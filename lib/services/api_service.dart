@@ -1,0 +1,1220 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/user_model.dart';
+import '../models/vehicle_model.dart';
+import '../models/ride_model.dart';
+import '../models/driver_status_model.dart';
+import '../models/driver_stats_model.dart';
+import '../models/driver_tasks_model.dart';
+import '../models/delivery_model.dart';
+import '../models/ride_location_model.dart';
+import '../models/conversation_model.dart';
+import '../models/chat_message_model.dart';
+import '../models/wallet_model.dart';
+
+class ApiService {
+  static String get _baseUrl =>
+      (dotenv.env['BASE_URL'] ?? 'http://192.168.1.9:8000/api/v1')
+          .replaceAll(RegExp(r'/+$'), '');
+
+  static const String _keyToken        = 'access_token';
+  static const String _keyRefreshToken = 'refresh_token';
+  static const String _keyRole         = 'user_role';
+  static const String _keyName         = 'user_name';
+  static const String _keyEmail        = 'user_email';
+  static const String _keyPhone        = 'user_phone';
+  static const String _keyId           = 'user_id';
+
+  // ── Raw HTTP helpers (dart:io — allows Host header override) ─────────────
+
+  static Future<_RawResponse> _rawGet(
+    String path, {
+    String? token,
+  }) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final req = await client.getUrl(uri);
+
+      req.headers.set('Accept', 'application/json');
+      if (token != null) req.headers.set('Authorization', 'Bearer $token');
+
+      final res     = await req.close();
+      final resBody = await res.transform(utf8.decoder).join();
+
+      if (kDebugMode) {
+        debugPrint('[API] GET $uri → ${res.statusCode}');
+        debugPrint('[API] response: $resBody');
+      }
+
+      return _RawResponse(res.statusCode, resBody);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  static Future<_RawResponse> _rawPost(
+    String path,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final req  = await client.postUrl(uri);
+
+      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Accept',       'application/json');
+      if (token != null) req.headers.set('Authorization', 'Bearer $token');
+
+      req.write(jsonEncode(body));
+
+      final res      = await req.close();
+      final resBody  = await res.transform(utf8.decoder).join();
+
+      if (kDebugMode) {
+        debugPrint('[API] POST $uri → ${res.statusCode}');
+        debugPrint('[API] response: $resBody');
+      }
+
+      return _RawResponse(res.statusCode, resBody);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+
+  static Future<({UserModel user, String token})> login(
+    String email,
+    String password,
+  ) async {
+    final raw = await _rawPost('/auth/login', {
+      'email':    email,
+      'password': password,
+    });
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}). '
+        'Is the backend running at $_baseUrl?',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      final userJson     = body['user'];
+      final accessToken  = body['access_token'];
+      final refreshToken = body['refresh_token'] as String?;
+
+      if (userJson == null || accessToken == null) {
+        throw ApiException(
+          'Server response missing "user" or "access_token" fields.',
+          raw.statusCode,
+        );
+      }
+
+      final user  = UserModel.fromJson(userJson as Map<String, dynamic>);
+      final token = accessToken as String;
+      await _saveSession(user, token, refreshToken: refreshToken);
+      return (user: user, token: token);
+    }
+
+    final message = body['message'] as String? ??
+        body['error']   as String? ??
+        'Login failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Logout ────────────────────────────────────────────────────────────────
+
+  static Future<void> logout() async {
+    try {
+      final token = await getToken();
+      if (token != null) {
+        await _rawPost('/auth/logout', {}, token: token);
+      }
+    } catch (_) {
+      // silently continue even if server call fails
+    }
+    await clearSession();
+  }
+
+  // ── Auth/me ───────────────────────────────────────────────────────────────
+
+  static Future<UserModel> getMe() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/auth/me', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      final userJson = body['user'] ?? body;
+      return UserModel.fromJson(userJson as Map<String, dynamic>);
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch user (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Vehicles ──────────────────────────────────────────────────────────────
+
+  static Future<List<VehicleModel>> getVehicles({int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/vehicles?page=$page', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      final pagination = body['vehicles'] as Map<String, dynamic>;
+      final data = pagination['data'] as List<dynamic>;
+      return data
+          .map((e) => VehicleModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch vehicles (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<VehicleModel> getVehicle(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/vehicles/$id', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      return VehicleModel.fromJson(body['vehicle'] as Map<String, dynamic>);
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch vehicle (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Rides ─────────────────────────────────────────────────────────────────
+
+  static Future<List<RideModel>> getRides({int page = 1, String? status}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final query = [
+      'page=$page',
+      if (status != null) 'status=$status',
+    ].join('&');
+
+    final raw = await _rawGet('/rides?$query', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      final pagination = body['rides'] as Map<String, dynamic>;
+      final data = pagination['data'] as List<dynamic>;
+      return data
+          .map((e) => RideModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch rides (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Single ride ───────────────────────────────────────────────────────────
+
+  static Future<RideModel> getRide(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/rides/$id', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data    = (body['data'] as Map<String, dynamic>?) ?? body;
+      final rideJson = data['ride'] ?? data;
+      return RideModel.fromJson(rideJson as Map<String, dynamic>);
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to fetch ride (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Available rides (Driver only) ────────────────────────────────────────
+
+  static Future<List<RideModel>> getAvailableRides({int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/rides/available?page=$page', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final pagination = body['rides'] as Map<String, dynamic>;
+      final data = pagination['data'] as List<dynamic>;
+      return data
+          .map((e) => RideModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch available rides (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Driver status ─────────────────────────────────────────────────────────
+
+  static Future<DriverStatusModel> getDriverStatus() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/driver/status', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      return DriverStatusModel.fromJson(body);
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch driver status (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Driver stats ──────────────────────────────────────────────────────────
+
+  static Future<DriverStatsModel> getDriverStats() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/driver/stats', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      return DriverStatsModel.fromJson(body);
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch driver stats (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Create ride ───────────────────────────────────────────────────────────
+
+  static Future<RideModel> createRide({
+    required String pickupAddress,
+    required String dropoffAddress,
+    String serviceType = 'standard',
+    int? vehicleId,
+    String? scheduledAt,
+    String? notes,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      'pickup_address':  pickupAddress,
+      'dropoff_address': dropoffAddress,
+      'service_type':    serviceType,
+      if (vehicleId    != null) 'vehicle_id':   vehicleId,
+      if (scheduledAt  != null) 'scheduled_at': scheduledAt,
+      if (notes        != null) 'notes':         notes,
+    };
+
+    final raw = await _rawPost('/rides', body, token: token);
+
+    final Map<String, dynamic> resBody;
+    try {
+      resBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final rideJson = resBody['ride'] ?? resBody;
+      return RideModel.fromJson(rideJson as Map<String, dynamic>);
+    }
+
+    final message = resBody['message'] as String? ??
+        resBody['error'] as String? ??
+        'Failed to create ride (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Deliveries ────────────────────────────────────────────────────────────
+
+  static Future<List<DeliveryModel>> getDeliveries({int page = 1, String? status}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final query = [
+      'page=$page',
+      if (status != null) 'status=$status',
+    ].join('&');
+
+    final raw = await _rawGet('/deliveries?$query', token: token);
+    return _parseDeliveryList(raw);
+  }
+
+  static Future<List<DeliveryModel>> getDeliveryHistory() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawGet('/deliveries/history', token: token);
+    return _parseDeliveryList(raw);
+  }
+
+  static Future<({List<NearbyDriverModel> drivers, int total, double radiusKm})>
+      getNearbyDrivers({
+    required double pickupLat,
+    required double pickupLng,
+    int limit = 10,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet(
+      '/deliveries/nearby-drivers?pickup_lat=$pickupLat&pickup_lng=$pickupLng&limit=$limit',
+      token: token,
+    );
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final list = (data['drivers'] as List<dynamic>? ?? [])
+          .map((e) => NearbyDriverModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return (
+        drivers:  list,
+        total:    data['total'] as int? ?? list.length,
+        radiusKm: (data['radius_km'] as num?)?.toDouble() ?? 30.0,
+      );
+    }
+
+    final message = body['message'] as String? ?? 'Failed to fetch nearby drivers (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<DeliveryEstimateModel> estimateDelivery({
+    double distance = 5.0,
+    String packageSize = 'small',
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost(
+      '/deliveries/estimate',
+      {'distance': distance, 'package_size': packageSize},
+      token: token,
+    );
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return DeliveryEstimateModel.fromJson(body);
+    }
+
+    final message = body['message'] as String? ?? 'Failed to estimate delivery (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<DeliveryModel> acceptDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/accept', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryTrackingModel> trackDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/track', {}, token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return DeliveryTrackingModel.fromJson(body['data'] as Map<String, dynamic>? ?? body);
+    }
+
+    final message = body['message'] as String? ?? 'Failed to track delivery (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<DeliveryModel> cancelDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/cancel', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> completeDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/complete', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> rateDelivery(
+    int id, {
+    required double rating,
+    String? comment,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost(
+      '/deliveries/$id/rate',
+      {
+        'rating': rating,
+        if (comment != null) 'rating_comment': comment,
+      },
+      token: token,
+    );
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return DeliveryModel.fromJson(data['delivery'] as Map<String, dynamic>);
+    }
+
+    final message = body['message'] as String? ?? 'Failed to rate delivery (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static List<DeliveryModel> _parseDeliveryList(_RawResponse raw) {
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data       = (body['data'] as Map<String, dynamic>?) ?? body;
+      final pagination = (data['deliveries'] as Map<String, dynamic>?) ?? {};
+      final list       = pagination['data'] as List<dynamic>? ?? [];
+      return list
+          .map((e) => DeliveryModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch deliveries (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static DeliveryModel _parseDeliveryResponse(_RawResponse raw) {
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return DeliveryModel.fromJson(data['delivery'] as Map<String, dynamic>);
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Request failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Ride actions ──────────────────────────────────────────────────────────
+
+  static Future<RideModel> acceptRide(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/rides/$id/accept', {}, token: token);
+    return _parseRideResponse(raw);
+  }
+
+  static Future<RideModel> completeRide(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/rides/$id/complete', {}, token: token);
+    return _parseRideResponse(raw);
+  }
+
+  static Future<RideModel> cancelRide(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/rides/$id/cancel', {}, token: token);
+    return _parseRideResponse(raw);
+  }
+
+  static Future<void> rateRide(int id, int rating, {String? comment}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      'rating': rating,
+      if (comment != null) 'comment': comment,
+    };
+
+    final raw = await _rawPost('/rides/$id/rate', body, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final resBody = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        resBody['message'] as String? ?? 'Failed to rate ride (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
+  static Future<RideModel> declineRide(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/driver/rides/$id/decline', {}, token: token);
+    return _parseRideResponse(raw);
+  }
+
+  static RideModel _parseRideResponse(_RawResponse raw) {
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final rideJson = body['ride'] ?? body;
+      return RideModel.fromJson(rideJson as Map<String, dynamic>);
+    }
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Request failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Ride tracking ──────────────────────────────────────────────────────────
+
+  static Future<List<RideLocationModel>> getRideLocationHistory(int rideId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/tracking/rides/$rideId', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final list = (body['locations'] ?? body['data'] ?? []) as List<dynamic>;
+      return list
+          .map((e) => RideLocationModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ?? 'Failed to fetch tracking (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<void> updateDriverLocation(
+    int rideId, {
+    required double latitude,
+    required double longitude,
+    double? speed,
+    double? heading,
+    String? status,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      'latitude':  latitude,
+      'longitude': longitude,
+      if (speed   != null) 'speed':   speed,
+      if (heading != null) 'heading': heading,
+      if (status  != null) 'status':  status,
+    };
+
+    final raw = await _rawPost('/tracking/rides/$rideId', body, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final resBody = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        resBody['message'] as String? ?? 'Failed to update location (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
+  // ── Create delivery ───────────────────────────────────────────────────────
+
+  static Future<DeliveryModel> createDelivery({
+    required String pickupAddress,
+    required String dropoffAddress,
+    required String packageDetails,
+    String? senderName,
+    String? recipientName,
+    String? recipientPhone,
+    String? packageSize,
+    int? fee,
+    String  paymentBy     = 'sender',
+    String  paymentMethod = 'cash',
+    String? scheduledAt,
+    String? notes,
+    int? vehicleId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      'pickup_address':  pickupAddress,
+      'dropoff_address': dropoffAddress,
+      'package_details': packageDetails,
+      'payment_by':      paymentBy,
+      'payment_method':  paymentMethod,
+      if (senderName     != null) 'sender_name':     senderName,
+      if (recipientName  != null) 'recipient_name':  recipientName,
+      if (recipientPhone != null) 'recipient_phone': recipientPhone,
+      if (packageSize    != null) 'package_size':    packageSize,
+      if (fee            != null) 'fee':              fee,
+      if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
+      if (notes          != null) 'notes':            notes,
+      if (vehicleId      != null) 'vehicle_id':      vehicleId,
+    };
+
+    final raw = await _rawPost('/deliveries', body, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  // ── Driver availability ───────────────────────────────────────────────────
+
+  static Future<void> goOnline() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/driver/go-online', {}, token: token);
+    if (raw.statusCode != 200) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        body['message'] as String? ?? 'Failed to go online (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
+  static Future<void> goOffline() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/driver/go-offline', {}, token: token);
+    if (raw.statusCode != 200) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        body['message'] as String? ?? 'Failed to go offline (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
+  // ── Driver tasks ──────────────────────────────────────────────────────────
+
+  static Future<DriverTasksModel> getDriverTasks() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/driver/tasks', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException(
+        'Unexpected server response (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+
+    if (raw.statusCode == 200) {
+      return DriverTasksModel.fromJson(body);
+    }
+
+    final message = body['message'] as String? ??
+        body['error'] as String? ??
+        'Failed to fetch driver tasks (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── OTP ───────────────────────────────────────────────────────────────────
+
+  /// Returns the sent phone and (in dev) the OTP code.
+  static Future<({String phone, int? code})> sendOtp(String phone) async {
+    final raw = await _rawPost('/auth/otp/send', {'phone': phone});
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return (
+        phone: body['phone'] as String? ?? phone,
+        code:  body['code']  as int?,
+      );
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to send OTP (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<void> verifyOtp(String phone, String code) async {
+    final raw = await _rawPost('/auth/otp/verify', {
+      'phone': phone,
+      'code':  code,
+    });
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'OTP verification failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+
+  // Primary: GET /rides/{id}/conversation — direct ride → conversation link.
+  // Returns null (does NOT throw) when the endpoint 404s or the ride has no conversation yet.
+  static Future<ConversationModel?> getRideConversation(int rideId) async {
+    final token = await getToken();
+    if (token == null) return null;
+
+    final raw = await _rawGet('/rides/$rideId/conversation', token: token);
+
+    if (kDebugMode) {
+      debugPrint('[Chat] GET /rides/$rideId/conversation → ${raw.statusCode}');
+      debugPrint('[Chat] body: ${raw.body}');
+    }
+
+    if (raw.statusCode != 200) return null;
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+
+    try {
+      final data    = (body['data'] as Map<String, dynamic>?) ?? body;
+      final convJson = data['conversation'] as Map<String, dynamic>? ?? data;
+      return ConversationModel.fromJson(convJson);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Fallback: GET /chats → match by the other party's ID.
+  static Future<ConversationModel?> findRideConversation({
+    int? withDriverId,
+    int? withPassengerId,
+  }) async {
+    final conversations = await getConversations();
+
+    if (kDebugMode) {
+      debugPrint('[Chat] GET /chats → ${conversations.length} conversation(s)');
+      for (final c in conversations) {
+        debugPrint('[Chat]   conv id=${c.id} driverId=${c.driverId} passengerId=${c.passengerId} topic=${c.topic}');
+      }
+      debugPrint('[Chat] matching withDriverId=$withDriverId withPassengerId=$withPassengerId');
+    }
+
+    for (final conv in conversations) {
+      if (withDriverId    != null && conv.driverId    == withDriverId)    return conv;
+      if (withPassengerId != null && conv.passengerId == withPassengerId)  return conv;
+    }
+    return null;
+  }
+
+  static Future<List<ConversationModel>> getConversations() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/chats', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final list = (data['conversations'] ?? body['conversations']) as List<dynamic>? ?? [];
+      return list.map((e) => ConversationModel.fromJson(e as Map<String, dynamic>)).toList();
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to fetch conversations (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<List<ChatMessageModel>> getMessages(int conversationId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/chats/$conversationId', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final list = (data['messages'] ?? body['messages']) as List<dynamic>? ?? [];
+      return list.map((e) => ChatMessageModel.fromJson(e as Map<String, dynamic>)).toList();
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to fetch messages (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<ChatMessageModel> sendMessage(int conversationId, String message) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost('/chats/$conversationId/messages', {'message': message}, token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data    = (body['data']    as Map<String, dynamic>?) ?? body;
+      final msgJson = data['message'] as Map<String, dynamic>? ??
+                      body['message'] as Map<String, dynamic>;
+      return ChatMessageModel.fromJson(msgJson);
+    }
+
+    final msg = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to send message (${raw.statusCode}).';
+    throw ApiException(msg, raw.statusCode);
+  }
+
+  // ── Session storage ───────────────────────────────────────────────────────
+
+  static Future<void> _saveSession(UserModel user, String token, {String? refreshToken}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyToken, token);
+    if (refreshToken != null) await prefs.setString(_keyRefreshToken, refreshToken);
+    await prefs.setString(_keyRole,  user.role);
+    await prefs.setString(_keyName,  user.name);
+    await prefs.setString(_keyEmail, user.email);
+    await prefs.setString(_keyPhone, user.phone);
+    await prefs.setInt(   _keyId,    user.id);
+  }
+
+  static Future<void> clearSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyToken);
+    await prefs.remove(_keyRefreshToken);
+    await prefs.remove(_keyRole);
+    await prefs.remove(_keyName);
+    await prefs.remove(_keyEmail);
+    await prefs.remove(_keyPhone);
+    await prefs.remove(_keyId);
+  }
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyToken);
+  }
+
+  static Future<String?> getRefreshToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRefreshToken);
+  }
+
+  static Future<String?> getRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyRole);
+  }
+
+  static Future<UserModel?> getSavedUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(_keyToken);
+    if (token == null) return null;
+    return UserModel(
+      id:        prefs.getInt(   _keyId)    ?? 0,
+      name:      prefs.getString(_keyName)  ?? '',
+      email:     prefs.getString(_keyEmail) ?? '',
+      phone:     prefs.getString(_keyPhone) ?? '',
+      role:      prefs.getString(_keyRole)  ?? 'passenger',
+      available: true,
+    );
+  }
+
+  static Future<bool> isLoggedIn() async => (await getToken()) != null;
+
+  // ── Wallet ────────────────────────────────────────────────────────────────
+
+  static Future<WalletModel> getWallet() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/wallet', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      return WalletModel.fromJson(body);
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to load wallet (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  /// POST /v1/wallet/topup  — returns the new TopUpRequestModel (status: pending)
+  static Future<TopUpRequestModel> requestTopUp({
+    required int    amount,
+    required String method,  // 'cash' | 'online' | 'company_credit'
+    String?         note,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{'amount': amount, 'method': method};
+    if (note != null && note.trim().isNotEmpty) body['note'] = note.trim();
+
+    final raw = await _rawPost('/wallet/topup', body, token: token);
+
+    final Map<String, dynamic> resBody;
+    try {
+      resBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 201) {
+      return TopUpRequestModel.fromJson(resBody);
+    }
+
+    final message = resBody['message'] as String? ?? resBody['error'] as String? ??
+        'Top-up request failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  /// GET /v1/wallet/topup/{id}
+  static Future<TopUpRequestModel> getTopUpRequest(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/wallet/topup/$id', token: token);
+
+    final Map<String, dynamic> resBody;
+    try {
+      resBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      return TopUpRequestModel.fromJson(resBody);
+    }
+
+    final message = resBody['message'] as String? ?? resBody['error'] as String? ??
+        'Failed to fetch top-up request (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  /// POST /v1/wallet/withdraw
+  static Future<WithdrawResultModel> withdraw({
+    required int amount,
+    String?      note,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{'amount': amount};
+    if (note != null && note.trim().isNotEmpty) body['note'] = note.trim();
+
+    final raw = await _rawPost('/wallet/withdraw', body, token: token);
+
+    final Map<String, dynamic> resBody;
+    try {
+      resBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      return WithdrawResultModel.fromJson(resBody);
+    }
+
+    final message = resBody['message'] as String? ?? resBody['error'] as String? ??
+        'Withdrawal failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<WalletTransactionsPage> getWalletTransactions({int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/wallet/transactions?page=$page', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      return WalletTransactionsPage.fromJson(body);
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to load transactions (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+}
+
+class _RawResponse {
+  final int    statusCode;
+  final String body;
+  const _RawResponse(this.statusCode, this.body);
+}
+
+class ApiException implements Exception {
+  final String message;
+  final int    statusCode;
+  const ApiException(this.message, this.statusCode);
+
+  @override
+  String toString() => message;
+}

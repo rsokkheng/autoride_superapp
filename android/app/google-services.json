@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "302191973529",
+    "project_id": "auto-ride-supperapp",
+    "storage_bucket": "auto-ride-supperapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302191973529:android:dd7a6f1b563bc8a7c7d408",
+        "android_client_info": {
+          "package_name": "com.example.autorideSuperapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:302191973529:android:e8a85ef3623fe0cac7d408",
+        "android_client_info": {
+          "package_name": "com.example.autoride_superapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="371977ec-7960-43c6-83d6-abf2ff387ae3" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../lib/l10n/app_localizations.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/driver/driver_active_trip_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/driver/driver_missions_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/edit_profile_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/notifications_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/promo_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/rate_driver_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/trip_history_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/trip_tracking_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/passenger/wallet_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/screens/splash_screen.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/services/notification_service.dart" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../lib/services/websocket_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Flutter/AppFrameworkInfo.plist" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Flutter/AppFrameworkInfo.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Podfile" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Podfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Podfile.lock" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Podfile.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Runner.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Runner.xcodeproj/project.pbxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Runner/AppDelegate.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Runner/AppDelegate.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ios/Runner/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/../ios/Runner/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/main.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/main.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/screens/auth/role_selection.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/screens/auth/role_selection.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/screens/driver/driver_home.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/screens/driver/driver_home.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/screens/passenger/marketplace_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/screens/passenger/marketplace_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/screens/passenger/passenger_home.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/screens/passenger/passenger_home.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/screens/passenger/payment_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/screens/passenger/payment_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/screens/passenger/ride_booking.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/screens/passenger/ride_booking.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../lib/theme/app_theme.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../lib/theme/app_theme.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/../pubspec.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/../pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../test/widget_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/../test/widget_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/../windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/../windows/flutter/generated_plugins.cmake" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 6
+}]]></component>
+  <component name="ProjectId" id="3EFvLWQRDhGrmdrlGgDWP8fEbUu" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "android.gradle.sync.needed": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "dart.analysis.tool.window.visible": "false",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/npcapro/Development/autoride_superapp/android",
+    "settings.editor.selected.configurable": "configurable.group.appearance",
+    "show.migrate.to.gradle.popup": "false"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="371977ec-7960-43c6-83d6-abf2ff387ae3" name="Changes" comment="" />
+      <created>1779787076947</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1779787076947</updated>
+    </task>
+    <servers />
+  </component>
+</project>

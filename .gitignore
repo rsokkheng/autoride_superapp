@@ -1,0 +1,6 @@
+.dart_tool/
+build/
+ios/build/
+ios/Pods/
+macos/Pods/
+DerivedData/
