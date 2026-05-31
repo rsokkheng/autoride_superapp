@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../models/user_model.dart';
 import '../../models/vehicle_model.dart';
+import '../../models/delivery_model.dart';
 import '../../models/ride_model.dart';
 import '../../models/driver_stats_model.dart';
 import '../../models/wallet_model.dart';
@@ -167,14 +168,15 @@ class _DriverDashboard extends StatefulWidget {
 
 class _DriverDashboardState extends State<_DriverDashboard> {
   DriverStatsModel? _stats;
-  RideModel? _pendingRide;
+  RideModel?     _pendingRide;
+  DeliveryModel? _pendingDelivery;
   Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRides());
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRequests());
   }
 
   @override
@@ -188,25 +190,34 @@ class _DriverDashboardState extends State<_DriverDashboard> {
       final results = await Future.wait([
         ApiService.getDriverStats(),
         ApiService.getAvailableRides(),
+        ApiService.getAvailableDeliveries(),
       ]);
       if (!mounted) return;
       setState(() {
         _stats = results[0] as DriverStatsModel;
-        final available = results[1] as List<RideModel>;
-        _pendingRide = available.isNotEmpty ? available.first : null;
+        final rides = results[1] as List<RideModel>;
+        _pendingRide = rides.isNotEmpty ? rides.first : null;
+        final deliveries = results[2] as List<DeliveryModel>;
+        _pendingDelivery = deliveries.isNotEmpty ? deliveries.first : null;
       });
     } catch (_) {}
   }
 
-  Future<void> _pollRides() async {
-    if (_pendingRide != null) return;
-    try {
-      final available = await ApiService.getAvailableRides();
-      if (!mounted) return;
-      if (available.isNotEmpty) {
-        setState(() => _pendingRide = available.first);
-      }
-    } catch (_) {}
+  Future<void> _pollRequests() async {
+    if (_pendingRide == null) {
+      try {
+        final rides = await ApiService.getAvailableRides();
+        if (!mounted) return;
+        if (rides.isNotEmpty) setState(() => _pendingRide = rides.first);
+      } catch (_) {}
+    }
+    if (_pendingDelivery == null) {
+      try {
+        final deliveries = await ApiService.getAvailableDeliveries();
+        if (!mounted) return;
+        if (deliveries.isNotEmpty) setState(() => _pendingDelivery = deliveries.first);
+      } catch (_) {}
+    }
   }
 
   @override
@@ -402,12 +413,22 @@ class _DriverDashboardState extends State<_DriverDashboard> {
                 const SizedBox(height: 14),
               ],
               if (widget.modeDelivery) ...[
-                _ModeEmptyCard(
-                  icon: Icons.delivery_dining_outlined,
-                  color: AppTheme.accentOrange,
-                  title: 'Delivery Mode Active',
-                  subtitle: 'Waiting for delivery orders in your area.',
-                ),
+                if (_pendingDelivery != null) ...[
+                  const SectionHeader(title: 'Incoming Delivery Request'),
+                  const SizedBox(height: 14),
+                  _DeliveryRequestCard(
+                    delivery: _pendingDelivery!,
+                    onAccepted: () => setState(() => _pendingDelivery = null),
+                    onDeclined: () => setState(() => _pendingDelivery = null),
+                  ),
+                ] else ...[
+                  _ModeEmptyCard(
+                    icon: Icons.delivery_dining_outlined,
+                    color: AppTheme.accentOrange,
+                    title: 'Delivery Mode Active',
+                    subtitle: 'Waiting for delivery orders in your area.',
+                  ),
+                ],
                 const SizedBox(height: 14),
               ],
               if (widget.modeRental) ...[
@@ -694,6 +715,213 @@ class _RideRequestCardState extends State<_RideRequestCard> {
               child: Center(child: _acting
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Text('Accept Ride', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+            ),
+          )),
+        ]),
+      ]),
+    );
+  }
+}
+
+// ─── Delivery request card with countdown ─────────────────────────────────────
+class _DeliveryRequestCard extends StatefulWidget {
+  final DeliveryModel delivery;
+  final VoidCallback onAccepted;
+  final VoidCallback onDeclined;
+
+  const _DeliveryRequestCard({
+    required this.delivery,
+    required this.onAccepted,
+    required this.onDeclined,
+  });
+
+  @override
+  State<_DeliveryRequestCard> createState() => _DeliveryRequestCardState();
+}
+
+class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
+  int _seconds = 30;
+  Timer? _timer;
+  bool _acting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      if (_seconds <= 1) {
+        t.cancel();
+        widget.onDeclined();
+      } else {
+        setState(() => _seconds--);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _accept() async {
+    if (_acting) return;
+    _timer?.cancel();
+    setState(() => _acting = true);
+    try {
+      await ApiService.acceptDelivery(widget.delivery.id);
+      if (!mounted) return;
+      widget.onAccepted();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('Delivery accepted! Go to Missions tab to manage it.'),
+        backgroundColor: AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      setState(() => _acting = false);
+    } catch (_) {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  Future<void> _decline() async {
+    if (_acting) return;
+    _timer?.cancel();
+    widget.onDeclined();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = _seconds / 30.0;
+    final urgent   = _seconds <= 8;
+    final senderLabel = widget.delivery.sender?.name
+        ?? widget.delivery.senderName
+        ?? 'Sender #${widget.delivery.senderId}';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: (urgent ? AppTheme.danger : AppTheme.accentOrange).withValues(alpha: 0.5),
+            width: 1.5),
+      ),
+      child: Column(children: [
+        Row(children: [
+          StatusBadge(label: urgent ? '⚡ URGENT' : '📦 NEW DELIVERY', color: urgent ? AppTheme.danger : AppTheme.accentOrange),
+          const Spacer(),
+          Text('$_seconds s', style: TextStyle(
+              color: urgent ? AppTheme.danger : AppTheme.accentOrange,
+              fontWeight: FontWeight.w900,
+              fontSize: 16)),
+        ]),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: AppTheme.cardBg,
+            valueColor: AlwaysStoppedAnimation<Color>(
+                urgent ? AppTheme.danger : AppTheme.accentOrange),
+            minHeight: 5,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        Row(children: [
+          CircleAvatar(
+            backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2),
+            radius: 18,
+            child: Text(senderLabel[0],
+                style: const TextStyle(
+                    color: AppTheme.accentOrange, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(senderLabel,
+                style: const TextStyle(
+                    color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+            if (widget.delivery.packageSize != null)
+              Text(widget.delivery.packageSize!,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 12)),
+          ])),
+          Text(AppTheme.khr(widget.delivery.fee),
+              style: const TextStyle(
+                  color: AppTheme.accentOrange,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800)),
+        ]),
+        const SizedBox(height: 12),
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: AppTheme.cardBg,
+              borderRadius: BorderRadius.circular(10)),
+          child: Column(children: [
+            Row(children: [
+              const Icon(Icons.circle, color: AppTheme.accent, size: 10),
+              const SizedBox(width: 8),
+              Expanded(child: Text(widget.delivery.pickupAddress,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13),
+                  overflow: TextOverflow.ellipsis)),
+            ]),
+            const SizedBox(height: 6),
+            Row(children: [
+              const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
+              const SizedBox(width: 8),
+              Expanded(child: Text(widget.delivery.dropoffAddress,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13),
+                  overflow: TextOverflow.ellipsis)),
+            ]),
+          ]),
+        ),
+        const SizedBox(height: 14),
+
+        Row(children: [
+          Expanded(child: GestureDetector(
+            onTap: _acting ? null : _decline,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                  color: AppTheme.cardBg,
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Center(child: Text('Decline',
+                  style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600))),
+            ),
+          )),
+          const SizedBox(width: 12),
+          Expanded(flex: 2, child: GestureDetector(
+            onTap: _acting ? null : _accept,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                  color: AppTheme.accentOrange,
+                  borderRadius: BorderRadius.circular(10)),
+              child: Center(child: _acting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
+                  : const Text('Accept Delivery',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800))),
             ),
           )),
         ]),

@@ -450,6 +450,13 @@ class ApiService {
     return _parseDeliveryList(raw);
   }
 
+  static Future<List<DeliveryModel>> getAvailableDeliveries() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawGet('/deliveries/available', token: token);
+    return _parseDeliveryList(raw);
+  }
+
   static Future<({List<NearbyDriverModel> drivers, int total, double radiusKm})>
       getNearbyDrivers({
     required double pickupLat,
