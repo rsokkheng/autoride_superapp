@@ -100,7 +100,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
           SizedBox(
             height: 160,
             child: GoogleMap(
-              onMapCreated: (c) => _mapController = c,
+              onMapCreated: (c) {
+                _mapController = c;
+                c.animateCamera(CameraUpdate.newCameraPosition(
+                  const CameraPosition(target: LatLng(11.5680, 104.9195), zoom: 13.5),
+                ));
+              },
               initialCameraPosition: const CameraPosition(
                   target: LatLng(11.5680, 104.9195), zoom: 13.5),
               markers: {

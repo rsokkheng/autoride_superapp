@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
+import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'firebase_options.dart';
 
 import 'l10n/app_localizations.dart';
@@ -13,6 +15,12 @@ final ValueNotifier<Locale> appLocale =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Legacy renderer has broader device support on Android
+  final mapsImpl = GoogleMapsFlutterPlatform.instance;
+  if (mapsImpl is GoogleMapsFlutterAndroid) {
+    await mapsImpl.initializeWithRenderer(AndroidMapRenderer.legacy);
+  }
 
   // Load environment variables
   await dotenv.load(fileName: '.env');

@@ -80,8 +80,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     );
   }
 
+  static bool _inCambodia(double lat, double lng) =>
+      lat >= 10.4 && lat <= 14.7 && lng >= 102.3 && lng <= 107.6;
+
   void _onDriverPosition(Position position) {
     if (!mounted) return;
+    // Ignore GPS updates from outside Cambodia (simulator default locations, stale fixes)
+    if (!_inCambodia(position.latitude, position.longitude)) return;
     final pos = LatLng(position.latitude, position.longitude);
     setState(() {
       _markers.removeWhere((m) => m.markerId.value == 'driver');
@@ -300,7 +305,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       body: Stack(children: [
         // Full-screen map
         GoogleMap(
-          onMapCreated: (c) => _mapController = c,
+          onMapCreated: (c) {
+            _mapController = c;
+            c.animateCamera(CameraUpdate.newCameraPosition(
+              const CameraPosition(target: LatLng(11.5648, 104.9218), zoom: 14),
+            ));
+          },
           initialCameraPosition: const CameraPosition(target: LatLng(11.5648, 104.9218), zoom: 14),
           style: _darkMapStyle,
           markers: _markers,

@@ -1,10 +1,12 @@
 import 'dart:async';
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/websocket_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
+import '../../services/maps_service.dart';
 import 'rate_driver_screen.dart';
 import '../shared/ride_chat_screen.dart';
 
@@ -14,18 +16,23 @@ const _kTextSub    = Color(0xFF757575);
 const _kDivider    = Color(0xFFEEEEEE);
 
 class TripTrackingScreen extends StatefulWidget {
-  final int?   rideId;
-  final String driverId;
-  final String driverName;
-  final String driverRating;
-  final String driverTrips;
-  final String vehicle;
-  final String vehicleColor;
-  final String plate;
-  final String from;
-  final String to;
-  final String fare;
-  final bool   isScheduled;
+  final int?    rideId;
+  final String  driverId;
+  final String  driverName;
+  final String  driverRating;
+  final String  driverTrips;
+  final String  vehicle;
+  final String  vehicleColor;
+  final String  plate;
+  final String  from;
+  final String  to;
+  final String  fare;
+  final bool    isScheduled;
+  // Real-world coordinates — used for live routing. Falls back to Phnom Penh
+  // test coords when null (e.g., when navigated from a screen that doesn't
+  // have geocoded coordinates yet).
+  final LatLng? pickupLatLng;
+  final LatLng? destLatLng;
 
   const TripTrackingScreen({
     super.key,
@@ -41,6 +48,8 @@ class TripTrackingScreen extends StatefulWidget {
     this.to            = '--',
     this.fare          = '--',
     this.isScheduled   = false,
+    this.pickupLatLng,
+    this.destLatLng,
   });
 
   @override
@@ -57,11 +66,22 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   final Set<Marker>   _markers   = {};
   final Set<Polyline> _polylines = {};
 
+  // Pulse animation controller — reserved for a future "searching" ripple UI
   late AnimationController _pulseController;
-  late Animation<double>   _pulseAnim;
+
+  // Smooth driver-marker movement between successive GPS positions
+  late AnimationController _markerAnimCtrl;
+  LatLng? _prevDriverPos;
+  LatLng? _targetDriverPos;
+
+  // Live route data from Directions API
+  int    _etaMinutes = 8;
+  double _distanceKm = 2.4;
+  DateTime? _lastRouteFetch;
+
   bool _cancelling = false;
 
-  // Mutable driver info — updated when a driver is assigned after booking
+  // Mutable driver info — updated when driver is assigned after booking
   late String _driverName;
   late String _driverRating;
   late String _driverTrips;
@@ -70,6 +90,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   late String _plate;
   String _currentDriverId = '';
   Timer? _ridePollTimer;
+
+  LatLng get _pickupPoint => widget.pickupLatLng ?? WebSocketService.pickupPoint;
+  LatLng get _destPoint   => widget.destLatLng   ?? WebSocketService.destinationPoint;
 
   static const _initialCamera = CameraPosition(
     target: LatLng(11.5680, 104.9195),
@@ -86,11 +109,17 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _vehicleColor    = widget.vehicleColor;
     _plate           = widget.plate;
     _currentDriverId = widget.driverId;
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(_pulseController);
+
+    _markerAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..addListener(_onMarkerAnimTick);
+
     _initMarkers();
     _startTracking();
     _startRidePoll();
@@ -100,24 +129,105 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _markers.addAll([
       Marker(
         markerId: const MarkerId('pickup'),
-        position: WebSocketService.pickupPoint,
+        position: _pickupPoint,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         infoWindow: InfoWindow(title: widget.from),
       ),
       Marker(
         markerId: const MarkerId('destination'),
-        position: WebSocketService.destinationPoint,
+        position: _destPoint,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         infoWindow: InfoWindow(title: widget.to),
       ),
     ]);
+    // Draw initial route between pickup and destination
     _polylines.add(Polyline(
       polylineId: const PolylineId('route'),
-      points: WebSocketService.driverRoute,
+      points: [_pickupPoint, _destPoint],
       color: _kGreen,
       width: 5,
     ));
   }
+
+  // ── Marker animation ────────────────────────────────────────────────────────
+
+  void _onMarkerAnimTick() {
+    final prev   = _prevDriverPos;
+    final target = _targetDriverPos;
+    if (prev == null || target == null || !mounted) return;
+    final t   = _markerAnimCtrl.value;
+    final lat = lerpDouble(prev.latitude,  target.latitude,  t)!;
+    final lng = lerpDouble(prev.longitude, target.longitude, t)!;
+    _setDriverMarker(LatLng(lat, lng));
+  }
+
+  void _setDriverMarker(LatLng pos) {
+    if (!mounted) return;
+    setState(() {
+      _markers.removeWhere((m) => m.markerId.value == 'driver');
+      _markers.add(Marker(
+        markerId: const MarkerId('driver'),
+        position: pos,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        infoWindow: InfoWindow(title: _driverName, snippet: _vehicle),
+        rotation: 45,
+      ));
+    });
+    _mapController?.animateCamera(CameraUpdate.newLatLng(pos));
+  }
+
+  static bool _inCambodia(LatLng p) =>
+      p.latitude  >= 10.4 && p.latitude  <= 14.7 &&
+      p.longitude >= 102.3 && p.longitude <= 107.6;
+
+  // ── Firestore driver position ──────────────────────────────────────────────
+
+  void _onDriverPosition(LatLng pos) {
+    if (!_inCambodia(pos)) return; // ignore stale/invalid Firestore values
+    // Animate from wherever the marker currently is
+    _prevDriverPos   = _targetDriverPos ?? pos;
+    _targetDriverPos = pos;
+    _markerAnimCtrl
+      ..reset()
+      ..forward();
+
+    // Throttle Directions API calls to at most once per 30 seconds
+    final now = DateTime.now();
+    if (_lastRouteFetch == null ||
+        now.difference(_lastRouteFetch!).inSeconds >= 30) {
+      _lastRouteFetch = now;
+      _fetchRoute(pos);
+    }
+  }
+
+  // ── Directions API — live route + ETA ─────────────────────────────────────
+
+  Future<void> _fetchRoute(LatLng driverPos) async {
+    // Before pickup: route driver → pickup. During trip: route driver → destination.
+    final destination = _lastUpdate?.status == TripStatus.inProgress
+        ? _destPoint
+        : _pickupPoint;
+
+    final result = await MapsService.getRoute(
+      origin:      driverPos,
+      destination: destination,
+    );
+    if (!mounted || result == null) return;
+    setState(() {
+      _etaMinutes = result.etaMinutes;
+      _distanceKm = result.distanceKm;
+      _polylines
+        ..clear()
+        ..add(Polyline(
+          polylineId: const PolylineId('route'),
+          points:     result.points,
+          color:      _kGreen,
+          width:      5,
+        ));
+    });
+  }
+
+  // ── Cancel ride ────────────────────────────────────────────────────────────
 
   Future<void> _cancelRide() async {
     if (widget.rideId == null || _cancelling) return;
@@ -139,6 +249,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     }
   }
 
+  // ── Tracking ───────────────────────────────────────────────────────────────
+
   void _startTracking() {
     _trackingSub =
         WebSocketService.instance.startTracking().listen((update) async {
@@ -150,7 +262,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           prevStatus == TripStatus.searching) {
         await NotificationService.instance.showTripUpdate(
           title: '🚗 Driver on the way',
-          body: '$_driverName is ${update.etaMinutes} min away',
+          body: '$_driverName is $_etaMinutes min away',
           payload: 'picking_up',
         );
       } else if (update.status == TripStatus.arrived) {
@@ -169,21 +281,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     }
   }
 
-  void _onDriverPosition(LatLng pos) {
-    if (!mounted) return;
-    setState(() {
-      _markers.removeWhere((m) => m.markerId.value == 'driver');
-      _markers.add(Marker(
-        markerId: const MarkerId('driver'),
-        position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: InfoWindow(title: _driverName, snippet: _vehicle),
-        rotation: 45,
-      ));
-    });
-    _mapController?.animateCamera(CameraUpdate.newLatLng(pos));
-  }
-
   @override
   void dispose() {
     _ridePollTimer?.cancel();
@@ -192,12 +289,16 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     WebSocketService.instance.stopTracking();
     _mapController?.dispose();
     _pulseController.dispose();
+    _markerAnimCtrl.dispose();
     super.dispose();
   }
 
+  // ── Ride poll (detects when driver is assigned) ────────────────────────────
+
   void _startRidePoll() {
     if (widget.rideId == null || _currentDriverId.isNotEmpty) return;
-    _ridePollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRide());
+    _ridePollTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _pollRide());
   }
 
   Future<void> _pollRide() async {
@@ -210,7 +311,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (newId == _currentDriverId) return;
       setState(() {
         _currentDriverId = newId;
-        _driverName   = ride.driver?.name    ?? 'Driver #${ride.driverId}';
+        _driverName   = ride.driver?.name ?? 'Driver #${ride.driverId}';
         _driverRating = '--';
         _driverTrips  = '--';
         _vehicle      = ride.vehicle != null
@@ -227,6 +328,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     } catch (_) {}
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
   bool get _isArrived => _lastUpdate?.status == TripStatus.arrived;
 
   String get _statusTitle {
@@ -238,10 +341,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     }
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final eta  = _lastUpdate?.etaMinutes ?? 8;
-    final dist = (_lastUpdate?.distanceKm ?? 2.4).toStringAsFixed(1);
+    final eta  = _isArrived ? 0 : _etaMinutes;
+    final dist = _distanceKm.toStringAsFixed(1);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -249,7 +354,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         children: [
           // ── Map ────────────────────────────────────────────────────────
           GoogleMap(
-            onMapCreated: (c) => _mapController = c,
+            onMapCreated: (c) {
+              _mapController = c;
+              c.animateCamera(CameraUpdate.newCameraPosition(_initialCamera));
+            },
             initialCameraPosition: _initialCamera,
             markers: _markers,
             polylines: _polylines,
@@ -346,7 +454,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   children: [
                     TextSpan(
-                        text: '${_isArrived ? "0" : eta} min',
+                        text: '$eta min',
                         style: const TextStyle(color: _kGreen)),
                     TextSpan(
                         text: '\naway',
@@ -416,7 +524,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           children: [
                             const TextSpan(text: 'Arriving in '),
                             TextSpan(
-                                text: '${_isArrived ? "0" : eta} min',
+                                text: '$eta min',
                                 style: const TextStyle(
                                     color: _kGreen,
                                     fontWeight: FontWeight.w600)),
