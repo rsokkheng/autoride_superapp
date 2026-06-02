@@ -8,7 +8,14 @@ class LocationService {
   LocationService._();
   static final instance = LocationService._();
 
-  StreamSubscription<Position>? _sub;
+  // Trip tracking subscription (high-frequency, 5m filter)
+  StreamSubscription<Position>? _tripSub;
+  // Online-presence subscription (low-frequency, 50m filter — battery friendly)
+  StreamSubscription<Position>? _onlineSub;
+
+  final _firestore = FirebaseFirestore.instance;
+
+  // ── Permissions ────────────────────────────────────────────────────────────────
 
   Future<bool> requestPermission() async {
     LocationPermission perm = await Geolocator.checkPermission();
@@ -19,41 +26,82 @@ class LocationService {
         perm == LocationPermission.always;
   }
 
+  // ── Online presence (Smart Dispatch) ──────────────────────────────────────────
+  // Called when driver goes online from the home screen.
+  // Broadcasts location every 50 m so the backend can find nearby drivers.
+
+  Future<void> startOnlineTracking(String driverId) async {
+    await _onlineSub?.cancel();
+    _onlineSub = null;
+    final granted = await requestPermission();
+    if (!granted) return;
+    AuthService.signInAnon();
+    _onlineSub = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy:       LocationAccuracy.medium,
+        distanceFilter: 50,
+      ),
+    ).listen((pos) {
+      _firestore.collection('drivers_live').doc(driverId).set({
+        'lat':        pos.latitude,
+        'lng':        pos.longitude,
+        'speed':      pos.speed,
+        'heading':    pos.heading,
+        'online':     true,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+    }, onError: (_) {});
+  }
+
+  // ── Trip tracking ──────────────────────────────────────────────────────────────
+  // High-frequency GPS during an active trip.
+  // Also stops the online-presence sub (trip tracking takes over).
+
   void startTracking({
     required String driverId,
     required void Function(Position) onPosition,
   }) {
+    _onlineSub?.cancel(); // trip tracking replaces online tracking
+    _onlineSub = null;
     AuthService.signInAnon();
-    _sub?.cancel();
-    _sub = Geolocator.getPositionStream(
+    _tripSub?.cancel();
+    _tripSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
+        accuracy:       LocationAccuracy.high,
         distanceFilter: 5,
       ),
     ).listen((position) {
-      FirebaseFirestore.instance.collection('drivers_live').doc(driverId).set({
-        'lat': position.latitude,
-        'lng': position.longitude,
-        'speed': position.speed,
-        'heading': position.heading,
-        'online': true,
+      _firestore.collection('drivers_live').doc(driverId).set({
+        'lat':        position.latitude,
+        'lng':        position.longitude,
+        'speed':      position.speed,
+        'heading':    position.heading,
+        'online':     true,
         'updated_at': FieldValue.serverTimestamp(),
       });
       onPosition(position);
-    });
+    }, onError: (_) {});
   }
+
+  // ── Stop ───────────────────────────────────────────────────────────────────────
 
   Future<void> stopTracking(String driverId) async {
-    await _sub?.cancel();
-    _sub = null;
-    await FirebaseFirestore.instance
-        .collection('drivers_live')
-        .doc(driverId)
-        .update({'online': false, 'updated_at': FieldValue.serverTimestamp()});
+    await _tripSub?.cancel();
+    _tripSub = null;
+    await _onlineSub?.cancel();
+    _onlineSub = null;
+    try {
+      await _firestore
+          .collection('drivers_live')
+          .doc(driverId)
+          .update({'online': false, 'updated_at': FieldValue.serverTimestamp()});
+    } catch (_) {}
   }
 
+  // ── Passenger side: listen to a driver's live position ───────────────────────
+
   Stream<LatLng> listenDriver(String driverId) {
-    return FirebaseFirestore.instance
+    return _firestore
         .collection('drivers_live')
         .doc(driverId)
         .snapshots()

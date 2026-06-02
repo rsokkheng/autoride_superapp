@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
+import '../../services/location_service.dart';
 import '../../models/user_model.dart';
 import '../../models/vehicle_model.dart';
 import '../../models/delivery_model.dart';
@@ -36,10 +37,20 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     if (_togglingOnline) return;
     setState(() => _togglingOnline = true);
     try {
+      final user = await ApiService.getSavedUser();
+      final driverId = user?.id.toString() ?? '';
+
       if (value) {
         await ApiService.goOnline();
+        // Start GPS so the backend Smart Dispatch can find this driver
+        if (driverId.isNotEmpty) {
+          await LocationService.instance.startOnlineTracking(driverId);
+        }
       } else {
         await ApiService.goOffline();
+        if (driverId.isNotEmpty) {
+          await LocationService.instance.stopTracking(driverId);
+        }
       }
       if (mounted) setState(() => _isOnline = value);
     } on ApiException catch (e) {
@@ -674,7 +685,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             child: Text(passengerLabel[0], style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700))),
           const SizedBox(width: 10),
           Expanded(child: Text(passengerLabel, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
-          Text('\$${widget.ride.fare}', style: const TextStyle(color: AppTheme.accent, fontSize: 20, fontWeight: FontWeight.w800)),
+          Text(AppTheme.khr(widget.ride.fareKhr), style: const TextStyle(color: AppTheme.accent, fontSize: 20, fontWeight: FontWeight.w800)),
         ]),
         const SizedBox(height: 12),
 
@@ -1008,7 +1019,7 @@ class _RecentRidesSectionState extends State<_RecentRidesSection> {
         passenger: ride.driver?.name ?? 'Passenger #${ride.passengerId}',
         from:      ride.pickupAddress,
         to:        ride.dropoffAddress,
-        earned:    '+\$${ride.fare}',
+        earned:    '+${AppTheme.khr(ride.fareKhr)}',
         time:      ride.createdAt.length >= 16 ? ride.createdAt.substring(11, 16) : '',
       )).toList(),
     );

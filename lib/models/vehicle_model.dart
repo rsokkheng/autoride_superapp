@@ -1,15 +1,15 @@
 import 'user_model.dart';
 
 class VehicleModel {
-  final int id;
-  final int userId;
+  final int    id;
+  final int    userId;
   final String licensePlate;
   final String make;
   final String model;
-  final int year;
+  final int    year;
   final String type;
   final String status;
-  final int capacity;
+  final int    capacity;
   final String details;
   final UserModel? driver;
 
@@ -27,18 +27,21 @@ class VehicleModel {
     this.driver,
   });
 
+  static int    _int(dynamic v)    => v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
+  static String _str(dynamic v)    => v?.toString() ?? '';
+
   factory VehicleModel.fromJson(Map<String, dynamic> json) {
     return VehicleModel(
-      id:           json['id'] as int,
-      userId:       json['user_id'] as int,
-      licensePlate: json['license_plate'] as String,
-      make:         json['make'] as String,
-      model:        json['model'] as String,
-      year:         json['year'] as int,
-      type:         json['type'] as String,
-      status:       json['status'] as String,
-      capacity:     json['capacity'] as int,
-      details:      json['details'] as String? ?? '',
+      id:           _int(json['id']),
+      userId:       _int(json['user_id']),
+      licensePlate: _str(json['license_plate']),
+      make:         _str(json['make']),
+      model:        _str(json['model']),
+      year:         _int(json['year']),
+      type:         _str(json['type']),
+      status:       _str(json['status']),
+      capacity:     _int(json['capacity']),
+      details:      _str(json['details']),
       driver: json['driver'] != null
           ? UserModel.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
@@ -46,5 +49,5 @@ class VehicleModel {
   }
 
   String get displayName => '$year $make $model';
-  bool get isActive => status == 'active';
+  bool   get isActive    => status == 'active';
 }

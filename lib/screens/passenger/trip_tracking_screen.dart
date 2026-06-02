@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show min, max, sin, cos, atan2, pi;
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -140,12 +141,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         infoWindow: InfoWindow(title: widget.to),
       ),
     ]);
-    // Draw initial route between pickup and destination
+    // Static full-route line (gray dashed): pickup → destination
+    // This stays visible the entire trip as context.
     _polylines.add(Polyline(
-      polylineId: const PolylineId('route'),
-      points: [_pickupPoint, _destPoint],
-      color: _kGreen,
-      width: 5,
+      polylineId: const PolylineId('full_route'),
+      points:     [_pickupPoint, _destPoint],
+      color:      const Color(0x55888888),
+      width:      4,
+      patterns:   [PatternItem.dash(16), PatternItem.gap(8)],
     ));
   }
 
@@ -161,19 +164,57 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _setDriverMarker(LatLng(lat, lng));
   }
 
+  // ── Heading: bearing from previous → current position ────────────────────────
+
+  static double _bearing(LatLng from, LatLng to) {
+    final lat1 = from.latitude  * pi / 180;
+    final lat2 = to.latitude    * pi / 180;
+    final dLng = (to.longitude - from.longitude) * pi / 180;
+    final y    = sin(dLng) * cos(lat2);
+    final x    = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng);
+    return (atan2(y, x) * 180 / pi + 360) % 360;
+  }
+
   void _setDriverMarker(LatLng pos) {
     if (!mounted) return;
+
+    final heading = (_prevDriverPos != null && _prevDriverPos != pos)
+        ? _bearing(_prevDriverPos!, pos)
+        : 0.0;
+
     setState(() {
       _markers.removeWhere((m) => m.markerId.value == 'driver');
       _markers.add(Marker(
         markerId: const MarkerId('driver'),
         position: pos,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        icon:     BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
         infoWindow: InfoWindow(title: _driverName, snippet: _vehicle),
-        rotation: 45,
+        rotation: heading,
+        anchor:   const Offset(0.5, 0.5),
+        flat:     true,   // rotates with the map rather than always pointing up
       ));
     });
-    _mapController?.animateCamera(CameraUpdate.newLatLng(pos));
+
+    // Camera: fit driver + next waypoint so both are always visible
+    final waypoint = _driverAssigned && _lastUpdate?.status == TripStatus.inProgress
+        ? _destPoint
+        : _pickupPoint;
+    _fitCamera(pos, waypoint);
+  }
+
+  void _fitCamera(LatLng a, LatLng b) {
+    final sw = LatLng(
+      min(a.latitude,  b.latitude)  - 0.004,
+      min(a.longitude, b.longitude) - 0.004,
+    );
+    final ne = LatLng(
+      max(a.latitude,  b.latitude)  + 0.004,
+      max(a.longitude, b.longitude) + 0.004,
+    );
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(southwest: sw, northeast: ne), 80),
+    );
   }
 
   static bool _inCambodia(LatLng p) =>
@@ -191,22 +232,23 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       ..reset()
       ..forward();
 
-    // Throttle Directions API calls to at most once per 30 seconds
+    // Throttle Routes API calls — at most once every 15 s
     final now = DateTime.now();
     if (_lastRouteFetch == null ||
-        now.difference(_lastRouteFetch!).inSeconds >= 30) {
+        now.difference(_lastRouteFetch!).inSeconds >= 15) {
       _lastRouteFetch = now;
       _fetchRoute(pos);
     }
   }
 
-  // ── Directions API — live route + ETA ─────────────────────────────────────
+  // ── Routes API — live route + ETA ────────────────────────────────────────────
 
   Future<void> _fetchRoute(LatLng driverPos) async {
-    // Before pickup: route driver → pickup. During trip: route driver → destination.
-    final destination = _lastUpdate?.status == TripStatus.inProgress
-        ? _destPoint
-        : _pickupPoint;
+    // Before pickup: driver → pickup.  During trip: driver → destination.
+    final destination =
+        _driverAssigned && _lastUpdate?.status == TripStatus.inProgress
+            ? _destPoint
+            : _pickupPoint;
 
     final result = await MapsService.getRoute(
       origin:      driverPos,
@@ -216,13 +258,17 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     setState(() {
       _etaMinutes = result.etaMinutes;
       _distanceKm = result.distanceKm;
+      // Replace only the live-route polyline; keep the full static route
       _polylines
-        ..clear()
+        ..removeWhere((p) => p.polylineId.value == 'live_route')
         ..add(Polyline(
-          polylineId: const PolylineId('route'),
+          polylineId: const PolylineId('live_route'),
           points:     result.points,
           color:      _kGreen,
           width:      5,
+          startCap:   Cap.roundCap,
+          endCap:     Cap.roundCap,
+          jointType:  JointType.round,
         ));
     });
   }
@@ -330,14 +376,19 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  bool get _isArrived => _lastUpdate?.status == TripStatus.arrived;
+  // Status must not advance past "searching" until a driver is actually assigned.
+  bool get _driverAssigned => _currentDriverId.isNotEmpty;
+
+  bool get _isArrived =>
+      _driverAssigned && _lastUpdate?.status == TripStatus.arrived;
 
   String get _statusTitle {
+    if (!_driverAssigned) return 'Finding your driver...';
     switch (_lastUpdate?.status) {
-      case TripStatus.pickingUp:  return 'Your driver is on the way';
-      case TripStatus.inProgress: return 'Trip in progress';
-      case TripStatus.arrived:    return 'Driver has arrived!';
-      default:                    return 'Finding your driver...';
+      case TripStatus.pickingUp:   return 'Your driver is on the way';
+      case TripStatus.inProgress:  return 'Trip in progress';
+      case TripStatus.arrived:     return 'Driver has arrived!';
+      default:                     return 'Driver assigned — connecting...';
     }
   }
 
@@ -356,7 +407,21 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           GoogleMap(
             onMapCreated: (c) {
               _mapController = c;
-              c.animateCamera(CameraUpdate.newCameraPosition(_initialCamera));
+              final pickup = _pickupPoint;
+              final dest   = _destPoint;
+              c.animateCamera(CameraUpdate.newLatLngBounds(
+                LatLngBounds(
+                  southwest: LatLng(
+                    min(pickup.latitude,  dest.latitude)  - 0.012,
+                    min(pickup.longitude, dest.longitude) - 0.012,
+                  ),
+                  northeast: LatLng(
+                    max(pickup.latitude,  dest.latitude)  + 0.012,
+                    max(pickup.longitude, dest.longitude) + 0.012,
+                  ),
+                ),
+                72,
+              ));
             },
             initialCameraPosition: _initialCamera,
             markers: _markers,
@@ -517,21 +582,25 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                               fontSize: 17,
                               fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
-                      RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
-                              fontSize: 13, color: _kTextSub),
-                          children: [
-                            const TextSpan(text: 'Arriving in '),
-                            TextSpan(
-                                text: '$eta min',
-                                style: const TextStyle(
-                                    color: _kGreen,
-                                    fontWeight: FontWeight.w600)),
-                            TextSpan(text: ' ($dist km)'),
-                          ],
-                        ),
-                      ),
+                      if (_driverAssigned)
+                        RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                                fontSize: 13, color: _kTextSub),
+                            children: [
+                              const TextSpan(text: 'Arriving in '),
+                              TextSpan(
+                                  text: '$eta min',
+                                  style: const TextStyle(
+                                      color: _kGreen,
+                                      fontWeight: FontWeight.w600)),
+                              TextSpan(text: ' ($dist km)'),
+                            ],
+                          ),
+                        )
+                      else
+                        const Text('Looking for a nearby driver…',
+                            style: TextStyle(fontSize: 13, color: _kTextSub)),
                       const SizedBox(height: 18),
 
                       // Driver + Car

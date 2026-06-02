@@ -47,9 +47,9 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
   int get _completedCount => _rides.where((r) => r.isCompleted).length;
 
-  double get _totalSpent => _rides
+  int get _totalSpent => _rides
       .where((r) => r.isCompleted)
-      .fold(0.0, (sum, r) => sum + (double.tryParse(r.fare) ?? 0));
+      .fold(0, (sum, r) => sum + r.fareKhr);
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +101,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                         children: [
                           _StatBubble(label: 'Total Trips', value: '${_rides.length}',    icon: Icons.directions_car),
                           _StatBubble(label: 'Completed',   value: '$_completedCount',    icon: Icons.check_circle_outline),
-                          _StatBubble(label: 'Total Spent', value: '\$${_totalSpent.toStringAsFixed(2)}', icon: Icons.account_balance_wallet_outlined),
+                          _StatBubble(label: 'Total Spent', value: AppTheme.khr(_totalSpent), icon: Icons.account_balance_wallet_outlined),
                         ],
                       ),
                     ),
@@ -146,7 +146,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                                   onRate: () => Navigator.push(context, MaterialPageRoute(
                                     builder: (_) => RateDriverScreen(
                                       driverName: ride.driver?.name ?? 'Driver',
-                                      fare: '\$${ride.fare}',
+                                      fare: AppTheme.khr(ride.fareKhr),
                                     ),
                                   )),
                                 );
@@ -264,7 +264,7 @@ class _TripHistoryCard extends StatelessWidget {
                   Text(ride.dropoffAddress, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                 ])),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text('\$${ride.fare}', style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 16)),
+                  Text(AppTheme.khr(ride.fareKhr), style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 16)),
                   Text(ride.serviceType,  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
                 ]),
               ]),

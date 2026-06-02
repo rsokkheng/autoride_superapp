@@ -2,25 +2,37 @@ import 'user_model.dart';
 import 'vehicle_model.dart';
 
 class RideModel {
-  final int id;
-  final int passengerId;
-  final int? driverId;
-  final int? vehicleId;
+  final int    id;
+  final int    passengerId;
+  final int?   driverId;
+  final int?   vehicleId;
   final String pickupAddress;
   final String dropoffAddress;
   final String? scheduledAt;
-  final String status;
-  final String fare;
-  final String serviceType;
-  final String? paymentMethod; // 'cash' | 'wallet' | 'aba' | 'acleda' | 'wing' | 'other_online'
+  final String  status;
+  final String  fare;
+  final String  serviceType;
+  final String? paymentMethod;
   final double? distanceKm;
-  final int? durationMin;
+  final int?    durationMin;
   final double? passengerRating;
   final String? notes;
-  final String createdAt;
-  final String updatedAt;
-  final UserModel? passenger;
-  final UserModel? driver;
+  final String  createdAt;
+  final String  updatedAt;
+  // Coordinates — returned by backend after improvement (Issue #8)
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? dropoffLat;
+  final double? dropoffLng;
+  // Pricing
+  final double? surgeMultiplier;
+  // Status timestamps — returned after backend improvement (Issue #9)
+  final String? acceptedAt;
+  final String? startedAt;
+  final String? completedAt;
+  // Relations
+  final UserModel?    passenger;
+  final UserModel?    driver;
   final VehicleModel? vehicle;
 
   const RideModel({
@@ -41,19 +53,28 @@ class RideModel {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    this.pickupLat,
+    this.pickupLng,
+    this.dropoffLat,
+    this.dropoffLng,
+    this.surgeMultiplier,
+    this.acceptedAt,
+    this.startedAt,
+    this.completedAt,
     this.passenger,
     this.driver,
     this.vehicle,
   });
 
-  static int _toInt(dynamic v) =>
+  static int  _toInt(dynamic v) =>
       v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
-
   static int? _toIntOrNull(dynamic v) =>
       v == null ? null : (v is int ? v : int.tryParse(v.toString()));
+  static double? _toDoubleOrNull(dynamic v) =>
+      v == null ? null : num.tryParse(v.toString())?.toDouble();
 
-  // Backend may send fare as KHR int or legacy USD float.
-  // Values > 1000 are treated as KHR already; ≤ 1000 are converted at 1 USD = 4000 KHR.
+  // Backend returns fare as KHR int (e.g. 12200).
+  // Legacy USD float values ≤ 1000 are converted at 4000 KHR/USD.
   int get fareKhr {
     final n = num.tryParse(fare) ?? 0;
     return n > 1000 ? n.round() : (n * 4000).round();
@@ -61,7 +82,7 @@ class RideModel {
 
   factory RideModel.fromJson(Map<String, dynamic> json) {
     final rawFare = json['fare'];
-    final fare = rawFare == null ? '0' : rawFare.toString();
+    final fare    = rawFare == null ? '0' : rawFare.toString();
 
     return RideModel(
       id:             _toInt(json['id']),
@@ -75,14 +96,20 @@ class RideModel {
       fare:           fare,
       serviceType:    json['service_type']?.toString()    ?? 'standard',
       paymentMethod:  json['payment_method']?.toString(),
-      distanceKm:     json['distance_km'] == null ? null : (json['distance_km'] as num).toDouble(),
+      distanceKm:     _toDoubleOrNull(json['distance_km']),
       durationMin:    _toIntOrNull(json['duration_min']),
-      passengerRating: json['passenger_rating'] == null
-          ? null
-          : (json['passenger_rating'] as num).toDouble(),
+      passengerRating: _toDoubleOrNull(json['passenger_rating']),
       notes:          json['notes']?.toString(),
-      createdAt:      json['created_at']?.toString()      ?? '',
-      updatedAt:      json['updated_at']?.toString()      ?? '',
+      createdAt:      json['created_at']?.toString()  ?? '',
+      updatedAt:      json['updated_at']?.toString()  ?? '',
+      pickupLat:      _toDoubleOrNull(json['pickup_lat']),
+      pickupLng:      _toDoubleOrNull(json['pickup_lng']),
+      dropoffLat:     _toDoubleOrNull(json['dropoff_lat']),
+      dropoffLng:     _toDoubleOrNull(json['dropoff_lng']),
+      surgeMultiplier: _toDoubleOrNull(json['surge_multiplier']),
+      acceptedAt:     json['accepted_at']?.toString(),
+      startedAt:      json['started_at']?.toString(),
+      completedAt:    json['completed_at']?.toString(),
       passenger: json['passenger'] != null
           ? UserModel.fromJson(json['passenger'] as Map<String, dynamic>)
           : null,
@@ -95,10 +122,10 @@ class RideModel {
     );
   }
 
-  bool get isRequested   => status == 'requested';
-  bool get isAccepted    => status == 'accepted';
-  bool get isCompleted   => status == 'completed';
-  bool get isCancelled   => status == 'cancelled';
-  bool get isPending     => status == 'pending'     || status == 'requested';
-  bool get isInProgress  => status == 'in_progress' || status == 'accepted';
+  bool get isRequested  => status == 'requested';
+  bool get isAccepted   => status == 'accepted';
+  bool get isCompleted  => status == 'completed';
+  bool get isCancelled  => status == 'cancelled';
+  bool get isPending    => status == 'pending'     || status == 'requested';
+  bool get isInProgress => status == 'in_progress' || status == 'accepted';
 }

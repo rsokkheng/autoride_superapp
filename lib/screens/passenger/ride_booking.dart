@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../utils/app_log.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../services/location_service.dart';
@@ -33,22 +34,22 @@ class _Preset {
 }
 
 class _RideType {
-  final String name, serviceType, price, eta, desc;
+  final String name, serviceType, eta, desc;
   final IconData icon;
   const _RideType({
     required this.name,
     required this.serviceType,
     required this.icon,
-    required this.price,
     required this.eta,
     required this.desc,
   });
 }
 
 const _kRideTypes = [
-  _RideType(name: 'Standard', serviceType: 'standard', icon: Icons.directions_car,  price: '\$3.50', eta: '3 min', desc: '4 seats'),
-  _RideType(name: 'Premium',  serviceType: 'premium',  icon: Icons.local_taxi,       price: '\$6.00', eta: '5 min', desc: 'Luxury car'),
-  _RideType(name: 'Shared',   serviceType: 'shared',   icon: Icons.airport_shuttle,  price: '\$2.50', eta: '7 min', desc: 'Shared ride'),
+  _RideType(name: 'Standard', serviceType: 'standard',   icon: Icons.directions_car,      eta: '4 min', desc: '4 seats'),
+  _RideType(name: 'Premium',  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '6 min', desc: 'Luxury'),
+  _RideType(name: 'Shared',   serviceType: 'shared',     icon: Icons.airport_shuttle,     eta: '8 min', desc: 'Shared'),
+  _RideType(name: 'Van',      serviceType: 'van',        icon: Icons.directions_bus,      eta: '6 min', desc: '6+ seats'),
 ];
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -91,11 +92,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   int    _etaMinutes  = 0;
   double _distanceKm  = 0.0;
   bool   _routeLoading = false;
+  Map<String, FareInfo> _fareByType  = {};
+  bool                  _fareLoading = false;
 
-  String   _selectedRide  = 'Standard';
-  bool     _isScheduled   = false;
-  DateTime _scheduledTime = DateTime.now().add(const Duration(hours: 1));
-  bool     _isBooking     = false;
+  String   _selectedRide    = 'Standard';
+  String   _paymentMethod   = 'cash';
+  bool     _isScheduled     = false;
+  DateTime _scheduledTime   = DateTime.now().add(const Duration(hours: 1));
+  bool     _isBooking       = false;
   String?  _bookError;
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -139,7 +143,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       setState(() { _pickupCenter = latLng; _gpsLoading = false; });
       _pickupMapCtrl?.animateCamera(CameraUpdate.newLatLng(latLng));
       _reverseGeocodePickup(latLng);
-    } catch (_) {
+    } catch (e, s) {
+      AppLog.e('GPS', 'Location detection failed', e, s);
       if (mounted) setState(() { _gpsLoading = false; _pickupAddress = 'Tap map to set pickup'; });
     }
   }
@@ -207,12 +212,85 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
   }
 
-  // ── Route ────────────────────────────────────────────────────────────────────
+  // ── Payment method ────────────────────────────────────────────────────────────
+
+  static const _kPaymentMethods = ['cash', 'wallet', 'aba', 'acleda', 'wing'];
+
+  static String _paymentLabel(String method) {
+    switch (method) {
+      case 'wallet': return 'AutoRide Pay';
+      case 'aba':    return 'ABA Pay';
+      case 'acleda': return 'ACLEDA';
+      case 'wing':   return 'Wing Money';
+      default:       return 'Cash';
+    }
+  }
+
+  void _showPaymentSheet(BuildContext ctx) {
+    showModalBottomSheet(
+      context: ctx,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+                color: AppTheme.cardBg, borderRadius: BorderRadius.circular(2)),
+          ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Payment Method',
+                  style: TextStyle(color: AppTheme.textPrimary,
+                      fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          ..._kPaymentMethods.map((m) => ListTile(
+            leading: Icon(
+              m == 'cash'   ? Icons.money :
+              m == 'wallet' ? Icons.account_balance_wallet_outlined :
+              Icons.credit_card_outlined,
+              color: _paymentMethod == m ? AppTheme.accent : AppTheme.textSecondary,
+            ),
+            title: Text(_paymentLabel(m),
+                style: TextStyle(
+                    color: _paymentMethod == m ? AppTheme.accent : AppTheme.textPrimary,
+                    fontWeight: _paymentMethod == m ? FontWeight.w700 : FontWeight.w400)),
+            trailing: _paymentMethod == m
+                ? const Icon(Icons.check_circle, color: AppTheme.accent, size: 20)
+                : null,
+            onTap: () {
+              setState(() => _paymentMethod = m);
+              Navigator.pop(ctx);
+            },
+          )),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  // ── Route + fare estimate (parallel) ─────────────────────────────────────────
 
   Future<void> _fetchRoute() async {
     final dest = _destLatLng;
     if (dest == null) return;
-    setState(() { _routeLoading = true; _routePoints = []; _etaMinutes = 0; _distanceKm = 0; });
+    setState(() {
+      _routeLoading = true;
+      _fareLoading  = true;
+      _routePoints  = [];
+      _etaMinutes   = 0;
+      _distanceKm   = 0;
+      _fareByType   = {};
+    });
+    await Future.wait([_doFetchRoute(dest), _doFetchFares(dest)]);
+  }
+
+  Future<void> _doFetchRoute(LatLng dest) async {
     final result = await MapsService.getRoute(origin: _pickupCenter, destination: dest);
     if (!mounted) return;
     setState(() {
@@ -240,17 +318,45 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
   }
 
+  Future<void> _doFetchFares(LatLng dest) async {
+    try {
+      final estimate = await ApiService.estimateRide(
+        pickupLat:  _pickupCenter.latitude,
+        pickupLng:  _pickupCenter.longitude,
+        dropoffLat: dest.latitude,
+        dropoffLng: dest.longitude,
+      );
+      if (!mounted) return;
+      setState(() {
+        _fareByType  = estimate.fares;
+        _fareLoading = false;
+        // Use backend route data to pre-fill distance/ETA before Google Maps responds
+        if (_distanceKm == 0 && estimate.distanceKm > 0) _distanceKm = estimate.distanceKm;
+        if (_etaMinutes == 0 && estimate.etaMinutes > 0) _etaMinutes = estimate.etaMinutes;
+      });
+    } catch (e, s) {
+      AppLog.e('Fare', 'estimateRide failed', e, s);
+      if (!mounted) return;
+      setState(() => _fareLoading = false);
+    }
+  }
+
   // ── Book ride ─────────────────────────────────────────────────────────────────
 
   Future<void> _bookRide() async {
-    if (_pickupAddress.isEmpty || _destAddress.isEmpty) return;
+    if (_pickupAddress.isEmpty || _destAddress.isEmpty || _destLatLng == null) return;
     setState(() { _isBooking = true; _bookError = null; });
     final type = _kRideTypes.firstWhere((r) => r.name == _selectedRide);
     try {
       final ride = await ApiService.createRide(
         pickupAddress:  _pickupAddress,
         dropoffAddress: _destAddress,
+        pickupLat:      _pickupCenter.latitude,
+        pickupLng:      _pickupCenter.longitude,
+        dropoffLat:     _destLatLng!.latitude,
+        dropoffLng:     _destLatLng!.longitude,
         serviceType:    type.serviceType,
+        paymentMethod:  _paymentMethod,
         scheduledAt: _isScheduled
             ? '${_scheduledTime.year}-'
               '${_scheduledTime.month.toString().padLeft(2,'0')}-'
@@ -269,7 +375,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         MaterialPageRoute(
           builder: (_) => TripTrackingScreen(
             rideId:       ride.id,
-            fare:         '\$${ride.fare}',
+            fare:         AppTheme.khr(ride.fareKhr),
             from:         ride.pickupAddress,
             to:           ride.dropoffAddress,
             isScheduled:  _isScheduled,
@@ -839,14 +945,25 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               const SizedBox(height: 12),
             ],
 
-            const Text('Choose Ride',
-                style: TextStyle(color: AppTheme.textPrimary,
-                    fontSize: 15, fontWeight: FontWeight.w700)),
+            Row(children: [
+              const Text('Choose Ride',
+                  style: TextStyle(color: AppTheme.textPrimary,
+                      fontSize: 15, fontWeight: FontWeight.w700)),
+              if (_fareLoading) ...[
+                const SizedBox(width: 10),
+                const SizedBox(
+                  width: 14, height: 14,
+                  child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2),
+                ),
+              ],
+            ]),
             const SizedBox(height: 10),
             ..._kRideTypes.map((r) => _RideTypeCard(
-                  type: r,
-                  selected: _selectedRide == r.name,
-                  onTap: () => setState(() => _selectedRide = r.name),
+                  type:        r,
+                  selected:    _selectedRide == r.name,
+                  onTap:       () => setState(() => _selectedRide = r.name),
+                  fareInfo:    _fareByType[r.serviceType],
+                  fareLoading: _fareLoading,
                 )),
             const SizedBox(height: 16),
 
@@ -864,6 +981,25 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   Expanded(child: Text('Add promo code',
                       style: TextStyle(color: AppTheme.textSecondary))),
                   Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            // Payment method selector
+            GestureDetector(
+              onTap: () => _showPaymentSheet(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(12)),
+                child: Row(children: [
+                  const Icon(Icons.payment_outlined, color: AppTheme.accent, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(_paymentLabel(_paymentMethod),
+                      style: const TextStyle(color: AppTheme.textPrimary))),
+                  const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
                 ]),
               ),
             ),
@@ -932,8 +1068,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                             color: AppTheme.primary, strokeWidth: 2.5))
                     : Text(
                         _isScheduled
-                            ? '📅  Schedule — ${type.price}'
-                            : '🚗  Confirm — ${type.price}',
+                            ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
+                            : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
                         style: const TextStyle(
                             fontWeight: FontWeight.w800, fontSize: 15)),
               ),
@@ -1188,13 +1324,25 @@ class _InfoChip extends StatelessWidget {
 }
 
 class _RideTypeCard extends StatelessWidget {
-  final _RideType type;
-  final bool selected;
+  final _RideType    type;
+  final bool         selected;
   final VoidCallback onTap;
-  const _RideTypeCard({required this.type, required this.selected, required this.onTap});
+  final FareInfo?    fareInfo;
+  final bool         fareLoading;
+  const _RideTypeCard({
+    required this.type,
+    required this.selected,
+    required this.onTap,
+    this.fareInfo,
+    this.fareLoading = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final priceText = fareInfo != null
+        ? fareInfo!.formattedTotal
+        : fareLoading ? '...' : '—';
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1226,10 +1374,25 @@ class _RideTypeCard extends StatelessWidget {
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
           ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(type.price,
-                style: TextStyle(
-                    color: selected ? AppTheme.accent : AppTheme.textPrimary,
-                    fontWeight: FontWeight.w700)),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              if (fareInfo?.surgeActive == true) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text('Surge',
+                      style: TextStyle(color: AppTheme.warning,
+                          fontSize: 9, fontWeight: FontWeight.w700)),
+                ),
+              ],
+              Text(priceText,
+                  style: TextStyle(
+                      color: selected ? AppTheme.accent : AppTheme.textPrimary,
+                      fontWeight: FontWeight.w700)),
+            ]),
             Text(type.eta,
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
           ]),

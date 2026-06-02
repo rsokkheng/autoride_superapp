@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../utils/app_log.dart';
 
 class PlaceResult {
   final String address;
@@ -10,7 +11,7 @@ class PlaceResult {
 
 class DirectionsResult {
   final List<LatLng> points;
-  final int etaMinutes;
+  final int    etaMinutes;
   final double distanceKm;
   const DirectionsResult({
     required this.points,
@@ -20,43 +21,91 @@ class DirectionsResult {
 }
 
 class MapsService {
-  // Must match the key in AndroidManifest.xml and iOS AppDelegate.swift
   static const _apiKey = 'AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc';
+
+  // ── Routes API (v2) — traffic-aware, replaces legacy Directions API ──────────
 
   static Future<DirectionsResult?> getRoute({
     required LatLng origin,
     required LatLng destination,
   }) async {
     final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/directions/json'
-      '?origin=${origin.latitude},${origin.longitude}'
-      '&destination=${destination.latitude},${destination.longitude}'
-      '&mode=driving'
-      '&key=$_apiKey',
-    );
+        'https://routes.googleapis.com/directions/v2:computeRoutes');
+
+    final body = {
+      'origin': {
+        'location': {
+          'latLng': {
+            'latitude':  origin.latitude,
+            'longitude': origin.longitude,
+          }
+        }
+      },
+      'destination': {
+        'location': {
+          'latLng': {
+            'latitude':  destination.latitude,
+            'longitude': destination.longitude,
+          }
+        }
+      },
+      'travelMode':            'DRIVE',
+      'routingPreference':     'TRAFFIC_AWARE',
+      'computeAlternativeRoutes': false,
+      'languageCode':          'km',
+      'units':                 'METRIC',
+    };
 
     try {
-      final response = await http.get(url).timeout(const Duration(seconds: 10));
-      if (response.statusCode != 200) return null;
-      final body = jsonDecode(response.body) as Map<String, dynamic>;
-      final routes = body['routes'] as List<dynamic>?;
-      if (routes == null || routes.isEmpty) return null;
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type':      'application/json',
+          'X-Goog-Api-Key':    _apiKey,
+          // Only request the fields we use — avoids being billed for extras
+          'X-Goog-FieldMask':
+              'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 10));
 
-      final route = routes.first as Map<String, dynamic>;
-      final leg   = (route['legs'] as List<dynamic>).first as Map<String, dynamic>;
-      final etaSec    = (leg['duration']['value'] as num).toInt();
-      final distanceM = (leg['distance']['value'] as num).toDouble();
-      final encoded   = route['overview_polyline']['points'] as String;
+      if (res.statusCode != 200) {
+        AppLog.w('Maps', 'Routes API HTTP ${res.statusCode}: ${res.body}');
+        return null;
+      }
+
+      final data   = jsonDecode(res.body) as Map<String, dynamic>;
+      final routes = data['routes'] as List<dynamic>?;
+      if (routes == null || routes.isEmpty) {
+        AppLog.w('Maps', 'Routes API: no routes in response');
+        return null;
+      }
+
+      final route       = routes.first as Map<String, dynamic>;
+      final distMeters  = (route['distanceMeters'] as num?)?.toDouble() ?? 0.0;
+      // duration arrives as "732s"
+      final durStr      = route['duration'] as String? ?? '0s';
+      final durSec      = int.tryParse(durStr.replaceAll('s', '')) ?? 0;
+      final encoded     = (route['polyline'] as Map<String, dynamic>?)?
+                              ['encodedPolyline'] as String? ?? '';
+
+      if (encoded.isEmpty) {
+        AppLog.w('Maps', 'Routes API: empty polyline');
+        return null;
+      }
 
       return DirectionsResult(
         points:     _decodePolyline(encoded),
-        etaMinutes: (etaSec / 60).ceil(),
-        distanceKm: distanceM / 1000,
+        etaMinutes: (durSec / 60).ceil(),
+        distanceKm: distMeters / 1000,
       );
-    } catch (_) {
+    } catch (e, s) {
+      AppLog.e('Maps', 'getRoute failed', e, s);
       return null;
     }
   }
+
+  // ── Geocoding API — reverse geocode & address search ─────────────────────────
 
   static Future<String?> reverseGeocode(LatLng pos) async {
     final url = Uri.parse(
@@ -66,13 +115,20 @@ class MapsService {
     );
     try {
       final res = await http.get(url).timeout(const Duration(seconds: 8));
-      if (res.statusCode != 200) return null;
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode != 200) {
+        AppLog.w('Maps', 'reverseGeocode HTTP ${res.statusCode}');
+        return null;
+      }
+      final body    = jsonDecode(res.body) as Map<String, dynamic>;
       final results = body['results'] as List<dynamic>?;
-      if (results == null || results.isEmpty) return null;
+      if (results == null || results.isEmpty) {
+        AppLog.w('Maps', 'reverseGeocode: no results (status=${body['status']})');
+        return null;
+      }
       return (results.first as Map<String, dynamic>)['formatted_address']
           as String?;
-    } catch (_) {
+    } catch (e, s) {
+      AppLog.e('Maps', 'reverseGeocode failed', e, s);
       return null;
     }
   }
@@ -87,30 +143,35 @@ class MapsService {
     );
     try {
       final res = await http.get(url).timeout(const Duration(seconds: 8));
-      if (res.statusCode != 200) return [];
-      final body  = jsonDecode(res.body) as Map<String, dynamic>;
-      final list  = (body['results'] as List<dynamic>? ?? []).take(5);
+      if (res.statusCode != 200) {
+        AppLog.w('Maps', 'searchAddress HTTP ${res.statusCode}');
+        return [];
+      }
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final list = (body['results'] as List<dynamic>? ?? []).take(5);
       return list.map((r) {
         final map = r as Map<String, dynamic>;
         final loc = (map['geometry'] as Map<String, dynamic>)['location']
             as Map<String, dynamic>;
         return PlaceResult(
           address: map['formatted_address'] as String,
-          latLng: LatLng(
+          latLng:  LatLng(
             (loc['lat'] as num).toDouble(),
             (loc['lng'] as num).toDouble(),
           ),
         );
       }).toList();
-    } catch (_) {
+    } catch (e, s) {
+      AppLog.e('Maps', 'searchAddress failed', e, s);
       return [];
     }
   }
 
+  // ── Polyline decoder (same encoding as Directions API) ───────────────────────
+
   static List<LatLng> _decodePolyline(String encoded) {
     final result = <LatLng>[];
-    int index = 0;
-    int lat = 0, lng = 0;
+    int index = 0, lat = 0, lng = 0;
 
     while (index < encoded.length) {
       int shift = 0, acc = 0, b;

@@ -286,7 +286,7 @@ class _HomeTabState extends State<_HomeTab> {
                 child: _TripCard(
                   from: r.pickupAddress,
                   to: r.dropoffAddress,
-                  price: '\$${r.fare}',
+                  price: AppTheme.khr(r.fareKhr),
                   status: r.status[0].toUpperCase() + r.status.substring(1),
                   date: r.createdAt.length >= 16 ? r.createdAt.substring(0, 16) : r.createdAt,
                 ),

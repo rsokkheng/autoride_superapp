@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
 import 'firebase_options.dart';
+import 'utils/app_log.dart';
 
 import 'l10n/app_localizations.dart';
 import 'services/notification_service.dart';
@@ -15,6 +16,13 @@ final ValueNotifier<Locale> appLocale =
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Catch uncaught Flutter framework errors
+  FlutterError.onError = (details) {
+    AppLog.e('Flutter', details.exceptionAsString(), details.exception, details.stack);
+    FlutterError.presentError(details);
+  };
+
 
   // Legacy renderer has broader device support on Android
   final mapsImpl = GoogleMapsFlutterPlatform.instance;

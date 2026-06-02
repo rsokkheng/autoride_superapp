@@ -216,7 +216,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     if (widget.rideId != null) {
                       await ApiService.rateRide(
                         widget.rideId!,
-                        _stars,
+                        _stars.toDouble(),
                         comment: _commentController.text.trim().isEmpty
                             ? null
                             : _commentController.text.trim(),

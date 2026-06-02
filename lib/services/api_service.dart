@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_log.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/ride_model.dart';
@@ -46,12 +47,13 @@ class ApiService {
       final res     = await req.close();
       final resBody = await res.transform(utf8.decoder).join();
 
-      if (kDebugMode) {
-        debugPrint('[API] GET $uri → ${res.statusCode}');
-        debugPrint('[API] response: $resBody');
-      }
+      AppLog.d('API', 'GET $uri → ${res.statusCode}');
+      if (res.statusCode >= 400) AppLog.w('API', 'GET $uri body: $resBody');
 
       return _RawResponse(res.statusCode, resBody);
+    } catch (e, s) {
+      AppLog.e('API', 'GET $path network error', e, s);
+      rethrow;
     } finally {
       client.close(force: true);
     }
@@ -68,21 +70,24 @@ class ApiService {
       final uri = Uri.parse('$_baseUrl$path');
       final req  = await client.postUrl(uri);
 
-      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Content-Type', 'application/json; charset=utf-8');
       req.headers.set('Accept',       'application/json');
       if (token != null) req.headers.set('Authorization', 'Bearer $token');
 
-      req.write(jsonEncode(body));
+      final bytes = utf8.encode(jsonEncode(body));
+      req.headers.contentLength = bytes.length;
+      req.add(bytes);
 
       final res      = await req.close();
       final resBody  = await res.transform(utf8.decoder).join();
 
-      if (kDebugMode) {
-        debugPrint('[API] POST $uri → ${res.statusCode}');
-        debugPrint('[API] response: $resBody');
-      }
+      AppLog.d('API', 'POST $uri → ${res.statusCode}');
+      if (res.statusCode >= 400) AppLog.w('API', 'POST $uri body: $resBody');
 
       return _RawResponse(res.statusCode, resBody);
+    } catch (e, s) {
+      AppLog.e('API', 'POST $path network error', e, s);
+      rethrow;
     } finally {
       client.close(force: true);
     }
@@ -142,8 +147,9 @@ class ApiService {
       if (token != null) {
         await _rawPost('/auth/logout', {}, token: token);
       }
-    } catch (_) {
-      // silently continue even if server call fails
+    } catch (e, s) {
+      AppLog.w('Auth', 'logout server call failed (session cleared anyway): $e');
+      AppLog.e('Auth', 'logout stack', e, s);
     }
     await clearSession();
   }
@@ -259,7 +265,8 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final pagination = body['rides'] as Map<String, dynamic>;
+      final outer     = (body['data'] as Map<String, dynamic>?) ?? body;
+      final pagination = outer['rides'] as Map<String, dynamic>;
       final data = pagination['data'] as List<dynamic>;
       return data
           .map((e) => RideModel.fromJson(e as Map<String, dynamic>))
@@ -314,7 +321,8 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final pagination = body['rides'] as Map<String, dynamic>;
+      final outer      = (body['data'] as Map<String, dynamic>?) ?? body;
+      final pagination = outer['rides'] as Map<String, dynamic>;
       final data = pagination['data'] as List<dynamic>;
       return data
           .map((e) => RideModel.fromJson(e as Map<String, dynamic>))
@@ -383,13 +391,60 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  // ── Estimate ride ─────────────────────────────────────────────────────────
+
+  static Future<RideEstimate> estimateRide({
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost('/rides/estimate', {
+      'pickup_lat':  pickupLat,
+      'pickup_lng':  pickupLng,
+      'dropoff_lat': dropoffLat,
+      'dropoff_lng': dropoffLng,
+    }, token: token);
+
+    final Map<String, dynamic> resBody;
+    try {
+      resBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data  = (resBody['data'] as Map<String, dynamic>?) ?? resBody;
+      final fares = data['fares'] as Map<String, dynamic>? ?? {};
+      final route = data['route'] as Map<String, dynamic>?;
+      return RideEstimate(
+        fares: fares.map((key, value) =>
+            MapEntry(key, FareInfo.fromJson(value as Map<String, dynamic>))),
+        distanceKm: (route?['distance_km'] as num?)?.toDouble() ?? 0.0,
+        etaMinutes: (route?['duration_min'] as num?)?.toInt()   ?? 0,
+      );
+    }
+
+    final message = resBody['message'] as String? ?? resBody['error'] as String? ??
+        'Failed to estimate ride (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
   // ── Create ride ───────────────────────────────────────────────────────────
 
   static Future<RideModel> createRide({
     required String pickupAddress,
     required String dropoffAddress,
-    String serviceType = 'standard',
-    int? vehicleId,
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
+    String  serviceType   = 'standard',
+    String  paymentMethod = 'cash',
+    int?    vehicleId,
     String? scheduledAt,
     String? notes,
   }) async {
@@ -399,10 +454,15 @@ class ApiService {
     final body = <String, dynamic>{
       'pickup_address':  pickupAddress,
       'dropoff_address': dropoffAddress,
+      'pickup_lat':      pickupLat,
+      'pickup_lng':      pickupLng,
+      'dropoff_lat':     dropoffLat,
+      'dropoff_lng':     dropoffLng,
       'service_type':    serviceType,
-      if (vehicleId    != null) 'vehicle_id':   vehicleId,
-      if (scheduledAt  != null) 'scheduled_at': scheduledAt,
-      if (notes        != null) 'notes':         notes,
+      'payment_method':  paymentMethod,
+      if (vehicleId   != null) 'vehicle_id':  vehicleId,
+      if (scheduledAt != null) 'scheduled_at': scheduledAt,
+      if (notes       != null) 'notes':        notes,
     };
 
     final raw = await _rawPost('/rides', body, token: token);
@@ -411,19 +471,16 @@ class ApiService {
     try {
       resBody = jsonDecode(raw.body) as Map<String, dynamic>;
     } catch (_) {
-      throw ApiException(
-        'Unexpected server response (${raw.statusCode}).',
-        raw.statusCode,
-      );
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
     }
 
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      final rideJson = resBody['ride'] ?? resBody;
+      final data    = (resBody['data'] as Map<String, dynamic>?) ?? resBody;
+      final rideJson = data['ride'] ?? data;
       return RideModel.fromJson(rideJson as Map<String, dynamic>);
     }
 
-    final message = resBody['message'] as String? ??
-        resBody['error'] as String? ??
+    final message = resBody['message'] as String? ?? resBody['error'] as String? ??
         'Failed to create ride (${raw.statusCode}).';
     throw ApiException(message, raw.statusCode);
   }
@@ -661,12 +718,12 @@ class ApiService {
     return _parseRideResponse(raw);
   }
 
-  static Future<void> rateRide(int id, int rating, {String? comment}) async {
+  static Future<void> rateRide(int id, double rating, {String? comment}) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
     final body = <String, dynamic>{
-      'rating': rating,
+      'rating':  rating,
       if (comment != null) 'comment': comment,
     };
 
@@ -695,7 +752,8 @@ class ApiService {
       throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
     }
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      final rideJson = body['ride'] ?? body;
+      final outer    = (body['data'] as Map<String, dynamic>?) ?? body;
+      final rideJson = outer['ride'] ?? outer;
       return RideModel.fromJson(rideJson as Map<String, dynamic>);
     }
     final message = body['message'] as String? ?? body['error'] as String? ??
@@ -1208,6 +1266,53 @@ class ApiService {
     final message = body['message'] as String? ?? body['error'] as String? ??
         'Failed to load transactions (${raw.statusCode}).';
     throw ApiException(message, raw.statusCode);
+  }
+}
+
+// ── Ride estimate models ──────────────────────────────────────────────────────
+
+class RideEstimate {
+  final Map<String, FareInfo> fares;
+  final double distanceKm;
+  final int    etaMinutes;
+  const RideEstimate({required this.fares, required this.distanceKm, required this.etaMinutes});
+}
+
+class FareInfo {
+  final int  total;
+  final int  minimumFare;
+  final bool surgeActive;
+  final bool nightRate;
+  final Map<String, int> breakdown;
+
+  const FareInfo({
+    required this.total,
+    required this.minimumFare,
+    required this.surgeActive,
+    required this.nightRate,
+    required this.breakdown,
+  });
+
+  factory FareInfo.fromJson(Map<String, dynamic> json) {
+    final bd = json['breakdown'] as Map<String, dynamic>? ?? {};
+    return FareInfo(
+      total:       (json['total']        as num?)?.toInt() ?? 0,
+      minimumFare: (json['minimum_fare'] as num?)?.toInt() ?? 0,
+      surgeActive:  json['surge_active'] as bool? ?? false,
+      nightRate:    json['night_rate']   as bool? ?? false,
+      breakdown:   bd.map((k, v) => MapEntry(k, (v as num).toInt())),
+    );
+  }
+
+  // e.g. 12200 → "12,200 ៛"
+  String get formattedTotal {
+    final s = total.toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ៛';
   }
 }
 
