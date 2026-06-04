@@ -116,25 +116,31 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final userJson     = body['user'];
-      final accessToken  = body['access_token'];
-      final refreshToken = body['refresh_token'] as String?;
+      // Unwrap optional data envelope: { "data": { ... } } or flat { ... }
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+
+      final userJson    = data['user'];
+      // Accept both 'access_token' and 'token' (Laravel returns either)
+      final accessToken = data['access_token'] as String?
+                       ?? data['token']        as String?;
+      final refreshToken = data['refresh_token'] as String?;
 
       if (userJson == null || accessToken == null) {
+        AppLog.e('Auth', 'Login response missing user or token. Keys: ${data.keys.toList()}');
         throw ApiException(
           'Server response missing "user" or "access_token" fields.',
           raw.statusCode,
         );
       }
 
-      final user  = UserModel.fromJson(userJson as Map<String, dynamic>);
-      final token = accessToken as String;
-      await _saveSession(user, token, refreshToken: refreshToken);
-      return (user: user, token: token);
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, accessToken, refreshToken: refreshToken);
+      return (user: user, token: accessToken);
     }
 
     final message = body['message'] as String? ??
-        body['error']   as String? ??
+        (body['data'] as Map?)?.entries.first.value?.toString() ??
+        body['error'] as String? ??
         'Login failed (${raw.statusCode}).';
     throw ApiException(message, raw.statusCode);
   }

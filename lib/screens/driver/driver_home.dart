@@ -4,7 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
-import '../../services/location_service.dart';
+import '../../services/location_service.dart' show LocationService, DriverStatus;
 import '../../models/user_model.dart';
 import '../../models/vehicle_model.dart';
 import '../../models/delivery_model.dart';
@@ -26,33 +26,40 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
-  int _tab = 0;
-  bool _isOnline = true;
-  bool _togglingOnline = false;
+  int          _tab           = 0;
+  DriverStatus _driverStatus  = DriverStatus.online;
+  bool         _togglingOnline = false;
   bool _modeRide     = true;
   bool _modeDelivery = false;
   bool _modeRental   = false;
 
+  bool get _isOnline => _driverStatus != DriverStatus.offline;
+
   Future<void> _toggleOnline(bool value) async {
-    if (_togglingOnline) return;
+    if (_togglingOnline || _driverStatus == DriverStatus.busy) return;
     setState(() => _togglingOnline = true);
     try {
-      final user = await ApiService.getSavedUser();
+      final user     = await ApiService.getSavedUser();
       final driverId = user?.id.toString() ?? '';
 
       if (value) {
         await ApiService.goOnline();
-        // Start GPS so the backend Smart Dispatch can find this driver
         if (driverId.isNotEmpty) {
-          await LocationService.instance.startOnlineTracking(driverId);
+          await LocationService.instance.startOnlineTracking(
+            driverId,
+            modeRide:     _modeRide,
+            modeDelivery: _modeDelivery,
+            modeRental:   _modeRental,
+          );
         }
+        if (mounted) setState(() => _driverStatus = DriverStatus.online);
       } else {
         await ApiService.goOffline();
         if (driverId.isNotEmpty) {
           await LocationService.instance.stopTracking(driverId);
         }
+        if (mounted) setState(() => _driverStatus = DriverStatus.offline);
       }
-      if (mounted) setState(() => _isOnline = value);
     } on ApiException catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -67,28 +74,75 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     }
   }
 
+  // Called when driver accepts a ride — blocks new requests during the trip.
+  Future<void> _setBusy() async {
+    setState(() => _driverStatus = DriverStatus.busy);
+    final user     = await ApiService.getSavedUser();
+    final driverId = user?.id.toString() ?? '';
+    if (driverId.isNotEmpty) {
+      await LocationService.instance.updateDriverStatus(driverId, DriverStatus.busy);
+    }
+  }
+
+  // Called automatically when the active trip screen closes (complete or cancel).
+  Future<void> _setOnlineAfterTrip() async {
+    if (!mounted) return;
+    setState(() => _driverStatus = DriverStatus.online);
+    final user     = await ApiService.getSavedUser();
+    final driverId = user?.id.toString() ?? '';
+    if (driverId.isNotEmpty) {
+      await LocationService.instance.updateDriverStatus(driverId, DriverStatus.online);
+      // Resume online-presence tracking
+      await LocationService.instance.startOnlineTracking(
+        driverId,
+        modeRide:     _modeRide,
+        modeDelivery: _modeDelivery,
+        modeRental:   _modeRental,
+      );
+    }
+  }
+
+  // Toggles a service mode and, if currently online, immediately pushes the
+  // updated modes to Firestore so Smart Dispatch reflects the change instantly.
+  Future<void> _changeMode({bool? ride, bool? delivery, bool? rental}) async {
+    final newRide     = ride     ?? _modeRide;
+    final newDelivery = delivery ?? _modeDelivery;
+    final newRental   = rental   ?? _modeRental;
+    // At least one mode must stay active
+    if (!newRide && !newDelivery && !newRental) return;
+    setState(() {
+      _modeRide     = newRide;
+      _modeDelivery = newDelivery;
+      _modeRental   = newRental;
+    });
+    if (_isOnline) {
+      final user     = await ApiService.getSavedUser();
+      final driverId = user?.id.toString() ?? '';
+      if (driverId.isNotEmpty) {
+        await LocationService.instance.updateServiceMode(
+          driverId,
+          modeRide:     _modeRide,
+          modeDelivery: _modeDelivery,
+          modeRental:   _modeRental,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = [
       _DriverDashboard(
-        isOnline:    _isOnline,
-        onToggle:    _toggleOnline,
-        modeRide:     _modeRide,
-        modeDelivery: _modeDelivery,
-        modeRental:   _modeRental,
-        onModeRide:     (v) => setState(() {
-          // at least one mode must stay active
-          if (!v && !_modeDelivery && !_modeRental) return;
-          _modeRide = v;
-        }),
-        onModeDelivery: (v) => setState(() {
-          if (!v && !_modeRide && !_modeRental) return;
-          _modeDelivery = v;
-        }),
-        onModeRental: (v) => setState(() {
-          if (!v && !_modeRide && !_modeDelivery) return;
-          _modeRental = v;
-        }),
+        driverStatus:  _driverStatus,
+        onToggle:      _toggleOnline,
+        modeRide:      _modeRide,
+        modeDelivery:  _modeDelivery,
+        modeRental:    _modeRental,
+        onModeRide:     (v) => _changeMode(ride:     v),
+        onModeDelivery: (v) => _changeMode(delivery: v),
+        onModeRental:   (v) => _changeMode(rental:   v),
+        onBusy:         _setBusy,
+        onTripCompleted: _setOnlineAfterTrip,
       ),
       const _DriverEarnings(),
       const DriverMissionsScreen(),
@@ -159,11 +213,14 @@ class _NavItem extends StatelessWidget {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 class _DriverDashboard extends StatefulWidget {
-  final bool isOnline, modeRide, modeDelivery, modeRental;
+  final DriverStatus driverStatus;
+  final bool modeRide, modeDelivery, modeRental;
   final Function(bool) onToggle, onModeRide, onModeDelivery, onModeRental;
+  final VoidCallback onBusy;
+  final VoidCallback onTripCompleted;
 
   const _DriverDashboard({
-    required this.isOnline,
+    required this.driverStatus,
     required this.onToggle,
     required this.modeRide,
     required this.modeDelivery,
@@ -171,7 +228,12 @@ class _DriverDashboard extends StatefulWidget {
     required this.onModeRide,
     required this.onModeDelivery,
     required this.onModeRental,
+    required this.onBusy,
+    required this.onTripCompleted,
   });
+
+  bool get isOnline => driverStatus != DriverStatus.offline;
+  bool get isBusy   => driverStatus == DriverStatus.busy;
 
   @override
   State<_DriverDashboard> createState() => _DriverDashboardState();
@@ -187,7 +249,27 @@ class _DriverDashboardState extends State<_DriverDashboard> {
   void initState() {
     super.initState();
     _loadData();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRequests());
+    if (widget.driverStatus == DriverStatus.online) {
+      _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRequests());
+    }
+  }
+
+  @override
+  void didUpdateWidget(_DriverDashboard old) {
+    super.didUpdateWidget(old);
+    if (old.driverStatus != widget.driverStatus) {
+      if (widget.driverStatus == DriverStatus.busy) {
+        _pollTimer?.cancel(); // Stop looking for requests while on a trip
+      } else if (widget.driverStatus == DriverStatus.online) {
+        // Resume polling when back online
+        _pollTimer?.cancel();
+        _pollTimer = Timer.periodic(
+            const Duration(seconds: 5), (_) => _pollRequests());
+        _pollRequests();
+      } else {
+        _pollTimer?.cancel();
+      }
+    }
   }
 
   @override
@@ -215,6 +297,7 @@ class _DriverDashboardState extends State<_DriverDashboard> {
   }
 
   Future<void> _pollRequests() async {
+    if (widget.driverStatus != DriverStatus.online) return;
     if (_pendingRide == null) {
       try {
         final rides = await ApiService.getAvailableRides();
@@ -252,9 +335,19 @@ class _DriverDashboardState extends State<_DriverDashboard> {
               ]),
               const Spacer(),
               Column(children: [
-                Switch(value: widget.isOnline, onChanged: widget.onToggle, activeThumbColor: AppTheme.success, activeTrackColor: AppTheme.success.withValues(alpha: 0.4)),
-                Text(widget.isOnline ? 'Online' : 'Offline',
-                    style: TextStyle(color: widget.isOnline ? AppTheme.success : AppTheme.textSecondary, fontSize: 11)),
+                Switch(
+                  value: widget.isOnline,
+                  onChanged: widget.isBusy ? null : widget.onToggle,
+                  activeThumbColor: widget.isBusy ? AppTheme.warning : AppTheme.success,
+                  activeTrackColor: (widget.isBusy ? AppTheme.warning : AppTheme.success).withValues(alpha: 0.4),
+                ),
+                Text(
+                  widget.isBusy ? 'Busy' : widget.isOnline ? 'Online' : 'Offline',
+                  style: TextStyle(
+                    color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : AppTheme.textSecondary,
+                    fontSize: 11,
+                  ),
+                ),
               ]),
             ]),
             const SizedBox(height: 16),
@@ -282,15 +375,22 @@ class _DriverDashboardState extends State<_DriverDashboard> {
 
             // Status card
             GradientCard(
-              colors: widget.isOnline ? [const Color(0xFF0F3460), const Color(0xFF003B2F)] : [AppTheme.surface, AppTheme.cardBg],
+              colors: widget.isBusy
+                  ? [const Color(0xFF3D2B00), const Color(0xFF3D1F00)]
+                  : widget.isOnline
+                      ? [const Color(0xFF0F3460), const Color(0xFF003B2F)]
+                      : [AppTheme.surface, AppTheme.cardBg],
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  StatusBadge(label: widget.isOnline ? '🟢 Online — Ready' : '⭕ Offline', color: widget.isOnline ? AppTheme.success : AppTheme.textSecondary),
+                  StatusBadge(
+                    label: widget.isBusy ? '🟡 Busy — On a Trip' : widget.isOnline ? '🟢 Online — Ready' : '⭕ Offline',
+                    color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : AppTheme.textSecondary,
+                  ),
                   const SizedBox(height: 8),
-                  Text(widget.isOnline ? 'Waiting for requests...' : 'Toggle online to accept rides',
+                  Text(widget.isBusy ? 'Complete your trip to receive new requests' : widget.isOnline ? 'Waiting for requests...' : 'Toggle online to accept rides',
                       style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
                 ])),
-                Icon(Icons.directions_car, color: widget.isOnline ? AppTheme.success : AppTheme.textSecondary, size: 50),
+                Icon(Icons.directions_car, color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : AppTheme.textSecondary, size: 50),
               ]),
             ),
             const SizedBox(height: 16),
@@ -404,52 +504,86 @@ class _DriverDashboardState extends State<_DriverDashboard> {
 
             // Active mode cards (one per active mode)
             if (widget.isOnline) ...[
-              if (widget.modeRide) ...[
-                if (_pendingRide != null) ...[
-                  const SectionHeader(title: 'Incoming Ride Request'),
-                  const SizedBox(height: 14),
-                  _RideRequestCard(
-                    ride: _pendingRide!,
-                    onAccepted: () => setState(() => _pendingRide = null),
-                    onDeclined: () => setState(() => _pendingRide = null),
+              // While busy — show "on a trip" card, hide all new requests
+              if (widget.isBusy) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
                   ),
-                ] else ...[
-                  _ModeEmptyCard(
-                    icon: Icons.directions_car_outlined,
-                    color: AppTheme.accent,
-                    title: 'Looking for Ride Requests',
-                    subtitle: 'You\'ll be notified when a passenger nearby needs a ride.',
-                  ),
-                ],
-                const SizedBox(height: 14),
-              ],
-              if (widget.modeDelivery) ...[
-                if (_pendingDelivery != null) ...[
-                  const SectionHeader(title: 'Incoming Delivery Request'),
-                  const SizedBox(height: 14),
-                  _DeliveryRequestCard(
-                    delivery: _pendingDelivery!,
-                    onAccepted: () => setState(() => _pendingDelivery = null),
-                    onDeclined: () => setState(() => _pendingDelivery = null),
-                  ),
-                ] else ...[
-                  _ModeEmptyCard(
-                    icon: Icons.delivery_dining_outlined,
-                    color: AppTheme.accentOrange,
-                    title: 'Delivery Mode Active',
-                    subtitle: 'Waiting for delivery orders in your area.',
-                  ),
-                ],
-                const SizedBox(height: 14),
-              ],
-              if (widget.modeRental) ...[
-                _ModeEmptyCard(
-                  icon: Icons.car_rental_outlined,
-                  color: const Color(0xFF9C27B0),
-                  title: 'Rental Mode Active',
-                  subtitle: 'Your vehicle is listed for hourly rentals.',
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.warning.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.directions_car, color: AppTheme.warning, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('On a Trip', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
+                      SizedBox(height: 2),
+                      Text('New requests are paused. You\'ll be available again automatically when the trip ends.',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    ])),
+                  ]),
                 ),
                 const SizedBox(height: 14),
+              ] else ...[
+                if (widget.modeRide) ...[
+                  if (_pendingRide != null) ...[
+                    const SectionHeader(title: 'Incoming Ride Request'),
+                    const SizedBox(height: 14),
+                    _RideRequestCard(
+                      ride: _pendingRide!,
+                      onAccepted: () {
+                        setState(() => _pendingRide = null);
+                        widget.onBusy();
+                      },
+                      onDeclined: () => setState(() => _pendingRide = null),
+                      onTripCompleted: widget.onTripCompleted,
+                    ),
+                  ] else ...[
+                    _ModeEmptyCard(
+                      icon: Icons.directions_car_outlined,
+                      color: AppTheme.accent,
+                      title: 'Looking for Ride Requests',
+                      subtitle: 'You\'ll be notified when a passenger nearby needs a ride.',
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                ],
+                if (widget.modeDelivery) ...[
+                  if (_pendingDelivery != null) ...[
+                    const SectionHeader(title: 'Incoming Delivery Request'),
+                    const SizedBox(height: 14),
+                    _DeliveryRequestCard(
+                      delivery: _pendingDelivery!,
+                      onAccepted: () => setState(() => _pendingDelivery = null),
+                      onDeclined: () => setState(() => _pendingDelivery = null),
+                    ),
+                  ] else ...[
+                    _ModeEmptyCard(
+                      icon: Icons.delivery_dining_outlined,
+                      color: AppTheme.accentOrange,
+                      title: 'Delivery Mode Active',
+                      subtitle: 'Waiting for delivery orders in your area.',
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                ],
+                if (widget.modeRental) ...[
+                  _ModeEmptyCard(
+                    icon: Icons.car_rental_outlined,
+                    color: const Color(0xFF9C27B0),
+                    title: 'Rental Mode Active',
+                    subtitle: 'Your vehicle is listed for hourly rentals.',
+                  ),
+                  const SizedBox(height: 14),
+                ],
               ],
             ],
 
@@ -575,14 +709,16 @@ class _StatCard extends StatelessWidget {
 
 // ─── Ride request card with countdown ─────────────────────────────────────────
 class _RideRequestCard extends StatefulWidget {
-  final RideModel ride;
+  final RideModel    ride;
   final VoidCallback onAccepted;
   final VoidCallback onDeclined;
+  final VoidCallback? onTripCompleted; // fired when DriverActiveTripScreen closes
 
   const _RideRequestCard({
     required this.ride,
     required this.onAccepted,
     required this.onDeclined,
+    this.onTripCompleted,
   });
 
   @override
@@ -622,9 +758,11 @@ class _RideRequestCardState extends State<_RideRequestCard> {
       await ApiService.acceptRide(widget.ride.id);
       if (!mounted) return;
       widget.onAccepted();
-      Navigator.push(context, MaterialPageRoute(
+      // When the trip screen pops (complete or cancel) → restore Online status
+      await Navigator.push(context, MaterialPageRoute(
         builder: (_) => DriverActiveTripScreen(ride: widget.ride),
       ));
+      if (mounted) widget.onTripCompleted?.call();
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(

@@ -4,6 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'auth_service.dart';
 
+enum DriverStatus { online, busy, offline }
+
 class LocationService {
   LocationService._();
   static final instance = LocationService._();
@@ -14,6 +16,12 @@ class LocationService {
   StreamSubscription<Position>? _onlineSub;
 
   final _firestore = FirebaseFirestore.instance;
+
+  // Current service modes — kept in sync with driver_home so every GPS write
+  // reflects the latest mode without restarting the stream.
+  bool _modeRide     = true;
+  bool _modeDelivery = false;
+  bool _modeRental   = false;
 
   // ── Permissions ────────────────────────────────────────────────────────────────
 
@@ -27,10 +35,21 @@ class LocationService {
   }
 
   // ── Online presence (Smart Dispatch) ──────────────────────────────────────────
-  // Called when driver goes online from the home screen.
-  // Broadcasts location every 50 m so the backend can find nearby drivers.
+  // Called when driver goes online.
+  // Broadcasts position every 50 m so the backend can match nearby drivers.
+  // Includes service modes so dispatch knows what job types this driver accepts.
 
-  Future<void> startOnlineTracking(String driverId) async {
+  Future<void> startOnlineTracking(
+    String driverId, {
+    bool modeRide     = true,
+    bool modeDelivery = false,
+    bool modeRental   = false,
+  }) async {
+    // Store modes so subsequent GPS writes always reflect latest values
+    _modeRide     = modeRide;
+    _modeDelivery = modeDelivery;
+    _modeRental   = modeRental;
+
     await _onlineSub?.cancel();
     _onlineSub = null;
     final granted = await requestPermission();
@@ -43,14 +62,58 @@ class LocationService {
       ),
     ).listen((pos) {
       _firestore.collection('drivers_live').doc(driverId).set({
-        'lat':        pos.latitude,
-        'lng':        pos.longitude,
-        'speed':      pos.speed,
-        'heading':    pos.heading,
-        'online':     true,
-        'updated_at': FieldValue.serverTimestamp(),
+        'lat':           pos.latitude,
+        'lng':           pos.longitude,
+        'speed':         pos.speed,
+        'heading':       pos.heading,
+        'online':        true,
+        'status':        'online',
+        'mode_ride':     _modeRide,
+        'mode_delivery': _modeDelivery,
+        'mode_rental':   _modeRental,
+        'updated_at':    FieldValue.serverTimestamp(),
       });
     }, onError: (_) {});
+  }
+
+  // ── Update service modes while already online ─────────────────────────────────
+  // Immediately pushes the new modes to Firestore and stores them so the next
+  // GPS write also uses the latest values.
+
+  Future<void> updateServiceMode(
+    String driverId, {
+    required bool modeRide,
+    required bool modeDelivery,
+    required bool modeRental,
+  }) async {
+    _modeRide     = modeRide;
+    _modeDelivery = modeDelivery;
+    _modeRental   = modeRental;
+    try {
+      await _firestore.collection('drivers_live').doc(driverId).update({
+        'mode_ride':     modeRide,
+        'mode_delivery': modeDelivery,
+        'mode_rental':   modeRental,
+        'updated_at':    FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
+  }
+
+  // ── Push a status transition to Firestore immediately ─────────────────────────
+
+  Future<void> updateDriverStatus(String driverId, DriverStatus status) async {
+    final statusStr = switch (status) {
+      DriverStatus.online  => 'online',
+      DriverStatus.busy    => 'busy',
+      DriverStatus.offline => 'offline',
+    };
+    try {
+      await _firestore.collection('drivers_live').doc(driverId).update({
+        'status':     statusStr,
+        'online':     status != DriverStatus.offline,
+        'updated_at': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {}
   }
 
   // ── Trip tracking ──────────────────────────────────────────────────────────────
@@ -72,12 +135,16 @@ class LocationService {
       ),
     ).listen((position) {
       _firestore.collection('drivers_live').doc(driverId).set({
-        'lat':        position.latitude,
-        'lng':        position.longitude,
-        'speed':      position.speed,
-        'heading':    position.heading,
-        'online':     true,
-        'updated_at': FieldValue.serverTimestamp(),
+        'lat':           position.latitude,
+        'lng':           position.longitude,
+        'speed':         position.speed,
+        'heading':       position.heading,
+        'online':        true,
+        'status':        'busy',
+        'mode_ride':     _modeRide,
+        'mode_delivery': _modeDelivery,
+        'mode_rental':   _modeRental,
+        'updated_at':    FieldValue.serverTimestamp(),
       });
       onPosition(position);
     }, onError: (_) {});
