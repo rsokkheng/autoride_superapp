@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const Color primary = Color(0xFF1A1A2E);
-  static const Color accent = Color(0xFF00D4AA);
-  static const Color accentOrange = Color(0xFFFF6B35);
-  static const Color surface = Color(0xFF16213E);
-  static const Color cardBg = Color(0xFF0F3460);
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB0BEC5);
-  static const Color success = Color(0xFF00D4AA);
-  static const Color warning = Color(0xFFFFB300);
-  static const Color danger = Color(0xFFFF5252);
-  static const Color gold = Color(0xFFFFD700);
+  // ROTEH brand — light theme
+  static const Color primary       = Color(0xFFF5F6FA); // page background
+  static const Color accent        = Color(0xFF1A3FAA); // brand navy blue
+  static const Color accentOrange  = Color(0xFFFF6B35); // secondary accent
+  static const Color surface       = Color(0xFFFFFFFF); // card / surface white
+  static const Color cardBg        = Color(0xFFF0F2F5); // secondary background / dividers
+  static const Color textPrimary   = Color(0xFF1A1A2E); // dark text
+  static const Color textSecondary = Color(0xFF6B7280); // gray text
+  static const Color success       = Color(0xFF00C48C); // green
+  static const Color warning       = Color(0xFFFFB300); // amber
+  static const Color danger        = Color(0xFFD32F2F); // red / CTA confirm
+  static const Color gold          = Color(0xFFFFD700); // gold
 
   // ── Currency helpers ──────────────────────────────────────────────────────
 
@@ -31,17 +32,16 @@ class AppTheme {
   static String usd(num amount) => '≈ \$${amount.toStringAsFixed(2)}';
 
   static ThemeData get darkTheme => ThemeData(
-        brightness: Brightness.dark,
-        primaryColor: primary,
+        brightness: Brightness.light,
+        primaryColor: accent,
         scaffoldBackgroundColor: primary,
-        colorScheme: const ColorScheme.dark(
+        colorScheme: const ColorScheme.light(
           primary: accent,
           secondary: accentOrange,
           surface: surface,
-          background: primary,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: primary,
+          backgroundColor: surface,
           elevation: 0,
           centerTitle: true,
           titleTextStyle: TextStyle(
@@ -65,8 +65,8 @@ class AppTheme {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: accent,
-            foregroundColor: primary,
+            backgroundColor: danger,
+            foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
@@ -74,7 +74,7 @@ class AppTheme {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: surface,
+          fillColor: cardBg,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none,

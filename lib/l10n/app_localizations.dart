@@ -29,9 +29,9 @@ class AppLocalizations {
 
   static const Map<String, Map<String, String>> _t = {
     'en': {
-      'appName': 'AutoRide',
-      'tagline': 'Super App',
-      'copyright': 'AutoRide © 2026 — All rights reserved',
+      'appName': 'RETEH',
+      'tagline': 'ROTEH App',
+      'copyright': 'ROTEH © 2026 — All rights reserved',
       'whoAreYou': 'Who are you?',
       'selectRole': 'Select your role to continue',
       'passenger': 'Passenger',
@@ -116,9 +116,9 @@ class AppLocalizations {
       'km': 'km',
     },
     'km': {
-      'appName': 'អូតូរ៉ាយ',
-      'tagline': 'ស៊ូភើអេប',
-      'copyright': 'AutoRide © ២០២៥ — រក្សាសិទ្ធិគ្រប់',
+      'appName': 'រទេះ',
+      'tagline': 'រទេះអេប',
+      'copyright': 'ROTEH © ២០២៥ — រក្សាសិទ្ធិគ្រប់',
       'whoAreYou': 'អ្នកជានរណា?',
       'selectRole': 'ជ្រើសរើសតួនាទីដើម្បីបន្ត',
       'passenger': 'អ្នកដំណើរ',
@@ -203,9 +203,9 @@ class AppLocalizations {
       'km': 'គ.ម',
     },
     'zh': {
-      'appName': 'AutoRide',
+      'appName': 'ROTEH',
       'tagline': '超级应用',
-      'copyright': 'AutoRide © 2026 — 版权所有',
+      'copyright': 'ROTEH © 2026 — 版权所有',
       'whoAreYou': '您是谁?',
       'selectRole': '选择您的角色以继续',
       'passenger': '乘客',

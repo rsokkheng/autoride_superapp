@@ -1,19 +1,25 @@
 import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 enum TripStatus { searching, pickingUp, inProgress, arrived }
 
 class TripUpdate {
-  final LatLng driverPosition;
+  final LatLng     driverPosition;
   final TripStatus status;
-  final int etaMinutes;
-  final double distanceKm;
+  final int        etaMinutes;
+  final double     distanceKm;
+  final String     vehicleType; // 'motorbike' | 'car' | 'van' | 'truck'
+  final double     heading;     // degrees 0–360
 
   const TripUpdate({
     required this.driverPosition,
     required this.status,
     required this.etaMinutes,
     required this.distanceKm,
+    this.vehicleType = 'motorbike',
+    this.heading     = 0.0,
   });
 }
 
@@ -42,7 +48,7 @@ class WebSocketService {
     LatLng(11.5616, 104.9282), // Royal Palace — arrived
   ];
 
-  static const LatLng pickupPoint = LatLng(11.5650, 104.9175);
+  static const LatLng pickupPoint      = LatLng(11.5650, 104.9175);
   static const LatLng destinationPoint = LatLng(11.5616, 104.9282);
 
   Stream<TripUpdate> startTracking() {
@@ -51,10 +57,8 @@ class WebSocketService {
     _step = 0;
     _timer?.cancel();
 
-    // Emit first update immediately
     _emitUpdate();
 
-    // Then update every 2 seconds to simulate real-time WebSocket messages
     _timer = Timer.periodic(const Duration(seconds: 2), (_) {
       _step++;
       if (_step >= driverRoute.length) {
@@ -70,20 +74,34 @@ class WebSocketService {
   }
 
   void _emitUpdate() {
-    final pos = driverRoute[_step];
+    final pos       = driverRoute[_step];
     final stepsLeft = driverRoute.length - 1 - _step;
-    final status = _step < 4
+    final status    = _step < 4
         ? TripStatus.pickingUp
         : _step < driverRoute.length - 1
             ? TripStatus.inProgress
             : TripStatus.arrived;
 
+    final bearing = _step > 0 ? _bearing(driverRoute[_step - 1], pos) : 0.0;
+
     _controller?.add(TripUpdate(
       driverPosition: pos,
-      status: status,
-      etaMinutes: (stepsLeft * 2).clamp(0, 20),
-      distanceKm: (stepsLeft * 0.35).clamp(0.0, 5.0),
+      status:      status,
+      etaMinutes:  (stepsLeft * 2).clamp(0, 20),
+      distanceKm:  (stepsLeft * 0.35).clamp(0.0, 5.0),
+      vehicleType: 'motorbike',
+      heading:     bearing,
     ));
+  }
+
+  static double _bearing(LatLng from, LatLng to) {
+    final lat1 = from.latitude  * math.pi / 180;
+    final lat2 = to.latitude    * math.pi / 180;
+    final dLng = (to.longitude - from.longitude) * math.pi / 180;
+    final y    = math.sin(dLng) * math.cos(lat2);
+    final x    = math.cos(lat1) * math.sin(lat2) -
+                 math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
+    return (math.atan2(y, x) * 180 / math.pi + 360) % 360;
   }
 
   void stopTracking() {

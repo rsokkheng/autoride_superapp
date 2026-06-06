@@ -53,7 +53,7 @@ class AutoRideApp extends StatelessWidget {
       valueListenable: appLocale,
       builder: (context, locale, _) {
         return MaterialApp(
-          title: 'AutoRide Super App',
+          title: 'ROTEH App',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.darkTheme,
           locale: locale,

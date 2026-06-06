@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../models/driver_marker_model.dart';
 import 'auth_service.dart';
 
 enum DriverStatus { online, busy, offline }
@@ -15,15 +16,16 @@ class LocationService {
   // Online-presence subscription (low-frequency, 50m filter — battery friendly)
   StreamSubscription<Position>? _onlineSub;
 
-  final _firestore = FirebaseFirestore.instance;
+  final _db = FirebaseFirestore.instance;
 
   // Current service modes — kept in sync with driver_home so every GPS write
   // reflects the latest mode without restarting the stream.
-  bool _modeRide     = true;
-  bool _modeDelivery = false;
-  bool _modeRental   = false;
+  bool   _modeRide     = true;
+  bool   _modeDelivery = false;
+  bool   _modeRental   = false;
+  String _vehicleType  = 'motorbike';
 
-  // ── Permissions ────────────────────────────────────────────────────────────────
+  // ── Permissions ────────────────────────────────────────────────────────────
 
   Future<bool> requestPermission() async {
     LocationPermission perm = await Geolocator.checkPermission();
@@ -34,21 +36,21 @@ class LocationService {
         perm == LocationPermission.always;
   }
 
-  // ── Online presence (Smart Dispatch) ──────────────────────────────────────────
-  // Called when driver goes online.
+  // ── Online presence (Smart Dispatch) ──────────────────────────────────────
   // Broadcasts position every 50 m so the backend can match nearby drivers.
-  // Includes service modes so dispatch knows what job types this driver accepts.
+  // Includes service modes and vehicle type for dispatch + passenger icon.
 
   Future<void> startOnlineTracking(
     String driverId, {
-    bool modeRide     = true,
-    bool modeDelivery = false,
-    bool modeRental   = false,
+    bool   modeRide     = true,
+    bool   modeDelivery = false,
+    bool   modeRental   = false,
+    String vehicleType  = 'motorbike',
   }) async {
-    // Store modes so subsequent GPS writes always reflect latest values
     _modeRide     = modeRide;
     _modeDelivery = modeDelivery;
     _modeRental   = modeRental;
+    _vehicleType  = DriverMarkerModel.normalise(vehicleType);
 
     await _onlineSub?.cancel();
     _onlineSub = null;
@@ -61,13 +63,14 @@ class LocationService {
         distanceFilter: 50,
       ),
     ).listen((pos) {
-      _firestore.collection('drivers_live').doc(driverId).set({
+      _db.collection('drivers_live').doc(driverId).set({
         'lat':           pos.latitude,
         'lng':           pos.longitude,
         'speed':         pos.speed,
         'heading':       pos.heading,
         'online':        true,
         'status':        'online',
+        'vehicle_type':  _vehicleType,
         'mode_ride':     _modeRide,
         'mode_delivery': _modeDelivery,
         'mode_rental':   _modeRental,
@@ -76,9 +79,7 @@ class LocationService {
     }, onError: (_) {});
   }
 
-  // ── Update service modes while already online ─────────────────────────────────
-  // Immediately pushes the new modes to Firestore and stores them so the next
-  // GPS write also uses the latest values.
+  // ── Update service modes while already online ──────────────────────────────
 
   Future<void> updateServiceMode(
     String driverId, {
@@ -90,7 +91,7 @@ class LocationService {
     _modeDelivery = modeDelivery;
     _modeRental   = modeRental;
     try {
-      await _firestore.collection('drivers_live').doc(driverId).update({
+      await _db.collection('drivers_live').doc(driverId).update({
         'mode_ride':     modeRide,
         'mode_delivery': modeDelivery,
         'mode_rental':   modeRental,
@@ -99,7 +100,7 @@ class LocationService {
     } catch (_) {}
   }
 
-  // ── Push a status transition to Firestore immediately ─────────────────────────
+  // ── Push a status transition to Firestore immediately ─────────────────────
 
   Future<void> updateDriverStatus(String driverId, DriverStatus status) async {
     final statusStr = switch (status) {
@@ -108,7 +109,7 @@ class LocationService {
       DriverStatus.offline => 'offline',
     };
     try {
-      await _firestore.collection('drivers_live').doc(driverId).update({
+      await _db.collection('drivers_live').doc(driverId).update({
         'status':     statusStr,
         'online':     status != DriverStatus.offline,
         'updated_at': FieldValue.serverTimestamp(),
@@ -116,16 +117,18 @@ class LocationService {
     } catch (_) {}
   }
 
-  // ── Trip tracking ──────────────────────────────────────────────────────────────
-  // High-frequency GPS during an active trip.
-  // Also stops the online-presence sub (trip tracking takes over).
+  // ── Trip tracking ──────────────────────────────────────────────────────────
+  // High-frequency GPS (5 m filter) during an active trip.
+  // Writes vehicle_type so passengers get the correct icon.
 
   void startTracking({
-    required String driverId,
+    required String   driverId,
     required void Function(Position) onPosition,
+    String vehicleType = 'motorbike',
   }) {
-    _onlineSub?.cancel(); // trip tracking replaces online tracking
-    _onlineSub = null;
+    _onlineSub?.cancel();
+    _onlineSub  = null;
+    _vehicleType = DriverMarkerModel.normalise(vehicleType);
     AuthService.signInAnon();
     _tripSub?.cancel();
     _tripSub = Geolocator.getPositionStream(
@@ -134,13 +137,14 @@ class LocationService {
         distanceFilter: 5,
       ),
     ).listen((position) {
-      _firestore.collection('drivers_live').doc(driverId).set({
+      _db.collection('drivers_live').doc(driverId).set({
         'lat':           position.latitude,
         'lng':           position.longitude,
         'speed':         position.speed,
         'heading':       position.heading,
         'online':        true,
         'status':        'busy',
+        'vehicle_type':  _vehicleType,
         'mode_ride':     _modeRide,
         'mode_delivery': _modeDelivery,
         'mode_rental':   _modeRental,
@@ -150,7 +154,7 @@ class LocationService {
     }, onError: (_) {});
   }
 
-  // ── Stop ───────────────────────────────────────────────────────────────────────
+  // ── Stop ──────────────────────────────────────────────────────────────────
 
   Future<void> stopTracking(String driverId) async {
     await _tripSub?.cancel();
@@ -158,27 +162,56 @@ class LocationService {
     await _onlineSub?.cancel();
     _onlineSub = null;
     try {
-      await _firestore
-          .collection('drivers_live')
-          .doc(driverId)
+      await _db.collection('drivers_live').doc(driverId)
           .update({'online': false, 'updated_at': FieldValue.serverTimestamp()});
     } catch (_) {}
   }
 
-  // ── Passenger side: listen to a driver's live position ───────────────────────
+  // ── Passenger side: listen to a driver's live position ────────────────────
+  //
+  // Returns a [DriverMarkerModel] on every Firestore document snapshot.
+  // Includes heading and vehicle_type so callers can rotate + icon-swap
+  // the marker without any extra API round-trips.
 
-  Stream<LatLng> listenDriver(String driverId) {
-    return _firestore
+  Stream<DriverMarkerModel> listenDriver(String driverId) {
+    return _db
         .collection('drivers_live')
         .doc(driverId)
         .snapshots()
         .expand((doc) {
       final data = doc.data();
-      if (data == null) return const <LatLng>[];
+      if (data == null) return const <DriverMarkerModel>[];
       final lat = (data['lat'] as num?)?.toDouble();
       final lng = (data['lng'] as num?)?.toDouble();
-      if (lat == null || lng == null) return const <LatLng>[];
-      return [LatLng(lat, lng)];
+      if (lat == null || lng == null) return const <DriverMarkerModel>[];
+      return [
+        DriverMarkerModel(
+          driverId:    driverId,
+          position:    LatLng(lat, lng),
+          heading:     (data['heading']     as num?)?.toDouble() ?? 0.0,
+          vehicleType: data['vehicle_type'] as String? ?? 'motorbike',
+        ),
+      ];
+    });
+  }
+
+  // ── Passenger side: stream ride status from Firestore ─────────────────────
+  //
+  // Backend (or the driver client) writes to `rides_live/{rideId}` with
+  // at least {status, driver_id}. This eliminates the 5-second polling timer.
+  //
+  // Falls back gracefully if the document doesn't exist: the stream just
+  // never emits, and the caller's timer remains the safety net.
+
+  Stream<Map<String, dynamic>> listenRideStatus(String rideId) {
+    return _db
+        .collection('rides_live')
+        .doc(rideId)
+        .snapshots()
+        .expand((doc) {
+      final data = doc.data();
+      if (data == null) return const <Map<String, dynamic>>[];
+      return [data];
     });
   }
 }

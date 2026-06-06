@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' show min, max, sin, cos, atan2, pi, sqrt;
+import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -8,6 +9,8 @@ import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
+import '../../services/marker_icon_service.dart';
+import '../../models/driver_marker_model.dart';
 import '../../models/ride_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'driver_trip_summary_screen.dart';
@@ -48,9 +51,18 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   double _distanceKm    = 0.0;
   DateTime? _lastRouteFetch;
 
-  // Driver position
+  // Driver position — plain fields; updated in GPS callback without setState
   LatLng? _driverLatLng;
   double  _driverHeading = 0.0;
+
+  // Smooth lerp animation (same pattern as passenger tracking screen)
+  late AnimationController _markerAnimCtrl;
+  LatLng? _prevDriverPos;
+  LatLng? _targetDriverPos;
+
+  // Custom vehicle icon — loaded once per vehicle type
+  BitmapDescriptor? _driverIcon;
+  String            _vehicleType = 'motorbike';
 
   final Set<Marker>   _markers   = {};
   final Set<Polyline> _polylines = {};
@@ -88,6 +100,20 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 1))
       ..repeat(reverse: true);
     _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(_pulseCtrl);
+
+    // Smooth marker movement between GPS pings
+    _markerAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..addListener(_onMarkerAnimTick);
+
+    // Load vehicle icon from the ride's vehicle type (falls back to motorbike)
+    _vehicleType = DriverMarkerModel.normalise(
+        widget.ride?.vehicle?.type ?? 'motorbike');
+    MarkerIconService.forType(_vehicleType).then((icon) {
+      if (mounted) setState(() => _driverIcon = icon);
+    });
+
     _initMap();
     _startTracking();
   }
@@ -96,6 +122,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   void dispose() {
     LocationService.instance.stopTracking(_driverId);
     _pulseCtrl.dispose();
+    _markerAnimCtrl.dispose();
     _mapController?.dispose();
     super.dispose();
   }
@@ -137,8 +164,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     final granted = await LocationService.instance.requestPermission();
     if (!granted) return;
     LocationService.instance.startTracking(
-      driverId:   _driverId,
-      onPosition: _onDriverPosition,
+      driverId:    _driverId,
+      onPosition:  _onDriverPosition,
+      vehicleType: widget.ride?.vehicle?.type ?? _vehicleType,
     );
   }
 
@@ -166,30 +194,55 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     return (atan2(y, x) * 180 / pi + 360) % 360;
   }
 
+  // ── Smooth lerp animation ─────────────────────────────────────────────────
+
+  void _onMarkerAnimTick() {
+    final prev   = _prevDriverPos;
+    final target = _targetDriverPos;
+    if (prev == null || target == null || !mounted) return;
+    final t   = _markerAnimCtrl.value;
+    final lat = lerpDouble(prev.latitude,  target.latitude,  t)!;
+    final lng = lerpDouble(prev.longitude, target.longitude, t)!;
+    _updateDriverMarker(LatLng(lat, lng));
+  }
+
+  void _updateDriverMarker(LatLng pos) {
+    if (!mounted) return;
+    setState(() {
+      _markers.removeWhere((m) => m.markerId.value == 'driver');
+      _markers.add(Marker(
+        markerId:   const MarkerId('driver'),
+        position:   pos,
+        icon:       _driverIcon ?? BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueOrange),
+        infoWindow: const InfoWindow(title: 'You'),
+        rotation:   _driverHeading,
+        anchor:     const Offset(0.5, 0.5),
+        flat:       true, // marker rotates with map compass bearing
+      ));
+    });
+  }
+
+  // ── GPS callback ──────────────────────────────────────────────────────────
+
   void _onDriverPosition(Position position) {
     if (!mounted) return;
     if (!_inCambodia(position.latitude, position.longitude)) return;
 
     final pos     = LatLng(position.latitude, position.longitude);
     final prevPos = _driverLatLng;
-    final heading = (prevPos != null && prevPos != pos)
+
+    _driverHeading = (prevPos != null && prevPos != pos)
         ? _bearing(prevPos, pos)
         : position.heading;
 
-    setState(() {
-      _driverLatLng  = pos;
-      _driverHeading = heading;
-      _markers.removeWhere((m) => m.markerId.value == 'driver');
-      _markers.add(Marker(
-        markerId: const MarkerId('driver'),
-        position: pos,
-        icon:     BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        infoWindow: const InfoWindow(title: 'You'),
-        rotation: heading,
-        anchor:   const Offset(0.5, 0.5),
-        flat:     true,
-      ));
-    });
+    // Animate smoothly from previous to current GPS ping
+    _prevDriverPos   = _targetDriverPos ?? pos;
+    _targetDriverPos = pos;
+    _driverLatLng    = pos;
+    _markerAnimCtrl
+      ..reset()
+      ..forward();
 
     // Auto-detect arrival at pickup (within 80 m → advance phase automatically)
     if (_phase == _TripPhase.headingToPickup) {
@@ -260,7 +313,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     if (widget.ride == null) return;
     final now = DateTime.now();
     if (_lastBackendPush != null &&
-        now.difference(_lastBackendPush!).inSeconds < 10) return;
+        now.difference(_lastBackendPush!).inSeconds < 10) { return; }
     _lastBackendPush = now;
     ApiService.updateDriverLocation(
       widget.ride!.id,

@@ -15,9 +15,9 @@ class DeliveryModel {
   final String? scheduledAt;
   final String status;
   final String packageDetails;
-  final int fee;              // KHR
-  final String paymentBy;    // 'sender' | 'recipient'
-  final String paymentMethod; // 'cash' | 'wallet' | 'aba' | 'wing' | 'other_online'
+  final int fee;
+  final String paymentBy;
+  final String paymentMethod;
   final String? notes;
   final String createdAt;
   final String updatedAt;
@@ -26,6 +26,23 @@ class DeliveryModel {
   final VehicleModel? vehicle;
   final double? rating;
   final String? ratingComment;
+
+  // ── Moving-specific fields ────────────────────────────────────────────────
+  final String? serviceType;      // 'delivery' | 'moving'
+  final int?    floorPickup;
+  final int?    floorDropoff;
+  final bool?   hasElevator;
+  final bool?   needsStairsCarry;
+  final bool?   heavyItems;
+  final bool?   packingService;
+  final int?    requiresHelpers;  // 1–4
+  final String? helperType;       // 'normal' | 'heavy'
+  // Vehicle type (delivery-specific)
+  final String? vehicleType;      // 'motorbike' | 'small_car' | 'van' | 'truck'
+  // Payment model (moving-specific)
+  final String? paymentModel;     // 'customer' | 'partner' | 'split' | 'sponsored'
+  final String? partnerCode;      // for 'partner' and 'split'
+  final int?    splitPercent;     // customer's share 0–100, for 'split'
 
   const DeliveryModel({
     required this.id,
@@ -52,7 +69,24 @@ class DeliveryModel {
     this.vehicle,
     this.rating,
     this.ratingComment,
+    // delivery vehicle
+    this.vehicleType,
+    // moving
+    this.serviceType,
+    this.floorPickup,
+    this.floorDropoff,
+    this.hasElevator,
+    this.needsStairsCarry,
+    this.heavyItems,
+    this.packingService,
+    this.requiresHelpers,
+    this.helperType,
+    this.paymentModel,
+    this.partnerCode,
+    this.splitPercent,
   });
+
+  bool get isMoving => serviceType == 'moving';
 
   factory DeliveryModel.fromJson(Map<String, dynamic> json) {
     return DeliveryModel(
@@ -84,13 +118,31 @@ class DeliveryModel {
       vehicle: json['vehicle'] != null
           ? VehicleModel.fromJson(json['vehicle'] as Map<String, dynamic>)
           : null,
-      rating: json['rating'] == null ? null : (json['rating'] as num).toDouble(),
+      rating:        json['rating'] == null ? null : (json['rating'] as num).toDouble(),
       ratingComment: json['rating_comment'] as String?,
+      // delivery vehicle
+      vehicleType:      json['vehicle_type'] as String?,
+      // moving
+      serviceType:      json['service_type'] as String?,
+      floorPickup:      json['floor_pickup'] as int?,
+      floorDropoff:     json['floor_dropoff'] as int?,
+      hasElevator:      json['has_elevator'] == null ? null : _toBool(json['has_elevator']),
+      needsStairsCarry: json['needs_stairs_carry'] == null ? null : _toBool(json['needs_stairs_carry']),
+      heavyItems:       json['heavy_items'] == null ? null : _toBool(json['heavy_items']),
+      packingService:   json['packing_service'] == null ? null : _toBool(json['packing_service']),
+      requiresHelpers:  json['requires_helpers'] as int?,
+      helperType:       json['helper_type'] as String?,
+      paymentModel:     json['payment_model'] as String?,
+      partnerCode:      json['partner_code'] as String?,
+      splitPercent:     json['split_percent'] as int?,
     );
   }
 
   static int _toInt(dynamic v) =>
       v == null ? 0 : v is int ? v : (v is num ? v.round() : int.tryParse(v.toString()) ?? 0);
+
+  static bool _toBool(dynamic v) =>
+      v == true || v == 1 || v.toString() == 'true' || v.toString() == '1';
 
   bool get isRequested  => status == 'requested';
   bool get isAccepted   => status == 'accepted';
@@ -143,7 +195,7 @@ class NearbyDriverModel {
 // ─── Estimate (for POST /deliveries/estimate) ─────────────────────────────────
 
 class DeliveryEstimateModel {
-  final int estimatedFee; // KHR
+  final int estimatedFee;
   final String currency;
   final int baseFee;
   final double distanceKm;

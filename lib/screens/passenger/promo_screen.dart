@@ -68,7 +68,7 @@ class _PromoScreenState extends State<PromoScreen> {
                     style: const TextStyle(color: AppTheme.textPrimary, letterSpacing: 1.5, fontWeight: FontWeight.w700),
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
-                      hintText: 'e.g. AUTORIDE15',
+                      hintText: 'e.g. ROTEH15',
                       hintStyle: const TextStyle(color: AppTheme.textSecondary, letterSpacing: 0, fontWeight: FontWeight.normal),
                       filled: true,
                       fillColor: AppTheme.cardBg,

@@ -6,7 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
-        android:label="autoride_superapp"
+        android:label="ROTEH"
         android:icon="@mipmap/ic_launcher">
 
         <!-- Google Maps API KEY (IMPORTANT) -->

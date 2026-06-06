@@ -8,6 +8,8 @@ import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
+import '../../services/marker_icon_service.dart';
+import '../../models/driver_marker_model.dart';
 import 'rate_driver_screen.dart';
 import '../shared/ride_chat_screen.dart';
 
@@ -24,6 +26,7 @@ class TripTrackingScreen extends StatefulWidget {
   final String  driverTrips;
   final String  vehicle;
   final String  vehicleColor;
+  final String  vehicleType;  // raw type: 'motorbike' | 'car' | 'van' | 'truck'
   final String  plate;
   final String  from;
   final String  to;
@@ -44,6 +47,7 @@ class TripTrackingScreen extends StatefulWidget {
     this.driverTrips   = '--',
     this.vehicle       = '--',
     this.vehicleColor  = '',
+    this.vehicleType   = 'motorbike',
     this.plate         = '--',
     this.from          = '--',
     this.to            = '--',
@@ -60,8 +64,9 @@ class TripTrackingScreen extends StatefulWidget {
 class _TripTrackingScreenState extends State<TripTrackingScreen>
     with TickerProviderStateMixin {
   GoogleMapController? _mapController;
-  StreamSubscription<TripUpdate>? _trackingSub;
-  StreamSubscription<LatLng>?    _firestoreSub;
+  StreamSubscription<TripUpdate>?        _trackingSub;
+  StreamSubscription<DriverMarkerModel>? _firestoreSub;
+  StreamSubscription<Map<String, dynamic>>? _rideStatusSub;
   TripUpdate? _lastUpdate;
 
   final Set<Marker>   _markers   = {};
@@ -88,9 +93,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   late String _driverTrips;
   late String _vehicle;
   late String _vehicleColor;
+  late String _vehicleType;
   late String _plate;
   String _currentDriverId = '';
   Timer? _ridePollTimer;
+
+  // Dynamic vehicle icon — loaded async; null means use default pin
+  BitmapDescriptor? _driverIcon;
+  double _driverHeading = 0.0;
 
   LatLng get _pickupPoint => widget.pickupLatLng ?? WebSocketService.pickupPoint;
   LatLng get _destPoint   => widget.destLatLng   ?? WebSocketService.destinationPoint;
@@ -108,6 +118,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _driverTrips     = widget.driverTrips;
     _vehicle         = widget.vehicle;
     _vehicleColor    = widget.vehicleColor;
+    _vehicleType     = DriverMarkerModel.normalise(widget.vehicleType);
     _plate           = widget.plate;
     _currentDriverId = widget.driverId;
 
@@ -120,6 +131,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..addListener(_onMarkerAnimTick);
+
+    // Pre-load icon so it's ready before first position update
+    MarkerIconService.forType(_vehicleType).then((icon) {
+      if (mounted) setState(() => _driverIcon = icon);
+    });
 
     _initMarkers();
     _startTracking();
@@ -178,20 +194,21 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   void _setDriverMarker(LatLng pos) {
     if (!mounted) return;
 
-    final heading = (_prevDriverPos != null && _prevDriverPos != pos)
-        ? _bearing(_prevDriverPos!, pos)
-        : 0.0;
+    if (_prevDriverPos != null && _prevDriverPos != pos) {
+      _driverHeading = _bearing(_prevDriverPos!, pos);
+    }
 
     setState(() {
       _markers.removeWhere((m) => m.markerId.value == 'driver');
       _markers.add(Marker(
-        markerId: const MarkerId('driver'),
-        position: pos,
-        icon:     BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        markerId:   const MarkerId('driver'),
+        position:   pos,
+        icon:       _driverIcon ?? BitmapDescriptor.defaultMarkerWithHue(
+                        BitmapDescriptor.hueAzure),
         infoWindow: InfoWindow(title: _driverName, snippet: _vehicle),
-        rotation: heading,
-        anchor:   const Offset(0.5, 0.5),
-        flat:     true,   // rotates with the map rather than always pointing up
+        rotation:   _driverHeading,
+        anchor:     const Offset(0.5, 0.5),
+        flat:       true, // marker rotates with map bearing
       ));
     });
 
@@ -222,10 +239,27 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       p.longitude >= 102.3 && p.longitude <= 107.6;
 
   // ── Firestore driver position ──────────────────────────────────────────────
+  //
+  // Receives a full DriverMarkerModel from Firestore, which now carries
+  // heading and vehicle_type alongside lat/lng.
 
-  void _onDriverPosition(LatLng pos) {
-    if (!_inCambodia(pos)) return; // ignore stale/invalid Firestore values
-    // Animate from wherever the marker currently is
+  void _onDriverMarker(DriverMarkerModel model) {
+    final pos = model.position;
+    if (!_inCambodia(pos)) return;
+
+    // Apply heading from the Firestore doc (driver's GPS bearing)
+    _driverHeading = model.heading;
+
+    // Reload icon if vehicle type changed (e.g. driver switched vehicles)
+    final newType = DriverMarkerModel.normalise(model.vehicleType);
+    if (newType != _vehicleType) {
+      _vehicleType = newType;
+      MarkerIconService.forType(newType).then((icon) {
+        if (mounted) setState(() => _driverIcon = icon);
+      });
+    }
+
+    // Smooth lerp animation from previous position to current
     _prevDriverPos   = _targetDriverPos ?? pos;
     _targetDriverPos = pos;
     _markerAnimCtrl
@@ -304,6 +338,25 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       final prevStatus = _lastUpdate?.status;
       setState(() => _lastUpdate = update);
 
+      // Reload vehicle icon if server sends a different vehicle type
+      final newType = DriverMarkerModel.normalise(update.vehicleType);
+      if (newType != _vehicleType) {
+        _vehicleType = newType;
+        MarkerIconService.forType(newType).then((icon) {
+          if (mounted) setState(() => _driverIcon = icon);
+        });
+      }
+
+      // Animate driver marker from WebSocket position when Firestore isn't live
+      if (_currentDriverId.isEmpty) {
+        _onDriverMarker(DriverMarkerModel(
+          driverId:    '',
+          position:    update.driverPosition,
+          heading:     update.heading,
+          vehicleType: update.vehicleType,
+        ));
+      }
+
       if (update.status == TripStatus.pickingUp &&
           prevStatus == TripStatus.searching) {
         await NotificationService.instance.showTripUpdate(
@@ -323,7 +376,34 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (_currentDriverId.isNotEmpty) {
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
-          .listen(_onDriverPosition);
+          .listen(_onDriverMarker);
+    }
+
+    // Firestore ride-status stream — replaces the 5-second poll timer.
+    // Falls back to the timer if the rides_live doc doesn't exist yet.
+    if (widget.rideId != null) {
+      _rideStatusSub = LocationService.instance
+          .listenRideStatus(widget.rideId.toString())
+          .listen(_onFirestoreRideStatus);
+    }
+  }
+
+  void _onFirestoreRideStatus(Map<String, dynamic> data) {
+    final status   = data['status']    as String? ?? '';
+    final driverId = data['driver_id'] as String? ?? '';
+
+    // Cancel the polling timer once Firestore is delivering status
+    _ridePollTimer?.cancel();
+    _ridePollTimer = null;
+
+    if (status == 'accepted' && driverId.isNotEmpty &&
+        driverId != _currentDriverId) {
+      // New driver assigned — re-subscribe to their live position
+      _currentDriverId = driverId;
+      _firestoreSub?.cancel();
+      _firestoreSub = LocationService.instance
+          .listenDriver(driverId)
+          .listen(_onDriverMarker);
     }
   }
 
@@ -332,6 +412,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _ridePollTimer?.cancel();
     _trackingSub?.cancel();
     _firestoreSub?.cancel();
+    _rideStatusSub?.cancel();
     WebSocketService.instance.stopTracking();
     _mapController?.dispose();
     _pulseController.dispose();
@@ -369,7 +450,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
-          .listen(_onDriverPosition);
+          .listen(_onDriverMarker);
       _ridePollTimer?.cancel();
     } catch (_) {}
   }
@@ -521,7 +602,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                     TextSpan(
                         text: '$eta min',
                         style: const TextStyle(color: _kGreen)),
-                    TextSpan(
+                    const TextSpan(
                         text: '\naway',
                         style: TextStyle(
                             color: _kTextSub,
@@ -694,13 +775,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                       // Promo code
                       InkWell(
                         onTap: () {},
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
                           child: Row(children: [
-                            const Icon(Icons.local_offer_outlined,
+                            Icon(Icons.local_offer_outlined,
                                 color: _kGreen, size: 20),
-                            const SizedBox(width: 12),
-                            const Expanded(
+                            SizedBox(width: 12),
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -715,7 +796,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                 ],
                               ),
                             ),
-                            const Icon(Icons.chevron_right, color: _kTextSub),
+                            Icon(Icons.chevron_right, color: _kTextSub),
                           ]),
                         ),
                       ),

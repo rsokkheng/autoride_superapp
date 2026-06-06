@@ -829,15 +829,20 @@ class ApiService {
     required String dropoffAddress,
     required String packageDetails,
     String? senderName,
+    String? senderPhone,
     String? recipientName,
     String? recipientPhone,
     String? packageSize,
-    int? fee,
+    int?    fee,
     String  paymentBy     = 'sender',
     String  paymentMethod = 'cash',
+    String  paymentModel  = 'customer', // 'customer'|'partner'|'split'|'sponsored'
+    String? partnerCode,
+    int?    splitPercent,
     String? scheduledAt,
     String? notes,
-    int? vehicleId,
+    int?    vehicleId,
+    String  vehicleType   = 'motorbike', // 'motorbike'|'small_car'|'van'|'truck'
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -848,17 +853,75 @@ class ApiService {
       'package_details': packageDetails,
       'payment_by':      paymentBy,
       'payment_method':  paymentMethod,
+      'payment_model':   paymentModel,
+      'vehicle_type':    vehicleType,
       if (senderName     != null) 'sender_name':     senderName,
+      if (senderPhone    != null) 'sender_phone':    senderPhone,
       if (recipientName  != null) 'recipient_name':  recipientName,
       if (recipientPhone != null) 'recipient_phone': recipientPhone,
       if (packageSize    != null) 'package_size':    packageSize,
-      if (fee            != null) 'fee':              fee,
+      if (fee            != null) 'fee':             fee,
+      if (partnerCode    != null) 'partner_code':    partnerCode,
+      if (splitPercent   != null) 'split_percent':   splitPercent,
       if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
-      if (notes          != null) 'notes':            notes,
+      if (notes          != null) 'notes':           notes,
       if (vehicleId      != null) 'vehicle_id':      vehicleId,
     };
 
     final raw = await _rawPost('/deliveries', body, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  // ── Create moving order ───────────────────────────────────────────────────
+
+  static Future<DeliveryModel> createMoving({
+    required String pickupAddress,
+    required String dropoffAddress,
+    required int    floorPickup,
+    required int    floorDropoff,
+    required bool   hasElevator,
+    required bool   needsStairsCarry,
+    required bool   heavyItems,
+    required int    requiresHelpers,   // 1–4
+    required String helperType,        // 'normal' | 'heavy'
+    bool    packingService  = false,
+    int?    fee,
+    String  paymentMethod   = 'cash',
+    // Payment model
+    String  paymentModel    = 'customer', // 'customer'|'partner'|'split'|'sponsored'
+    String? partnerCode,
+    int?    splitPercent,               // customer's % share (0–100)
+    String? notes,
+    String? scheduledAt,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      'service_type':       'moving',
+      'pickup_address':     pickupAddress,
+      'dropoff_address':    dropoffAddress,
+      'package_details':    'Moving service',
+      'package_size':       'large',
+      'payment_by':         'sender',
+      'payment_method':     paymentMethod,
+      'payment_model':      paymentModel,
+      'floor_pickup':       floorPickup,
+      'floor_dropoff':      floorDropoff,
+      'has_elevator':       hasElevator,
+      'needs_stairs_carry': needsStairsCarry,
+      'heavy_items':        heavyItems,
+      'packing_service':    packingService,
+      'requires_helpers':   requiresHelpers,
+      'helper_type':        helperType,
+      if (fee          != null) 'fee':           fee,
+      if (partnerCode  != null) 'partner_code':  partnerCode,
+      if (splitPercent != null) 'split_percent': splitPercent,
+      if (notes        != null) 'notes':         notes,
+      if (scheduledAt  != null) 'scheduled_at':  scheduledAt,
+    };
+
+    final raw = await _rawPost('/movings', body, token: token);
     return _parseDeliveryResponse(raw);
   }
 

@@ -212,7 +212,7 @@ class _SplashScreenState extends State<SplashScreen>
                             end: Alignment.bottomRight,
                           ).createShader(bounds),
                           child: const Text(
-                            'AutoRide',
+                            'ROTEH', // Updated app name
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 44,

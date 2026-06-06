@@ -29,9 +29,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   int          _tab           = 0;
   DriverStatus _driverStatus  = DriverStatus.online;
   bool         _togglingOnline = false;
-  bool _modeRide     = true;
-  bool _modeDelivery = false;
-  bool _modeRental   = false;
+  bool   _modeRide     = true;
+  bool   _modeDelivery = false;
+  bool   _modeRental   = false;
+  String _vehicleType  = 'motorbike'; // raw type from VehicleModel.type
 
   bool get _isOnline => _driverStatus != DriverStatus.offline;
 
@@ -50,6 +51,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             modeRide:     _modeRide,
             modeDelivery: _modeDelivery,
             modeRental:   _modeRental,
+            vehicleType:  _vehicleType,
           );
         }
         if (mounted) setState(() => _driverStatus = DriverStatus.online);
@@ -98,6 +100,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         modeRide:     _modeRide,
         modeDelivery: _modeDelivery,
         modeRental:   _modeRental,
+        vehicleType:  _vehicleType,
       );
     }
   }
@@ -966,7 +969,12 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
       ),
       child: Column(children: [
         Row(children: [
-          StatusBadge(label: urgent ? '⚡ URGENT' : '📦 NEW DELIVERY', color: urgent ? AppTheme.danger : AppTheme.accentOrange),
+          StatusBadge(
+            label: urgent
+                ? '⚡ URGENT'
+                : widget.delivery.isMoving ? '🚚 NEW MOVING' : '📦 NEW DELIVERY',
+            color: urgent ? AppTheme.danger : AppTheme.accentOrange,
+          ),
           const Spacer(),
           Text('$_seconds s', style: TextStyle(
               color: urgent ? AppTheme.danger : AppTheme.accentOrange,
@@ -1037,6 +1045,83 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
             ]),
           ]),
         ),
+
+        // ── Moving details panel ─────────────────────────────────────────
+        if (widget.delivery.isMoving) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Row(children: [
+                Icon(Icons.local_shipping, color: AppTheme.accent, size: 14),
+                SizedBox(width: 6),
+                Text('Moving Details', style: TextStyle(
+                    color: AppTheme.accent,
+                    fontWeight: FontWeight.w700, fontSize: 12)),
+              ]),
+              const SizedBox(height: 8),
+              // Floor info
+              Row(children: [
+                const Icon(Icons.apartment_outlined, color: AppTheme.textSecondary, size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  'Floor: pickup ${widget.delivery.floorPickup ?? '?'} → '
+                  'dropoff ${widget.delivery.floorDropoff ?? '?'}',
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+              ]),
+              const SizedBox(height: 4),
+              // Elevator
+              Row(children: [
+                Icon(Icons.elevator_outlined,
+                    color: (widget.delivery.hasElevator ?? true)
+                        ? AppTheme.success : AppTheme.danger,
+                    size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  'Elevator: ${(widget.delivery.hasElevator ?? true) ? "Yes" : "No"}',
+                  style: TextStyle(
+                    color: (widget.delivery.hasElevator ?? true)
+                        ? AppTheme.success : AppTheme.danger,
+                    fontSize: 12, fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (widget.delivery.needsStairsCarry == true) ...[
+                  const SizedBox(width: 8),
+                  const Icon(Icons.stairs_outlined, color: AppTheme.warning, size: 14),
+                  const Text(' Stairs carry',
+                      style: TextStyle(color: AppTheme.warning, fontSize: 12)),
+                ],
+              ]),
+              const SizedBox(height: 4),
+              // Helpers
+              if (widget.delivery.requiresHelpers != null)
+                Row(children: [
+                  const Icon(Icons.people_outline, color: AppTheme.textSecondary, size: 14),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${widget.delivery.requiresHelpers} helper(s) — '
+                    '${widget.delivery.helperType == 'heavy' ? 'Heavy carry' : 'Normal carry'}',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ]),
+              // Flags row
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, children: [
+                if (widget.delivery.heavyItems == true)
+                  _MovingFlag(label: '⚠ Heavy items', color: AppTheme.warning),
+                if (widget.delivery.packingService == true)
+                  _MovingFlag(label: '📦 Packing', color: AppTheme.accent),
+              ]),
+            ]),
+          ),
+        ],
+
         const SizedBox(height: 14),
 
         Row(children: [
@@ -1793,6 +1878,28 @@ class _DriverProfileState extends State<_DriverProfile> {
           }),
         ]),
       ),
+    );
+  }
+}
+
+// ── Moving flag chip (driver card) ────────────────────────────────────────────
+
+class _MovingFlag extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _MovingFlag({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(label, style: TextStyle(
+          color: color, fontSize: 11, fontWeight: FontWeight.w600)),
     );
   }
 }

@@ -88,8 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(width: 12),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('AutoRide', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                  Text('Super App', style: TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 3)),
+                  const Text('ROTEH', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  Text('ROTEH App', style: TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 3)),
                 ]),
                 const Spacer(),
                 const LanguagePickerButton(),

@@ -22,7 +22,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
   String get _serviceLabel {
     switch (ride.serviceType) {
       case 'premium': return 'Premium';
-      case 'xl':      return 'AutoRide XL';
+      case 'xl':      return 'ROTEH XL';
       case 'ev':      return 'EV Ride';
       default:        return 'Standard';
     }
@@ -285,7 +285,7 @@ class _PaymentMethodDisplay extends StatelessWidget {
     _PayMethod('aba',         'ABA Pay',     Icons.account_balance,      Color(0xFF003087)),
     _PayMethod('acleda',      'ACLEDA',      Icons.account_balance,      Color(0xFF006B3F)),
     _PayMethod('wing',        'Wing',        Icons.flight_takeoff,       Color(0xFFFF6B00)),
-    _PayMethod('wallet',      'AutoRide Pay',Icons.account_balance_wallet,Color(0xFF00B14F)),
+    _PayMethod('wallet',      'ROTEH Pay',Icons.account_balance_wallet,Color(0xFF00B14F)),
     _PayMethod('other_online','Online Pay',  Icons.language,             Color(0xFF2196F3)),
   ];
 

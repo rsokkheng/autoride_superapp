@@ -400,8 +400,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       firstDate:   DateTime.now(),
       lastDate:    DateTime.now().add(const Duration(days: 7)),
       builder: (c, child) => Theme(
-        data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(primary: AppTheme.accent)),
+        data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: AppTheme.accent)),
         child: child!,
       ),
     );
@@ -411,8 +411,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       context: ctx,
       initialTime: TimeOfDay.fromDateTime(_scheduledTime),
       builder: (c, child) => Theme(
-        data: ThemeData.dark().copyWith(
-            colorScheme: const ColorScheme.dark(primary: AppTheme.accent)),
+        data: ThemeData.light().copyWith(
+            colorScheme: const ColorScheme.light(primary: AppTheme.accent)),
         child: child!,
       ),
     );
@@ -801,9 +801,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                         _goToStep(2);
                       },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accent,
-                  foregroundColor: AppTheme.primary,
-                  disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
+                  backgroundColor: AppTheme.danger,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppTheme.danger.withValues(alpha: 0.4),
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
@@ -1055,8 +1055,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               child: ElevatedButton(
                 onPressed: _isBooking ? null : _bookRide,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.accent,
-                  foregroundColor: AppTheme.primary,
+                  backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
@@ -1405,12 +1405,4 @@ class _RideTypeCard extends StatelessWidget {
   }
 }
 
-const String _kDarkMapStyle =
-    '[{"elementType":"geometry","stylers":[{"color":"#1a1a2e"}]},'
-    '{"elementType":"labels.text.fill","stylers":[{"color":"#b0bec5"}]},'
-    '{"elementType":"labels.text.stroke","stylers":[{"color":"#1a1a2e"}]},'
-    '{"featureType":"road","elementType":"geometry","stylers":[{"color":"#16213e"}]},'
-    '{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#0f3460"}]},'
-    '{"featureType":"water","elementType":"geometry","stylers":[{"color":"#0f3460"}]},'
-    '{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#16213e"}]},'
-    '{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#0f3460"}]}]';
+const String? _kDarkMapStyle = null; // default light Google Maps style
