@@ -33,6 +33,12 @@ class _Preset {
   const _Preset(this.name, this.latLng);
 }
 
+class _WayStop {
+  String  address = '';
+  LatLng? latLng;
+  bool get isFilled => latLng != null && address.isNotEmpty;
+}
+
 class _RideType {
   final String name, serviceType, eta, desc;
   final IconData icon;
@@ -76,15 +82,21 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   List<PlaceResult> _searchResults = [];
   bool   _searching  = false;
   Timer? _searchDebounce;
-  String _destAddress = '';
-  LatLng? _destLatLng;
-  int    _whereToTab  = 0; // 0=Recent  1=Suggestions  2=Saved
+  // Multiple drop-off stops — last stop is always the final destination
+  final List<_WayStop> _stops = [_WayStop()];
+  int    _activeStopIdx = 0;
+  int    _whereToTab    = 0; // 0=Recent  1=Suggestions  2=Saved
+
+  // Getters for backward-compat with route/booking methods
+  String  get _destAddress => _stops.last.address;
+  LatLng? get _destLatLng  => _stops.last.latLng;
 
   // ── Destination map picker ──────────────────────────────────────────────────
   bool   _choosingDestOnMap = false;
   GoogleMapController? _destMapCtrl;
-  LatLng _destMapCenter = const LatLng(11.5680, 104.9195);
-  bool   _geocodingDest = false;
+  LatLng _destMapCenter  = const LatLng(11.5680, 104.9195);
+  String _mapPickerAddress = '';
+  bool   _geocodingDest  = false;
 
   // ── Confirm ─────────────────────────────────────────────────────────────────
   GoogleMapController? _confirmMapCtrl;
@@ -149,6 +161,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
   }
 
+  Future<void> _geocodeMapCenter() async {
+    setState(() => _geocodingDest = true);
+    final address = await MapsService.reverseGeocode(_destMapCenter);
+    if (!mounted) return;
+    setState(() {
+      _mapPickerAddress = address ??
+          '${_destMapCenter.latitude.toStringAsFixed(4)}, ${_destMapCenter.longitude.toStringAsFixed(4)}';
+      _geocodingDest = false;
+    });
+  }
+
   Future<void> _reverseGeocodePickup(LatLng pos) async {
     setState(() => _geocodingPickup = true);
     final address = await MapsService.reverseGeocode(pos);
@@ -180,13 +203,28 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _selectResult(PlaceResult r) {
-    setState(() { _destAddress = r.address; _destLatLng = r.latLng; });
-    _goToStep(2);
+    setState(() {
+      _stops[_activeStopIdx].address = r.address;
+      _stops[_activeStopIdx].latLng  = r.latLng;
+    });
+    _afterStopFilled();
   }
 
   void _selectPreset(_Preset p) {
-    setState(() { _destAddress = p.name; _destLatLng = p.latLng; });
-    _goToStep(2);
+    setState(() {
+      _stops[_activeStopIdx].address = p.name;
+      _stops[_activeStopIdx].latLng  = p.latLng;
+    });
+    _afterStopFilled();
+  }
+
+  void _afterStopFilled() {
+    final next = _stops.indexWhere((s) => !s.isFilled, _activeStopIdx + 1);
+    if (next == -1) {
+      _goToStep(2);
+    } else {
+      setState(() { _activeStopIdx = next; _searchCtrl.clear(); });
+    }
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -566,78 +604,179 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     if (_choosingDestOnMap) return _buildDestinationMapPicker();
 
     final hasQuery = _searchCtrl.text.trim().isNotEmpty;
+
     return Column(children: [
-      // Route header — current location + where to input
+      // ── Route card (Grab-style) ──────────────────────────────────────────
       Container(
         color: AppTheme.surface,
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Pickup row
-          Row(children: [
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+        child: Column(children: [
+
+          // ── Pickup row (read-only) ──────────────────────────────────────
+          Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             Container(
-              width: 10, height: 10,
-              decoration: const BoxDecoration(
-                  color: AppTheme.accent, shape: BoxShape.circle),
+              width: 12, height: 12,
+              decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 _pickupAddress.isEmpty ? 'Current location' : _pickupAddress,
                 style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
             ),
           ]),
-          // Vertical connector
-          Padding(
-            padding: const EdgeInsets.only(left: 4),
-            child: Container(width: 2, height: 14, color: AppTheme.cardBg),
-          ),
-          // Destination input row
-          Row(children: [
-            Container(
-              width: 10, height: 10,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppTheme.accent, width: 2)),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                autofocus: true,
-                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-                decoration: InputDecoration(
-                  hintText: 'Where to?',
-                  hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                  suffixIcon: hasQuery
-                      ? IconButton(
-                          icon: const Icon(Icons.close,
-                              color: AppTheme.textSecondary, size: 18),
-                          onPressed: () => _searchCtrl.clear(),
+
+          // ── Stop rows ───────────────────────────────────────────────────
+          ...List.generate(_stops.length, (i) {
+            final stop    = _stops[i];
+            final isActive = i == _activeStopIdx;
+            final isLast   = i == _stops.length - 1;
+
+            return Column(children: [
+              // Connector line
+              Row(children: [
+                const SizedBox(width: 5),
+                Container(width: 2, height: 20,
+                    color: AppTheme.cardBg.withValues(alpha: 0.8)),
+              ]),
+
+              // Stop row
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: isActive
+                    ? BoxDecoration(
+                        color: AppTheme.cardBg.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+                      )
+                    : null,
+                child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                  // Stop icon
+                  isLast && _stops.length == 1
+                    // Single destination → red pin
+                    ? const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 20)
+                    : isLast
+                    // Final stop of multi-stop → red pin
+                    ? const Icon(Icons.location_on, color: AppTheme.danger, size: 20)
+                    // Intermediate stop → numbered circle
+                    : Container(
+                        width: 20, height: 20,
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.warning, width: 1.5),
+                        ),
+                        child: Center(
+                          child: Text('${i + 1}',
+                              style: const TextStyle(color: AppTheme.warning,
+                                  fontSize: 10, fontWeight: FontWeight.w800)),
+                        ),
+                      ),
+
+                  const SizedBox(width: 10),
+
+                  // Input or filled text
+                  Expanded(
+                    child: isActive
+                      ? TextField(
+                          controller: _searchCtrl,
+                          autofocus: true,
+                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: i == 0 ? 'Where to?' : 'Stop ${i + 1}',
+                            hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                            border: InputBorder.none,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 7),
+                            suffixIcon: hasQuery
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
+                                  onPressed: () => _searchCtrl.clear(),
+                                )
+                              : null,
+                          ),
                         )
-                      : null,
-                ),
+                      : GestureDetector(
+                          onTap: () => setState(() { _activeStopIdx = i; _searchCtrl.clear(); }),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 9),
+                            child: stop.isFilled
+                              ? Text(stop.address,
+                                  style: const TextStyle(color: AppTheme.textPrimary,
+                                      fontSize: 14, fontWeight: FontWeight.w500),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis)
+                              : Text(i == 0 ? 'Where to?' : 'Stop ${i + 1}',
+                                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                          ),
+                        ),
+                  ),
+
+                  // Delete stop button
+                  if (_stops.length > 1)
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _stops.removeAt(i);
+                        if (_activeStopIdx >= _stops.length) {
+                          _activeStopIdx = _stops.length - 1;
+                        }
+                      }),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        child: Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
+                      ),
+                    ),
+                ]),
               ),
+            ]);
+          }),
+
+          // ── "Add a stop" — always visible when < 4 stops ───────────────
+          if (_stops.length < 4) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: () {
+                final unfilled = _stops.indexWhere((s) => !s.isFilled);
+                if (unfilled != -1) {
+                  // Focus the first unfilled stop instead of adding a new one
+                  setState(() { _activeStopIdx = unfilled; _searchCtrl.clear(); });
+                } else {
+                  setState(() {
+                    _stops.add(_WayStop());
+                    _activeStopIdx = _stops.length - 1;
+                    _searchCtrl.clear();
+                  });
+                }
+              },
+              child: Row(children: [
+                Container(
+                  width: 22, height: 22,
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.add, size: 14, color: AppTheme.accent),
+                ),
+                const SizedBox(width: 10),
+                const Text('Add a stop',
+                    style: TextStyle(color: AppTheme.accent,
+                        fontSize: 14, fontWeight: FontWeight.w500)),
+              ]),
             ),
-          ]),
-          const SizedBox(height: 6),
-          const Divider(height: 1, color: AppTheme.cardBg),
+          ],
         ]),
       ),
 
-      // Body
+      const Divider(height: 1, color: AppTheme.cardBg),
+
+      // ── Search results / tabs ────────────────────────────────────────────
       Expanded(
         child: _searching
             ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
             : hasQuery && _searchResults.isEmpty
-                ? const Center(
-                    child: Text('No results found',
-                        style: TextStyle(color: AppTheme.textSecondary)))
+                ? const Center(child: Text('No results found',
+                    style: TextStyle(color: AppTheme.textSecondary)))
                 : hasQuery
                     ? ListView(
                         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -662,10 +801,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         icon: Icons.map_outlined,
         iconColor: AppTheme.accent,
         title: 'Choose on Map',
-        onTap: () => setState(() {
-          _destMapCenter = _pickupCenter;
-          _choosingDestOnMap = true;
-        }),
+        onTap: () {
+          final activeStop = _stops[_activeStopIdx];
+          setState(() {
+            // Start at the stop's existing position; fall back to pickup center
+            _destMapCenter   = activeStop.latLng ?? _pickupCenter;
+            // Pre-fill address so confirm button is enabled immediately
+            _mapPickerAddress = activeStop.address;
+            _choosingDestOnMap = true;
+          });
+        },
       ),
       const Divider(height: 1, color: AppTheme.cardBg),
 
@@ -727,6 +872,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         onMapCreated: (c) {
           _destMapCtrl = c;
           c.animateCamera(CameraUpdate.newLatLng(_destMapCenter));
+          // Geocode immediately so the confirm button is ready without dragging
+          if (_mapPickerAddress.isEmpty) _geocodeMapCenter();
         },
         initialCameraPosition: CameraPosition(target: _destMapCenter, zoom: 15),
         style: _kDarkMapStyle,
@@ -736,84 +883,88 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         cameraTargetBounds: CameraTargetBounds(_kCambodiaBounds),
         minMaxZoomPreference: const MinMaxZoomPreference(10, 20),
         onCameraMove: (pos) => _destMapCenter = pos.target,
-        onCameraIdle: () async {
-          setState(() => _geocodingDest = true);
-          final address = await MapsService.reverseGeocode(_destMapCenter);
-          if (!mounted) return;
-          setState(() {
-            _destAddress = address ??
-                '${_destMapCenter.latitude.toStringAsFixed(4)}, ${_destMapCenter.longitude.toStringAsFixed(4)}';
-            _geocodingDest = false;
-          });
-        },
+        onCameraIdle: _geocodeMapCenter,
       ),
 
       const Center(child: _Crosshair()),
 
       Positioned(
         bottom: 0, left: 0, right: 0,
-        child: _BottomCard(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(children: [
-              Container(
-                width: 10, height: 10,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppTheme.accent, width: 2)),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _geocodingDest
-                    ? const Row(children: [
-                        SizedBox(
-                          width: 14, height: 14,
-                          child: CircularProgressIndicator(
-                              color: AppTheme.accent, strokeWidth: 2),
-                        ),
-                        SizedBox(width: 10),
-                        Text('Finding address…',
-                            style: TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 13)),
-                      ])
-                    : Text(
-                        _destAddress.isEmpty
-                            ? 'Drag map to set destination'
-                            : _destAddress,
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
+        child: Builder(builder: (ctx) {
+          // Use viewPadding so this always sits above the system nav bar,
+          // regardless of whether the parent Scaffold already consumed the inset.
+          final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
+          return Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+            ),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomInset),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [
+                Container(
+                  width: 10, height: 10,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.accent, width: 2)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _geocodingDest
+                      ? const Row(children: [
+                          SizedBox(
+                            width: 14, height: 14,
+                            child: CircularProgressIndicator(
+                                color: AppTheme.accent, strokeWidth: 2),
+                          ),
+                          SizedBox(width: 10),
+                          Text('Finding address…',
+                              style: TextStyle(
+                                  color: AppTheme.textSecondary, fontSize: 13)),
+                        ])
+                      : Text(
+                          _mapPickerAddress.isEmpty
+                              ? 'Drag map to set destination'
+                              : _mapPickerAddress,
+                          style: const TextStyle(
+                              color: AppTheme.textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: (_geocodingDest || _mapPickerAddress.isEmpty)
+                      ? null
+                      : () {
+                          setState(() {
+                            _stops[_activeStopIdx].address = _mapPickerAddress;
+                            _stops[_activeStopIdx].latLng  = _destMapCenter;
+                            _choosingDestOnMap = false;
+                            _mapPickerAddress  = '';
+                          });
+                          _afterStopFilled();
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.danger,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppTheme.danger.withValues(alpha: 0.4),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Confirm Destination',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                ),
               ),
             ]),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: (_geocodingDest || _destAddress.isEmpty)
-                    ? null
-                    : () {
-                        setState(() {
-                          _destLatLng = _destMapCenter;
-                          _choosingDestOnMap = false;
-                        });
-                        _goToStep(2);
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.danger,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppTheme.danger.withValues(alpha: 0.4),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text('Confirm Destination',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              ),
-            ),
-          ]),
-        ),
+          );
+        }),
       ),
     ]);
   }
@@ -833,6 +984,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         infoWindow: const InfoWindow(title: 'Pickup'),
       ),
+      // Intermediate stops (orange)
+      for (int i = 0; i < _stops.length - 1; i++)
+        if (_stops[i].latLng != null)
+          Marker(
+            markerId: MarkerId('stop_$i'),
+            position: _stops[i].latLng!,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+            infoWindow: InfoWindow(title: 'Stop ${i + 1}'),
+          ),
+      // Final destination (red)
       if (dest != null)
         Marker(
           markerId: const MarkerId('dest'),
@@ -910,12 +1071,21 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   color: AppTheme.surface,
                   borderRadius: BorderRadius.circular(14)),
               child: Column(children: [
-                _RouteRow(color: AppTheme.accent,       icon: Icons.circle,      label: _pickupAddress),
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
-                  child: Container(width: 2, height: 16, color: AppTheme.cardBg),
-                ),
-                _RouteRow(color: AppTheme.accentOrange, icon: Icons.location_on, label: _destAddress),
+                _RouteRow(color: AppTheme.accent, icon: Icons.circle, label: _pickupAddress),
+                ...List.generate(_stops.length, (i) {
+                  final isLast = i == _stops.length - 1;
+                  return Column(children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
+                      child: Container(width: 2, height: 16, color: AppTheme.cardBg),
+                    ),
+                    _RouteRow(
+                      color: isLast ? AppTheme.accentOrange : AppTheme.warning,
+                      icon:  isLast ? Icons.location_on : Icons.location_on_outlined,
+                      label: _stops[i].address,
+                    ),
+                  ]);
+                }),
                 if (_etaMinutes > 0 || _distanceKm > 0) ...[
                   const Divider(color: AppTheme.cardBg, height: 20),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [

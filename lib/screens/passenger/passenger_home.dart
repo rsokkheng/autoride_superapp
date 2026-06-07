@@ -31,6 +31,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
 
   final List<Widget> _pages = [
     const _HomeTab(),
+    const RideBookingScreen(),
     const ChargingStationsScreen(),
     const ChatScreen(isDriver: false),
     const _ProfileTab(),
@@ -52,9 +53,23 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _NavItem(icon: Icons.home_outlined, label: AppLocalizations.of(context).home, index: 0, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.ev_station_outlined, label: AppLocalizations.of(context).charging, index: 1, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.chat_bubble_outline, label: AppLocalizations.of(context).chat, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.person_outline, label: AppLocalizations.of(context).profile, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i)),
+               _NavItem(
+                    icon: Icons.directions_car_outlined,
+                    label: AppLocalizations.of(context).bookRide,
+                    index: 1,
+                    current: _tab,
+                    onTap: (i) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RideBookingScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                _NavItem(icon: Icons.ev_station_outlined, label: AppLocalizations.of(context).charging, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i)),
+                _NavItem(icon: Icons.chat_bubble_outline, label: AppLocalizations.of(context).chat, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i)),
+                _NavItem(icon: Icons.person_outline, label: AppLocalizations.of(context).profile, index: 4, current: _tab, onTap: (i) => setState(() => _tab = i)),
               ],
             ),
           ),
@@ -146,8 +161,8 @@ class _HomeTabState extends State<_HomeTab> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Good morning,', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                    Text(_firstName.isEmpty ? 'Welcome!' : '$_firstName 👋',
+                    Text(AppLocalizations.of(context).goodMorning, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                    Text(_firstName.isEmpty ? AppLocalizations.of(context).welcome : '${AppLocalizations.of(context).hello} $_firstName 👋',
                         style: const TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
                   ],
                 ),
@@ -169,7 +184,7 @@ class _HomeTabState extends State<_HomeTab> {
                 children: [
                   const Icon(Icons.search, color: AppTheme.textSecondary),
                   const SizedBox(width: 10),
-                  Text('Where are you going?', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+                  Text(AppLocalizations.of(context).explore, style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
                 ],
               ),
             ),
@@ -184,24 +199,30 @@ class _HomeTabState extends State<_HomeTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const StatusBadge(label: 'NEW', color: AppTheme.accent),
                         const SizedBox(height: 8),
-                        const Text('EV Cars Now\nAvailable!', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800, height: 1.3)),
                         const SizedBox(height: 8),
-                        Text('Rent or buy electric\nvehicles near you', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                        Text(AppLocalizations.of(context).evCarsSubtitle, style: const TextStyle(color: AppTheme.primary, fontSize: 15 , fontWeight: FontWeight.w700)),
                         const SizedBox(height: 12),
                         GestureDetector(
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(8)),
-                            child: const Text('Explore', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+                            child: Text(AppLocalizations.of(context).explore, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.electric_car, color: AppTheme.accent, size: 80),
+                 Container(
+                    width: 80,
+                    height: 80,
+                    color: Colors.transparent,
+                    child: Image.asset(
+                      'assets/library/icon_fa.png',
+                       fit: BoxFit.contain,
+                    ),
+                  )
                 ],
               ),
             ),

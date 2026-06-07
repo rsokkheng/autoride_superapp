@@ -883,7 +883,7 @@ class ApiService {
     required bool   needsStairsCarry,
     required bool   heavyItems,
     required int    requiresHelpers,   // 1–4
-    required String helperType,        // 'normal' | 'heavy'
+    String  helperType      = 'normal', // 'normal' | 'heavy'
     bool    packingService  = false,
     int?    fee,
     String  paymentMethod   = 'cash',

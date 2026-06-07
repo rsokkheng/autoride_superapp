@@ -32,8 +32,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   String   _deliveryVehicleType  = 'motorbike'; // 'motorbike'|'small_car'|'van'|'truck'
   String   _paymentBy            = 'sender';
   String   _paymentMethod        = 'cash';
-  String   _delivPaymentModel    = 'customer';  // 'customer'|'partner'|'split'|'sponsored'
-  int      _delivSplitPercent    = 50;
   DateTime _scheduledTime        = DateTime.now().add(const Duration(hours: 2));
 
   // ── Moving fields ────────────────────────────────────────────────────────
@@ -50,12 +48,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   bool     _heavyItems        = false;
   bool     _packingService    = false;
   int      _requiresHelpers   = 1;        // 1–4
-  String   _helperType        = 'normal'; // 'normal' | 'heavy'
   String   _movePaymentMethod = 'cash';
-  // Payment model
-  String   _movePaymentModel  = 'customer'; // 'customer'|'partner'|'split'|'sponsored'
-  final    _partnerCodeCtrl   = TextEditingController();
-  int      _splitPercent      = 50;         // customer's share
+  bool     _isMoveScheduled   = false;
   DateTime _moveDate          = DateTime.now().add(const Duration(days: 1));
 
   // ── Shared ───────────────────────────────────────────────────────────────
@@ -77,7 +71,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     _moveFromCtrl.dispose();
     _moveToCtrl.dispose();
     _moveNotesCtrl.dispose();
-    _partnerCodeCtrl.dispose();
     super.dispose();
   }
 
@@ -106,9 +99,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         fee:            int.tryParse(_feeCtrl.text.trim()),
         paymentBy:      _paymentBy,
         paymentMethod:  _paymentMethod,
-        paymentModel:   _delivPaymentModel,
-        partnerCode:    _delivPartnerCodeCtrl.text.trim().isEmpty ? null : _delivPartnerCodeCtrl.text.trim(),
-        splitPercent:   _delivPaymentModel == 'split' ? _delivSplitPercent : null,
         vehicleType:    _deliveryVehicleType,
         notes:          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         scheduledAt:    _isScheduled ? _formatDateTime(_scheduledTime) : null,
@@ -145,14 +135,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         needsStairsCarry: _needsStairsCarry,
         heavyItems:       _heavyItems,
         requiresHelpers:  _requiresHelpers,
-        helperType:       _helperType,
         packingService:   _packingService,
         paymentMethod:    _movePaymentMethod,
-        paymentModel:     _movePaymentModel,
-        partnerCode:      _partnerCodeCtrl.text.trim().isEmpty ? null : _partnerCodeCtrl.text.trim(),
-        splitPercent:     _movePaymentModel == 'split' ? _splitPercent : null,
         notes:            _moveNotesCtrl.text.trim().isEmpty ? null : _moveNotesCtrl.text.trim(),
-        scheduledAt:      _formatDateTime(_moveDate),
+        scheduledAt:      _isMoveScheduled ? _formatDateTime(_moveDate) : null,
       );
       if (!mounted) return;
       _showSuccess('Moving scheduled successfully!');
@@ -169,7 +155,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   // ── Moving pricing preview (client-side estimate in USD) ──────────────────
 
   static const _kHelperFeeNormal = 5.0;
-  static const _kHelperFeeHeavy  = 8.0;
   static const _kBaseFeeMoving   = 15.0;
 
   double get _floorFee {
@@ -185,10 +170,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     return _hasElevator ? fee : fee * 1.5;
   }
 
-  double get _helperFee {
-    final rate = _helperType == 'heavy' ? _kHelperFeeHeavy : _kHelperFeeNormal;
-    return _requiresHelpers * rate;
-  }
+  double get _helperFee => _requiresHelpers * _kHelperFeeNormal;
 
   double get _packingFee => _packingService ? 10.0 : 0.0;
 
@@ -387,103 +369,20 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       const SizedBox(height: 12),
 
-      // Payment model
+      // Payment method (always visible, no payment model needed)
       _AppDropdown<String>(
-        label: 'Payment Model',
-        icon: Icons.payment_outlined,
-        value: _delivPaymentModel,
+        label: 'Payment Method',
+        icon: Icons.wallet_outlined,
+        value: _paymentMethod,
         items: const [
-          _DropItem(value: 'customer',  label: 'Customer Pays',  subtitle: 'You cover the full delivery cost',   icon: Icons.person_outline),
-          _DropItem(value: 'partner',   label: 'Partner Pays',   subtitle: 'A company or partner is billed',     icon: Icons.handshake_outlined),
-          _DropItem(value: 'split',     label: 'Split Payment',  subtitle: 'You and a partner share the cost',   icon: Icons.call_split_outlined),
-          _DropItem(value: 'sponsored', label: 'Sponsored',      subtitle: 'Covered by ROTEH — free for you',    icon: Icons.verified_outlined),
+          _DropItem(value: 'cash',        label: 'Cash',         subtitle: 'Pay with cash',           icon: Icons.money),
+          _DropItem(value: 'wallet',       label: 'ROTEH Wallet', subtitle: 'Pay from wallet balance',  icon: Icons.account_balance_wallet_outlined),
+          _DropItem(value: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.credit_card),
+          _DropItem(value: 'wing',         label: 'Wing Money',   subtitle: 'Wing mobile payment',     icon: Icons.send_to_mobile),
+          _DropItem(value: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language),
         ],
-        onChanged: (v) => setState(() => _delivPaymentModel = v),
+        onChanged: (v) => setState(() => _paymentMethod = v),
       ),
-
-      // Payment model sub-options
-      if (_delivPaymentModel == 'customer') ...[
-        const SizedBox(height: 12),
-        _AppDropdown<String>(
-          label: 'Payment Method',
-          icon: Icons.wallet_outlined,
-          value: _paymentMethod,
-          items: const [
-            _DropItem(value: 'cash',        label: 'Cash',         subtitle: 'Pay with cash',           icon: Icons.money),
-            _DropItem(value: 'wallet',       label: 'ROTEH Wallet', subtitle: 'Pay from wallet balance',  icon: Icons.account_balance_wallet_outlined),
-            _DropItem(value: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.credit_card),
-            _DropItem(value: 'wing',         label: 'Wing Money',   subtitle: 'Wing mobile payment',     icon: Icons.send_to_mobile),
-            _DropItem(value: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language),
-          ],
-          onChanged: (v) => setState(() => _paymentMethod = v),
-        ),
-      ],
-
-      if (_delivPaymentModel == 'partner') ...[
-        const SizedBox(height: 12),
-        _Field(hint: 'Partner code / company ID', icon: Icons.badge_outlined, controller: _delivPartnerCodeCtrl),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.accent.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
-          ),
-          child: const Row(children: [
-            Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text(
-              'Partner will be invoiced directly. No payment collected from you.',
-              style: TextStyle(color: AppTheme.accent, fontSize: 12),
-            )),
-          ]),
-        ),
-      ],
-
-      if (_delivPaymentModel == 'split') ...[
-        const SizedBox(height: 12),
-        _Field(hint: 'Partner code / company ID', icon: Icons.badge_outlined, controller: _delivPartnerCodeCtrl),
-        const SizedBox(height: 12),
-        _SplitSlider(
-          percent: _delivSplitPercent,
-          onChanged: (v) => setState(() => _delivSplitPercent = v),
-        ),
-        const SizedBox(height: 12),
-        _AppDropdown<String>(
-          label: 'Your Payment Method',
-          icon: Icons.wallet_outlined,
-          value: _paymentMethod,
-          items: const [
-            _DropItem(value: 'cash',        label: 'Cash',         subtitle: 'Pay with cash',           icon: Icons.money),
-            _DropItem(value: 'wallet',       label: 'ROTEH Wallet', subtitle: 'Pay from wallet balance',  icon: Icons.account_balance_wallet_outlined),
-            _DropItem(value: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.credit_card),
-            _DropItem(value: 'wing',         label: 'Wing Money',   subtitle: 'Wing mobile payment',     icon: Icons.send_to_mobile),
-            _DropItem(value: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language),
-          ],
-          onChanged: (v) => setState(() => _paymentMethod = v),
-        ),
-      ],
-
-      if (_delivPaymentModel == 'sponsored') ...[
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.success.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
-          ),
-          child: const Row(children: [
-            Icon(Icons.verified_outlined, color: AppTheme.success, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text(
-              'This delivery is covered by ROTEH. No payment required from you.',
-              style: TextStyle(color: AppTheme.success, fontSize: 12),
-            )),
-          ]),
-        ),
-      ],
       const SizedBox(height: 20),
 
       // Schedule toggle
@@ -636,19 +535,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       const SizedBox(height: 14),
 
-      // Helper type
-      _AppDropdown<String>(
-        label: 'Helper Type',
-        icon: Icons.person_outline,
-        value: _helperType,
-        items: const [
-          _DropItem(value: 'normal', label: 'Normal Carry', subtitle: 'Boxes, furniture',    icon: Icons.person_outline),
-          _DropItem(value: 'heavy',  label: 'Heavy Carry',  subtitle: 'Fridge, sofa, safe',  icon: Icons.fitness_center),
-        ],
-        onChanged: (v) => setState(() => _helperType = v),
-      ),
-      const SizedBox(height: 14),
-
       // Heavy items
       _CheckOption(
         label: 'Has heavy items',
@@ -686,110 +572,42 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _Field(hint: 'Notes (optional)', icon: Icons.notes_outlined, controller: _moveNotesCtrl),
       const SizedBox(height: 20),
 
-      // ── 💳 Payment Model ──────────────────────────────────────────────────
+      // ── 💳 Payment Method ─────────────────────────────────────────────────
       _AppDropdown<String>(
-        label: 'Payment Model',
-        icon: Icons.payment_outlined,
-        value: _movePaymentModel,
+        label: 'Payment Method',
+        icon: Icons.wallet_outlined,
+        value: _movePaymentMethod,
         items: const [
-          _DropItem(value: 'customer',  label: 'Customer Pays',  subtitle: 'You cover the full moving cost',       icon: Icons.person_outline),
-          _DropItem(value: 'partner',   label: 'Partner Pays',   subtitle: 'A company or partner is billed',       icon: Icons.handshake_outlined),
-          _DropItem(value: 'split',     label: 'Split Payment',  subtitle: 'You and a partner share the cost',     icon: Icons.call_split_outlined),
-          _DropItem(value: 'sponsored', label: 'Sponsored',      subtitle: 'Covered by ROTEH — free for you',      icon: Icons.verified_outlined),
+          _DropItem(value: 'cash',        label: 'Cash',         subtitle: 'Pay with cash',           icon: Icons.money),
+          _DropItem(value: 'wallet',       label: 'ROTEH Wallet', subtitle: 'Pay from wallet balance',  icon: Icons.account_balance_wallet_outlined),
+          _DropItem(value: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.credit_card),
+          _DropItem(value: 'wing',         label: 'Wing Money',   subtitle: 'Wing mobile payment',     icon: Icons.send_to_mobile),
+          _DropItem(value: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language),
         ],
-        onChanged: (v) => setState(() => _movePaymentModel = v),
+        onChanged: (v) => setState(() => _movePaymentMethod = v),
       ),
-
-      // Sub-options per model
-      if (_movePaymentModel == 'customer') ...[
-        const SizedBox(height: 12),
-        _AppDropdown<String>(
-          label: 'Payment Method',
-          icon: Icons.wallet_outlined,
-          value: _movePaymentMethod,
-          items: const [
-            _DropItem(value: 'cash',   label: 'Cash',          subtitle: 'Pay on delivery',          icon: Icons.money),
-            _DropItem(value: 'wallet', label: 'ROTEH Wallet',  subtitle: 'From your wallet balance',  icon: Icons.account_balance_wallet_outlined),
-            _DropItem(value: 'aba',    label: 'ABA Pay',       subtitle: 'Via ABA Mobile',            icon: Icons.credit_card),
-            _DropItem(value: 'wing',   label: 'Wing Money',    subtitle: 'Via Wing mobile',           icon: Icons.send_to_mobile),
-          ],
-          onChanged: (v) => setState(() => _movePaymentMethod = v),
-        ),
-      ],
-
-      if (_movePaymentModel == 'partner') ...[
-        const SizedBox(height: 12),
-        _Field(hint: 'Partner code / company ID', icon: Icons.badge_outlined, controller: _partnerCodeCtrl),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.accent.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
-          ),
-          child: const Row(children: [
-            Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text(
-              'Partner will be invoiced directly. No payment collected from you.',
-              style: TextStyle(color: AppTheme.accent, fontSize: 12),
-            )),
-          ]),
-        ),
-      ],
-
-      if (_movePaymentModel == 'split') ...[
-        const SizedBox(height: 12),
-        _Field(hint: 'Partner code / company ID', icon: Icons.badge_outlined, controller: _partnerCodeCtrl),
-        const SizedBox(height: 12),
-        _SplitSlider(
-          percent: _splitPercent,
-          onChanged: (v) => setState(() => _splitPercent = v),
-        ),
-        const SizedBox(height: 12),
-        _AppDropdown<String>(
-          label: 'Your Payment Method',
-          icon: Icons.wallet_outlined,
-          value: _movePaymentMethod,
-          items: const [
-            _DropItem(value: 'cash',   label: 'Cash',          subtitle: 'Pay on delivery',          icon: Icons.money),
-            _DropItem(value: 'wallet', label: 'ROTEH Wallet',  subtitle: 'From your wallet balance',  icon: Icons.account_balance_wallet_outlined),
-            _DropItem(value: 'aba',    label: 'ABA Pay',       subtitle: 'Via ABA Mobile',            icon: Icons.credit_card),
-            _DropItem(value: 'wing',   label: 'Wing Money',    subtitle: 'Via Wing mobile',           icon: Icons.send_to_mobile),
-          ],
-          onChanged: (v) => setState(() => _movePaymentMethod = v),
-        ),
-      ],
-
-      if (_movePaymentModel == 'sponsored') ...[
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.success.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.success.withValues(alpha: 0.3)),
-          ),
-          child: const Row(children: [
-            Icon(Icons.verified_outlined, color: AppTheme.success, size: 16),
-            SizedBox(width: 8),
-            Expanded(child: Text(
-              'This move is covered by ROTEH. No payment required from you.',
-              style: TextStyle(color: AppTheme.success, fontSize: 12),
-            )),
-          ]),
-        ),
-      ],
       const SizedBox(height: 20),
 
       // ── Moving date ───────────────────────────────────────────────────────
-      const SectionHeader(title: 'Moving Date & Time'),
       const SizedBox(height: 14),
-      _DateTimeTile(dateTime: _moveDate, color: AppTheme.accent, onTap: _pickMoveDate),
+      Row(children: [
+        const Text('Schedule moving date',
+            style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+        const Spacer(),
+        Switch(
+          value: _isMoveScheduled,
+          onChanged: (v) => setState(() => _isMoveScheduled = v),
+          activeThumbColor: AppTheme.accent,
+          activeTrackColor: AppTheme.accent.withValues(alpha: 0.4),
+        ),
+      ]),
+      if (_isMoveScheduled) ...[
+        const SizedBox(height: 10),
+        _DateTimeTile(dateTime: _moveDate, color: AppTheme.accent, onTap: _pickMoveDate),
+      ],
       const SizedBox(height: 28),
 
-      _SubmitButton(label: 'Schedule Moving', icon: Icons.local_shipping, loading: _submitting, onPressed: _submitMoving),
+      _SubmitButton(label: _isMoveScheduled ? 'Schedule Moving' : 'Book Moving', icon: Icons.local_shipping, loading: _submitting, onPressed: _submitMoving),
       const SizedBox(height: 16),
     ]);
   }
@@ -1209,62 +1027,6 @@ class _AppDropdown<T> extends StatelessWidget {
               color: AppTheme.textSecondary, size: 22),
         ]),
       ),
-    );
-  }
-}
-
-// ── Split payment slider ──────────────────────────────────────────────────────
-
-class _SplitSlider extends StatelessWidget {
-  final int percent;
-  final ValueChanged<int> onChanged;
-  const _SplitSlider({required this.percent, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final partnerPercent = 100 - percent;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0097A7).withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF0097A7).withValues(alpha: 0.3)),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Row(children: [
-          Icon(Icons.call_split_outlined, color: Color(0xFF0097A7), size: 16),
-          SizedBox(width: 6),
-          Text('Split Ratio', style: TextStyle(
-              color: Color(0xFF0097A7), fontWeight: FontWeight.w700, fontSize: 13)),
-        ]),
-        const SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('You', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-            Text('$percent%', style: const TextStyle(
-                color: Color(0xFF0097A7), fontWeight: FontWeight.w800, fontSize: 20)),
-          ])),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            const Text('Partner', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-            Text('$partnerPercent%', style: const TextStyle(
-                color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 20)),
-          ])),
-        ]),
-        Slider(
-          value: percent.toDouble(),
-          min: 10,
-          max: 90,
-          divisions: 8,
-          activeColor: const Color(0xFF0097A7),
-          inactiveColor: AppTheme.accent.withValues(alpha: 0.3),
-          onChanged: (v) => onChanged(v.round()),
-        ),
-        const Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('10%', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-          Text('50/50', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-          Text('90%', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-        ]),
-      ]),
     );
   }
 }
