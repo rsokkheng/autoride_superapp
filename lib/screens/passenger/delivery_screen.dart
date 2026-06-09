@@ -29,6 +29,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   bool     _isScheduled          = false;
   String   _packageSize          = 'small';
+  String   _deliveryServiceOption = 'normal'; // 'normal' | 'express'
   String   _deliveryVehicleType  = 'motorbike'; // 'motorbike'|'small_car'|'van'|'truck'
   String   _paymentBy            = 'sender';
   String   _paymentMethod        = 'cash';
@@ -39,9 +40,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   final _moveToCtrl    = TextEditingController();
   final _moveNotesCtrl = TextEditingController();
 
-  String   _moveType          = 'home';   // 'home' | 'office'
-  String   _propertySize      = 'studio';
-  int      _floorPickup       = 1;
+  String   _moveType            = 'home';   // 'home' | 'office'
+  String   _movingServiceOption  = 'normal'; // 'normal' | 'express'
+  String   _propertySize        = 'studio';
+  int      _floorPickup         = 1;
   int      _floorDropoff      = 1;
   bool     _hasElevator       = true;
   bool     _needsStairsCarry  = false;
@@ -99,6 +101,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         fee:            int.tryParse(_feeCtrl.text.trim()),
         paymentBy:      _paymentBy,
         paymentMethod:  _paymentMethod,
+        serviceOption:  _deliveryServiceOption,
         vehicleType:    _deliveryVehicleType,
         notes:          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         scheduledAt:    _isScheduled ? _formatDateTime(_scheduledTime) : null,
@@ -135,6 +138,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         needsStairsCarry: _needsStairsCarry,
         heavyItems:       _heavyItems,
         requiresHelpers:  _requiresHelpers,
+        serviceOption:    _movingServiceOption,
         packingService:   _packingService,
         paymentMethod:    _movePaymentMethod,
         notes:            _moveNotesCtrl.text.trim().isEmpty ? null : _moveNotesCtrl.text.trim(),
@@ -341,6 +345,19 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       const SizedBox(height: 12),
 
+      // Service option
+      _AppDropdown<String>(
+        label: 'Service Option',
+        icon: Icons.speed,
+        value: _deliveryServiceOption,
+        items: const [
+          _DropItem(value: 'normal',  label: 'Normal',  subtitle: 'Standard delivery speed', icon: Icons.check_circle_outline),
+          _DropItem(value: 'express', label: 'Express', subtitle: 'Faster delivery at higher fee', icon: Icons.flash_on_outlined),
+        ],
+        onChanged: (v) => setState(() => _deliveryServiceOption = v),
+      ),
+      const SizedBox(height: 12),
+
       // Delivery vehicle
       _AppDropdown<String>(
         label: 'Delivery Vehicle',
@@ -457,6 +474,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           _DropItem(value: 'office', label: 'Office Move', subtitle: 'Commercial / office moving',  icon: Icons.business_outlined),
         ],
         onChanged: (v) => setState(() => _moveType = v),
+      ),
+      const SizedBox(height: 12),
+
+      _AppDropdown<String>(
+        label: 'Service Option',
+        icon: Icons.speed,
+        value: _movingServiceOption,
+        items: const [
+          _DropItem(value: 'normal',  label: 'Normal',  subtitle: 'Standard moving service', icon: Icons.check_circle_outline),
+          _DropItem(value: 'express', label: 'Express', subtitle: 'Priority moving service', icon: Icons.flash_on_outlined),
+        ],
+        onChanged: (v) => setState(() => _movingServiceOption = v),
       ),
       const SizedBox(height: 12),
 

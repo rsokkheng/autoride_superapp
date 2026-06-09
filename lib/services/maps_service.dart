@@ -135,32 +135,81 @@ class MapsService {
 
   static Future<List<PlaceResult>> searchAddress(String query) async {
     if (query.trim().isEmpty) return [];
-    final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/geocode/json'
-      '?address=${Uri.encodeComponent(query)}'
-      '&region=kh'
-      '&key=$_apiKey',
-    );
+
     try {
-      final res = await http.get(url).timeout(const Duration(seconds: 8));
-      if (res.statusCode != 200) {
-        AppLog.w('Maps', 'searchAddress HTTP ${res.statusCode}');
+      final autocompleteUrl = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/autocomplete/json',
+        {
+          'input': query,
+          'key': _apiKey,
+          'components': 'country:kh',
+          'language': 'en',
+        },
+      );
+
+      final autoRes = await http.get(autocompleteUrl).timeout(const Duration(seconds: 8));
+      if (autoRes.statusCode != 200) {
+        AppLog.w('Maps', 'searchAddress autocomplete HTTP ${autoRes.statusCode}');
         return [];
       }
-      final body = jsonDecode(res.body) as Map<String, dynamic>;
-      final list = (body['results'] as List<dynamic>? ?? []).take(5);
-      return list.map((r) {
-        final map = r as Map<String, dynamic>;
-        final loc = (map['geometry'] as Map<String, dynamic>)['location']
-            as Map<String, dynamic>;
-        return PlaceResult(
-          address: map['formatted_address'] as String,
-          latLng:  LatLng(
-            (loc['lat'] as num).toDouble(),
-            (loc['lng'] as num).toDouble(),
-          ),
-        );
-      }).toList();
+
+      final autoBody = jsonDecode(autoRes.body) as Map<String, dynamic>;
+      final status = autoBody['status'] as String? ?? '';
+      if (status != 'OK' && status != 'ZERO_RESULTS') {
+        AppLog.w('Maps', 'searchAddress autocomplete status: $status');
+        return [];
+      }
+
+      final predictions = autoBody['predictions'] as List<dynamic>? ?? [];
+      final results = await Future.wait(predictions.take(5).map((prediction) async {
+        final pred = prediction as Map<String, dynamic>;
+        final placeId = pred['place_id'] as String?;
+        final description = pred['description'] as String? ?? '';
+
+        if (placeId == null || placeId.isEmpty) return null;
+        try {
+          final detailsUrl = Uri.https(
+            'maps.googleapis.com',
+            '/maps/api/place/details/json',
+            {
+              'place_id': placeId,
+              'fields': 'formatted_address,geometry',
+              'key': _apiKey,
+              'language': 'en',
+            },
+          );
+
+          final detailRes = await http.get(detailsUrl).timeout(const Duration(seconds: 8));
+          if (detailRes.statusCode != 200) {
+            AppLog.w('Maps', 'searchAddress details HTTP ${detailRes.statusCode}');
+            return null;
+          }
+
+          final detailBody = jsonDecode(detailRes.body) as Map<String, dynamic>;
+          final result = detailBody['result'] as Map<String, dynamic>?;
+          if (result == null) return null;
+
+          final geometry = result['geometry'] as Map<String, dynamic>?;
+          final location = geometry?['location'] as Map<String, dynamic>?;
+          if (location == null) return null;
+
+          final lat = (location['lat'] as num?)?.toDouble();
+          final lng = (location['lng'] as num?)?.toDouble();
+          final formattedAddress = result['formatted_address'] as String? ?? description;
+
+          if (lat == null || lng == null) return null;
+          return PlaceResult(
+            address: formattedAddress,
+            latLng: LatLng(lat, lng),
+          );
+        } catch (e, s) {
+          AppLog.e('Maps', 'searchAddress details failed', e, s);
+          return null;
+        }
+      }));
+
+      return results.whereType<PlaceResult>().toList();
     } catch (e, s) {
       AppLog.e('Maps', 'searchAddress failed', e, s);
       return [];

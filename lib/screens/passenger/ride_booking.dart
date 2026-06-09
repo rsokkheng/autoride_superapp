@@ -221,10 +221,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   void _afterStopFilled() {
     final next = _stops.indexWhere((s) => !s.isFilled, _activeStopIdx + 1);
     if (next == -1) {
-      _goToStep(2);
+      // All stops are filled. Keep focus on the last stop and allow editing.
+      setState(() { _searchCtrl.clear(); });
     } else {
       setState(() { _activeStopIdx = next; _searchCtrl.clear(); });
     }
+  }
+
+  String _shortAddress(String address) {
+    final parts = address.split(',');
+    if (parts.length <= 2) return address;
+    return '${parts[0].trim()}, ${parts[1].trim()}';
   }
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -238,14 +245,19 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _onBack() {
-    if (_step == 1 && _choosingDestOnMap) {
+    if (_step == 2) {
+      setState(() {
+        _step = 1;
+        _activeStopIdx = _stops.length - 1;
+        _searchCtrl.clear();
+        _choosingDestOnMap = false;
+      });
+    } else if (_step == 1 && _choosingDestOnMap) {
       setState(() => _choosingDestOnMap = false);
     } else if (_step == 1) {
       _searchCtrl.clear();
       setState(() { _step = 0; _searchResults = []; });
     } else if (_step > 0) {
-      setState(() => _step--);
-    } else {
       Navigator.pop(context);
     }
   }
@@ -593,6 +605,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           ]),
         ),
       ),
+      const SizedBox(height: 12),
     ]);
   }
 
@@ -781,16 +794,39 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     ? ListView(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         children: _searchResults
-                            .map((r) => _DestTile(
-                                  icon: Icons.location_on,
-                                  iconColor: AppTheme.accent,
-                                  title: r.address,
-                                  onTap: () => _selectResult(r),
-                                ))
+                            .map((r) {
+                              final isAlreadySelected = _stops.any((s) => s.address == r.address);
+                              return _DestTile(
+                                icon: Icons.location_on,
+                                iconColor: AppTheme.accent,
+                                title: r.address,
+                                trailing: isAlreadySelected
+                                    ? const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
+                                    : null,
+                                onTap: () => _selectResult(r),
+                              );
+                            })
                             .toList(),
                       )
                     : _buildWhereToTabs(),
       ),
+      if (_stops.every((s) => s.isFilled))
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: ElevatedButton(
+            onPressed: () => _goToStep(2),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: Text(
+              _stops.length > 1 ? 'Confirm destinations' : 'Confirm destination',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ),
     ]);
   }
 
@@ -844,12 +880,18 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         return ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: _kPresets
-              .map((p) => _DestTile(
-                    icon: Icons.place_outlined,
-                    iconColor: AppTheme.accentOrange,
-                    title: p.name,
-                    onTap: () => _selectPreset(p),
-                  ))
+              .map((p) {
+                final isAlreadySelected = _stops.any((s) => s.address == p.name);
+                return _DestTile(
+                  icon: Icons.place_outlined,
+                  iconColor: AppTheme.accentOrange,
+                  title: p.name,
+                  trailing: isAlreadySelected
+                      ? const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
+                      : null,
+                  onTap: () => _selectPreset(p),
+                );
+              })
               .toList(),
         );
       case 2:
@@ -974,8 +1016,25 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildConfirm() {
+    // Safety check: ensure we have stops with valid destination
+    if (_stops.isEmpty || _destLatLng == null || _stops.last.address.isEmpty) {
+      return Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Text('No destination selected', style: TextStyle(color: AppTheme.textSecondary)),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _goToStep(1),
+            child: const Text('Select Destination'),
+          ),
+        ]),
+      );
+    }
+
     final dest = _destLatLng;
-    final type = _kRideTypes.firstWhere((r) => r.name == _selectedRide);
+    final type = _kRideTypes.firstWhere(
+      (r) => r.name == _selectedRide,
+      orElse: () => _kRideTypes[0],  // Default to first ride type if not found
+    );
 
     final markers = <Marker>{
       Marker(
@@ -1021,6 +1080,31 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         : _pickupCenter.longitude;
 
     return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+        child: Row(children: [
+          Expanded(
+            child: Text('Review trip details',
+                style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700)),
+          ),
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _step = 1;
+                _activeStopIdx = _stops.length - 1;
+                _searchCtrl.clear();
+                _choosingDestOnMap = false;
+              });
+            },
+            icon: const Icon(Icons.edit, size: 18),
+            label: const Text('Edit route'),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.accent),
+          ),
+        ]),
+      ),
       SizedBox(
         height: 240,
         child: Stack(children: [
@@ -1083,6 +1167,15 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       color: isLast ? AppTheme.accentOrange : AppTheme.warning,
                       icon:  isLast ? Icons.location_on : Icons.location_on_outlined,
                       label: _stops[i].address,
+                      onTap: () {
+                        setState(() {
+                          _step = 1;
+                          _activeStopIdx = i;
+                          _searchCtrl.clear();
+                          _choosingDestOnMap = false;
+                        });
+                      },
+                      trailing: const Icon(Icons.edit, color: AppTheme.accent, size: 18),
                     ),
                   ]);
                 }),
@@ -1218,35 +1311,35 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 20),
-
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isBooking ? null : _bookRide,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                child: _isBooking
-                    ? const SizedBox(
-                        width: 22, height: 22,
-                        child: CircularProgressIndicator(
-                            color: AppTheme.primary, strokeWidth: 2.5))
-                    : Text(
-                        _isScheduled
-                            ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
-                            : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 15)),
-              ),
-            ),
+            const SizedBox(height: 12),
           ]),
         ),
       ),
+
+    // Full-width confirm button
+    Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: ElevatedButton(
+        onPressed: _isBooking ? null : _bookRide,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+        child: _isBooking
+            ? const SizedBox(
+                width: 22, height: 22,
+                child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
+            : Text(
+                _isScheduled
+                    ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
+                    : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+      ),
+    ),
+
     ]);
   }
 }
@@ -1433,11 +1526,13 @@ class _DestTile extends StatelessWidget {
   final Color    iconColor;
   final String   title;
   final VoidCallback onTap;
+  final Widget? trailing;
   const _DestTile({
     required this.icon,
     required this.iconColor,
     required this.title,
     required this.onTap,
+    this.trailing,
   });
 
   @override
@@ -1453,6 +1548,7 @@ class _DestTile extends StatelessWidget {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13)),
+      trailing: trailing,
       onTap: onTap,
     );
   }
@@ -1462,18 +1558,37 @@ class _RouteRow extends StatelessWidget {
   final Color    color;
   final IconData icon;
   final String   label;
-  const _RouteRow({required this.color, required this.icon, required this.label});
+  final VoidCallback? onTap;
+  final Widget?      trailing;
+  const _RouteRow({
+    required this.color,
+    required this.icon,
+    required this.label,
+    this.onTap,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
+    final content = Row(children: [
       Icon(icon, color: color, size: 14),
       const SizedBox(width: 10),
       Expanded(child: Text(label,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13))),
+      if (trailing != null) ...[
+        const SizedBox(width: 8),
+        trailing!,
+      ],
     ]);
+
+    if (onTap == null) return content;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: content),
+    );
   }
 }
 

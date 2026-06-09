@@ -93,6 +93,102 @@ class ApiService {
     }
   }
 
+  static Future<_RawResponse> _rawPut(
+    String path,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final req = await client.putUrl(uri);
+
+      req.headers.set('Content-Type', 'application/json; charset=utf-8');
+      req.headers.set('Accept', 'application/json');
+      if (token != null) req.headers.set('Authorization', 'Bearer $token');
+
+      final bytes = utf8.encode(jsonEncode(body));
+      req.headers.contentLength = bytes.length;
+      req.add(bytes);
+
+      final res     = await req.close();
+      final resBody = await res.transform(utf8.decoder).join();
+
+      AppLog.d('API', 'PUT $uri → ${res.statusCode}');
+      if (res.statusCode >= 400) AppLog.w('API', 'PUT $uri body: $resBody');
+
+      return _RawResponse(res.statusCode, resBody);
+    } catch (e, s) {
+      AppLog.e('API', 'PUT $path network error', e, s);
+      rethrow;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  static Future<_RawResponse> _rawPatch(
+    String path,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final req = await client.patchUrl(uri);
+
+      req.headers.set('Content-Type', 'application/json; charset=utf-8');
+      req.headers.set('Accept', 'application/json');
+      if (token != null) req.headers.set('Authorization', 'Bearer $token');
+
+      final bytes = utf8.encode(jsonEncode(body));
+      req.headers.contentLength = bytes.length;
+      req.add(bytes);
+
+      final res     = await req.close();
+      final resBody = await res.transform(utf8.decoder).join();
+
+      AppLog.d('API', 'PATCH $uri → ${res.statusCode}');
+      if (res.statusCode >= 400) AppLog.w('API', 'PATCH $uri body: $resBody');
+
+      return _RawResponse(res.statusCode, resBody);
+    } catch (e, s) {
+      AppLog.e('API', 'PATCH $path network error', e, s);
+      rethrow;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  static Future<_RawResponse> _rawDelete(
+    String path, {
+    String? token,
+  }) async {
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    try {
+      final uri = Uri.parse('$_baseUrl$path');
+      final req = await client.deleteUrl(uri);
+
+      req.headers.set('Accept', 'application/json');
+      if (token != null) req.headers.set('Authorization', 'Bearer $token');
+
+      final res     = await req.close();
+      final resBody = await res.transform(utf8.decoder).join();
+
+      AppLog.d('API', 'DELETE $uri → ${res.statusCode}');
+      if (res.statusCode >= 400) AppLog.w('API', 'DELETE $uri body: $resBody');
+
+      return _RawResponse(res.statusCode, resBody);
+    } catch (e, s) {
+      AppLog.e('API', 'DELETE $path network error', e, s);
+      rethrow;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   // ── Login ─────────────────────────────────────────────────────────────────
 
   static Future<({UserModel user, String token})> login(
@@ -506,6 +602,95 @@ class ApiService {
     return _parseDeliveryList(raw);
   }
 
+  static Future<DeliveryModel> getDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/deliveries/$id', token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> updateDelivery(
+    int id, {
+    String? pickupAddress,
+    String? dropoffAddress,
+    String? packageDetails,
+    String? packageSize,
+    String? senderName,
+    String? senderPhone,
+    String? recipientName,
+    String? recipientPhone,
+    int? fee,
+    String? paymentBy,
+    String? paymentMethod,
+    String? serviceOption,
+    String? paymentModel,
+    String? partnerCode,
+    int? splitPercent,
+    String? scheduledAt,
+    String? notes,
+    int? vehicleId,
+    int? floorPickup,
+    int? floorDropoff,
+    bool? hasElevator,
+    bool? needsStairsCarry,
+    bool? heavyItems,
+    int? requiresHelpers,
+    String? helperType,
+    bool? packingService,
+    String? serviceType,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      if (pickupAddress  != null) 'pickup_address':   pickupAddress,
+      if (dropoffAddress != null) 'dropoff_address':  dropoffAddress,
+      if (packageDetails != null) 'package_details': packageDetails,
+      if (packageSize    != null) 'package_size':    packageSize,
+      if (senderName     != null) 'sender_name':     senderName,
+      if (senderPhone    != null) 'sender_phone':    senderPhone,
+      if (recipientName  != null) 'recipient_name':  recipientName,
+      if (recipientPhone != null) 'recipient_phone': recipientPhone,
+      if (fee            != null) 'fee':             fee,
+      if (paymentBy      != null) 'payment_by':      paymentBy,
+      if (paymentMethod  != null) 'payment_method':  paymentMethod,
+      if (serviceOption  != null) 'service_option':  serviceOption,
+      if (paymentModel   != null) 'payment_model':   paymentModel,
+      if (partnerCode    != null) 'partner_code':    partnerCode,
+      if (splitPercent   != null) 'split_percent':   splitPercent,
+      if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
+      if (notes          != null) 'notes':           notes,
+      if (vehicleId      != null) 'vehicle_id':      vehicleId,
+      if (floorPickup    != null) 'floor_pickup':    floorPickup,
+      if (floorDropoff   != null) 'floor_dropoff':   floorDropoff,
+      if (hasElevator    != null) 'has_elevator':    hasElevator,
+      if (needsStairsCarry != null) 'needs_stairs_carry': needsStairsCarry,
+      if (heavyItems     != null) 'heavy_items':     heavyItems,
+      if (requiresHelpers != null) 'requires_helpers': requiresHelpers,
+      if (helperType     != null) 'helper_type':     helperType,
+      if (packingService != null) 'packing_service': packingService,
+      if (serviceType    != null) 'service_type':    serviceType,
+    };
+
+    final raw = await _rawPut('/deliveries/$id', body, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<void> deleteDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawDelete('/deliveries/$id', token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 204) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        body['message'] as String? ?? 'Failed to delete delivery (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
   static Future<List<DeliveryModel>> getDeliveryHistory() async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -558,30 +743,45 @@ class ApiService {
   }
 
   static Future<DeliveryEstimateModel> estimateDelivery({
-    double distance = 5.0,
-    String packageSize = 'small',
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
+    String serviceType = 'delivery',
+    String serviceOption = 'normal',
+    String packageSize = 'medium',
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
+    final body = <String, dynamic>{
+      'service_type': serviceType,
+      'service_option': serviceOption,
+      'pickup_lat': pickupLat,
+      'pickup_lng': pickupLng,
+      'dropoff_lat': dropoffLat,
+      'dropoff_lng': dropoffLng,
+      'package_size': packageSize,
+    };
+    
     final raw = await _rawPost(
       '/deliveries/estimate',
-      {'distance': distance, 'package_size': packageSize},
+      body,
       token: token,
     );
 
-    final Map<String, dynamic> body;
+    final Map<String, dynamic> responseBody;
     try {
-      body = jsonDecode(raw.body) as Map<String, dynamic>;
+      responseBody = jsonDecode(raw.body) as Map<String, dynamic>;
     } catch (_) {
       throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
     }
 
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return DeliveryEstimateModel.fromJson(body);
+      return DeliveryEstimateModel.fromJson(responseBody);
     }
 
-    final message = body['message'] as String? ?? 'Failed to estimate delivery (${raw.statusCode}).';
+    final message = responseBody['message'] as String? ?? 'Failed to estimate delivery (${raw.statusCode}).';
     throw ApiException(message, raw.statusCode);
   }
 
@@ -836,6 +1036,7 @@ class ApiService {
     int?    fee,
     String  paymentBy     = 'sender',
     String  paymentMethod = 'cash',
+    String  serviceOption = 'normal',
     String  paymentModel  = 'customer', // 'customer'|'partner'|'split'|'sponsored'
     String? partnerCode,
     int?    splitPercent,
@@ -860,6 +1061,7 @@ class ApiService {
       if (recipientName  != null) 'recipient_name':  recipientName,
       if (recipientPhone != null) 'recipient_phone': recipientPhone,
       if (packageSize    != null) 'package_size':    packageSize,
+      if (serviceOption  != null) 'service_option':  serviceOption,
       if (fee            != null) 'fee':             fee,
       if (partnerCode    != null) 'partner_code':    partnerCode,
       if (splitPercent   != null) 'split_percent':   splitPercent,
@@ -883,6 +1085,7 @@ class ApiService {
     required bool   needsStairsCarry,
     required bool   heavyItems,
     required int    requiresHelpers,   // 1–4
+    String  serviceOption   = 'normal',
     String  helperType      = 'normal', // 'normal' | 'heavy'
     bool    packingService  = false,
     int?    fee,
@@ -914,6 +1117,7 @@ class ApiService {
       'packing_service':    packingService,
       'requires_helpers':   requiresHelpers,
       'helper_type':        helperType,
+      'service_option':     serviceOption,
       if (fee          != null) 'fee':           fee,
       if (partnerCode  != null) 'partner_code':  partnerCode,
       if (splitPercent != null) 'split_percent': splitPercent,
@@ -922,6 +1126,246 @@ class ApiService {
     };
 
     final raw = await _rawPost('/movings', body, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  // ── Estimate moving order ──────────────────────────────────────────────────
+
+  static Future<DeliveryEstimateModel> estimateMoving({
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
+    required int floorPickup,
+    required int floorDropoff,
+    required bool hasElevator,
+    required bool heavyItems,
+    required int requiresHelpers,
+    String serviceOption = 'normal',
+    String helperType = 'normal',
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      'service_type': 'moving',
+      'service_option': serviceOption,
+      'pickup_lat': pickupLat,
+      'pickup_lng': pickupLng,
+      'dropoff_lat': dropoffLat,
+      'dropoff_lng': dropoffLng,
+      'floor_pickup': floorPickup,
+      'floor_dropoff': floorDropoff,
+      'has_elevator': hasElevator,
+      'heavy_items': heavyItems,
+      'requires_helpers': requiresHelpers,
+      'helper_type': helperType,
+    };
+
+    final raw = await _rawPost(
+      '/movings/estimate',
+      body,
+      token: token,
+    );
+
+    final Map<String, dynamic> responseBody;
+    try {
+      responseBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return DeliveryEstimateModel.fromJson(responseBody);
+    }
+
+    final message = responseBody['message'] as String? ??
+        'Failed to estimate moving (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Moving order CRUD ──────────────────────────────────────────────────────
+
+  static Future<DeliveryModel> getMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/movings/$id', token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> updateMoving(
+    int id, {
+    String? pickupAddress,
+    String? dropoffAddress,
+    int? floorPickup,
+    int? floorDropoff,
+    bool? hasElevator,
+    bool? needsStairsCarry,
+    bool? heavyItems,
+    int? requiresHelpers,
+    String? serviceOption,
+    String? helperType,
+    bool? packingService,
+    int? fee,
+    String? paymentMethod,
+    String? paymentModel,
+    String? partnerCode,
+    int? splitPercent,
+    String? notes,
+    String? scheduledAt,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      if (pickupAddress     != null) 'pickup_address': pickupAddress,
+      if (dropoffAddress    != null) 'dropoff_address': dropoffAddress,
+      if (floorPickup       != null) 'floor_pickup': floorPickup,
+      if (floorDropoff      != null) 'floor_dropoff': floorDropoff,
+      if (hasElevator       != null) 'has_elevator': hasElevator,
+      if (needsStairsCarry  != null) 'needs_stairs_carry': needsStairsCarry,
+      if (heavyItems        != null) 'heavy_items': heavyItems,
+      if (requiresHelpers   != null) 'requires_helpers': requiresHelpers,
+      if (serviceOption     != null) 'service_option': serviceOption,
+      if (helperType        != null) 'helper_type': helperType,
+      if (packingService    != null) 'packing_service': packingService,
+      if (fee               != null) 'fee': fee,
+      if (paymentMethod     != null) 'payment_method': paymentMethod,
+      if (paymentModel      != null) 'payment_model': paymentModel,
+      if (partnerCode       != null) 'partner_code': partnerCode,
+      if (splitPercent      != null) 'split_percent': splitPercent,
+      if (notes             != null) 'notes': notes,
+      if (scheduledAt       != null) 'scheduled_at': scheduledAt,
+    };
+
+    final raw = await _rawPut('/movings/$id', body, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> patchMoving(
+    int id, {
+    String? pickupAddress,
+    String? dropoffAddress,
+    int? floorPickup,
+    int? floorDropoff,
+    bool? hasElevator,
+    bool? needsStairsCarry,
+    bool? heavyItems,
+    int? requiresHelpers,
+    String? serviceOption,
+    String? helperType,
+    bool? packingService,
+    int? fee,
+    String? paymentMethod,
+    String? paymentModel,
+    String? partnerCode,
+    int? splitPercent,
+    String? notes,
+    String? scheduledAt,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final body = <String, dynamic>{
+      if (pickupAddress     != null) 'pickup_address': pickupAddress,
+      if (dropoffAddress    != null) 'dropoff_address': dropoffAddress,
+      if (floorPickup       != null) 'floor_pickup': floorPickup,
+      if (floorDropoff      != null) 'floor_dropoff': floorDropoff,
+      if (hasElevator       != null) 'has_elevator': hasElevator,
+      if (needsStairsCarry  != null) 'needs_stairs_carry': needsStairsCarry,
+      if (heavyItems        != null) 'heavy_items': heavyItems,
+      if (requiresHelpers   != null) 'requires_helpers': requiresHelpers,
+      if (serviceOption     != null) 'service_option': serviceOption,
+      if (helperType        != null) 'helper_type': helperType,
+      if (packingService    != null) 'packing_service': packingService,
+      if (fee               != null) 'fee': fee,
+      if (paymentMethod     != null) 'payment_method': paymentMethod,
+      if (paymentModel      != null) 'payment_model': paymentModel,
+      if (partnerCode       != null) 'partner_code': partnerCode,
+      if (splitPercent      != null) 'split_percent': splitPercent,
+      if (notes             != null) 'notes': notes,
+      if (scheduledAt       != null) 'scheduled_at': scheduledAt,
+    };
+
+    final raw = await _rawPatch('/movings/$id', body, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<void> deleteMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawDelete('/movings/$id', token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 204) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        body['message'] as String? ?? 'Failed to delete moving (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
+  // ── Moving order actions ───────────────────────────────────────────────────
+
+  static Future<DeliveryModel> acceptMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/movings/$id/accept', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> cancelMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/movings/$id/cancel', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryTrackingModel> trackMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/movings/$id/track', {}, token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return DeliveryTrackingModel.fromJson(body['data'] as Map<String, dynamic>? ?? body);
+    }
+
+    final message = body['message'] as String? ?? 'Failed to track moving (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  static Future<DeliveryModel> completeMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/movings/$id/complete', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> rateMoving(
+    int id, {
+    required double rating,
+    String? comment,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost(
+      '/movings/$id/rate',
+      {
+        'rating': rating,
+        if (comment != null) 'rating_comment': comment,
+      },
+      token: token,
+    );
+
     return _parseDeliveryResponse(raw);
   }
 
