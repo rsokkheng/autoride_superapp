@@ -26,6 +26,9 @@ dependencies:
   flutter_local_notifications: ^17.2.2
   # Permissions
   permission_handler: ^11.3.1
+  # Media
+  image_picker: ^1.1.2
+  flutter_image_compress: ^2.3.0
   # Networking & storage
   http: ^1.2.0
   shared_preferences: ^2.3.0

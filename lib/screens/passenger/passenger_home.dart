@@ -191,7 +191,7 @@ class _HomeTabState extends State<_HomeTab> {
             const SizedBox(height: 24),
             // Hero banner
             GradientCard(
-              colors: [const Color(0xFF0F3460), const Color(0xFF1A1A5E)],
+              colors: [const Color(0xFF2E7D32), const Color(0xFF00E676)],
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [

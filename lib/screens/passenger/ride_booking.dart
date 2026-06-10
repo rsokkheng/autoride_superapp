@@ -143,9 +143,24 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         setState(() { _gpsLoading = false; _pickupAddress = 'Location permission denied'; });
         return;
       }
+
+      // Show last known position instantly — but only if it is recent (< 5 min).
+      // A stale cache would show a location from hours ago, which is misleading.
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null && mounted) {
+        final age = DateTime.now().difference(last.timestamp);
+        final lastLatLng = LatLng(last.latitude, last.longitude);
+        if (age.inMinutes < 5 && _isInCambodia(lastLatLng)) {
+          setState(() => _pickupCenter = lastLatLng);
+          _pickupMapCtrl?.animateCamera(CameraUpdate.newLatLng(lastLatLng));
+          _reverseGeocodePickup(lastLatLng);
+        }
+      }
+
+      // Upgrade to accurate current position.
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 15));
       if (!mounted) return;
       final latLng = LatLng(pos.latitude, pos.longitude);
       if (!_isInCambodia(latLng)) {
@@ -813,17 +828,20 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       if (_stops.every((s) => s.isFilled))
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-          child: ElevatedButton(
-            onPressed: () => _goToStep(2),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: Text(
-              _stops.length > 1 ? 'Confirm destinations' : 'Confirm destination',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => _goToStep(2),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                _stops.length > 1 ? 'Confirm destinations' : 'Confirm destination',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ),
@@ -1099,7 +1117,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 _choosingDestOnMap = false;
               });
             },
-            icon: const Icon(Icons.edit, size: 18),
+            icon: const Icon(Icons.cancel_outlined, size: 18),
             label: const Text('Edit route'),
             style: TextButton.styleFrom(foregroundColor: AppTheme.accent),
           ),
@@ -1175,7 +1193,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           _choosingDestOnMap = false;
                         });
                       },
-                      trailing: const Icon(Icons.edit, color: AppTheme.accent, size: 18),
+                      trailing: const Icon(Icons.cancel_outlined, color: AppTheme.accent, size: 18),
                     ),
                   ]);
                 }),

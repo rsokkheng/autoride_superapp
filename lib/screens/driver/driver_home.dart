@@ -1106,7 +1106,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                   const SizedBox(width: 6),
                   Text(
                     '${widget.delivery.requiresHelpers} helper(s) — '
-                    '${widget.delivery.helperType == 'heavy' ? 'Heavy carry' : 'Normal carry'}',
+                    '${widget.delivery.helperType == 'heavy_carry' ? 'Heavy carry' : 'Normal carry'}',
                     style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
                   ),
                 ]),

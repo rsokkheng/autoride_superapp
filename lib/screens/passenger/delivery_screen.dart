@@ -102,7 +102,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         paymentBy:      _paymentBy,
         paymentMethod:  _paymentMethod,
         serviceOption:  _deliveryServiceOption,
-        vehicleType:    _deliveryVehicleType,
         notes:          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         scheduledAt:    _isScheduled ? _formatDateTime(_scheduledTime) : null,
       );
@@ -139,7 +138,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         heavyItems:       _heavyItems,
         requiresHelpers:  _requiresHelpers,
         serviceOption:    _movingServiceOption,
-        packingService:   _packingService,
         paymentMethod:    _movePaymentMethod,
         notes:            _moveNotesCtrl.text.trim().isEmpty ? null : _moveNotesCtrl.text.trim(),
         scheduledAt:      _isMoveScheduled ? _formatDateTime(_moveDate) : null,
@@ -235,43 +233,68 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isDelivery = _mode == 'delivery';
     return Scaffold(
       appBar: AppBar(title: const Text('Delivery & Moving')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Mode toggle ────────────────────────────────────────────
-            _ModeToggle(
-              selected: _mode,
-              onChanged: (m) => setState(() { _mode = m; _error = null; }),
-            ),
-            const SizedBox(height: 20),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Mode toggle ──────────────────────────────────────
+                  _ModeToggle(
+                    selected: _mode,
+                    onChanged: (m) => setState(() { _mode = m; _error = null; }),
+                  ),
+                  const SizedBox(height: 20),
 
-            // ── Error banner ───────────────────────────────────────────
-            if (_error != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: AppTheme.danger.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
-                ]),
+                  // ── Error banner ─────────────────────────────────────
+                  if (_error != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(children: [
+                        const Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                      ]),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // ── Form ─────────────────────────────────────────────
+                  if (isDelivery) _buildDeliveryForm()
+                  else            _buildMovingForm(),
+                ],
               ),
-              const SizedBox(height: 16),
-            ],
+            ),
+          ),
 
-            // ── Form ───────────────────────────────────────────────────
-            if (_mode == 'delivery') _buildDeliveryForm()
-            else                     _buildMovingForm(),
-          ],
-        ),
+          // ── Sticky bottom button ──────────────────────────────────────
+          Container(
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPadding),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+            ),
+            child: _SubmitButton(
+              label: isDelivery
+                  ? (_isScheduled ? 'Schedule Delivery' : 'Send Now')
+                  : (_isMoveScheduled ? 'Schedule Moving' : 'Book Moving'),
+              icon: isDelivery ? Icons.delivery_dining : Icons.local_shipping,
+              loading: _submitting,
+              onPressed: isDelivery ? _submitDelivery : _submitMoving,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -422,16 +445,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           onTap: _pickDeliverySchedule,
         ),
       ],
-      const SizedBox(height: 28),
-
-      // Submit
-      _SubmitButton(
-        label: _isScheduled ? 'Schedule Delivery' : 'Send Now',
-        icon: Icons.delivery_dining,
-        loading: _submitting,
-        onPressed: _submitDelivery,
-      ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 8),
     ]);
   }
 
@@ -634,10 +648,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         const SizedBox(height: 10),
         _DateTimeTile(dateTime: _moveDate, color: AppTheme.accent, onTap: _pickMoveDate),
       ],
-      const SizedBox(height: 28),
-
-      _SubmitButton(label: _isMoveScheduled ? 'Schedule Moving' : 'Book Moving', icon: Icons.local_shipping, loading: _submitting, onPressed: _submitMoving),
-      const SizedBox(height: 16),
+      const SizedBox(height: 8),
     ]);
   }
 }

@@ -1,1269 +1,1005 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
-import 'payment_screen.dart';
+import '../../models/marketplace_model.dart';
+import '../../services/api_service.dart';
 
-// ─── Data Models ────────────────────────────────────────────────
-class Vehicle {
-  final String id, name, brand, type, fuelType, year, color;
-  final String buyPrice, rentPriceDay, rentPriceWeek;
-  final String range, seats, power, mileage;
-  final double rating;
-  final int reviews;
-  final List<String> features;
-  final bool isAvailable, isFeatured;
-  final Color accentColor;
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-  const Vehicle({
-    required this.id, required this.name, required this.brand,
-    required this.type, required this.fuelType, required this.year,
-    required this.color, required this.buyPrice, required this.rentPriceDay,
-    required this.rentPriceWeek, required this.range, required this.seats,
-    required this.power, required this.mileage, required this.rating,
-    required this.reviews, required this.features, required this.isAvailable,
-    required this.isFeatured, required this.accentColor,
-  });
-}
+final _khr = NumberFormat('#,###', 'en_US');
+String _fmtKhr(int amount) => '${_khr.format(amount)} ៛';
 
-const _vehicles = [
-  Vehicle(
-    id: '1', name: 'Model 3 Long Range', brand: 'Tesla', type: 'Sedan',
-    fuelType: 'Electric', year: '2024', color: 'Pearl White',
-    buyPrice: '\$42,000', rentPriceDay: '\$75/day', rentPriceWeek: '\$420/week',
-    range: '576 km', seats: '5', power: '498 hp', mileage: '12,000 km',
-    rating: 4.9, reviews: 248, isAvailable: true, isFeatured: true,
-    accentColor: Color(0xFF00D4AA),
-    features: ['Autopilot', 'Supercharger', 'OTA Updates', 'Premium Audio'],
-  ),
-  Vehicle(
-    id: '2', name: 'Atto 3 Extended', brand: 'BYD', type: 'SUV',
-    fuelType: 'Electric', year: '2024', color: 'Surf Blue',
-    buyPrice: '\$32,500', rentPriceDay: '\$52/day', rentPriceWeek: '\$295/week',
-    range: '420 km', seats: '5', power: '204 hp', mileage: '8,500 km',
-    rating: 4.7, reviews: 183, isAvailable: true, isFeatured: false,
-    accentColor: Color(0xFF2196F3),
-    features: ['Blade Battery', 'DiLink System', '360° Camera', 'Heat Pump'],
-  ),
-  Vehicle(
-    id: '3', name: 'Ioniq 6 Standard', brand: 'Hyundai', type: 'Sedan',
-    fuelType: 'Electric', year: '2023', color: 'Gravity Gold',
-    buyPrice: '\$38,000', rentPriceDay: '\$60/day', rentPriceWeek: '\$340/week',
-    range: '491 km', seats: '5', power: '225 hp', mileage: '5,200 km',
-    rating: 4.8, reviews: 97, isAvailable: true, isFeatured: true,
-    accentColor: Color(0xFFFFB300),
-    features: ['800V Fast Charge', 'V2L Tech', 'ADAS Suite', 'Digital Mirrors'],
-  ),
-  Vehicle(
-    id: '4', name: 'Camry Hybrid XSE', brand: 'Toyota', type: 'Sedan',
-    fuelType: 'Hybrid', year: '2023', color: 'Midnight Black',
-    buyPrice: '\$28,900', rentPriceDay: '\$45/day', rentPriceWeek: '\$255/week',
-    range: '950 km', seats: '5', power: '219 hp', mileage: '22,000 km',
-    rating: 4.6, reviews: 312, isAvailable: true, isFeatured: false,
-    accentColor: Color(0xFF9C27B0),
-    features: ['Toyota Safety Sense', 'JBL Audio', 'HUD Display', 'Wireless Charge'],
-  ),
-  Vehicle(
-    id: '5', name: 'EQS 580 4MATIC', brand: 'Mercedes', type: 'Luxury Sedan',
-    fuelType: 'Electric', year: '2024', color: 'High-tech Silver',
-    buyPrice: '\$119,000', rentPriceDay: '\$180/day', rentPriceWeek: '\$980/week',
-    range: '660 km', seats: '5', power: '516 hp', mileage: '3,100 km',
-    rating: 5.0, reviews: 41, isAvailable: false, isFeatured: true,
-    accentColor: Color(0xFFFF6B35),
-    features: ['Hyperscreen', 'MBUX AI', 'Air Suspension', 'Burmester 3D Audio'],
-  ),
-  Vehicle(
-    id: '6', name: 'Polestar 2 Performance', brand: 'Polestar', type: 'Fastback',
-    fuelType: 'Electric', year: '2024', color: 'Snow White',
-    buyPrice: '\$52,000', rentPriceDay: '\$85/day', rentPriceWeek: '\$480/week',
-    range: '482 km', seats: '5', power: '476 hp', mileage: '6,800 km',
-    rating: 4.8, reviews: 66, isAvailable: true, isFeatured: false,
-    accentColor: Color(0xFF00BCD4),
-    features: ['Brembo Brakes', 'Öhlins Suspension', 'Google Built-in', 'Vegan Interior'],
-  ),
-];
+Color _conditionColor(String? c) => switch (c) {
+  'new'         => AppTheme.success,
+  'refurbished' => AppTheme.accent,
+  _             => AppTheme.gold,
+};
 
-// ─── Main Marketplace Screen ─────────────────────────────────────
+Color _statusColor(String s) => switch (s) {
+  'active'    => AppTheme.success,
+  'paused'    => AppTheme.gold,
+  'sold'      => AppTheme.accent,
+  'draft'     => AppTheme.textSecondary,
+  'pending'   => AppTheme.gold,
+  'confirmed' => AppTheme.accent,
+  'completed' => AppTheme.success,
+  'cancelled' => AppTheme.danger,
+  _           => AppTheme.textSecondary,
+};
+
+// ── Main Screen ────────────────────────────────────────────────────────────
+
 class MarketplaceScreen extends StatefulWidget {
   const MarketplaceScreen({super.key});
-
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
 }
 
 class _MarketplaceScreenState extends State<MarketplaceScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String _fuelFilter = 'All';
-  String _sortBy = 'Featured';
-  String _searchQuery = '';
-  bool _showSearch = false;
-  final _searchController = TextEditingController();
+  late TabController _tab;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  List<Vehicle> get _filtered {
-    var list = _vehicles.where((v) {
-      final matchFuel = _fuelFilter == 'All' || v.fuelType == _fuelFilter;
-      final matchSearch = _searchQuery.isEmpty ||
-          v.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          v.brand.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchFuel && matchSearch;
-    }).toList();
-
-    if (_sortBy == 'Price: Low') {
-      list.sort((a, b) => a.buyPrice.compareTo(b.buyPrice));
-    } else if (_sortBy == 'Rating') {
-      list.sort((a, b) => b.rating.compareTo(a.rating));
-    } else {
-      list.sort((a, b) => (b.isFeatured ? 1 : 0).compareTo(a.isFeatured ? 1 : 0));
-    }
-    return list;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.primary,
-      appBar: AppBar(
-        backgroundColor: AppTheme.primary,
-        title: _showSearch
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  hintText: 'Search vehicles, brands...',
-                  hintStyle: TextStyle(color: AppTheme.textSecondary),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onChanged: (v) => setState(() => _searchQuery = v),
-              )
-            : const Text('Marketplace',
-                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w800)),
-        actions: [
-          IconButton(
-            icon: Icon(_showSearch ? Icons.close : Icons.search,
-                color: AppTheme.textPrimary),
-            onPressed: () => setState(() {
-              _showSearch = !_showSearch;
-              if (!_showSearch) {
-                _searchQuery = '';
-                _searchController.clear();
-              }
-            }),
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune_outlined, color: AppTheme.textPrimary),
-            onPressed: () => _showFilterSheet(context),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.accent,
-          indicatorWeight: 3,
-          labelColor: AppTheme.accent,
-          unselectedLabelColor: AppTheme.textSecondary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-          tabs: const [
-            Tab(text: '🛒  Buy'),
-            Tab(text: '🔑  Rent'),
-          ],
-        ),
-      ),
-      body: Column(
-        children: [
-          // Filter + Sort Row
-          _FilterSortBar(
-            fuelFilter: _fuelFilter,
-            sortBy: _sortBy,
-            onFuelChange: (v) => setState(() => _fuelFilter = v),
-            onSortChange: (v) => setState(() => _sortBy = v),
-          ),
-          // Results count
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-            child: Row(children: [
-              Text('${_filtered.length} vehicles found',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-              const Spacer(),
-              if (_fuelFilter != 'All')
-                GestureDetector(
-                  onTap: () => setState(() => _fuelFilter = 'All'),
-                  child: const Text('Clear filters',
-                      style: TextStyle(color: AppTheme.accent, fontSize: 12)),
-                ),
-            ]),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _VehicleListView(vehicles: _filtered, mode: 'buy'),
-                _VehicleListView(vehicles: _filtered, mode: 'rent'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFilterSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => _FilterSheet(
-        currentFuel: _fuelFilter,
-        currentSort: _sortBy,
-        onApply: (fuel, sort) => setState(() {
-          _fuelFilter = fuel;
-          _sortBy = sort;
-        }),
-      ),
-    );
-  }
-}
-
-// ─── Filter Sort Bar ─────────────────────────────────────────────
-class _FilterSortBar extends StatelessWidget {
-  final String fuelFilter, sortBy;
-  final Function(String) onFuelChange, onSortChange;
-
-  const _FilterSortBar({
-    required this.fuelFilter, required this.sortBy,
-    required this.onFuelChange, required this.onSortChange,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            ...['All', 'Electric', 'Hybrid', 'Petrol'].map((f) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: GestureDetector(
-                onTap: () => onFuelChange(f),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: fuelFilter == f ? AppTheme.accent : AppTheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: fuelFilter == f ? AppTheme.accent : AppTheme.surface,
-                    ),
-                  ),
-                  child: Row(children: [
-                    Text(
-                      f == 'Electric' ? '⚡ ' : f == 'Hybrid' ? '🔋 ' : f == 'Petrol' ? '⛽ ' : '',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    Text(f,
-                        style: TextStyle(
-                          color: fuelFilter == f ? AppTheme.primary : AppTheme.textSecondary,
-                          fontWeight: FontWeight.w600, fontSize: 13,
-                        )),
-                  ]),
-                ),
-              ),
-            )),
-            const SizedBox(width: 8),
-            // Sort button
-            GestureDetector(
-              onTap: () {
-                const sorts = ['Featured', 'Price: Low', 'Rating'];
-                final idx = sorts.indexOf(sortBy);
-                onSortChange(sorts[(idx + 1) % sorts.length]);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: AppTheme.cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.sort, color: AppTheme.textSecondary, size: 16),
-                  const SizedBox(width: 6),
-                  Text(sortBy,
-                      style: const TextStyle(color: AppTheme.textSecondary,
-                          fontWeight: FontWeight.w500, fontSize: 13)),
-                ]),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Vehicle List ────────────────────────────────────────────────
-class _VehicleListView extends StatelessWidget {
-  final List<Vehicle> vehicles;
-  final String mode;
-
-  const _VehicleListView({required this.vehicles, required this.mode});
-
-  @override
-  Widget build(BuildContext context) {
-    if (vehicles.isEmpty) {
-      return Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Text('🚗', style: TextStyle(fontSize: 48)),
-          const SizedBox(height: 12),
-          const Text('No vehicles found',
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          const Text('Try changing your filters',
-              style: TextStyle(color: AppTheme.textSecondary)),
-        ]),
-      );
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
-      itemCount: vehicles.length,
-      itemBuilder: (context, i) => _VehicleCard(vehicle: vehicles[i], mode: mode),
-    );
-  }
-}
-
-// ─── Vehicle Card ────────────────────────────────────────────────
-class _VehicleCard extends StatelessWidget {
-  final Vehicle vehicle;
-  final String mode;
-
-  const _VehicleCard({required this.vehicle, required this.mode});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = vehicle.accentColor;
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: vehicle, mode: mode)),
-      ),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: vehicle.isFeatured
-              ? Border.all(color: color.withValues(alpha: 0.35), width: 1.5)
-              : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image area
-            Stack(
-              children: [
-                Container(
-                  height: 180,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [color.withValues(alpha: 0.08), color.withValues(alpha: 0.18)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  child: Stack(
-                    children: [
-                      // Grid lines for depth
-                      Positioned.fill(
-                        child: CustomPaint(painter: _GridPainter(color: color)),
-                      ),
-                      // Car icon
-                      Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              vehicle.type == 'SUV' ? Icons.directions_car :
-                              vehicle.type == 'Luxury Sedan' ? Icons.local_taxi :
-                              Icons.directions_car_filled,
-                              color: color.withValues(alpha: 0.7),
-                              size: 90,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(vehicle.color,
-                                style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 11)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Featured badge
-                if (vehicle.isFeatured)
-                  Positioned(
-                    top: 12, left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(children: [
-                        Icon(Icons.star, color: Colors.white, size: 12),
-                        SizedBox(width: 4),
-                        Text('Featured', style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                      ]),
-                    ),
-                  ),
-                // Availability
-                Positioned(
-                  top: 12, right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: vehicle.isAvailable
-                          ? AppTheme.success.withValues(alpha: 0.15)
-                          : AppTheme.danger.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: vehicle.isAvailable
-                            ? AppTheme.success.withValues(alpha: 0.4)
-                            : AppTheme.danger.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(children: [
-                      Container(
-                        width: 6, height: 6,
-                        decoration: BoxDecoration(
-                          color: vehicle.isAvailable ? AppTheme.success : AppTheme.danger,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        vehicle.isAvailable ? 'Available' : 'Unavailable',
-                        style: TextStyle(
-                          color: vehicle.isAvailable ? AppTheme.success : AppTheme.danger,
-                          fontSize: 11, fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ]),
-                  ),
-                ),
-                // Favorite
-                Positioned(
-                  bottom: 12, right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary.withValues(alpha: 0.8),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.favorite_border, color: AppTheme.textSecondary, size: 18),
-                  ),
-                ),
-              ],
-            ),
-            // Info
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(vehicle.brand,
-                                style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 2),
-                            Text(vehicle.name,
-                                style: const TextStyle(
-                                    color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)),
-                            Text('${vehicle.year} · ${vehicle.type}',
-                                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            mode == 'buy' ? vehicle.buyPrice : vehicle.rentPriceDay,
-                            style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800),
-                          ),
-                          if (mode == 'rent')
-                            Text(vehicle.rentPriceWeek,
-                                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Specs row
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.cardBg,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _SpecItem(icon: Icons.bolt_outlined, label: vehicle.range, sublabel: 'Range', color: color),
-                        _Divider(),
-                        _SpecItem(icon: Icons.event_seat_outlined, label: vehicle.seats, sublabel: 'Seats', color: color),
-                        _Divider(),
-                        _SpecItem(icon: Icons.speed_outlined, label: vehicle.power, sublabel: 'Power', color: color),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Rating + Reviews
-                  Row(children: [
-                    ...List.generate(5, (i) => Icon(
-                      i < vehicle.rating.floor() ? Icons.star : Icons.star_border,
-                      color: AppTheme.gold, size: 14,
-                    )),
-                    const SizedBox(width: 6),
-                    Text(vehicle.rating.toStringAsFixed(1),
-                        style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-                    const SizedBox(width: 4),
-                    Text('(${vehicle.reviews} reviews)',
-                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    const Spacer(),
-                    // Fuel type badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(vehicle.fuelType,
-                          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-                    ),
-                  ]),
-                  const SizedBox(height: 14),
-                  // Action buttons
-                  Row(children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => VehicleDetailScreen(vehicle: vehicle, mode: mode)),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: color.withValues(alpha: 0.4)),
-                          foregroundColor: color,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Details', style: TextStyle(fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: vehicle.isAvailable
-                            ? () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) =>
-                                    mode == 'rent'
-                                        ? RentBookingScreen(vehicle: vehicle)
-                                        : const PaymentScreen()))
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: color,
-                          foregroundColor: AppTheme.primary,
-                          disabledBackgroundColor: AppTheme.cardBg,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: Text(
-                          vehicle.isAvailable
-                              ? (mode == 'buy' ? 'Buy Now' : 'Rent Now')
-                              : 'Unavailable',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ]),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SpecItem extends StatelessWidget {
-  final IconData icon;
-  final String label, sublabel;
-  final Color color;
-
-  const _SpecItem({required this.icon, required this.label, required this.sublabel, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Icon(icon, color: color, size: 18),
-      const SizedBox(height: 4),
-      Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-      Text(sublabel, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-    ]);
-  }
-}
-
-class _Divider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, height: 36, color: AppTheme.primary.withValues(alpha: 0.5));
-}
-
-// ─── Filter Sheet ─────────────────────────────────────────────────
-class _FilterSheet extends StatefulWidget {
-  final String currentFuel, currentSort;
-  final Function(String, String) onApply;
-
-  const _FilterSheet({required this.currentFuel, required this.currentSort, required this.onApply});
-
-  @override
-  State<_FilterSheet> createState() => _FilterSheetState();
-}
-
-class _FilterSheetState extends State<_FilterSheet> {
-  late String _fuel, _sort;
-
-  @override
-  void initState() {
-    super.initState();
-    _fuel = widget.currentFuel;
-    _sort = widget.currentSort;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Text('Filters', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
-            const Spacer(),
-            TextButton(onPressed: () => setState(() { _fuel = 'All'; _sort = 'Featured'; }),
-                child: const Text('Reset', style: TextStyle(color: AppTheme.accent))),
-          ]),
-          const SizedBox(height: 16),
-          const Text('Fuel Type', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, children: ['All', 'Electric', 'Hybrid', 'Petrol'].map((f) =>
-            GestureDetector(
-              onTap: () => setState(() => _fuel = f),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _fuel == f ? AppTheme.accent : AppTheme.cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(f, style: TextStyle(color: _fuel == f ? AppTheme.primary : AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-              ),
-            )
-          ).toList()),
-          const SizedBox(height: 16),
-          const Text('Sort By', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, children: ['Featured', 'Price: Low', 'Rating'].map((s) =>
-            GestureDetector(
-              onTap: () => setState(() => _sort = s),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _sort == s ? AppTheme.accent : AppTheme.cardBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(s, style: TextStyle(color: _sort == s ? AppTheme.primary : AppTheme.textSecondary, fontWeight: FontWeight.w600)),
-              ),
-            )
-          ).toList()),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () { widget.onApply(_fuel, _sort); Navigator.pop(context); },
-              child: const Text('Apply Filters', style: TextStyle(fontWeight: FontWeight.w700)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Vehicle Detail Screen ───────────────────────────────────────
-class VehicleDetailScreen extends StatefulWidget {
-  final Vehicle vehicle;
-  final String mode;
-
-  const VehicleDetailScreen({super.key, required this.vehicle, required this.mode});
-
-  @override
-  State<VehicleDetailScreen> createState() => _VehicleDetailScreenState();
-}
-
-class _VehicleDetailScreenState extends State<VehicleDetailScreen> {
-  bool _isFav = false;
-  int _imgIndex = 0;
-  late final PageController _pageController;
-
-  static const _views = [
-    {'icon': Icons.directions_car_filled, 'label': 'Front View'},
-    {'icon': Icons.directions_car,        'label': 'Side View'},
-    {'icon': Icons.airport_shuttle,       'label': 'Interior'},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
+    _tab = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _tab.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final v = widget.vehicle;
-    final color = v.accentColor;
-
     return Scaffold(
       backgroundColor: AppTheme.primary,
-      // Standard AppBar — Flutter adds the back button automatically
       appBar: AppBar(
         backgroundColor: AppTheme.primary,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
-        title: Text(
-          v.name,
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
-        ),
+        title: const Text('Marketplace',
+            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w800)),
         actions: [
           IconButton(
-            icon: Icon(
-              _isFav ? Icons.favorite : Icons.favorite_border,
-              color: _isFav ? AppTheme.danger : AppTheme.textPrimary,
-            ),
-            onPressed: () => setState(() => _isFav = !_isFav),
+            icon: const Icon(Icons.add_box_outlined, color: AppTheme.accent),
+            tooltip: 'Post a product',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const _PostProductScreen()),
+            ).then((_) => setState(() {})),
           ),
         ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Image carousel ──────────────────────────────────────
-            SizedBox(
-              height: 260,
-              child: Stack(children: [
-                PageView.builder(
-                  controller: _pageController,
-                  itemCount: _views.length,
-                  onPageChanged: (i) => setState(() => _imgIndex = i),
-                  itemBuilder: (_, i) {
-                    final view = _views[i];
-                    return Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            color.withValues(alpha: 0.08 + i * 0.04),
-                            color.withValues(alpha: 0.20 + i * 0.04),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Stack(children: [
-                        Positioned.fill(child: CustomPaint(painter: _GridPainter(color: color))),
-                        Center(
-                          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Icon(view['icon'] as IconData, color: color.withValues(alpha: 0.8), size: 130),
-                            const SizedBox(height: 8),
-                            Text(
-                              view['label'] as String,
-                              style: TextStyle(color: color.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                          ]),
-                        ),
-                      ]),
-                    );
-                  },
-                ),
-                // Pagination dots
-                Positioned(
-                  bottom: 14, left: 0, right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(_views.length, (i) => AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: _imgIndex == i ? 20 : 6,
-                      height: 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 3),
-                      decoration: BoxDecoration(
-                        color: _imgIndex == i ? color : color.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    )),
-                  ),
-                ),
-                // Photo counter
-                Positioned(
-                  top: 10, right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${_imgIndex + 1} / ${_views.length}',
-                      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-
-            // ── Detail content ──────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Title row
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(v.brand, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-                      Text(v.name,
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
-                      Text('${v.year} · ${v.type} · ${v.color}',
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    ])),
-                    const SizedBox(width: 8),
-                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text(
-                        widget.mode == 'buy' ? v.buyPrice : v.rentPriceDay,
-                        style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800),
-                      ),
-                      if (widget.mode == 'rent')
-                        Text(v.rentPriceWeek,
-                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                    ]),
-                  ]),
-                  const SizedBox(height: 14),
-
-                  // Rating + badges
-                  Row(children: [
-                    ...List.generate(5, (i) => Icon(
-                      i < v.rating.floor() ? Icons.star : Icons.star_border,
-                      color: AppTheme.gold, size: 15)),
-                    const SizedBox(width: 6),
-                    Text(v.rating.toStringAsFixed(1),
-                        style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-                    Text('  ·  ${v.reviews} reviews',
-                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    const Spacer(),
-                    StatusBadge(label: v.fuelType, color: color),
-                    const SizedBox(width: 6),
-                    StatusBadge(
-                      label: v.isAvailable ? 'Available' : 'Unavailable',
-                      color: v.isAvailable ? AppTheme.success : AppTheme.danger,
-                    ),
-                  ]),
-                  const SizedBox(height: 20),
-
-                  // Spec cards (2×2 grid)
-                  const SectionHeader(title: 'Specifications'),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _SpecCard(icon: Icons.bolt,       label: 'Range',   value: v.range,   color: color)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _SpecCard(icon: Icons.event_seat, label: 'Seats',   value: v.seats,   color: color)),
-                  ]),
-                  const SizedBox(height: 10),
-                  Row(children: [
-                    Expanded(child: _SpecCard(icon: Icons.speed,      label: 'Power',   value: v.power,   color: color)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _SpecCard(icon: Icons.drive_eta,  label: 'Mileage', value: v.mileage, color: color)),
-                  ]),
-                  const SizedBox(height: 20),
-
-                  // Features
-                  const SectionHeader(title: 'Features'),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: v.features.map((f) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: color.withValues(alpha: 0.3)),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.check_circle_outline, color: color, size: 14),
-                        const SizedBox(width: 5),
-                        Text(f, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),
-                      ]),
-                    )).toList(),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // About
-                  const SectionHeader(title: 'About this vehicle'),
-                  const SizedBox(height: 10),
-                  Text(
-                    'The ${v.brand} ${v.name} (${v.year}) is a cutting-edge ${v.fuelType.toLowerCase()} vehicle '
-                    'with an impressive range of ${v.range} and ${v.power} of power. '
-                    'Perfect for both daily commutes and long trips, it combines '
-                    'luxury with performance. Currently showing ${v.mileage} on the odometer.',
-                    style: const TextStyle(color: AppTheme.textSecondary, height: 1.6, fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Seller info
-                  const SectionHeader(title: 'Seller Info'),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                        color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
-                    child: Row(children: [
-                      CircleAvatar(
-                        backgroundColor: color.withValues(alpha: 0.2), radius: 24,
-                        child: Text(v.brand[0],
-                            style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 18)),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('${v.brand} Official Dealer',
-                            style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-                        const Text('Phnom Penh · Verified Seller',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                        Row(children: [
-                          const Icon(Icons.star, color: AppTheme.gold, size: 14),
-                          const SizedBox(width: 4),
-                          const Text('4.9 · 500+ sales',
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                        ]),
-                      ])),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-                        child: Icon(Icons.chat_outlined, color: color, size: 20),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Primary CTA button (inline — no floating bar needed)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: v.isAvailable
-                          ? () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => widget.mode == 'rent'
-                                      ? RentBookingScreen(vehicle: v)
-                                      : const PaymentScreen()))
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: color,
-                        foregroundColor: AppTheme.primary,
-                        disabledBackgroundColor: AppTheme.cardBg,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text(
-                        v.isAvailable
-                            ? (widget.mode == 'buy' ? '🛒  Proceed to Buy  ·  ${v.buyPrice}' : '🔑  Book Rental  ·  ${v.rentPriceDay}')
-                            : 'Currently Unavailable',
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
+        bottom: TabBar(
+          controller: _tab,
+          indicatorColor: AppTheme.accent,
+          labelColor: AppTheme.accent,
+          unselectedLabelColor: AppTheme.textSecondary,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+          tabs: const [
+            Tab(text: 'Browse'),
+            Tab(text: 'My Listings'),
+            Tab(text: 'My Orders'),
           ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tab,
+        children: const [
+          _BrowseTab(),
+          _MyListingsTab(),
+          _MyOrdersTab(),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Browse Tab ─────────────────────────────────────────────────────────────
+
+class _BrowseTab extends StatefulWidget {
+  const _BrowseTab();
+  @override
+  State<_BrowseTab> createState() => _BrowseTabState();
+}
+
+class _BrowseTabState extends State<_BrowseTab> {
+  final _searchCtrl = TextEditingController();
+
+  List<MarketplaceCategoryModel> _categories = [];
+  List<MarketplaceProductModel>  _products   = [];
+  bool   _loading   = true;
+  String? _error;
+
+  int?    _selectedCategory;
+  String? _listingType;  // null = all | sale | rent | both
+  String? _condition;    // null = all | new | used | refurbished
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _searchCtrl.addListener(() => _debounceSearch());
+  }
+
+  DateTime? _lastSearch;
+  void _debounceSearch() {
+    _lastSearch = DateTime.now();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (DateTime.now().difference(_lastSearch!) >= const Duration(milliseconds: 480)) {
+        _load();
+      }
+    });
+  }
+
+  Future<void> _load() async {
+    if (!mounted) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final results = await Future.wait([
+        if (_categories.isEmpty) ApiService.getMarketplaceCategories(),
+        ApiService.getMarketplaceProducts(
+          search:      _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
+          categoryId:  _selectedCategory,
+          listingType: _listingType,
+          condition:   _condition,
+        ),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        if (_categories.isEmpty) _categories = results[0] as List<MarketplaceCategoryModel>;
+        _products = results.last as List<MarketplaceProductModel>;
+        _loading  = false;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      // Search bar
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: TextField(
+          controller: _searchCtrl,
+          style: const TextStyle(color: AppTheme.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Search products…',
+            hintStyle: const TextStyle(color: AppTheme.textSecondary),
+            prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+            suffixIcon: _searchCtrl.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close, color: AppTheme.textSecondary, size: 18),
+                    onPressed: () { _searchCtrl.clear(); _load(); },
+                  )
+                : null,
+            filled: true,
+            fillColor: AppTheme.surface,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          ),
+        ),
+      ),
+      // Filter chips
+      _FilterBar(
+        categories:      _categories,
+        selectedCategory: _selectedCategory,
+        listingType:     _listingType,
+        condition:       _condition,
+        onCategoryChanged: (v) { setState(() => _selectedCategory = v); _load(); },
+        onListingTypeChanged: (v) { setState(() => _listingType = v); _load(); },
+        onConditionChanged: (v) { setState(() => _condition = v); _load(); },
+      ),
+      // Results
+      Expanded(child: _buildBody()),
+    ]);
+  }
+
+  Widget _buildBody() {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppTheme.danger)));
+    if (_products.isEmpty) {
+      return const Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(Icons.storefront_outlined, color: AppTheme.textSecondary, size: 56),
+          SizedBox(height: 12),
+          Text('No products found', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          SizedBox(height: 6),
+          Text('Try adjusting your filters', style: TextStyle(color: AppTheme.textSecondary)),
+        ]),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppTheme.accent,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+        itemCount: _products.length,
+        itemBuilder: (_, i) => _ProductCard(
+          product: _products[i],
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => _ProductDetailScreen(product: _products[i])),
+          ).then((_) => _load()),
         ),
       ),
     );
   }
 }
 
-class _SpecCard extends StatelessWidget {
-  final IconData icon;
-  final String label, value;
-  final Color color;
+// ── Filter Bar ──────────────────────────────────────────────────────────────
 
-  const _SpecCard({required this.icon, required this.label, required this.value, required this.color});
+class _FilterBar extends StatelessWidget {
+  final List<MarketplaceCategoryModel> categories;
+  final int?    selectedCategory;
+  final String? listingType;
+  final String? condition;
+  final ValueChanged<int?>    onCategoryChanged;
+  final ValueChanged<String?> onListingTypeChanged;
+  final ValueChanged<String?> onConditionChanged;
+
+  const _FilterBar({
+    required this.categories,
+    required this.selectedCategory,
+    required this.listingType,
+    required this.condition,
+    required this.onCategoryChanged,
+    required this.onListingTypeChanged,
+    required this.onConditionChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Row(children: [
-        Icon(icon, color: color, size: 18),
+        // All products chip
+        _Chip(
+          label: 'All',
+          active: selectedCategory == null && listingType == null && condition == null,
+          onTap: () {
+            onCategoryChanged(null);
+            onListingTypeChanged(null);
+            onConditionChanged(null);
+          },
+        ),
         const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-          Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
-        ]),
+        // Listing type chips
+        for (final type in ['sale', 'rent']) ...[
+          _Chip(
+            label: type == 'sale' ? 'For Sale' : 'For Rent',
+            active: listingType == type,
+            color: type == 'rent' ? AppTheme.accent : AppTheme.success,
+            onTap: () => onListingTypeChanged(listingType == type ? null : type),
+          ),
+          const SizedBox(width: 8),
+        ],
+        // Condition chips
+        for (final cond in ['new', 'used', 'refurbished']) ...[
+          _Chip(
+            label: cond[0].toUpperCase() + cond.substring(1),
+            active: condition == cond,
+            color: _conditionColor(cond),
+            onTap: () => onConditionChanged(condition == cond ? null : cond),
+          ),
+          const SizedBox(width: 8),
+        ],
+        // Category chips
+        for (final cat in categories) ...[
+          _Chip(
+            label: cat.name,
+            active: selectedCategory == cat.id,
+            onTap: () => onCategoryChanged(selectedCategory == cat.id ? null : cat.id),
+          ),
+          const SizedBox(width: 8),
+        ],
       ]),
     );
   }
 }
 
-// ─── Rent Booking Screen ─────────────────────────────────────────
-class RentBookingScreen extends StatefulWidget {
-  final Vehicle vehicle;
+class _Chip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback onTap;
 
-  const RentBookingScreen({super.key, required this.vehicle});
-
-  @override
-  State<RentBookingScreen> createState() => _RentBookingScreenState();
-}
-
-class _RentBookingScreenState extends State<RentBookingScreen> {
-  DateTime _pickupDate = DateTime.now().add(const Duration(days: 1));
-  DateTime _returnDate = DateTime.now().add(const Duration(days: 4));
-  String _pickupLocation = 'Phnom Penh City Center';
-  bool _withDriver = false;
-  bool _includeInsurance = true;
-
-  int get _days => _returnDate.difference(_pickupDate).inDays;
-
-  double get _subtotal {
-    final rate = double.tryParse(
-      widget.vehicle.rentPriceDay.replaceAll(RegExp(r'[^\d.]'), ''),
-    ) ?? 0;
-    return rate * _days;
-  }
-
-  double get _insurance => _includeInsurance ? _days * 8.0 : 0;
-  double get _driverFee => _withDriver ? _days * 25.0 : 0;
-  double get _total => _subtotal + _insurance + _driverFee;
+  const _Chip({
+    required this.label,
+    required this.active,
+    this.color = AppTheme.accent,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.vehicle.accentColor;
-    return Scaffold(
-      appBar: AppBar(title: Text('Rent ${widget.vehicle.brand} ${widget.vehicle.name.split(' ').first}')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Vehicle mini card
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: color.withValues(alpha: 0.3)),
-              ),
-              child: Row(children: [
-                Container(
-                  width: 64, height: 64,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(Icons.directions_car_filled, color: color, size: 36),
-                ),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(widget.vehicle.brand, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
-                  Text(widget.vehicle.name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-                  Text('${widget.vehicle.fuelType} · ${widget.vehicle.seats} seats',
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                ])),
-                Text(widget.vehicle.rentPriceDay,
-                    style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 16)),
-              ]),
-            ),
-            const SizedBox(height: 20),
-            const SectionHeader(title: 'Rental Dates'),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _DatePickerCard(
-                label: 'Pickup',
-                date: _pickupDate,
-                icon: Icons.calendar_today_outlined,
-                color: color,
-                onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: _pickupDate,
-                    firstDate: DateTime.now(),
-                    lastDate: DateTime.now().add(const Duration(days: 90)),
-                    builder: (c, child) => Theme(data: ThemeData.dark().copyWith(
-                        colorScheme: ColorScheme.dark(primary: color)), child: child!),
-                  );
-                  if (d != null) setState(() { _pickupDate = d; if (_returnDate.isBefore(d.add(const Duration(days: 1)))) _returnDate = d.add(const Duration(days: 1)); });
-                },
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: _DatePickerCard(
-                label: 'Return',
-                date: _returnDate,
-                icon: Icons.event_outlined,
-                color: color,
-                onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: _returnDate,
-                    firstDate: _pickupDate.add(const Duration(days: 1)),
-                    lastDate: DateTime.now().add(const Duration(days: 90)),
-                    builder: (c, child) => Theme(data: ThemeData.dark().copyWith(
-                        colorScheme: ColorScheme.dark(primary: color)), child: child!),
-                  );
-                  if (d != null) setState(() => _returnDate = d);
-                },
-              )),
-            ]),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.access_time, color: color, size: 16),
-                const SizedBox(width: 6),
-                Text('$_days day${_days == 1 ? '' : 's'} rental',
-                    style: TextStyle(color: color, fontWeight: FontWeight.w700)),
-                const SizedBox(width: 8),
-                Text('= ${widget.vehicle.rentPriceDay.replaceAll('/day', '')} × $_days',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-              ]),
-            ),
-            const SizedBox(height: 20),
-            const SectionHeader(title: 'Pickup Location'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
-              child: Column(children: [
-                ...[
-                  'Phnom Penh City Center',
-                  'Phnom Penh International Airport',
-                  'AEON Mall Sen Sok',
-                ].map((loc) => GestureDetector(
-                  onTap: () => setState(() => _pickupLocation = loc),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(children: [
-                      Icon(
-                        _pickupLocation == loc ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: _pickupLocation == loc ? color : AppTheme.textSecondary, size: 18,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(loc,
-                          style: TextStyle(
-                            color: _pickupLocation == loc ? AppTheme.textPrimary : AppTheme.textSecondary,
-                            fontSize: 13,
-                          ))),
-                    ]),
-                  ),
-                )),
-              ]),
-            ),
-            const SizedBox(height: 20),
-            const SectionHeader(title: 'Add-ons'),
-            const SizedBox(height: 12),
-            _AddonToggle(
-              icon: Icons.security_outlined,
-              title: 'Full Insurance Coverage',
-              subtitle: '\$8/day — Covers all damages',
-              value: _includeInsurance,
-              color: AppTheme.success,
-              onChanged: (v) => setState(() => _includeInsurance = v),
-            ),
-            _AddonToggle(
-              icon: Icons.person_outlined,
-              title: 'With Professional Driver',
-              subtitle: '\$25/day — Includes fuel',
-              value: _withDriver,
-              color: color,
-              onChanged: (v) => setState(() => _withDriver = v),
-            ),
-            const SizedBox(height: 20),
-            // Price breakdown
-            const SectionHeader(title: 'Price Breakdown'),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
-              child: Column(children: [
-                _PriceRow('${widget.vehicle.rentPriceDay} × $_days days',
-                    '\$${_subtotal.toStringAsFixed(0)}'),
-                if (_includeInsurance) _PriceRow('Insurance (\$8 × $_days)', '\$${_insurance.toStringAsFixed(0)}'),
-                if (_withDriver) _PriceRow('Driver fee (\$25 × $_days)', '\$${_driverFee.toStringAsFixed(0)}'),
-                _PriceRow('Service fee (5%)', '\$${(_total * 0.05).toStringAsFixed(0)}'),
-                const Divider(color: AppTheme.cardBg, height: 24),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  const Text('Total', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)),
-                  Text('\$${(_total * 1.05).toStringAsFixed(0)}',
-                      style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
-                ]),
-              ]),
-            ),
-            const SizedBox(height: 24),
-            PrimaryButton(
-              label: '🔑  Confirm Rental — \$${(_total * 1.05).toStringAsFixed(0)}',
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentScreen())),
-              color: color,
-            ),
-            const SizedBox(height: 12),
-            const Center(
-              child: Text('Free cancellation up to 24h before pickup',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-            ),
-          ],
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? color : AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: active ? color : AppTheme.surface),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : AppTheme.textSecondary,
+            fontWeight: FontWeight.w600,
+            fontSize: 12,
+          ),
         ),
       ),
     );
   }
 }
 
-class _DatePickerCard extends StatelessWidget {
-  final String label;
-  final DateTime date;
-  final IconData icon;
-  final Color color;
+// ── Product Card ────────────────────────────────────────────────────────────
+
+class _ProductCard extends StatelessWidget {
+  final MarketplaceProductModel product;
   final VoidCallback onTap;
 
-  const _DatePickerCard({required this.label, required this.date, required this.icon, required this.color, required this.onTap});
+  const _ProductCard({required this.product, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = product;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Image
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
+            child: SizedBox(
+              width: 110,
+              height: 110,
+              child: p.images.isNotEmpty
+                  ? Image.network(p.images.first, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _PlaceholderImg())
+                  : _PlaceholderImg(),
+            ),
+          ),
+          // Info
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(p.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14)),
+                const SizedBox(height: 6),
+                Text(_fmtKhr(p.price),
+                    style: const TextStyle(
+                        color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 15)),
+                if (p.rentPricePerDay != null && p.listingType != 'sale')
+                  Text('${_fmtKhr(p.rentPricePerDay!)}/day',
+                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                const SizedBox(height: 8),
+                Wrap(spacing: 6, runSpacing: 4, children: [
+                  if (p.condition != null)
+                    _Badge(label: p.condition!, color: _conditionColor(p.condition)),
+                  if (p.listingType != 'sale')
+                    _Badge(label: p.listingType == 'rent' ? 'Rent' : 'Sale & Rent',
+                        color: AppTheme.accent),
+                  if (p.locationText != null)
+                    _Badge(
+                        label: p.locationText!.length > 20
+                            ? '${p.locationText!.substring(0, 20)}…'
+                            : p.locationText!,
+                        color: AppTheme.textSecondary,
+                        icon: Icons.location_on_outlined),
+                ]),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _PlaceholderImg extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+    color: AppTheme.cardBg,
+    child: const Center(child: Icon(Icons.image_outlined, color: AppTheme.textSecondary, size: 32)),
+  );
+}
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  const _Badge({required this.label, required this.color, this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon != null) ...[Icon(icon, color: color, size: 11), const SizedBox(width: 3)],
+        Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+      ]),
+    );
+  }
+}
+
+// ── Product Detail Screen ──────────────────────────────────────────────────
+
+class _ProductDetailScreen extends StatefulWidget {
+  final MarketplaceProductModel product;
+  const _ProductDetailScreen({required this.product});
+
+  @override
+  State<_ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<_ProductDetailScreen> {
+  late MarketplaceProductModel _product;
+  bool _loading = true;
+  int  _imgIndex = 0;
+  late PageController _pageCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _product = widget.product;
+    _pageCtrl = PageController();
+    _loadDetail();
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadDetail() async {
+    try {
+      final detail = await ApiService.getMarketplaceProduct(_product.id);
+      if (mounted) setState(() { _product = detail; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = _product;
+    final canSell = p.listingType == 'sale' || p.listingType == 'both';
+    final canRent = p.listingType == 'rent' || p.listingType == 'both';
+
+    return Scaffold(
+      backgroundColor: AppTheme.primary,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primary,
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+        title: Text(p.title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
+      ),
+      body: Column(children: [
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Images
+              SizedBox(
+                height: 240,
+                child: Stack(children: [
+                  p.images.isNotEmpty
+                      ? PageView.builder(
+                          controller: _pageCtrl,
+                          itemCount: p.images.length,
+                          onPageChanged: (i) => setState(() => _imgIndex = i),
+                          itemBuilder: (_, i) => Image.network(p.images[i],
+                              fit: BoxFit.cover, width: double.infinity,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: AppTheme.cardBg,
+                                child: const Center(child: Icon(Icons.image_outlined,
+                                    color: AppTheme.textSecondary, size: 56)),
+                              )),
+                        )
+                      : Container(
+                          color: AppTheme.cardBg,
+                          child: const Center(child: Icon(Icons.image_outlined,
+                              color: AppTheme.textSecondary, size: 72)),
+                        ),
+                  if (p.images.length > 1)
+                    Positioned(
+                      bottom: 12, left: 0, right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(p.images.length, (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: _imgIndex == i ? 18 : 6,
+                          height: 6,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            color: _imgIndex == i ? AppTheme.accent : AppTheme.textSecondary.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        )),
+                      ),
+                    ),
+                  if (_loading)
+                    const Positioned.fill(
+                      child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                    ),
+                ]),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  // Title + price
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(p.title,
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800)),
+                        if (p.categoryName != null)
+                          Text(p.categoryName!,
+                              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      ]),
+                    ),
+                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      if (canSell)
+                        Text(_fmtKhr(p.price),
+                            style: const TextStyle(
+                                color: AppTheme.accent,
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800)),
+                      if (canRent && p.rentPricePerDay != null)
+                        Text('${_fmtKhr(p.rentPricePerDay!)}/day',
+                            style: const TextStyle(
+                                color: AppTheme.gold, fontSize: 14, fontWeight: FontWeight.w600)),
+                    ]),
+                  ]),
+                  const SizedBox(height: 12),
+
+                  // Badges row
+                  Wrap(spacing: 8, runSpacing: 6, children: [
+                    if (p.condition != null)
+                      _Badge(label: p.condition![0].toUpperCase() + p.condition!.substring(1),
+                          color: _conditionColor(p.condition)),
+                    _Badge(
+                        label: p.listingType == 'sale' ? 'For Sale' : p.listingType == 'rent' ? 'For Rent' : 'Sale & Rent',
+                        color: AppTheme.accent),
+                    _Badge(label: '${p.viewsCount} views', color: AppTheme.textSecondary, icon: Icons.visibility_outlined),
+                    if (p.quantity > 1)
+                      _Badge(label: 'Qty: ${p.quantity}', color: AppTheme.textSecondary),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  // Description
+                  if (p.description != null && p.description!.isNotEmpty) ...[
+                    const SectionHeader(title: 'Description'),
+                    const SizedBox(height: 8),
+                    Text(p.description!,
+                        style: const TextStyle(
+                            color: AppTheme.textSecondary, height: 1.6, fontSize: 13)),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Location
+                  if (p.locationText != null) ...[
+                    const SectionHeader(title: 'Location'),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      const Icon(Icons.location_on_outlined, color: AppTheme.accent, size: 16),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(p.locationText!,
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+                    ]),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // Seller info
+                  if (p.sellerName != null) ...[
+                    const SectionHeader(title: 'Seller'),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppTheme.cardBg,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(children: [
+                        CircleAvatar(
+                          backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+                          radius: 20,
+                          child: Text(
+                            p.sellerName![0].toUpperCase(),
+                            style: const TextStyle(
+                                color: AppTheme.accent, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(p.sellerName!,
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                      ]),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                ]),
+              ),
+            ]),
+          ),
+        ),
+
+        // Sticky bottom buttons
+        Container(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).padding.bottom),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+          ),
+          child: Row(children: [
+            if (canSell) Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _openOrder(context, 'purchase'),
+                icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                label: const Text('Buy', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accent,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+            if (canSell && canRent) const SizedBox(width: 10),
+            if (canRent) Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () => _openOrder(context, 'rent'),
+                icon: const Icon(Icons.key_outlined, size: 18),
+                label: const Text('Rent', style: TextStyle(fontWeight: FontWeight.w800)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.gold,
+                  foregroundColor: AppTheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  void _openOrder(BuildContext ctx, String orderType) {
+    Navigator.push(ctx, MaterialPageRoute(
+      builder: (_) => _OrderScreen(product: _product, orderType: orderType),
+    ));
+  }
+}
+
+// ── Order Screen ───────────────────────────────────────────────────────────
+
+class _OrderScreen extends StatefulWidget {
+  final MarketplaceProductModel product;
+  final String orderType; // purchase | rent
+
+  const _OrderScreen({required this.product, required this.orderType});
+
+  @override
+  State<_OrderScreen> createState() => _OrderScreenState();
+}
+
+class _OrderScreenState extends State<_OrderScreen> {
+  int    _quantity     = 1;
+  String _paymentMethod = 'cash';
+  final  _notesCtrl   = TextEditingController();
+
+  DateTime _rentStart = DateTime.now().add(const Duration(days: 1));
+  DateTime _rentEnd   = DateTime.now().add(const Duration(days: 4));
+
+  bool   _submitting = false;
+  String? _error;
+
+  bool get _isRent => widget.orderType == 'rent';
+  int  get _rentDays => _rentEnd.difference(_rentStart).inDays.clamp(1, 365);
+
+  int get _total {
+    if (_isRent && widget.product.rentPricePerDay != null) {
+      return widget.product.rentPricePerDay! * _rentDays * _quantity;
+    }
+    return widget.product.price * _quantity;
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() { _submitting = true; _error = null; });
+    try {
+      await ApiService.placeMarketplaceOrder(
+        widget.product.id,
+        orderType:     widget.orderType,
+        quantity:      _quantity,
+        paymentMethod: _paymentMethod,
+        notes:         _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_rentStart) : null,
+        rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_rentEnd)   : null,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order placed successfully!'), backgroundColor: AppTheme.success),
+      );
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _submitting = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _submitting = false; });
+    }
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final now = DateTime.now();
+    final initial  = isStart ? _rentStart : _rentEnd;
+    final first    = isStart ? now.add(const Duration(days: 1)) : _rentStart.add(const Duration(days: 1));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      if (isStart) {
+        _rentStart = picked;
+        if (_rentEnd.isBefore(picked.add(const Duration(days: 1)))) {
+          _rentEnd = picked.add(const Duration(days: 1));
+        }
+      } else {
+        _rentEnd = picked;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.product;
+    return Scaffold(
+      backgroundColor: AppTheme.primary,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primary,
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+        title: Text(_isRent ? 'Rent: ${p.title}' : 'Buy: ${p.title}',
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
+      ),
+      body: Column(children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+                ),
+              ],
+
+              // Dates (rent only)
+              if (_isRent) ...[
+                const SectionHeader(title: 'Rental Dates'),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: _DateCard(
+                    label: 'Start',
+                    date: _rentStart,
+                    onTap: () => _pickDate(isStart: true),
+                  )),
+                  const SizedBox(width: 12),
+                  Expanded(child: _DateCard(
+                    label: 'End',
+                    date: _rentEnd,
+                    onTap: () => _pickDate(isStart: false),
+                  )),
+                ]),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.date_range_outlined, color: AppTheme.accent, size: 16),
+                    const SizedBox(width: 6),
+                    Text('$_rentDays day${_rentDays == 1 ? '' : 's'}',
+                        style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+                  ]),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Quantity
+              const SectionHeader(title: 'Quantity'),
+              const SizedBox(height: 12),
+              Row(children: [
+                IconButton(
+                  onPressed: _quantity > 1 ? () => setState(() => _quantity--) : null,
+                  icon: const Icon(Icons.remove_circle_outline, color: AppTheme.accent),
+                ),
+                Text('$_quantity',
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+                IconButton(
+                  onPressed: _quantity < p.quantity
+                      ? () => setState(() => _quantity++)
+                      : null,
+                  icon: const Icon(Icons.add_circle_outline, color: AppTheme.accent),
+                ),
+                Text('(max ${p.quantity})', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              ]),
+              const SizedBox(height: 20),
+
+              // Payment method
+              const SectionHeader(title: 'Payment Method'),
+              const SizedBox(height: 12),
+              Wrap(spacing: 8, runSpacing: 8,
+                children: ['cash', 'aba', 'wing', 'wallet', 'other_online'].map((m) =>
+                  GestureDetector(
+                    onTap: () => setState(() => _paymentMethod = m),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _paymentMethod == m ? AppTheme.accent : AppTheme.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: _paymentMethod == m ? AppTheme.accent : AppTheme.surface),
+                      ),
+                      child: Text(
+                        m[0].toUpperCase() + m.substring(1),
+                        style: TextStyle(
+                          color: _paymentMethod == m ? Colors.white : AppTheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ).toList(),
+              ),
+              const SizedBox(height: 20),
+
+              // Notes
+              const SectionHeader(title: 'Notes (optional)'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _notesCtrl,
+                maxLines: 2,
+                style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Any special instructions…',
+                  hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                  filled: true,
+                  fillColor: AppTheme.surface,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Price summary
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+                child: Column(children: [
+                  if (!_isRent)
+                    _PriceRow('${_fmtKhr(p.price)} × $_quantity', _fmtKhr(p.price * _quantity)),
+                  if (_isRent && p.rentPricePerDay != null) ...[
+                    _PriceRow('${_fmtKhr(p.rentPricePerDay!)} × $_rentDays days',
+                        _fmtKhr(p.rentPricePerDay! * _rentDays)),
+                    if (_quantity > 1)
+                      _PriceRow('× $_quantity items', _fmtKhr(p.rentPricePerDay! * _rentDays * _quantity)),
+                  ],
+                  const Divider(color: AppTheme.cardBg, height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                    const Text('Total',
+                        style: TextStyle(
+                            color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)),
+                    Text(_fmtKhr(_total),
+                        style: const TextStyle(
+                            color: AppTheme.accent, fontSize: 20, fontWeight: FontWeight.w800)),
+                  ]),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+
+        // Confirm button
+        Container(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).padding.bottom),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _submitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isRent ? AppTheme.gold : AppTheme.accent,
+                foregroundColor: _isRent ? AppTheme.primary : Colors.white,
+                disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.5),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _submitting
+                  ? const SizedBox(width: 22, height: 22,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                  : Text(
+                      _isRent
+                          ? 'Confirm Rental — ${_fmtKhr(_total)}'
+                          : 'Place Order — ${_fmtKhr(_total)}',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _DateCard extends StatelessWidget {
+  final String label;
+  final DateTime date;
+  final VoidCallback onTap;
+
+  const _DateCard({required this.label, required this.date, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1274,93 +1010,784 @@ class _DatePickerCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(width: 6),
-            Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-          ]),
-          const SizedBox(height: 6),
-          Text('${date.day}/${date.month}/${date.year}',
-              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+          Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          const SizedBox(height: 4),
+          Text(DateFormat('dd MMM yyyy').format(date),
+              style: const TextStyle(
+                  color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
         ]),
       ),
     );
   }
 }
 
-class _AddonToggle extends StatelessWidget {
-  final IconData icon;
-  final String title, subtitle;
-  final bool value;
-  final Color color;
-  final Function(bool) onChanged;
-
-  const _AddonToggle({required this.icon, required this.title, required this.subtitle, required this.value, required this.color, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: value ? Border.all(color: color.withValues(alpha: 0.4)) : null,
-      ),
-      child: Row(children: [
-        Container(padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, color: color, size: 18)),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-          Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-        ])),
-        Switch(value: value, onChanged: onChanged, activeColor: color),
-      ]),
-    );
-  }
-}
-
 class _PriceRow extends StatelessWidget {
   final String label, amount;
-
   const _PriceRow(this.label, this.amount);
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-        Text(amount, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
+        Text(amount, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
       ]),
     );
   }
 }
 
-// ─── Grid Painter ────────────────────────────────────────────────
-class _GridPainter extends CustomPainter {
-  final Color color;
+// ── My Listings Tab ────────────────────────────────────────────────────────
 
-  _GridPainter({required this.color});
+class _MyListingsTab extends StatefulWidget {
+  const _MyListingsTab();
+  @override
+  State<_MyListingsTab> createState() => _MyListingsTabState();
+}
+
+class _MyListingsTabState extends State<_MyListingsTab> {
+  List<MarketplaceProductModel> _products = [];
+  bool    _loading = true;
+  String? _error;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.06)
-      ..strokeWidth = 1;
-    for (double x = 0; x < size.width; x += 40) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final list = await ApiService.getMyMarketplaceProducts();
+      if (mounted) setState(() { _products = list; _loading = false; });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
-    for (double y = 0; y < size.height; y += 40) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+  }
+
+  Future<void> _delete(MarketplaceProductModel p) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: const Text('Delete product?', style: TextStyle(color: AppTheme.textPrimary)),
+        content: Text('${p.title} will be permanently deleted.',
+            style: const TextStyle(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete', style: TextStyle(color: AppTheme.danger))),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await ApiService.deleteMarketplaceProduct(p.id);
+      _load();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: AppTheme.danger),
+      );
     }
   }
 
   @override
-  bool shouldRepaint(_) => false;
+  Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppTheme.danger)));
+    if (_products.isEmpty) {
+      return Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.add_box_outlined, color: AppTheme.textSecondary, size: 56),
+          const SizedBox(height: 12),
+          const Text("You haven't listed anything yet",
+              style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 16)),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const _PostProductScreen()))
+                .then((_) => _load()),
+            icon: const Icon(Icons.add),
+            label: const Text('Post a Product'),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, foregroundColor: Colors.white),
+          ),
+        ]),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      color: AppTheme.accent,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _products.length,
+        itemBuilder: (_, i) {
+          final p = _products[i];
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: SizedBox(
+                  width: 64, height: 64,
+                  child: p.images.isNotEmpty
+                      ? Image.network(p.images.first, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            color: AppTheme.cardBg,
+                            child: const Icon(Icons.image_outlined, color: AppTheme.textSecondary),
+                          ))
+                      : Container(
+                          color: AppTheme.cardBg,
+                          child: const Icon(Icons.image_outlined, color: AppTheme.textSecondary)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(p.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(_fmtKhr(p.price),
+                    style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Row(children: [
+                  Container(
+                    width: 6, height: 6,
+                    decoration: BoxDecoration(color: _statusColor(p.status), shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(p.status[0].toUpperCase() + p.status.substring(1),
+                      style: TextStyle(color: _statusColor(p.status), fontSize: 11, fontWeight: FontWeight.w600)),
+                ]),
+              ])),
+              Column(children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, color: AppTheme.accent, size: 20),
+                  onPressed: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => _PostProductScreen(existing: p)))
+                      .then((_) => _load()),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20),
+                  onPressed: () => _delete(p),
+                ),
+              ]),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// ── My Orders Tab ──────────────────────────────────────────────────────────
+
+class _MyOrdersTab extends StatefulWidget {
+  const _MyOrdersTab();
+  @override
+  State<_MyOrdersTab> createState() => _MyOrdersTabState();
+}
+
+class _MyOrdersTabState extends State<_MyOrdersTab>
+    with SingleTickerProviderStateMixin {
+  late TabController _tab;
+  List<MarketplaceOrderModel> _buying  = [];
+  List<MarketplaceOrderModel> _selling = [];
+  bool    _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 2, vsync: this);
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final results = await Future.wait([
+        ApiService.getMyMarketplaceOrders(type: 'buying'),
+        ApiService.getMyMarketplaceOrders(type: 'selling'),
+      ]);
+      if (mounted) setState(() {
+        _buying  = results[0];
+        _selling = results[1];
+        _loading = false;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  Future<void> _action(MarketplaceOrderModel order, String action) async {
+    try {
+      switch (action) {
+        case 'confirm':  await ApiService.confirmMarketplaceOrder(order.id);
+        case 'complete': await ApiService.completeMarketplaceOrder(order.id);
+        case 'cancel':   await ApiService.cancelMarketplaceOrder(order.id);
+      }
+      _load();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: AppTheme.danger),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+    if (_error != null) return Center(child: Text(_error!, style: const TextStyle(color: AppTheme.danger)));
+    return Column(children: [
+      TabBar(
+        controller: _tab,
+        indicatorColor: AppTheme.accent,
+        labelColor: AppTheme.accent,
+        unselectedLabelColor: AppTheme.textSecondary,
+        tabs: [
+          Tab(text: 'Buying (${_buying.length})'),
+          Tab(text: 'Selling (${_selling.length})'),
+        ],
+      ),
+      Expanded(
+        child: TabBarView(
+          controller: _tab,
+          children: [
+            _OrderList(orders: _buying,  isSeller: false, onAction: _action, onRefresh: _load),
+            _OrderList(orders: _selling, isSeller: true,  onAction: _action, onRefresh: _load),
+          ],
+        ),
+      ),
+    ]);
+  }
+}
+
+class _OrderList extends StatelessWidget {
+  final List<MarketplaceOrderModel> orders;
+  final bool isSeller;
+  final void Function(MarketplaceOrderModel, String) onAction;
+  final Future<void> Function() onRefresh;
+
+  const _OrderList({
+    required this.orders,
+    required this.isSeller,
+    required this.onAction,
+    required this.onRefresh,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (orders.isEmpty) {
+      return const Center(
+        child: Text('No orders yet', style: TextStyle(color: AppTheme.textSecondary)),
+      );
+    }
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: AppTheme.accent,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: orders.length,
+        itemBuilder: (_, i) => _OrderCard(order: orders[i], isSeller: isSeller, onAction: onAction),
+      ),
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  final MarketplaceOrderModel order;
+  final bool isSeller;
+  final void Function(MarketplaceOrderModel, String) onAction;
+
+  const _OrderCard({required this.order, required this.isSeller, required this.onAction});
+
+  @override
+  Widget build(BuildContext context) {
+    final o = order;
+    final statusColor = _statusColor(o.status);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: statusColor.withValues(alpha: 0.25)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Text(
+              o.productTitle ?? 'Order #${o.id}',
+              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              o.status[0].toUpperCase() + o.status.substring(1),
+              style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Row(children: [
+          Text('${o.orderType[0].toUpperCase()}${o.orderType.substring(1)}',
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          const Text(' · ', style: TextStyle(color: AppTheme.textSecondary)),
+          Text('Qty: ${o.quantity}',
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          if (o.rentStartDate != null) ...[
+            const Text(' · ', style: TextStyle(color: AppTheme.textSecondary)),
+            Text('${o.rentStartDate} → ${o.rentEndDate}',
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          ],
+        ]),
+        const SizedBox(height: 4),
+        Text(_fmtKhr(o.total),
+            style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 15)),
+        // Actions: pending → confirm/complete/cancel; confirmed → complete/cancel
+        if (o.status == 'pending' || o.status == 'confirmed') ...[
+          const SizedBox(height: 12),
+          Row(children: [
+            if (isSeller && o.status == 'pending') Expanded(
+              child: OutlinedButton(
+                onPressed: () => onAction(o, 'confirm'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.success),
+                  foregroundColor: AppTheme.success,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ),
+            if (isSeller && o.status == 'pending') const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => onAction(o, 'complete'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.accent),
+                  foregroundColor: AppTheme.accent,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: const Text('Complete', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => onAction(o, 'cancel'),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppTheme.danger),
+                  foregroundColor: AppTheme.danger,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+            ),
+          ]),
+        ],
+      ]),
+    );
+  }
+}
+
+// ── Post / Edit Product Screen ─────────────────────────────────────────────
+
+class _PostProductScreen extends StatefulWidget {
+  final MarketplaceProductModel? existing;
+  const _PostProductScreen({this.existing});
+
+  @override
+  State<_PostProductScreen> createState() => _PostProductScreenState();
+}
+
+class _PostProductScreenState extends State<_PostProductScreen> {
+  final _titleCtrl    = TextEditingController();
+  final _descCtrl     = TextEditingController();
+  final _priceCtrl    = TextEditingController();
+  final _rentCtrl     = TextEditingController();
+  final _locationCtrl = TextEditingController();
+  final _qtyCtrl      = TextEditingController(text: '1');
+
+  String  _listingType = 'sale';   // sale | rent | both
+  String  _condition   = 'used';   // new | used | refurbished
+  String  _status      = 'active'; // draft | active
+
+  final List<File> _images = [];
+  final _picker = ImagePicker();
+
+  bool   _submitting = false;
+  String? _error;
+
+  bool get _isEdit => widget.existing != null;
+
+  Future<void> _pickImages() async {
+    final slots = 5 - _images.length;
+    if (slots <= 0) return;
+    final picked = await _picker.pickMultiImage(limit: slots);
+    if (picked.isEmpty) return;
+
+    final tmpDir = await getTemporaryDirectory();
+    final compressed = <File>[];
+    for (final x in picked) {
+      final outPath = '${tmpDir.path}/mkt_${DateTime.now().microsecondsSinceEpoch}_${compressed.length}.jpg';
+      final result = await FlutterImageCompress.compressAndGetFile(
+        x.path,
+        outPath,
+        quality:   75,
+        minWidth:  1080,
+        minHeight: 1080,
+        format:    CompressFormat.jpeg,
+      );
+      if (result != null) compressed.add(File(result.path));
+    }
+    if (compressed.isEmpty || !mounted) return;
+    setState(() => _images.addAll(compressed));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    if (e != null) {
+      _titleCtrl.text    = e.title;
+      _descCtrl.text     = e.description ?? '';
+      _priceCtrl.text    = '${e.price}';
+      _rentCtrl.text     = e.rentPricePerDay != null ? '${e.rentPricePerDay}' : '';
+      _locationCtrl.text = e.locationText ?? '';
+      _qtyCtrl.text      = '${e.quantity}';
+      _listingType       = e.listingType;
+      _condition         = e.condition ?? 'used';
+      _status            = e.status;
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_titleCtrl, _descCtrl, _priceCtrl, _rentCtrl, _locationCtrl, _qtyCtrl]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final title = _titleCtrl.text.trim();
+    final price = int.tryParse(_priceCtrl.text.trim());
+    if (title.isEmpty) { setState(() => _error = 'Title is required.'); return; }
+    if (price == null) { setState(() => _error = 'Price must be a valid number.'); return; }
+    final rentPerDay = int.tryParse(_rentCtrl.text.trim());
+
+    setState(() { _submitting = true; _error = null; });
+    try {
+      if (_isEdit) {
+        await ApiService.updateMarketplaceProduct(
+          widget.existing!.id,
+          title:           title,
+          description:     _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          listingType:     _listingType,
+          condition:       _condition,
+          price:           price,
+          rentPricePerDay: rentPerDay,
+          quantity:        int.tryParse(_qtyCtrl.text.trim()) ?? 1,
+          status:          _status,
+          locationText:    _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
+        );
+      } else {
+        await ApiService.createMarketplaceProduct(
+          title:           title,
+          price:           price,
+          condition:       _condition,
+          listingType:     _listingType,
+          status:          _status,
+          description:     _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
+          locationText:    _locationCtrl.text.trim().isEmpty ? null : _locationCtrl.text.trim(),
+          quantity:        int.tryParse(_qtyCtrl.text.trim()) ?? 1,
+          rentPricePerDay: rentPerDay,
+          images:          _images,
+        );
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isEdit ? 'Product updated!' : 'Product posted!'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+      Navigator.pop(context);
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _error = e.message; _submitting = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _submitting = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.primary,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primary,
+        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+        title: Text(_isEdit ? 'Edit Product' : 'Post a Product',
+            style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+      ),
+      body: Column(children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_error != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+                ),
+              ],
+
+              const SectionHeader(title: 'Product Info'),
+              const SizedBox(height: 12),
+              _Field(ctrl: _titleCtrl, label: 'Title', hint: 'e.g. iPhone 14 Pro 128GB'),
+              const SizedBox(height: 12),
+              _Field(ctrl: _descCtrl, label: 'Description', hint: 'Describe your product…', maxLines: 3),
+              const SizedBox(height: 20),
+
+              const SectionHeader(title: 'Listing Type'),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, children: ['sale', 'rent', 'both'].map((t) =>
+                GestureDetector(
+                  onTap: () => setState(() => _listingType = t),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _listingType == t ? AppTheme.accent : AppTheme.surface,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      t[0].toUpperCase() + t.substring(1),
+                      style: TextStyle(
+                        color: _listingType == t ? Colors.white : AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ).toList()),
+              const SizedBox(height: 20),
+
+              const SectionHeader(title: 'Condition'),
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, children: ['new', 'used', 'refurbished'].map((c) =>
+                GestureDetector(
+                  onTap: () => setState(() => _condition = c),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _condition == c ? _conditionColor(c) : AppTheme.surface,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      c[0].toUpperCase() + c.substring(1),
+                      style: TextStyle(
+                        color: _condition == c ? Colors.white : AppTheme.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ).toList()),
+              const SizedBox(height: 20),
+
+              const SectionHeader(title: 'Pricing'),
+              const SizedBox(height: 12),
+              _Field(ctrl: _priceCtrl, label: 'Price (KHR)', hint: 'e.g. 1500000', keyboardType: TextInputType.number),
+              if (_listingType == 'rent' || _listingType == 'both') ...[
+                const SizedBox(height: 12),
+                _Field(ctrl: _rentCtrl, label: 'Rent Price / Day (KHR)',
+                    hint: 'e.g. 50000', keyboardType: TextInputType.number),
+              ],
+              const SizedBox(height: 12),
+              _Field(ctrl: _qtyCtrl, label: 'Quantity', hint: '1', keyboardType: TextInputType.number),
+              const SizedBox(height: 20),
+
+              if (!_isEdit) ...[
+                const SectionHeader(title: 'Images (up to 5)'),
+                const SizedBox(height: 12),
+                Wrap(spacing: 10, runSpacing: 10, children: [
+                  // Thumbnails
+                  for (int i = 0; i < _images.length; i++)
+                    Stack(children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(_images[i],
+                            width: 72, height: 72, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: 2, right: 2,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _images.removeAt(i)),
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.danger, shape: BoxShape.circle),
+                            child: const Icon(Icons.close, color: Colors.white, size: 12),
+                          ),
+                        ),
+                      ),
+                    ]),
+                  // Add button
+                  if (_images.length < 10)
+                    GestureDetector(
+                      onTap: _pickImages,
+                      child: Container(
+                        width: 72, height: 72,
+                        decoration: BoxDecoration(
+                          color: AppTheme.surface,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppTheme.accent.withValues(alpha: 0.4),
+                              style: BorderStyle.solid),
+                        ),
+                        child: const Icon(Icons.add_photo_alternate_outlined,
+                            color: AppTheme.accent, size: 28),
+                      ),
+                    ),
+                ]),
+                const SizedBox(height: 20),
+              ],
+
+              const SectionHeader(title: 'Location'),
+              const SizedBox(height: 12),
+              _Field(ctrl: _locationCtrl, label: 'Location (optional)', hint: 'e.g. BKK1, Phnom Penh'),
+              const SizedBox(height: 20),
+
+              if (_isEdit) ...[
+                const SectionHeader(title: 'Status'),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, children: ['draft', 'active', 'paused', 'sold'].map((s) =>
+                  GestureDetector(
+                    onTap: () => setState(() => _status = s),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _status == s ? _statusColor(s) : AppTheme.surface,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        s[0].toUpperCase() + s.substring(1),
+                        style: TextStyle(
+                          color: _status == s ? Colors.white : AppTheme.textSecondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ).toList()),
+                const SizedBox(height: 8),
+              ],
+            ]),
+          ),
+        ),
+
+        Container(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).padding.bottom),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
+          ),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _submitting ? null : _submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.5),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: _submitting
+                  ? const SizedBox(width: 22, height: 22,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                  : Text(_isEdit ? 'Save Changes' : 'Post Product',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  final TextEditingController ctrl;
+  final String label, hint;
+  final int maxLines;
+  final TextInputType? keyboardType;
+
+  const _Field({
+    required this.ctrl,
+    required this.label,
+    required this.hint,
+    this.maxLines = 1,
+    this.keyboardType,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 6),
+      TextField(
+        controller: ctrl,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: AppTheme.textSecondary),
+          filled: true,
+          fillColor: AppTheme.surface,
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+    ]);
+  }
 }
