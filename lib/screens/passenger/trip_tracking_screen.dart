@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math' show min, max, sin, cos, atan2, pi;
 import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/websocket_service.dart';
 import '../../services/notification_service.dart';
@@ -86,6 +88,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   DateTime? _lastRouteFetch;
 
   bool _cancelling = false;
+
+  // Trip sharing state
+  String? _shareUrl;
+  bool    _sharing = false;
 
   // Mutable driver info — updated when driver is assigned after booking
   late String _driverName;
@@ -763,7 +769,19 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                             label: 'Chat',
                             onTap: _openRideChat,
                           ),
-                          _ActionBtn(icon: Icons.share_outlined, label: 'Share', onTap: () {}),
+                          _ActionBtn(
+                            icon:  _shareUrl != null
+                                ? Icons.share_location
+                                : Icons.share_outlined,
+                            label: _shareUrl != null ? 'Sharing' : 'Share',
+                            onTap: _sharing
+                                ? () {}
+                                : _shareUrl != null
+                                    ? () => _showShareSheet(_shareUrl!)
+                                    : _shareTrip,
+                            highlight: _shareUrl != null,
+                            loading:   _sharing,
+                          ),
                           _ActionBtn(icon: Icons.more_horiz, label: 'More', onTap: () {
                             _showMoreSheet(context);
                           }),
@@ -891,6 +909,57 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     ));
   }
 
+  // ── Trip sharing ───────────────────────────────────────────────────────────
+
+  Future<void> _shareTrip() async {
+    if (widget.rideId == null) return;
+    setState(() => _sharing = true);
+    try {
+      final result = await ApiService.shareTrip(widget.rideId!);
+      if (!mounted) return;
+      setState(() { _shareUrl = result.shareUrl; _sharing = false; });
+      _showShareSheet(result.shareUrl);
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _sharing = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  Future<void> _stopSharing() async {
+    if (widget.rideId == null) return;
+    try {
+      await ApiService.stopSharingTrip(widget.rideId!);
+      if (mounted) setState(() => _shareUrl = null);
+    } catch (_) {}
+  }
+
+  void _showShareSheet(String url) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TripShareSheet(
+        url:         url,
+        from:        widget.from,
+        to:          widget.to,
+        driverName:  _driverName,
+        etaMinutes:  _etaMinutes,
+        onStop:      () {
+          Navigator.pop(context);
+          _stopSharing();
+        },
+      ),
+    );
+  }
+
   void _showMoreSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -960,11 +1029,18 @@ class _MapBtn extends StatelessWidget {
 
 class _ActionBtn extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String   label;
   final VoidCallback onTap;
+  final bool highlight;
+  final bool loading;
 
-  const _ActionBtn(
-      {required this.icon, required this.label, required this.onTap});
+  const _ActionBtn({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.highlight = false,
+    this.loading   = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -974,15 +1050,233 @@ class _ActionBtn extends StatelessWidget {
         Container(
           width: 50, height: 50,
           decoration: BoxDecoration(
-            color: _kGreen.withValues(alpha: 0.1),
+            color: highlight
+                ? _kGreen.withValues(alpha: 0.18)
+                : _kGreen.withValues(alpha: 0.1),
             shape: BoxShape.circle,
+            border: highlight
+                ? Border.all(color: _kGreen, width: 1.5)
+                : null,
           ),
-          child: Icon(icon, color: _kGreen, size: 22),
+          child: loading
+              ? const Padding(
+                  padding: EdgeInsets.all(14),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: _kGreen))
+              : Icon(icon, color: _kGreen, size: 22),
         ),
         const SizedBox(height: 6),
         Text(label,
-            style: const TextStyle(color: _kTextSub, fontSize: 12)),
+            style: TextStyle(
+              color: highlight ? _kGreen : _kTextSub,
+              fontSize: 12,
+              fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
+            )),
       ]),
+    );
+  }
+}
+
+// ── Trip share bottom sheet ───────────────────────────────────────────────────
+
+class _TripShareSheet extends StatelessWidget {
+  final String   url;
+  final String   from;
+  final String   to;
+  final String   driverName;
+  final int      etaMinutes;
+  final VoidCallback onStop;
+
+  const _TripShareSheet({
+    required this.url,
+    required this.from,
+    required this.to,
+    required this.driverName,
+    required this.etaMinutes,
+    required this.onStop,
+  });
+
+  void _copy(BuildContext ctx) {
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+      content: Text('Link copied to clipboard'),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 2),
+    ));
+  }
+
+  void _shareNative() {
+    Share.share(
+      'Track my AutoRide trip live 🚗\n'
+      'Driver: $driverName · ETA: $etaMinutes min\n'
+      'From: $from\nTo: $to\n\n$url',
+      subject: 'Track my ride live',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24, right: 24, top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Header
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _kGreen.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.share_location, color: _kGreen, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Share Trip', style: TextStyle(
+                fontSize: 17, fontWeight: FontWeight.w700, color: _kTextMain)),
+              Text('Friends & family can track your ride live',
+                  style: const TextStyle(fontSize: 12, color: _kTextSub)),
+            ])),
+          ]),
+          const SizedBox(height: 20),
+
+          // Trip summary card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F5),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Column(children: [
+              Row(children: [
+                const Icon(Icons.circle, color: _kGreen, size: 8),
+                const SizedBox(width: 10),
+                Expanded(child: Text(from,
+                    style: const TextStyle(color: _kTextMain, fontSize: 13),
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ]),
+              Padding(
+                padding: const EdgeInsets.only(left: 3),
+                child: Column(children: List.generate(3, (_) => Container(
+                  width: 2, height: 4, margin: const EdgeInsets.symmetric(vertical: 1),
+                  color: Colors.grey[400],
+                ))),
+              ),
+              Row(children: [
+                const Icon(Icons.location_on, color: Colors.red, size: 10),
+                const SizedBox(width: 10),
+                Expanded(child: Text(to,
+                    style: const TextStyle(color: _kTextMain, fontSize: 13),
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                const Icon(Icons.person_outline, color: _kTextSub, size: 14),
+                const SizedBox(width: 6),
+                Text('Driver: $driverName',
+                    style: const TextStyle(color: _kTextSub, fontSize: 12)),
+                const Spacer(),
+                const Icon(Icons.timer_outlined, color: _kTextSub, size: 14),
+                const SizedBox(width: 4),
+                Text('ETA $etaMinutes min',
+                    style: const TextStyle(color: _kTextSub, fontSize: 12)),
+              ]),
+            ]),
+          ),
+          const SizedBox(height: 16),
+
+          // URL row
+          GestureDetector(
+            onTap: () => _copy(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: _kGreen.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.link_rounded, color: _kGreen, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text(url,
+                    style: const TextStyle(
+                      color: _kGreen, fontSize: 12, fontWeight: FontWeight.w500),
+                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+                const SizedBox(width: 8),
+                const Icon(Icons.copy_rounded, color: _kGreen, size: 16),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Action buttons
+          Row(children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _copy(context),
+                icon: const Icon(Icons.copy_rounded, size: 16),
+                label: const Text('Copy link'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _kGreen,
+                  side: const BorderSide(color: _kGreen),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _shareNative,
+                icon: const Icon(Icons.share_rounded, size: 16),
+                label: const Text('Share via...'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _kGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 10),
+
+          // Stop sharing
+          TextButton(
+            onPressed: onStop,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+              minimumSize: const Size(double.infinity, 44),
+            ),
+            child: const Text('Stop sharing location',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
     );
   }
 }

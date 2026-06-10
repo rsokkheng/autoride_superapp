@@ -306,14 +306,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   Widget _buildDeliveryForm() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       GradientCard(
-        colors: const [Color(0xFF1A3FAA), Color(0xFF0D2F6E)],
+        colors: const [Color(0xFF00C48C), Color(0xFF00A37A)],
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Send anything,\nanywhere fast!',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text('Average delivery: 25 min',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13)),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
           ])),
           const Icon(Icons.delivery_dining, color: Colors.white, size: 56),
         ]),
@@ -456,14 +456,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   Widget _buildMovingForm() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       GradientCard(
-        colors: const [Color(0xFF1A3FAA), Color(0xFF0D2F6E)],
+        colors: const [Color(0xFF00C48C), Color(0xFF00A37A)],
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Move with ease,\nwe handle the rest!',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
             Text('Professional moving service',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13)),
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
           ])),
           const Icon(Icons.local_shipping, color: Colors.white, size: 56),
         ]),
@@ -598,19 +598,6 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       const SizedBox(height: 20),
 
-      // ── 💰 Price Estimate ─────────────────────────────────────────────────
-      _PriceBreakdown(
-        baseFee:    _kBaseFeeMoving,
-        floorFee:   _floorFee,
-        helperFee:  _helperFee,
-        packingFee: _packingFee,
-        total:      _totalEstimate,
-        hasElevator: _hasElevator,
-        floorPickup: _floorPickup,
-        floorDropoff: _floorDropoff,
-      ),
-      const SizedBox(height: 20),
-
       // ── Notes ─────────────────────────────────────────────────────────────
       _Field(hint: 'Notes (optional)', icon: Icons.notes_outlined, controller: _moveNotesCtrl),
       const SizedBox(height: 20),
@@ -648,6 +635,19 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         const SizedBox(height: 10),
         _DateTimeTile(dateTime: _moveDate, color: AppTheme.accent, onTap: _pickMoveDate),
       ],
+      const SizedBox(height: 20),
+
+      // ── 💰 Price Estimate ─────────────────────────────────────────────────
+      _PriceBreakdown(
+        baseFee:    _kBaseFeeMoving,
+        floorFee:   _floorFee,
+        helperFee:  _helperFee,
+        packingFee: _packingFee,
+        total:      _totalEstimate,
+        hasElevator: _hasElevator,
+        floorPickup: _floorPickup,
+        floorDropoff: _floorDropoff,
+      ),
       const SizedBox(height: 8),
     ]);
   }

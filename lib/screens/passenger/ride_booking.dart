@@ -243,11 +243,6 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
   }
 
-  String _shortAddress(String address) {
-    final parts = address.split(',');
-    if (parts.length <= 2) return address;
-    return '${parts[0].trim()}, ${parts[1].trim()}';
-  }
 
   // ── Navigation ───────────────────────────────────────────────────────────────
 

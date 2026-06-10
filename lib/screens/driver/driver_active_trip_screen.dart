@@ -408,6 +408,20 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       return;
     }
 
+    // Call backend API before advancing phase
+    if (_phase == _TripPhase.headingToPickup && widget.ride != null) {
+      // Mark arrived at pickup → POST /rides/{id}/arrive
+      try {
+        await ApiService.arriveAtPickup(widget.ride!.id);
+      } catch (_) {}
+    } else if (_phase == _TripPhase.waitingAtPickup && widget.ride != null) {
+      // Passenger on board → POST /rides/{id}/start
+      try {
+        await ApiService.startTrip(widget.ride!.id);
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
     setState(() => _phase = _TripPhase.values[_phase.index + 1]);
 
     // When trip starts (inProgress), re-fetch route to destination

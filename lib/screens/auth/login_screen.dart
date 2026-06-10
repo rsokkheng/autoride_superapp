@@ -5,6 +5,7 @@ import '../../services/api_service.dart';
 import '../passenger/passenger_home.dart';
 import '../driver/driver_home.dart';
 import 'role_selection.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -195,7 +196,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
 
-              const SizedBox(height: 36),
+              const SizedBox(height: 20),
+
+              // ── Create account link ──────────────────────────────────────
+              Center(
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Text("Don't have an account?",
+                      style: TextStyle(
+                          color: AppTheme.textSecondary, fontSize: 14)),
+                  TextButton(
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(
+                            builder: (_) => const RegisterScreen())),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: Size.zero, tapTargetSize:
+                          MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Create Account',
+                        style: TextStyle(
+                            color: AppTheme.accent,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14)),
+                  ),
+                ]),
+              ),
+
+              const SizedBox(height: 16),
 
               // ── Demo credentials hint ────────────────────────────────────
               Container(

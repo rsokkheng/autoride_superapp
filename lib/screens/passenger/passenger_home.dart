@@ -14,10 +14,13 @@ import 'chat_screen.dart';
 import 'payment_screen.dart';
 import 'safety_screen.dart';
 import 'trip_history_screen.dart';
+import 'trip_tracking_screen.dart';
 import 'notifications_screen.dart';
 import 'wallet_screen.dart';
 import 'promo_screen.dart';
 import 'edit_profile_screen.dart';
+import 'saved_places_screen.dart';
+import 'support_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -125,8 +128,10 @@ class _HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<_HomeTab> {
-  String _firstName = '';
+  String     _firstName  = '';
   List<RideModel> _recentRides = [];
+  RideModel? _activeRide;
+  SurgeInfo? _surgeInfo;
 
   @override
   void initState() {
@@ -140,11 +145,49 @@ class _HomeTabState extends State<_HomeTab> {
     final name = saved?.name ?? '';
     setState(() => _firstName = name.split(' ').first);
 
+    // Run all three fetches in parallel
+    await Future.wait([
+      _loadRecentRides(),
+      _loadActiveRide(),
+      _loadSurge(),
+    ]);
+  }
+
+  Future<void> _loadRecentRides() async {
     try {
       final rides = await ApiService.getRides(status: 'completed');
       if (!mounted) return;
       setState(() => _recentRides = rides.take(2).toList());
     } catch (_) {}
+  }
+
+  Future<void> _loadActiveRide() async {
+    try {
+      final ride = await ApiService.getActiveRide();
+      if (!mounted) return;
+      setState(() => _activeRide = ride);
+    } catch (_) {}
+  }
+
+  Future<void> _loadSurge() async {
+    try {
+      final info = await ApiService.checkSurge();
+      if (!mounted) return;
+      if (info.surgeActive) setState(() => _surgeInfo = info);
+    } catch (_) {}
+  }
+
+  void _resumeActiveRide() {
+    final ride = _activeRide;
+    if (ride == null) return;
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => TripTrackingScreen(
+        rideId: ride.id,
+        from:   ride.pickupAddress,
+        to:     ride.dropoffAddress,
+        fare:   AppTheme.khr(ride.fareKhr),
+      ),
+    ));
   }
 
   @override
@@ -188,7 +231,70 @@ class _HomeTabState extends State<_HomeTab> {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+
+            // Active ride restore banner
+            if (_activeRide != null)
+              GestureDetector(
+                onTap: _resumeActiveRide,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                        color: AppTheme.success.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.directions_car_rounded,
+                        color: AppTheme.success, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      const Text('Active ride in progress',
+                          style: TextStyle(color: AppTheme.success,
+                              fontWeight: FontWeight.w700, fontSize: 13)),
+                      Text(
+                          '${_activeRide!.pickupAddress} → ${_activeRide!.dropoffAddress}',
+                          style: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 12),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ])),
+                    const Icon(Icons.arrow_forward_ios_rounded,
+                        color: AppTheme.success, size: 14),
+                  ]),
+                ),
+              ),
+
+            // Surge zone banner
+            if (_surgeInfo != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.danger.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppTheme.danger.withValues(alpha: 0.3)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.local_fire_department,
+                      color: AppTheme.danger, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(
+                    _surgeInfo!.message ??
+                        '${_surgeInfo!.multiplier.toStringAsFixed(1)}× surge pricing active in your area',
+                    style: const TextStyle(
+                        color: AppTheme.danger, fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  )),
+                ]),
+              ),
+
+            const SizedBox(height: 8),
             // Hero banner
             GradientCard(
               colors: [const Color(0xFF2E7D32), const Color(0xFF00E676)],
@@ -471,8 +577,10 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()))),
                 _ProfileMenuItem(icon: Icons.notifications_outlined, label: l.notifications,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
+                _ProfileMenuItem(icon: Icons.bookmark_outline, label: 'Saved Places',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedPlacesScreen()))),
                 _ProfileMenuItem(icon: Icons.help_outline, label: l.helpSupport,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(isDriver: false)))),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()))),
                 // Language switcher row
                 Container(
                   margin: const EdgeInsets.only(bottom: 10),

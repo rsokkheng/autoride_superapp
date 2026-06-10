@@ -164,14 +164,21 @@ class WalletTransactionsPage {
   });
 
   factory WalletTransactionsPage.fromJson(Map<String, dynamic> json) {
-    final page = json['transactions'] as Map<String, dynamic>;
-    final data = (page['data'] as List<dynamic>? ?? [])
-        .map((e) => WalletTransactionModel.fromJson(e as Map<String, dynamic>))
+    // API may return paginated list under 'transactions', 'data', or root level
+    final page = (json['transactions'] as Map<String, dynamic>?)
+        ?? (json['data'] as Map<String, dynamic>?)
+        ?? json;
+    final rawList = page['data'] as List<dynamic>?
+        ?? json['data'] as List<dynamic>?
+        ?? [];
+    final data = rawList
+        .whereType<Map<String, dynamic>>()
+        .map(WalletTransactionModel.fromJson)
         .toList();
     return WalletTransactionsPage(
       transactions: data,
       currentPage:  _toInt(page['current_page']),
-      lastPage:     _toInt(page['last_page']),
+      lastPage:     _toInt(page['last_page'] ?? 1),
       total:        _toInt(page['total']),
       hasNextPage:  page['next_page_url'] != null,
     );

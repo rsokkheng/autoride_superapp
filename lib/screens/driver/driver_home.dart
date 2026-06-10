@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
@@ -306,14 +308,18 @@ class _DriverDashboardState extends State<_DriverDashboard> {
         final rides = await ApiService.getAvailableRides();
         if (!mounted) return;
         if (rides.isNotEmpty) setState(() => _pendingRide = rides.first);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[Driver] getAvailableRides error: $e');
+      }
     }
     if (_pendingDelivery == null) {
       try {
         final deliveries = await ApiService.getAvailableDeliveries();
         if (!mounted) return;
         if (deliveries.isNotEmpty) setState(() => _pendingDelivery = deliveries.first);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[Driver] getAvailableDeliveries error: $e');
+      }
     }
   }
 
@@ -590,12 +596,107 @@ class _DriverDashboardState extends State<_DriverDashboard> {
               ],
             ],
 
+            // Share location card
+            _DriverShareLocationCard(isOnline: widget.isOnline),
+            const SizedBox(height: 20),
+
             const SectionHeader(title: 'Recent Trips'),
             const SizedBox(height: 14),
             const _RecentRidesSection(),
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─── Driver share location card ───────────────────────────────────────────────
+
+class _DriverShareLocationCard extends StatefulWidget {
+  final bool isOnline;
+  const _DriverShareLocationCard({required this.isOnline});
+
+  @override
+  State<_DriverShareLocationCard> createState() => _DriverShareLocationCardState();
+}
+
+class _DriverShareLocationCardState extends State<_DriverShareLocationCard> {
+  bool _sharing = false;
+
+  Future<void> _shareLocation() async {
+    setState(() => _sharing = true);
+    try {
+      // Get current GPS position (try last known first, fallback to full fix)
+      Position? pos = await Geolocator.getLastKnownPosition();
+      pos ??= await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      if (!mounted) return;
+
+      final lat = pos.latitude;
+      final lng = pos.longitude;
+      final mapsUrl = 'https://maps.google.com/?q=$lat,$lng';
+      final text    = 'My current location as an AutoRide driver:\n$mapsUrl';
+
+      await Share.share(text, subject: 'My live location');
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not get your location. Make sure GPS is on.'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.red,
+      ));
+    } finally {
+      if (mounted) setState(() => _sharing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.success.withValues(alpha: 0.35)),
+      ),
+      child: Row(children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.success.withValues(alpha: 0.12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.share_location, color: AppTheme.success, size: 22),
+        ),
+        const SizedBox(width: 12),
+        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Share My Location', style: TextStyle(
+              color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+          SizedBox(height: 2),
+          Text('Send your live GPS link to friends or family via WhatsApp, SMS, etc.',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        ])),
+        const SizedBox(width: 10),
+        SizedBox(
+          height: 36,
+          child: ElevatedButton(
+            onPressed: _sharing ? null : _shareLocation,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.success,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              elevation: 0,
+            ),
+            child: _sharing
+                ? const SizedBox(width: 14, height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Share', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+          ),
+        ),
+      ]),
     );
   }
 }
@@ -796,54 +897,79 @@ class _RideRequestCardState extends State<_RideRequestCard> {
     final urgent = _seconds <= 8;
     final passengerLabel = widget.ride.passenger?.name ?? 'Passenger #${widget.ride.passengerId}';
 
+    final cardColor = urgent ? AppTheme.danger : AppTheme.success;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: (urgent ? AppTheme.danger : AppTheme.accentOrange).withValues(alpha: 0.5), width: 1.5),
+        boxShadow: [BoxShadow(
+            color: cardColor.withValues(alpha: 0.4),
+            blurRadius: 14, offset: const Offset(0, 5))],
       ),
       child: Column(children: [
         Row(children: [
-          StatusBadge(label: urgent ? '⚡ URGENT' : '🆕 NEW REQUEST', color: urgent ? AppTheme.danger : AppTheme.accentOrange),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text(urgent ? '⚡ URGENT' : '🆕 NEW REQUEST',
+                style: const TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.w800, fontSize: 11)),
+          ),
           const Spacer(),
-          Text('$_seconds s', style: TextStyle(color: urgent ? AppTheme.danger : AppTheme.accentOrange, fontWeight: FontWeight.w900, fontSize: 16)),
+          Text('$_seconds s', style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: AppTheme.cardBg,
-            valueColor: AlwaysStoppedAnimation<Color>(urgent ? AppTheme.danger : AppTheme.accentOrange),
+            backgroundColor: Colors.white.withValues(alpha: 0.25),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 5,
           ),
         ),
         const SizedBox(height: 12),
 
         Row(children: [
-          CircleAvatar(backgroundColor: AppTheme.accent.withValues(alpha: 0.2), radius: 18,
-            child: Text(passengerLabel[0], style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700))),
+          CircleAvatar(
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            radius: 18,
+            child: Text(passengerLabel[0],
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+          ),
           const SizedBox(width: 10),
-          Expanded(child: Text(passengerLabel, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
-          Text(AppTheme.khr(widget.ride.fareKhr), style: const TextStyle(color: AppTheme.accent, fontSize: 20, fontWeight: FontWeight.w800)),
+          Expanded(child: Text(passengerLabel,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+          Text(AppTheme.khr(widget.ride.fareKhr),
+              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
         ]),
         const SizedBox(height: 12),
 
         Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(10)),
+          decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10)),
           child: Column(children: [
             Row(children: [
-              const Icon(Icons.circle, color: AppTheme.accent, size: 10),
+              const Icon(Icons.circle, color: Colors.white, size: 10),
               const SizedBox(width: 8),
-              Expanded(child: Text(widget.ride.pickupAddress, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(widget.ride.pickupAddress,
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  overflow: TextOverflow.ellipsis)),
             ]),
             const SizedBox(height: 6),
             Row(children: [
-              const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
+              const Icon(Icons.location_on, color: Colors.white70, size: 10),
               const SizedBox(width: 8),
-              Expanded(child: Text(widget.ride.dropoffAddress, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13), overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(widget.ride.dropoffAddress,
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  overflow: TextOverflow.ellipsis)),
             ]),
           ]),
         ),
@@ -854,8 +980,11 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             onTap: _acting ? null : _decline,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(10)),
-              child: const Center(child: Text('Decline', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600))),
+              decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10)),
+              child: const Center(child: Text('Decline',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
             ),
           )),
           const SizedBox(width: 12),
@@ -863,10 +992,13 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             onTap: _acting ? null : _accept,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
-              decoration: BoxDecoration(color: AppTheme.accentOrange, borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(10)),
               child: Center(child: _acting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Accept Ride', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+                  ? SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(color: cardColor, strokeWidth: 2))
+                  : Text('Accept Ride',
+                      style: TextStyle(color: cardColor, fontWeight: FontWeight.w800))),
             ),
           )),
         ]),
@@ -958,37 +1090,42 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
         ?? widget.delivery.senderName
         ?? 'Sender #${widget.delivery.senderId}';
 
+    final cardColor = urgent ? AppTheme.danger : AppTheme.success;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: (urgent ? AppTheme.danger : AppTheme.accentOrange).withValues(alpha: 0.5),
-            width: 1.5),
+        boxShadow: [BoxShadow(
+            color: cardColor.withValues(alpha: 0.4),
+            blurRadius: 14, offset: const Offset(0, 5))],
       ),
       child: Column(children: [
         Row(children: [
-          StatusBadge(
-            label: urgent
-                ? '⚡ URGENT'
-                : widget.delivery.isMoving ? '🚚 NEW MOVING' : '📦 NEW DELIVERY',
-            color: urgent ? AppTheme.danger : AppTheme.accentOrange,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text(
+              urgent ? '⚡ URGENT'
+                  : widget.delivery.isMoving ? '🚚 NEW MOVING' : '📦 NEW DELIVERY',
+              style: const TextStyle(color: Colors.white,
+                  fontWeight: FontWeight.w800, fontSize: 11),
+            ),
           ),
           const Spacer(),
-          Text('$_seconds s', style: TextStyle(
-              color: urgent ? AppTheme.danger : AppTheme.accentOrange,
-              fontWeight: FontWeight.w900,
-              fontSize: 16)),
+          Text('$_seconds s', style: const TextStyle(
+              color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: AppTheme.cardBg,
-            valueColor: AlwaysStoppedAnimation<Color>(
-                urgent ? AppTheme.danger : AppTheme.accentOrange),
+            backgroundColor: Colors.white.withValues(alpha: 0.25),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
             minHeight: 5,
           ),
         ),
@@ -996,51 +1133,43 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
 
         Row(children: [
           CircleAvatar(
-            backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2),
+            backgroundColor: Colors.white.withValues(alpha: 0.2),
             radius: 18,
             child: Text(senderLabel[0],
-                style: const TextStyle(
-                    color: AppTheme.accentOrange, fontWeight: FontWeight.w700)),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(senderLabel,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             if (widget.delivery.packageSize != null)
               Text(widget.delivery.packageSize!,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12)),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
           ])),
           Text(AppTheme.khr(widget.delivery.fee),
-              style: const TextStyle(
-                  color: AppTheme.accentOrange,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800)),
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
         ]),
         const SizedBox(height: 12),
 
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: AppTheme.cardBg,
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10)),
           child: Column(children: [
             Row(children: [
-              const Icon(Icons.circle, color: AppTheme.accent, size: 10),
+              const Icon(Icons.circle, color: Colors.white, size: 10),
               const SizedBox(width: 8),
               Expanded(child: Text(widget.delivery.pickupAddress,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 13),
+                  style: const TextStyle(color: Colors.white, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
             const SizedBox(height: 6),
             Row(children: [
-              const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
+              const Icon(Icons.location_on, color: Colors.white70, size: 10),
               const SizedBox(width: 8),
               Expanded(child: Text(widget.delivery.dropoffAddress,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 13),
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
           ]),
@@ -1052,71 +1181,59 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.accent.withValues(alpha: 0.08),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Row(children: [
-                Icon(Icons.local_shipping, color: AppTheme.accent, size: 14),
+                Icon(Icons.local_shipping, color: Colors.white, size: 14),
                 SizedBox(width: 6),
                 Text('Moving Details', style: TextStyle(
-                    color: AppTheme.accent,
-                    fontWeight: FontWeight.w700, fontSize: 12)),
+                    color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
               ]),
               const SizedBox(height: 8),
-              // Floor info
               Row(children: [
-                const Icon(Icons.apartment_outlined, color: AppTheme.textSecondary, size: 14),
+                const Icon(Icons.apartment_outlined, color: Colors.white70, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   'Floor: pickup ${widget.delivery.floorPickup ?? '?'} → '
                   'dropoff ${widget.delivery.floorDropoff ?? '?'}',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ]),
               const SizedBox(height: 4),
-              // Elevator
               Row(children: [
-                Icon(Icons.elevator_outlined,
-                    color: (widget.delivery.hasElevator ?? true)
-                        ? AppTheme.success : AppTheme.danger,
-                    size: 14),
+                Icon(Icons.elevator_outlined, color: Colors.white, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   'Elevator: ${(widget.delivery.hasElevator ?? true) ? "Yes" : "No"}',
-                  style: TextStyle(
-                    color: (widget.delivery.hasElevator ?? true)
-                        ? AppTheme.success : AppTheme.danger,
-                    fontSize: 12, fontWeight: FontWeight.w600,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 if (widget.delivery.needsStairsCarry == true) ...[
                   const SizedBox(width: 8),
-                  const Icon(Icons.stairs_outlined, color: AppTheme.warning, size: 14),
+                  const Icon(Icons.stairs_outlined, color: Colors.white70, size: 14),
                   const Text(' Stairs carry',
-                      style: TextStyle(color: AppTheme.warning, fontSize: 12)),
+                      style: TextStyle(color: Colors.white70, fontSize: 12)),
                 ],
               ]),
               const SizedBox(height: 4),
-              // Helpers
               if (widget.delivery.requiresHelpers != null)
                 Row(children: [
-                  const Icon(Icons.people_outline, color: AppTheme.textSecondary, size: 14),
+                  const Icon(Icons.people_outline, color: Colors.white70, size: 14),
                   const SizedBox(width: 6),
                   Text(
                     '${widget.delivery.requiresHelpers} helper(s) — '
                     '${widget.delivery.helperType == 'heavy_carry' ? 'Heavy carry' : 'Normal carry'}',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ]),
-              // Flags row
               const SizedBox(height: 6),
               Wrap(spacing: 6, children: [
                 if (widget.delivery.heavyItems == true)
-                  _MovingFlag(label: '⚠ Heavy items', color: AppTheme.warning),
+                  _MovingFlag(label: '⚠ Heavy items', color: Colors.white),
                 if (widget.delivery.packingService == true)
-                  _MovingFlag(label: '📦 Packing', color: AppTheme.accent),
+                  _MovingFlag(label: '📦 Packing', color: Colors.white),
               ]),
             ]),
           ),
@@ -1130,12 +1247,10 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  color: AppTheme.cardBg,
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10)),
               child: const Center(child: Text('Decline',
-                  style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w600))),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
             ),
           )),
           const SizedBox(width: 12),
@@ -1144,18 +1259,12 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  color: AppTheme.accentOrange,
-                  borderRadius: BorderRadius.circular(10)),
+                  color: Colors.white, borderRadius: BorderRadius.circular(10)),
               child: Center(child: _acting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : const Text('Accept Delivery',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w800))),
+                  ? SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(color: cardColor, strokeWidth: 2))
+                  : Text('Accept Delivery',
+                      style: TextStyle(color: cardColor, fontWeight: FontWeight.w800))),
             ),
           )),
         ]),
@@ -1434,51 +1543,55 @@ class _DriverEarningsState extends State<_DriverEarnings> {
 
             // ── Balance card ──────────────────────────────────────────────
             GradientCard(
-              colors: const [Color(0xFF0F3460), Color(0xFF1A3A00)],
+              colors: const [Color(0xFF00C48C), Color(0xFF00A37A)],
               child: _balanceLoading
                   ? const SizedBox(
                       height: 80,
                       child: Center(
-                          child: CircularProgressIndicator(
-                              color: AppTheme.accent)))
+                          child: CircularProgressIndicator(color: Colors.white)))
                   : _balanceError != null
                       ? Text(_balanceError!,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 13))
+                              color: Colors.white70, fontSize: 13))
                       : Column(children: [
                           const Text('Available Balance',
                               style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 13)),
+                                  color: Colors.white70, fontSize: 13)),
                           const SizedBox(height: 8),
                           Text(AppTheme.khr(balance),
                               style: const TextStyle(
-                                  color: AppTheme.accent,
+                                  color: Colors.white,
                                   fontSize: 34,
                                   fontWeight: FontWeight.w800)),
                           Text(AppTheme.usd(balance / 4000),
                               style: const TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 13)),
+                                  color: Colors.white70, fontSize: 13)),
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               _EarningItem(
                                   label: 'Trips',
-                                  value: AppTheme.khr(_tripEarnings)),
+                                  value: AppTheme.khr(_tripEarnings),
+                                  valueColor: Colors.white,
+                                  labelColor: Colors.white70),
                               _EarningItem(
                                   label: 'Bonuses',
-                                  value: AppTheme.khr(_bonuses)),
+                                  value: AppTheme.khr(_bonuses),
+                                  valueColor: Colors.white,
+                                  labelColor: Colors.white70),
                               _EarningItem(
                                   label: 'Fees',
                                   value: '-${AppTheme.khr(_platformFees)}',
-                                  valueColor: AppTheme.danger),
+                                  valueColor: Colors.white,
+                                  labelColor: Colors.white70),
                               if (_topUps > 0)
                                 _EarningItem(
                                     label: 'Top-ups',
-                                    value: AppTheme.khr(_topUps)),
+                                    value: AppTheme.khr(_topUps),
+                                    valueColor: Colors.white,
+                                    labelColor: Colors.white70),
                             ],
                           ),
                         ]),
@@ -1638,9 +1751,11 @@ class _DriverEarningsState extends State<_DriverEarnings> {
 class _EarningItem extends StatelessWidget {
   final String label, value;
   final Color? valueColor;
+  final Color? labelColor;
 
   const _EarningItem(
-      {required this.label, required this.value, this.valueColor});
+      {required this.label, required this.value,
+       this.valueColor, this.labelColor});
 
   @override
   Widget build(BuildContext context) => Column(children: [
@@ -1650,8 +1765,8 @@ class _EarningItem extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 fontSize: 12)),
         Text(label,
-            style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 10)),
+            style: TextStyle(
+                color: labelColor ?? AppTheme.textSecondary, fontSize: 10)),
       ]);
 }
 
