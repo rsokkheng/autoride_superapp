@@ -64,6 +64,11 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
       if (!mounted) return;
       setState(() => _trip = trip);
       _buildMarkers(trip);
+      // Stop polling once the ride is no longer live
+      if (!trip.isLive) {
+        _pollTimer?.cancel();
+        _pollTimer = null;
+      }
     } catch (_) {}
   }
 
@@ -306,6 +311,18 @@ class _InfoPanel extends StatelessWidget {
                     fontSize: 13)),
           ],
         ]),
+
+      // Driver location status
+      if (!trip.locationUpdated) ...[
+        const SizedBox(height: 8),
+        Row(children: [
+          const Icon(Icons.location_searching,
+              color: Color(0xFFFF9800), size: 14),
+          const SizedBox(width: 6),
+          const Text('Waiting for driver GPS…',
+              style: TextStyle(color: Color(0xFFFF9800), fontSize: 12)),
+        ]),
+      ],
 
       const SizedBox(height: 8),
       const Text('This page updates automatically every 8 seconds.',

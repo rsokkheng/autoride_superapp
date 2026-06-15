@@ -93,15 +93,15 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                       margin: const EdgeInsets.all(16),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF0F3460), Color(0xFF1A1A5E)]),
+                        gradient: const LinearGradient(colors: [Color(0xFF2E7D32), Color(0xFF00E676)]),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _StatBubble(label: 'Total Trips', value: '${_rides.length}',    icon: Icons.directions_car),
-                          _StatBubble(label: 'Completed',   value: '$_completedCount',    icon: Icons.check_circle_outline),
-                          _StatBubble(label: 'Total Spent', value: AppTheme.khr(_totalSpent), icon: Icons.account_balance_wallet_outlined),
+                          _StatBubble(label: 'Total Trips', value: '${_rides.length}',         icon: Icons.directions_car),
+                          _StatBubble(label: 'Completed',   value: '$_completedCount',         icon: Icons.check_circle_outline,           highlight: true),
+                          _StatBubble(label: 'Total Spent', value: AppTheme.khr(_totalSpent),  icon: Icons.account_balance_wallet_outlined, highlight: true),
                         ],
                       ),
                     ),
@@ -145,8 +145,11 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                                   ride: ride,
                                   onRate: () => Navigator.push(context, MaterialPageRoute(
                                     builder: (_) => RateDriverScreen(
-                                      driverName: ride.driver?.name ?? 'Driver',
-                                      fare: AppTheme.khr(ride.fareKhr),
+                                      rideId:      ride.id,
+                                      driverName:  ride.driver?.name ?? 'Driver',
+                                      fare:        AppTheme.khr(ride.fareKhr),
+                                      distanceKm:  ride.distanceKm,
+                                      durationMin: ride.durationMin,
                                     ),
                                   )),
                                 );
@@ -189,17 +192,29 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 }
 
 class _StatBubble extends StatelessWidget {
-  final String label, value;
+  final String   label, value;
   final IconData icon;
-  const _StatBubble({required this.label, required this.value, required this.icon});
+  final bool     highlight;
+  const _StatBubble({
+    required this.label, required this.value, required this.icon,
+    this.highlight = false,
+  });
 
   @override
-  Widget build(BuildContext context) => Column(children: [
-    Icon(icon, color: AppTheme.accent, size: 22),
-    const SizedBox(height: 4),
-    Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
-    Text(label,  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-  ]);
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Icon(icon, color: Colors.white, size: 22),
+      const SizedBox(height: 4),
+      Text(value,
+          style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800, fontSize: 16)),
+      Text(label,
+          style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: 11, fontWeight: FontWeight.w500)),
+    ]);
+  }
 }
 
 class _TripHistoryCard extends StatelessWidget {

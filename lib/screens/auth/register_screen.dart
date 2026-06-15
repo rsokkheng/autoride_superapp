@@ -19,7 +19,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passCtrl  = TextEditingController();
   final _confCtrl  = TextEditingController();
 
-  String  _role      = 'passenger';
+  String  _role       = 'passenger';
+  String  _driverType = 'motorcycle';
   bool    _obscureP  = true;
   bool    _obscureC  = true;
   bool    _loading   = false;
@@ -43,7 +44,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         passwordConfirmation: _confCtrl.text,
         phone:                _phoneCtrl.text.trim().isEmpty
             ? null : _phoneCtrl.text.trim(),
-        role: _role,
+        role:       _role,
+        driverType: _role == 'driver' ? _driverType : null,
       );
       if (!mounted) return;
       // Replace entire stack so back doesn't go to register
@@ -115,6 +117,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onTap: () => setState(() => _role = 'driver'),
                 ),
               ]),
+              if (_role == 'driver') ...[
+                const SizedBox(height: 12),
+                const Text('Vehicle Type',
+                    style: TextStyle(color: AppTheme.textSecondary,
+                        fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final t in ['motorcycle', 'tuk_tuk', 'car', 'van', 'truck'])
+                    GestureDetector(
+                      onTap: () => setState(() => _driverType = t),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _driverType == t
+                              ? _green.withValues(alpha: 0.15)
+                              : AppTheme.surface,
+                          border: Border.all(
+                            color: _driverType == t
+                                ? _green : AppTheme.cardBg,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          t.replaceAll('_', ' ').toUpperCase(),
+                          style: TextStyle(
+                            color: _driverType == t
+                                ? _green : AppTheme.textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                ]),
+              ],
               const SizedBox(height: 20),
 
               _Field(

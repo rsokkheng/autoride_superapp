@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../utils/app_log.dart';
@@ -58,6 +59,158 @@ const _kRideTypes = [
   _RideType(name: 'Van',      serviceType: 'van',        icon: Icons.directions_bus,      eta: '6 min', desc: '6+ seats'),
 ];
 
+// ─── Labeled marker (pill + numbered circle) ─────────────────────────────────
+// Returns a composite bitmap of [label pill][number circle] plus the anchor
+// offset so the circle center aligns to the map coordinate.
+
+class _LabeledMarker {
+  final BitmapDescriptor icon;
+  final Offset anchor; // 0–1 relative to bitmap dimensions
+  const _LabeledMarker(this.icon, this.anchor);
+}
+
+// Draw markers at 3× resolution and declare the logical display size explicitly
+// so they appear at the correct dp size on all screen densities (retina/3×/etc.).
+Future<_LabeledMarker> _buildLabeledMarker(
+    int number, String label, {
+    Color bg              = const Color(0xFFFF9800),
+    double circleLogical  = 30.0, // desired display size in dp
+    bool   showNumber     = true,
+}) async {
+  const scale    = 3.0; // render at 3× for sharpness
+  final circleSize = circleLogical * scale; // canvas px
+
+  const maxChars = 18;
+  final display  = label.isEmpty
+      ? (showNumber ? 'Stop $number' : 'Destination')
+      : label.length > maxChars
+          ? '${label.substring(0, maxChars)}…'
+          : label;
+
+  // All "logical dp" constants, scaled to canvas pixels
+  final fontSize = 13.0 * scale;
+  final pillPadH = 10.0 * scale;
+  final pillPadV =  7.0 * scale;
+  final pillR    =  8.0 * scale;
+  final gap      =  5.0 * scale;
+  final blurPad  =  6.0 * scale;
+
+  final tp = TextPainter(
+    text: TextSpan(
+      text: display,
+      style: TextStyle(
+          color: Colors.white, fontSize: fontSize, fontWeight: FontWeight.w600),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
+  final pillW    = tp.width + pillPadH * 2;
+  final pillH    = tp.height + pillPadV * 2;
+  final contentH = circleSize > pillH ? circleSize : pillH;
+  final canvasW  = pillW + gap + circleSize + blurPad * 2;
+  final canvasH  = contentH + blurPad * 2;
+
+  final recorder = ui.PictureRecorder();
+  final canvas   = Canvas(recorder);
+
+  // ── Pill ───────────────────────────────────────────────────────────────────
+  final pillTop  = blurPad + (contentH - pillH) / 2;
+  final pillRect = RRect.fromLTRBR(
+      blurPad, pillTop, blurPad + pillW, pillTop + pillH,
+      Radius.circular(pillR));
+
+  canvas.drawRRect(
+    pillRect,
+    Paint()
+      ..color = Colors.black.withValues(alpha: 0.18)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 3 * scale),
+  );
+  canvas.drawRRect(pillRect, Paint()..color = bg);
+  tp.paint(canvas, Offset(blurPad + pillPadH, pillTop + pillPadV));
+
+  // ── Circle ─────────────────────────────────────────────────────────────────
+  final cx     = blurPad + pillW + gap + circleSize / 2;
+  final cy     = blurPad + contentH / 2;
+  final center = Offset(cx, cy);
+  final radius = circleSize / 2;
+
+  canvas.drawCircle(
+    center.translate(0, 2 * scale), radius,
+    Paint()
+      ..color = Colors.black.withValues(alpha: 0.22)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4 * scale),
+  );
+  canvas.drawCircle(center, radius, Paint()..color = bg);
+  canvas.drawCircle(
+    center, radius,
+    Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3 * scale,
+  );
+
+  if (showNumber) {
+    final numTp = TextPainter(
+      text: TextSpan(
+        text: '$number',
+        style: TextStyle(
+            color: Colors.white,
+            fontSize: circleSize * 0.42,
+            fontWeight: FontWeight.w900),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    numTp.paint(canvas, center - Offset(numTp.width / 2, numTp.height / 2));
+  } else {
+    canvas.drawCircle(center, radius * 0.32, Paint()..color = Colors.white);
+  }
+
+  final picture = recorder.endRecording();
+  final img     = await picture.toImage(canvasW.ceil(), canvasH.ceil());
+  final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+
+  // imagePixelRatio tells the map that this image was drawn at 3× density,
+  // so it displays at canvasW/3 × canvasH/3 logical dp on all screen types.
+  return _LabeledMarker(
+    BitmapDescriptor.bytes(
+        bytes!.buffer.asUint8List(), imagePixelRatio: scale),
+    Offset(cx / canvasW, cy / canvasH),
+  );
+}
+
+/// Pickup marker — green dot with a white ring (no number).
+Future<BitmapDescriptor> _buildPickupMarker({double logical = 26.0}) async {
+  const scale  = 3.0;
+  final size   = logical * scale;
+  final radius = size / 2;
+  final center = Offset(radius, radius);
+
+  final recorder = ui.PictureRecorder();
+  final canvas   = Canvas(recorder);
+
+  canvas.drawCircle(
+    center.translate(0, 2 * scale), radius,
+    Paint()
+      ..color = Colors.black.withValues(alpha: 0.2)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4 * scale),
+  );
+  canvas.drawCircle(center, radius, Paint()..color = AppTheme.accent);
+  canvas.drawCircle(
+    center, radius,
+    Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3 * scale,
+  );
+  canvas.drawCircle(center, radius * 0.35, Paint()..color = Colors.white);
+
+  final picture = recorder.endRecording();
+  final img     = await picture.toImage(size.ceil(), size.ceil());
+  final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+  return BitmapDescriptor.bytes(
+      bytes!.buffer.asUint8List(), imagePixelRatio: scale);
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 // step 0 = "Where to?" landing   step 1 = destination search   step 2 = confirm
 
@@ -100,18 +253,29 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
   // ── Confirm ─────────────────────────────────────────────────────────────────
   GoogleMapController? _confirmMapCtrl;
-  List<LatLng> _routePoints = [];
+  List<LatLng>         _routePoints   = [];   // combined (for camera fit)
+  List<List<LatLng>>   _segmentRoutes = [];   // one list of points per segment
   int    _etaMinutes  = 0;
   double _distanceKm  = 0.0;
   bool   _routeLoading = false;
   Map<String, FareInfo> _fareByType  = {};
   bool                  _fareLoading = false;
 
+  // Labeled marker icons — built once per booking session
+  BitmapDescriptor? _pickupIcon;
+  List<_LabeledMarker> _stopMarkers = [];
+
   String   _selectedRide    = 'Standard';
   String   _paymentMethod   = 'cash';
   bool     _isScheduled     = false;
   DateTime _scheduledTime   = DateTime.now().add(const Duration(hours: 1));
   bool     _isBooking       = false;
+
+  // Promo code
+  String? _promoCode;
+  double? _promoDiscount;   // discount amount in KHR
+  bool    _promoLoading = false;
+  String? _promoError;
   String?  _bookError;
 
   // ── Lifecycle ────────────────────────────────────────────────────────────────
@@ -218,6 +382,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _selectResult(PlaceResult r) {
+    if (_activeStopIdx < 0) return;
     setState(() {
       _stops[_activeStopIdx].address = r.address;
       _stops[_activeStopIdx].latLng  = r.latLng;
@@ -226,6 +391,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _selectPreset(_Preset p) {
+    if (_activeStopIdx < 0) return;
     setState(() {
       _stops[_activeStopIdx].address = p.name;
       _stops[_activeStopIdx].latLng  = p.latLng;
@@ -234,10 +400,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _afterStopFilled() {
-    final next = _stops.indexWhere((s) => !s.isFilled, _activeStopIdx + 1);
+    final searchFrom = _activeStopIdx < 0 ? 0 : _activeStopIdx + 1;
+    final next = _stops.indexWhere((s) => !s.isFilled, searchFrom);
     if (next == -1) {
-      // All stops are filled. Keep focus on the last stop and allow editing.
-      setState(() { _searchCtrl.clear(); });
+      // All stops filled — move focus to -1 so every row renders as confirmed
+      setState(() { _activeStopIdx = -1; _searchCtrl.clear(); });
     } else {
       setState(() { _activeStopIdx = next; _searchCtrl.clear(); });
     }
@@ -251,7 +418,30 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       _step = s;
       if (s != 1) _choosingDestOnMap = false;
     });
-    if (s == 2) _fetchRoute();
+    if (s == 2) {
+      _fetchRoute();
+      _buildMarkerIcons();
+    }
+  }
+
+  Future<void> _buildMarkerIcons() async {
+    final pickup  = await _buildPickupMarker();
+    final single  = _stops.length == 1;
+    final markers = await Future.wait(
+      List.generate(_stops.length, (i) => _buildLabeledMarker(
+        i + 1,
+        _stops[i].address,
+        bg: i == _stops.length - 1
+            ? const Color(0xFFE53935)  // red for final destination
+            : const Color(0xFFFF9800), // orange for intermediate stops
+        showNumber: !single,          // no number when there is only one stop
+      )),
+    );
+    if (!mounted) return;
+    setState(() {
+      _pickupIcon  = pickup;
+      _stopMarkers = markers;
+    });
   }
 
   void _onBack() {
@@ -284,6 +474,130 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       case 'wing':   return 'Wing Money';
       default:       return 'Cash';
     }
+  }
+
+  void _showPromoSheet(BuildContext ctx) {
+    final ctrl = TextEditingController(text: _promoCode ?? '');
+    showModalBottomSheet(
+      context: ctx,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (_, setLocal) {
+          Future<void> apply() async {
+            final code = ctrl.text.trim().toUpperCase();
+            if (code.isEmpty) return;
+            setLocal(() { _promoLoading = true; _promoError = null; });
+            try {
+              final fare = _fareByType[_kRideTypes
+                  .firstWhere((r) => r.name == _selectedRide,
+                      orElse: () => _kRideTypes.first)
+                  .serviceType];
+              final result = await ApiService.validatePromoCode(
+                code:        code,
+                serviceType: 'rides',
+                orderAmount: fare?.total ?? 0,
+              );
+              if (!mounted) return;
+              setState(() {
+                _promoCode     = code;
+                _promoDiscount = result.discountAmount;
+                _promoError    = null;
+              });
+              Navigator.pop(sheetCtx);
+            } on ApiException catch (e) {
+              setLocal(() { _promoError = e.message; _promoLoading = false; });
+            } catch (_) {
+              setLocal(() { _promoError = 'Invalid or expired code.'; _promoLoading = false; });
+            } finally {
+              setLocal(() => _promoLoading = false);
+            }
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(
+                left: 20, right: 20, top: 20,
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+            child: Column(mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2)),
+              )),
+              const SizedBox(height: 16),
+              const Text('Promo Code',
+                  style: TextStyle(color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.w800, fontSize: 17)),
+              const SizedBox(height: 14),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    textCapitalization: TextCapitalization.characters,
+                    style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w700, letterSpacing: 1.5),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. SAVE10',
+                      hintStyle: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontWeight: FontWeight.normal, letterSpacing: 0),
+                      filled: true, fillColor: AppTheme.cardBg,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
+                    ),
+                    onSubmitted: (_) => apply(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _promoLoading ? null : apply,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent,
+                    foregroundColor: AppTheme.primary,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _promoLoading
+                      ? const SizedBox(width: 18, height: 18,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Text('Apply',
+                          style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ]),
+              if (_promoError != null) ...[
+                const SizedBox(height: 8),
+                Text(_promoError!,
+                    style: const TextStyle(
+                        color: AppTheme.danger, fontSize: 13)),
+              ],
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(sheetCtx);
+                  Navigator.push(ctx,
+                      MaterialPageRoute(
+                          builder: (_) => const PromoScreen()));
+                },
+                child: const Text('Browse available vouchers →',
+                    style: TextStyle(
+                        color: AppTheme.accent,
+                        fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
   }
 
   void _showPaymentSheet(BuildContext ctx) {
@@ -340,38 +654,65 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     final dest = _destLatLng;
     if (dest == null) return;
     setState(() {
-      _routeLoading = true;
-      _fareLoading  = true;
-      _routePoints  = [];
-      _etaMinutes   = 0;
-      _distanceKm   = 0;
-      _fareByType   = {};
+      _routeLoading  = true;
+      _fareLoading   = true;
+      _routePoints   = [];
+      _segmentRoutes = [];
+      _etaMinutes    = 0;
+      _distanceKm    = 0;
+      _fareByType    = {};
     });
     await Future.wait([_doFetchRoute(dest), _doFetchFares(dest)]);
   }
 
   Future<void> _doFetchRoute(LatLng dest) async {
-    final result = await MapsService.getRoute(origin: _pickupCenter, destination: dest);
+    // Build ordered waypoints: pickup + all filled stops
+    final waypoints = [
+      _pickupCenter,
+      ..._stops.where((s) => s.latLng != null).map((s) => s.latLng!),
+    ];
+
+    // Fetch each segment (origin→next) in parallel
+    final results = await Future.wait(
+      List.generate(waypoints.length - 1, (i) =>
+        MapsService.getRoute(origin: waypoints[i], destination: waypoints[i + 1]),
+      ),
+    );
     if (!mounted) return;
-    setState(() {
-      _routeLoading = false;
-      if (result != null) {
-        _routePoints = result.points;
-        _etaMinutes  = result.etaMinutes;
-        _distanceKm  = result.distanceKm;
+
+    final segments = <List<LatLng>>[];
+    int   totalEta  = 0;
+    double totalKm  = 0.0;
+
+    for (int i = 0; i < results.length; i++) {
+      final r = results[i];
+      if (r != null) {
+        segments.add(r.points);
+        totalEta += r.etaMinutes;
+        totalKm  += r.distanceKm;
       } else {
-        _routePoints = [_pickupCenter, dest];
+        // Fallback: straight line for this segment
+        segments.add([waypoints[i], waypoints[i + 1]]);
       }
+    }
+
+    final combined = segments.expand((pts) => pts).toList();
+
+    setState(() {
+      _routeLoading  = false;
+      _segmentRoutes = segments;
+      _routePoints   = combined;
+      if (totalEta > 0) _etaMinutes = totalEta;
+      if (totalKm  > 0) _distanceKm = totalKm;
     });
-    if (_routePoints.isNotEmpty) {
-      final sw = LatLng(
-        [_pickupCenter.latitude,  dest.latitude].reduce((a,b) => a<b?a:b) - 0.005,
-        [_pickupCenter.longitude, dest.longitude].reduce((a,b) => a<b?a:b) - 0.005,
-      );
-      final ne = LatLng(
-        [_pickupCenter.latitude,  dest.latitude].reduce((a,b) => a>b?a:b) + 0.005,
-        [_pickupCenter.longitude, dest.longitude].reduce((a,b) => a>b?a:b) + 0.005,
-      );
+
+    if (combined.isNotEmpty) {
+      final lats = combined.map((p) => p.latitude);
+      final lngs = combined.map((p) => p.longitude);
+      final sw = LatLng(lats.reduce((a,b) => a<b?a:b) - 0.005,
+                        lngs.reduce((a,b) => a<b?a:b) - 0.005);
+      final ne = LatLng(lats.reduce((a,b) => a>b?a:b) + 0.005,
+                        lngs.reduce((a,b) => a>b?a:b) + 0.005);
       _confirmMapCtrl?.animateCamera(
         CameraUpdate.newLatLngBounds(LatLngBounds(southwest: sw, northeast: ne), 64),
       );
@@ -417,6 +758,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         dropoffLng:     _destLatLng!.longitude,
         serviceType:    type.serviceType,
         paymentMethod:  _paymentMethod,
+        promoCode:      _promoCode,
         scheduledAt: _isScheduled
             ? '${_scheduledTime.year}-'
               '${_scheduledTime.month.toString().padLeft(2,'0')}-'
@@ -491,11 +833,18 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         body: _buildWhereTo(),
       );
     }
+    // Step 2 — full-screen map, no header
+    if (_step == 2) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _buildConfirm(),
+      );
+    }
     return Scaffold(
       backgroundColor: AppTheme.primary,
       body: Column(children: [
         _StepHeader(step: _step - 1, onBack: _onBack),
-        Expanded(child: _step == 1 ? _buildDestination() : _buildConfirm()),
+        Expanded(child: _buildDestination()),
       ]),
     );
   }
@@ -581,7 +930,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ]),
             const SizedBox(height: 12),
 
-            // "Where to?" tappable pill
+            // "Where to?" tappable pill — shows destination name when already set
             GestureDetector(
               onTap: () => _goToStep(1),
               child: Container(
@@ -589,13 +938,30 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 decoration: BoxDecoration(
                   color: AppTheme.cardBg,
                   borderRadius: BorderRadius.circular(12),
+                  border: _stops.last.isFilled
+                      ? Border.all(color: AppTheme.accent.withValues(alpha: 0.4))
+                      : null,
                 ),
                 child: Row(children: [
-                  const Icon(Icons.search, color: AppTheme.textSecondary, size: 20),
+                  Icon(
+                    _stops.last.isFilled ? Icons.location_on : Icons.search,
+                    color: _stops.last.isFilled ? AppTheme.accentOrange : AppTheme.textSecondary,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Where to?',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+                  Expanded(
+                    child: _stops.last.isFilled
+                        ? Text(
+                            _stops.last.address,
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : const Text('Where to?',
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -702,38 +1068,58 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
                   // Input or filled text
                   Expanded(
-                    child: isActive
-                      ? TextField(
-                          controller: _searchCtrl,
-                          autofocus: true,
-                          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: i == 0 ? 'Where to?' : 'Stop ${i + 1}',
-                            hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-                            border: InputBorder.none,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 7),
-                            suffixIcon: hasQuery
-                              ? IconButton(
-                                  icon: const Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
-                                  onPressed: () => _searchCtrl.clear(),
-                                )
-                              : null,
-                          ),
-                        )
-                      : GestureDetector(
-                          onTap: () => setState(() { _activeStopIdx = i; _searchCtrl.clear(); }),
+                    child: stop.isFilled
+                      // ── Confirmed stop: show name + checkmark, tap to clear & re-edit
+                      ? GestureDetector(
+                          onTap: () => setState(() {
+                            _stops[i].address = '';
+                            _stops[i].latLng  = null;
+                            _activeStopIdx    = i;
+                            _searchCtrl.clear();
+                          }),
                           child: Padding(
                             padding: const EdgeInsets.symmetric(vertical: 9),
-                            child: stop.isFilled
-                              ? Text(stop.address,
-                                  style: const TextStyle(color: AppTheme.textPrimary,
-                                      fontSize: 14, fontWeight: FontWeight.w500),
-                                  maxLines: 1, overflow: TextOverflow.ellipsis)
-                              : Text(i == 0 ? 'Where to?' : 'Stop ${i + 1}',
-                                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                            child: Row(children: [
+                              Expanded(
+                                child: Text(stop.address,
+                                    style: const TextStyle(color: AppTheme.textPrimary,
+                                        fontSize: 14, fontWeight: FontWeight.w500),
+                                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.check_circle,
+                                  color: AppTheme.success, size: 16),
+                            ]),
                           ),
-                        ),
+                        )
+                      // ── Empty stop: show TextField when active, placeholder otherwise
+                      : isActive
+                          ? TextField(
+                              controller: _searchCtrl,
+                              autofocus: true,
+                              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: i == 0 ? 'Where to?' : 'Stop ${i + 1}',
+                                hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 7),
+                                suffixIcon: hasQuery
+                                  ? IconButton(
+                                      icon: const Icon(Icons.close, size: 16, color: AppTheme.textSecondary),
+                                      onPressed: () => _searchCtrl.clear(),
+                                    )
+                                  : null,
+                              ),
+                            )
+                          : GestureDetector(
+                              onTap: () => setState(() { _activeStopIdx = i; _searchCtrl.clear(); }),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                child: Text(i == 0 ? 'Where to?' : 'Stop ${i + 1}',
+                                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                              ),
+                            ),
                   ),
 
                   // Delete stop button
@@ -741,8 +1127,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     GestureDetector(
                       onTap: () => setState(() {
                         _stops.removeAt(i);
-                        if (_activeStopIdx >= _stops.length) {
-                          _activeStopIdx = _stops.length - 1;
+                        if (_activeStopIdx >= _stops.length || _activeStopIdx == i) {
+                          _activeStopIdx = _stops.every((s) => s.isFilled)
+                              ? -1
+                              : _stops.indexWhere((s) => !s.isFilled);
                         }
                       }),
                       child: const Padding(
@@ -793,8 +1181,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
       const Divider(height: 1, color: AppTheme.cardBg),
 
-      // ── Search results / tabs ────────────────────────────────────────────
-      Expanded(
+      // ── Search results / tabs — hidden when all stops are confirmed ───────
+      if (_activeStopIdx == -1) const SizedBox.shrink()
+      else Expanded(
         child: _searching
             ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
             : hasQuery && _searchResults.isEmpty
@@ -851,6 +1240,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         iconColor: AppTheme.accent,
         title: 'Choose on Map',
         onTap: () {
+          if (_activeStopIdx < 0) return;
           final activeStop = _stops[_activeStopIdx];
           setState(() {
             // Start at the stop's existing position; fall back to pickup center
@@ -1050,40 +1440,55 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     );
 
     final markers = <Marker>{
+      // Pickup — green dot
       Marker(
         markerId: const MarkerId('pickup'),
         position: _pickupCenter,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: 'Pickup'),
+        icon: _pickupIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: InfoWindow(title: '📍 Pickup', snippet: _pickupAddress),
       ),
-      // Intermediate stops (orange)
-      for (int i = 0; i < _stops.length - 1; i++)
+      // All stops in order — numbered 1, 2, 3…
+      for (int i = 0; i < _stops.length; i++)
         if (_stops[i].latLng != null)
           Marker(
             markerId: MarkerId('stop_$i'),
             position: _stops[i].latLng!,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-            infoWindow: InfoWindow(title: 'Stop ${i + 1}'),
-          ),
-      // Final destination (red)
-      if (dest != null)
-        Marker(
-          markerId: const MarkerId('dest'),
-          position: dest,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: const InfoWindow(title: 'Destination'),
-        ),
-    };
-    final polylines = _routePoints.length >= 2
-        ? <Polyline>{
-            Polyline(
-              polylineId: const PolylineId('route'),
-              points: _routePoints,
-              color: AppTheme.accent,
-              width: 5,
+            icon: (_stopMarkers.length > i)
+                ? _stopMarkers[i].icon
+                : BitmapDescriptor.defaultMarkerWithHue(
+                    i == _stops.length - 1
+                        ? BitmapDescriptor.hueRed
+                        : BitmapDescriptor.hueOrange),
+            anchor: _stopMarkers.length > i
+                ? _stopMarkers[i].anchor
+                : const Offset(0.5, 1.0),
+            infoWindow: InfoWindow(
+              title: i == _stops.length - 1
+                  ? '🏁 Stop ${i + 1} — Destination'
+                  : '🔵 Stop ${i + 1}',
+              snippet: _stops[i].address,
             ),
-          }
-        : <Polyline>{};
+          ),
+    };
+    // Road-following route, one colored polyline per segment:
+    // segment 0 (pickup→1): green  1→2: red  2→3: blue …
+    const _segmentColors = [
+      Color(0xFF00C48C), // green
+      Color(0xFFE53935), // red
+      Color(0xFF1976D2), // blue
+      Color(0xFFFF9800), // orange
+      Color(0xFF9C27B0), // purple
+    ];
+    final polylines = <Polyline>{
+      for (int i = 0; i < _segmentRoutes.length; i++)
+        if (_segmentRoutes[i].length >= 2)
+          Polyline(
+            polylineId: PolylineId('seg_$i'),
+            points: _segmentRoutes[i],
+            color: _segmentColors[i % _segmentColors.length],
+            width: 4,
+          ),
+    };
 
     final midLat = dest != null
         ? (_pickupCenter.latitude  + dest.latitude)  / 2
@@ -1092,266 +1497,322 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         ? (_pickupCenter.longitude + dest.longitude) / 2
         : _pickupCenter.longitude;
 
-    return Column(children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
-        child: Row(children: [
-          Expanded(
-            child: Text('Review trip details',
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700)),
-          ),
-          TextButton.icon(
-            onPressed: () {
-              setState(() {
-                _step = 1;
-                _activeStopIdx = _stops.length - 1;
-                _searchCtrl.clear();
-                _choosingDestOnMap = false;
-              });
-            },
-            icon: const Icon(Icons.cancel_outlined, size: 18),
-            label: const Text('Edit route'),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.accent),
-          ),
-        ]),
-      ),
-      SizedBox(
-        height: 240,
-        child: Stack(children: [
-          GoogleMap(
-            onMapCreated: (c) {
-              _confirmMapCtrl = c;
-              if (dest != null) {
-                final sw = LatLng(
-                  [_pickupCenter.latitude,  dest.latitude].reduce((a,b) => a<b?a:b) - 0.005,
-                  [_pickupCenter.longitude, dest.longitude].reduce((a,b) => a<b?a:b) - 0.005,
-                );
-                final ne = LatLng(
-                  [_pickupCenter.latitude,  dest.latitude].reduce((a,b) => a>b?a:b) + 0.005,
-                  [_pickupCenter.longitude, dest.longitude].reduce((a,b) => a>b?a:b) + 0.005,
-                );
-                c.animateCamera(CameraUpdate.newLatLngBounds(
-                    LatLngBounds(southwest: sw, northeast: ne), 64));
-              } else {
-                c.animateCamera(CameraUpdate.newLatLng(_pickupCenter));
-              }
-            },
-            initialCameraPosition: CameraPosition(
-              target: LatLng(midLat, midLng), zoom: 13,
-            ),
-            style: _kDarkMapStyle,
-            markers:   markers,
-            polylines: polylines,
-            myLocationEnabled:       false,
-            myLocationButtonEnabled: false,
-            zoomControlsEnabled:     false,
-          ),
-          if (_routeLoading)
-            const ColoredBox(
-              color: Colors.black38,
-              child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
-            ),
-        ]),
+    return Stack(children: [
+
+      // ── Full-screen map ───────────────────────────────────────────────────
+      GoogleMap(
+        onMapCreated: (c) {
+          _confirmMapCtrl = c;
+          if (dest != null) {
+            final allLats = [_pickupCenter.latitude,  ..._stops.whereType<_WayStop>().where((s) => s.latLng != null).map((s) => s.latLng!.latitude)];
+            final allLngs = [_pickupCenter.longitude, ..._stops.whereType<_WayStop>().where((s) => s.latLng != null).map((s) => s.latLng!.longitude)];
+            final sw = LatLng(allLats.reduce((a,b) => a<b?a:b) - 0.008, allLngs.reduce((a,b) => a<b?a:b) - 0.008);
+            final ne = LatLng(allLats.reduce((a,b) => a>b?a:b) + 0.008, allLngs.reduce((a,b) => a>b?a:b) + 0.008);
+            c.animateCamera(CameraUpdate.newLatLngBounds(LatLngBounds(southwest: sw, northeast: ne), 80));
+          } else {
+            c.animateCamera(CameraUpdate.newLatLng(_pickupCenter));
+          }
+        },
+        initialCameraPosition: CameraPosition(target: LatLng(midLat, midLng), zoom: 13),
+        style: _kDarkMapStyle,
+        markers:   markers,
+        polylines: polylines,
+        myLocationEnabled:       true,
+        myLocationButtonEnabled: false,
+        zoomControlsEnabled:     false,
       ),
 
-      Expanded(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Route summary
-            Container(
-              padding: const EdgeInsets.all(14),
+      if (_routeLoading)
+        const Positioned.fill(
+          child: ColoredBox(
+            color: Colors.black26,
+            child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+          ),
+        ),
+
+      // ── Floating back button ──────────────────────────────────────────────
+      SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: GestureDetector(
+            onTap: () => setState(() {
+              _step          = 1;
+              _activeStopIdx = _stops.length - 1;
+              _searchCtrl.clear();
+              _choosingDestOnMap = false;
+            }),
+            child: Container(
+              width: 40, height: 40,
               decoration: BoxDecoration(
+                color: AppTheme.surface,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8)],
+              ),
+              child: const Icon(Icons.arrow_back_ios_new,
+                  color: AppTheme.textPrimary, size: 18),
+            ),
+          ),
+        ),
+      ),
+
+      // ── Floating ETA / distance chips ────────────────────────────────────
+      if ((_etaMinutes > 0 || _distanceKm > 0) && !_routeLoading)
+        SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
                   color: AppTheme.surface,
-                  borderRadius: BorderRadius.circular(14)),
-              child: Column(children: [
-                _RouteRow(color: AppTheme.accent, icon: Icons.circle, label: _pickupAddress),
-                ...List.generate(_stops.length, (i) {
-                  final isLast = i == _stops.length - 1;
-                  return Column(children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8, top: 4, bottom: 4),
-                      child: Container(width: 2, height: 16, color: AppTheme.cardBg),
-                    ),
-                    _RouteRow(
-                      color: isLast ? AppTheme.accentOrange : AppTheme.warning,
-                      icon:  isLast ? Icons.location_on : Icons.location_on_outlined,
-                      label: _stops[i].address,
-                      onTap: () {
-                        setState(() {
-                          _step = 1;
-                          _activeStopIdx = i;
-                          _searchCtrl.clear();
-                          _choosingDestOnMap = false;
-                        });
-                      },
-                      trailing: const Icon(Icons.cancel_outlined, color: AppTheme.accent, size: 18),
-                    ),
-                  ]);
-                }),
-                if (_etaMinutes > 0 || _distanceKm > 0) ...[
-                  const Divider(color: AppTheme.cardBg, height: 20),
-                  Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                    _InfoChip(icon: Icons.straighten,        label: '${_distanceKm.toStringAsFixed(1)} km'),
-                    _InfoChip(icon: Icons.access_time_outlined, label: '~$_etaMinutes min'),
-                  ]),
-                ],
-              ]),
-            ),
-            const SizedBox(height: 16),
-
-            if (_bookError != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppTheme.danger.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 8)],
                 ),
-                child: Row(children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(_bookError!,
-                      style: const TextStyle(color: AppTheme.danger, fontSize: 12))),
-                ]),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            Row(children: [
-              const Text('Choose Ride',
-                  style: TextStyle(color: AppTheme.textPrimary,
-                      fontSize: 15, fontWeight: FontWeight.w700)),
-              if (_fareLoading) ...[
-                const SizedBox(width: 10),
-                const SizedBox(
-                  width: 14, height: 14,
-                  child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2),
-                ),
-              ],
-            ]),
-            const SizedBox(height: 10),
-            ..._kRideTypes.map((r) => _RideTypeCard(
-                  type:        r,
-                  selected:    _selectedRide == r.name,
-                  onTap:       () => setState(() => _selectedRide = r.name),
-                  fareInfo:    _fareByType[r.serviceType],
-                  fareLoading: _fareLoading,
-                )),
-            const SizedBox(height: 16),
-
-            GestureDetector(
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const PromoScreen())),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(12)),
-                child: const Row(children: [
-                  Icon(Icons.local_offer_outlined, color: AppTheme.warning, size: 20),
-                  SizedBox(width: 10),
-                  Expanded(child: Text('Add promo code',
-                      style: TextStyle(color: AppTheme.textSecondary))),
-                  Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.straighten, color: AppTheme.accent, size: 14),
+                  const SizedBox(width: 4),
+                  Text('${_distanceKm.toStringAsFixed(1)} km',
+                      style: const TextStyle(color: AppTheme.textPrimary,
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 12),
+                  const Icon(Icons.access_time_outlined, color: AppTheme.accent, size: 14),
+                  const SizedBox(width: 4),
+                  Text('~$_etaMinutes min',
+                      style: const TextStyle(color: AppTheme.textPrimary,
+                          fontSize: 13, fontWeight: FontWeight.w600)),
                 ]),
               ),
             ),
-            const SizedBox(height: 10),
+          ),
+        ),
 
-            // Payment method selector
-            GestureDetector(
-              onTap: () => _showPaymentSheet(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Row(children: [
-                  const Icon(Icons.payment_outlined, color: AppTheme.accent, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(_paymentLabel(_paymentMethod),
-                      style: const TextStyle(color: AppTheme.textPrimary))),
-                  const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            Row(children: [
-              const Text('Schedule for later',
-                  style: TextStyle(color: AppTheme.textPrimary,
-                      fontSize: 14, fontWeight: FontWeight.w600)),
-              const Spacer(),
-              Switch(
-                value: _isScheduled,
-                onChanged: (v) => setState(() => _isScheduled = v),
-                activeThumbColor: AppTheme.accent,
-                activeTrackColor: AppTheme.accent.withValues(alpha: 0.4),
-              ),
-            ]),
-            if (_isScheduled) ...[
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () async {
-                  final dt = await _pickDateTime(context);
-                  if (dt != null) setState(() => _scheduledTime = dt);
-                },
+      // ── Bottom sheet ─────────────────────────────────────────────────────
+      DraggableScrollableSheet(
+        initialChildSize: 0.45,
+        minChildSize:     0.18,
+        maxChildSize:     0.88,
+        builder: (ctx, scrollCtrl) => Container(
+          decoration: const BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+          ),
+          child: ListView(
+            controller: scrollCtrl,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+            children: [
+              // Drag handle
+              Center(
                 child: Container(
-                  padding: const EdgeInsets.all(13),
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  width: 40, height: 4,
                   decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+                      color: AppTheme.cardBg,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+
+              // Route summary — Grab-style numbered list
+              _RouteSummary(
+                pickupAddress: _pickupAddress,
+                stops: _stops,
+                onEditStop: (i) => setState(() {
+                  _step = 1; _activeStopIdx = i;
+                  _searchCtrl.clear(); _choosingDestOnMap = false;
+                }),
+                onRemoveStop: _stops.length > 1 ? (i) {
+                  setState(() => _stops.removeAt(i));
+                  _fetchRoute();
+                  _buildMarkerIcons();
+                } : null,
+                onAddStop: _stops.length < 4 ? () {
+                  // Insert a new empty stop before the final destination
+                  final insertAt = _stops.length - 1;
+                  setState(() {
+                    _stops.insert(insertAt, _WayStop());
+                    _step          = 1;
+                    _activeStopIdx = insertAt;
+                    _searchCtrl.clear();
+                    _choosingDestOnMap = false;
+                  });
+                } : null,
+              ),
+              const SizedBox(height: 14),
+
+              if (_bookError != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.schedule, color: AppTheme.accent, size: 18),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${_scheduledTime.day}/${_scheduledTime.month}/'
-                      '${_scheduledTime.year}  '
-                      '${_scheduledTime.hour}:'
-                      '${_scheduledTime.minute.toString().padLeft(2,'0')}',
-                      style: const TextStyle(
-                          color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                    const Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_bookError!,
+                        style: const TextStyle(color: AppTheme.danger, fontSize: 12))),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Choose Ride
+              Row(children: [
+                const Text('Choose Ride',
+                    style: TextStyle(color: AppTheme.textPrimary,
+                        fontSize: 15, fontWeight: FontWeight.w700)),
+                if (_fareLoading) ...[
+                  const SizedBox(width: 10),
+                  const SizedBox(width: 14, height: 14,
+                      child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2)),
+                ],
+              ]),
+              const SizedBox(height: 10),
+              ..._kRideTypes.map((r) => _RideTypeCard(
+                    type:        r,
+                    selected:    _selectedRide == r.name,
+                    onTap:       () => setState(() => _selectedRide = r.name),
+                    fareInfo:    _fareByType[r.serviceType],
+                    fareLoading: _fareLoading,
+                  )),
+              const SizedBox(height: 14),
+
+              // Promo code
+              GestureDetector(
+                onTap: () => _showPromoSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _promoCode != null
+                        ? AppTheme.success.withValues(alpha: 0.08)
+                        : AppTheme.cardBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: _promoCode != null
+                        ? Border.all(color: AppTheme.success.withValues(alpha: 0.4))
+                        : null,
+                  ),
+                  child: Row(children: [
+                    Icon(
+                      _promoCode != null ? Icons.check_circle_outline : Icons.local_offer_outlined,
+                      color: _promoCode != null ? AppTheme.success : AppTheme.warning,
+                      size: 20,
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _promoCode != null
+                          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(_promoCode!, style: const TextStyle(
+                                  color: AppTheme.success, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                              if (_promoDiscount != null)
+                                Text('− ${AppTheme.khr(_promoDiscount!)} discount',
+                                    style: const TextStyle(color: AppTheme.success, fontSize: 12)),
+                            ])
+                          : const Text('Add promo code',
+                              style: TextStyle(color: AppTheme.textSecondary)),
+                    ),
+                    GestureDetector(
+                      onTap: _promoCode != null
+                          ? () => setState(() { _promoCode = null; _promoDiscount = null; })
+                          : null,
+                      child: Icon(
+                        _promoCode != null ? Icons.close : Icons.chevron_right,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Payment method
+              GestureDetector(
+                onTap: () => _showPaymentSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                      color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+                  child: Row(children: [
+                    const Icon(Icons.payment_outlined, color: AppTheme.accent, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_paymentLabel(_paymentMethod),
+                        style: const TextStyle(color: AppTheme.textPrimary))),
                     const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
                   ]),
                 ),
               ),
-            ],
-            const SizedBox(height: 12),
-          ]),
-        ),
-      ),
+              const SizedBox(height: 10),
 
-    // Full-width confirm button
-    Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: ElevatedButton(
-        onPressed: _isBooking ? null : _bookRide,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              // Schedule toggle
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                    color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+                child: Column(children: [
+                  Row(children: [
+                    const Text('Schedule for later',
+                        style: TextStyle(color: AppTheme.textPrimary,
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Switch(
+                      value: _isScheduled,
+                      onChanged: (v) => setState(() => _isScheduled = v),
+                      activeThumbColor: AppTheme.accent,
+                      activeTrackColor: AppTheme.accent.withValues(alpha: 0.4),
+                    ),
+                  ]),
+                  if (_isScheduled)
+                    GestureDetector(
+                      onTap: () async {
+                        final dt = await _pickDateTime(context);
+                        if (dt != null) setState(() => _scheduledTime = dt);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(children: [
+                          const Icon(Icons.schedule, color: AppTheme.accent, size: 18),
+                          const SizedBox(width: 10),
+                          Text(
+                            '${_scheduledTime.day}/${_scheduledTime.month}/'
+                            '${_scheduledTime.year}  '
+                            '${_scheduledTime.hour}:'
+                            '${_scheduledTime.minute.toString().padLeft(2,'0')}',
+                            style: const TextStyle(
+                                color: AppTheme.textPrimary, fontWeight: FontWeight.w500),
+                          ),
+                          const Spacer(),
+                          const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                        ]),
+                      ),
+                    ),
+                ]),
+              ),
+              const SizedBox(height: 16),
+
+              // Confirm button
+              ElevatedButton(
+                onPressed: _isBooking ? null : _bookRide,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: _isBooking
+                    ? const SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                    : Text(
+                        _isScheduled
+                            ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
+                            : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+            ],
+          ),
         ),
-        child: _isBooking
-            ? const SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-            : Text(
-                _isScheduled
-                    ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
-                    : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
       ),
-    ),
 
     ]);
   }
@@ -1436,20 +1897,42 @@ class _StepHeader extends StatelessWidget {
 class _Crosshair extends StatelessWidget {
   const _Crosshair();
 
+  static const _green = Color(0xFF00C853);
+
   @override
   Widget build(BuildContext context) {
     return IgnorePointer(
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      child: Column(mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center, children: [
+        // Circle head
         Container(
-          width: 10, height: 10,
+          width: 36, height: 36,
           decoration: BoxDecoration(
-            color: AppTheme.accent,
+            color: _green,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: const [
+              BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+            ],
+          ),
+          child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+        ),
+        // Stem
+        Container(
+          width: 3, height: 18,
+          decoration: const BoxDecoration(
+            color: _green,
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(2)),
           ),
         ),
-        Container(width: 2, height: 12, color: AppTheme.accent),
+        // Ground dot shadow
+        Container(
+          width: 10, height: 4,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(5),
+          ),
+        ),
       ]),
     );
   }
@@ -1567,59 +2050,140 @@ class _DestTile extends StatelessWidget {
   }
 }
 
-class _RouteRow extends StatelessWidget {
-  final Color    color;
-  final IconData icon;
-  final String   label;
-  final VoidCallback? onTap;
-  final Widget?      trailing;
-  const _RouteRow({
-    required this.color,
-    required this.icon,
-    required this.label,
-    this.onTap,
-    this.trailing,
+// ─── Grab-style route summary — numbered stop list ────────────────────────────
+
+class _RouteSummary extends StatelessWidget {
+  final String pickupAddress;
+  final List<_WayStop> stops;
+  final void Function(int stopIndex) onEditStop;
+  final void Function(int stopIndex)? onRemoveStop;
+  final VoidCallback? onAddStop;
+
+  const _RouteSummary({
+    required this.pickupAddress,
+    required this.stops,
+    required this.onEditStop,
+    this.onRemoveStop,
+    this.onAddStop,
   });
 
   @override
   Widget build(BuildContext context) {
-    final content = Row(children: [
-      Icon(icon, color: color, size: 14),
-      const SizedBox(width: 10),
-      Expanded(child: Text(label,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13))),
-      if (trailing != null) ...[
-        const SizedBox(width: 8),
-        trailing!,
-      ],
-    ]);
+    return Container(
+      decoration: BoxDecoration(
+          color: AppTheme.cardBg, borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        children: [
+          // ── Pickup row ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+            child: Row(children: [
+              Container(
+                width: 10, height: 10,
+                decoration: const BoxDecoration(
+                    color: AppTheme.accent, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  pickupAddress,
+                  style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 13),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ]),
+          ),
 
-    if (onTap == null) return content;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: content),
+          // ── Stop rows ─────────────────────────────────────────────────────
+          ...List.generate(stops.length, (i) {
+            final isLast = i == stops.length - 1;
+            return Column(children: [
+              Divider(height: 1, indent: 40, color: AppTheme.surface.withValues(alpha: 0.8)),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+                child: Row(children: [
+                  // Numbered circle
+                  Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                      color: isLast
+                          ? const Color(0xFFE53935)
+                          : const Color(0xFFFF9800),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${i + 1}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  // Address
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onEditStop(i),
+                      child: Text(
+                        stops[i].address,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  // Remove button
+                  if (onRemoveStop != null && stops.length > 1)
+                    GestureDetector(
+                      onTap: () => onRemoveStop!(i),
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 10),
+                        child: Icon(Icons.close,
+                            color: AppTheme.textSecondary, size: 18),
+                      ),
+                    ),
+                ]),
+              ),
+            ]);
+          }),
+
+          // ── Add a stop ────────────────────────────────────────────────────
+          if (onAddStop != null && stops.length < 4) ...[
+            Divider(height: 1, indent: 40, color: AppTheme.surface.withValues(alpha: 0.8)),
+            GestureDetector(
+              onTap: onAddStop,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: Row(children: [
+                  Container(
+                    width: 24, height: 24,
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.add, size: 14, color: AppTheme.accent),
+                  ),
+                  const SizedBox(width: 14),
+                  const Text('Add a stop',
+                      style: TextStyle(
+                          color: AppTheme.accent,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String   label;
-  const _InfoChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, color: AppTheme.accent, size: 15),
-      const SizedBox(width: 5),
-      Text(label, style: const TextStyle(
-          color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-    ]);
-  }
-}
 
 class _RideTypeCard extends StatelessWidget {
   final _RideType    type;

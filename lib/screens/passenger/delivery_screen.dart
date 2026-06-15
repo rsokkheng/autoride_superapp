@@ -1,8 +1,15 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
-import 'package:autoride_superapp/widgets/address_field.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../services/api_service.dart';
+import '../../services/maps_service.dart';
+
+const _kPickerSW     = LatLng(10.4, 102.3);
+const _kPickerNE     = LatLng(14.7, 107.6);
+final  _kPickerBounds = LatLngBounds(southwest: _kPickerSW, northeast: _kPickerNE);
 
 class DeliveryScreen extends StatefulWidget {
   const DeliveryScreen({super.key});
@@ -30,7 +37,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   bool     _isScheduled          = false;
   String   _packageSize          = 'small';
   String   _deliveryServiceOption = 'normal'; // 'normal' | 'express'
-  String   _deliveryVehicleType  = 'motorbike'; // 'motorbike'|'small_car'|'van'|'truck'
+  String   _deliveryVehicleType  = 'car'; // 'car'|'tuk_tuk'
   String   _paymentBy            = 'sender';
   String   _paymentMethod        = 'cash';
   DateTime _scheduledTime        = DateTime.now().add(const Duration(hours: 2));
@@ -53,6 +60,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   String   _movePaymentMethod = 'cash';
   bool     _isMoveScheduled   = false;
   DateTime _moveDate          = DateTime.now().add(const Duration(days: 1));
+
+  // ── Location lat/lng (from map picker) ──────────────────────────────────
+  LatLng? _pickupLatLng;
+  LatLng? _dropoffLatLng;
+  LatLng? _moveFromLatLng;
+  LatLng? _moveToLatLng;
 
   // ── Shared ───────────────────────────────────────────────────────────────
   bool    _submitting = false;
@@ -229,6 +242,39 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     });
   }
 
+  // ── Map picker ───────────────────────────────────────────────────────────
+
+  static const _kDefaultPos = LatLng(11.5680, 104.9195);
+
+  Future<void> _openLocationPicker(
+      TextEditingController ctrl,
+      LatLng? current,
+      ValueChanged<LatLng> onLatLng) async {
+    LatLng initial = current ?? _kDefaultPos;
+    if (current == null) {
+      try {
+        final pos = await Geolocator.getLastKnownPosition();
+        if (pos != null) {
+          final ll = LatLng(pos.latitude, pos.longitude);
+          // Only use GPS position if it is actually inside Cambodia
+          if (_kPickerBounds.contains(ll)) initial = ll;
+        }
+      } catch (_) {}
+    }
+    if (!mounted) return;
+    final result = await Navigator.push<_LocationResult>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _LocationPickerScreen(initial: initial),
+        fullscreenDialog: true,
+      ),
+    );
+    if (result != null && mounted) {
+      ctrl.text = result.address;
+      setState(() => onLatLng(result.latLng));
+    }
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────
 
   @override
@@ -328,7 +374,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _Field(hint: "Sender's phone", icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
           keyboardType: TextInputType.phone),
       const SizedBox(height: 10),
-      AddressField(hint: 'Pickup address', icon: Icons.location_on_outlined, controller: _pickupCtrl),
+      _AddressWithMap(
+        hint: 'Pickup address', icon: Icons.location_on_outlined, controller: _pickupCtrl,
+        onMapTap: () => _openLocationPicker(_pickupCtrl, _pickupLatLng, (ll) => _pickupLatLng = ll),
+      ),
       const SizedBox(height: 20),
 
       // Recipient
@@ -339,7 +388,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _Field(hint: "Recipient's phone", icon: Icons.phone_outlined,  controller: _recipientPhoneCtrl,
           keyboardType: TextInputType.phone),
       const SizedBox(height: 10),
-      AddressField(hint: 'Delivery address', icon: Icons.location_on, controller: _dropoffCtrl),
+      _AddressWithMap(
+        hint: 'Delivery address', icon: Icons.location_on, controller: _dropoffCtrl,
+        onMapTap: () => _openLocationPicker(_dropoffCtrl, _dropoffLatLng, (ll) => _dropoffLatLng = ll),
+      ),
       const SizedBox(height: 20),
 
       // Package
@@ -384,13 +436,11 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       // Delivery vehicle
       _AppDropdown<String>(
         label: 'Delivery Vehicle',
-        icon: Icons.two_wheeler,
+        icon: Icons.directions_car_outlined,
         value: _deliveryVehicleType,
         items: const [
-          _DropItem(value: 'motorbike', label: 'Motorbike — ម៉ូតូ',       subtitle: 'Up to 10 kg  •  Fastest', icon: Icons.two_wheeler),
-          _DropItem(value: 'small_car', label: 'Small Car — ឡានតូច',      subtitle: 'Up to 50 kg  •  Fast',    icon: Icons.directions_car_outlined),
-          _DropItem(value: 'van',       label: 'Van / Pickup — ឡានធំតូច', subtitle: 'Up to 300 kg  •  Standard', icon: Icons.airport_shuttle_outlined),
-          _DropItem(value: 'truck',     label: 'Truck — ឡានធំ',           subtitle: '300 kg+  •  Scheduled',   icon: Icons.local_shipping_outlined),
+          _DropItem(value: 'car',     label: 'Car — ឡាន',       subtitle: 'Up to 200 kg  •  Comfortable', icon: Icons.directions_car_outlined),
+          _DropItem(value: 'tuk_tuk', label: 'Tuk Tuk — តុកតុក', subtitle: 'Up to 100 kg  •  Affordable',  icon: Icons.electric_rickshaw_outlined),
         ],
         onChanged: (v) => setState(() => _deliveryVehicleType = v),
       ),
@@ -473,9 +523,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       // ── Addresses ────────────────────────────────────────────────────────
       const SectionHeader(title: 'Addresses'),
       const SizedBox(height: 14),
-      AddressField(hint: 'Moving from (full address)', icon: Icons.location_on_outlined, controller: _moveFromCtrl),
+      _AddressWithMap(
+        hint: 'Moving from (full address)', icon: Icons.location_on_outlined, controller: _moveFromCtrl,
+        onMapTap: () => _openLocationPicker(_moveFromCtrl, _moveFromLatLng, (ll) => _moveFromLatLng = ll),
+      ),
       const SizedBox(height: 10),
-      AddressField(hint: 'Moving to (full address)', icon: Icons.location_on, controller: _moveToCtrl),
+      _AddressWithMap(
+        hint: 'Moving to (full address)', icon: Icons.location_on, controller: _moveToCtrl,
+        onMapTap: () => _openLocationPicker(_moveToCtrl, _moveToLatLng, (ll) => _moveToLatLng = ll),
+      ),
       const SizedBox(height: 20),
 
       // ── Move type ─────────────────────────────────────────────────────────
@@ -1277,6 +1333,441 @@ class _SubmitButton extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
               ]),
+      ),
+    );
+  }
+}
+
+// ── Tappable address field — opens map picker directly ────────────────────────
+
+class _AddressWithMap extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final IconData icon;
+  final VoidCallback onMapTap;
+  const _AddressWithMap({
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    required this.onMapTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final filled = controller.text.trim().isNotEmpty;
+    return GestureDetector(
+      onTap: onMapTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: filled
+                ? const Color(0xFF00C853).withValues(alpha: 0.4)
+                : AppTheme.cardBg,
+          ),
+        ),
+        child: Row(children: [
+          Icon(icon,
+              color: filled ? const Color(0xFF00C853) : AppTheme.textSecondary,
+              size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              filled ? controller.text.trim() : hint,
+              style: TextStyle(
+                color: filled ? AppTheme.textPrimary : AppTheme.textSecondary,
+                fontSize: 14,
+                fontWeight: filled ? FontWeight.w500 : FontWeight.normal,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            filled ? Icons.check_circle : Icons.map_outlined,
+            color: filled ? const Color(0xFF00C853) : AppTheme.accent,
+            size: 20,
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Location picker result ────────────────────────────────────────────────────
+
+class _LocationResult {
+  final String address;
+  final LatLng latLng;
+  const _LocationResult(this.address, this.latLng);
+}
+
+// ── Full-screen map drag-drop location picker ─────────────────────────────────
+
+class _LocationPickerScreen extends StatefulWidget {
+  final LatLng initial;
+  const _LocationPickerScreen({required this.initial});
+
+  @override
+  State<_LocationPickerScreen> createState() => _LocationPickerScreenState();
+}
+
+class _LocationPickerScreenState extends State<_LocationPickerScreen> {
+  late LatLng _center;
+  String _address  = '';
+  bool   _geocoding = false;
+  GoogleMapController? _ctrl;
+
+  // Search
+  final _searchCtrl    = TextEditingController();
+  List<PlaceResult> _searchResults = [];
+  bool   _searching    = false;
+  bool   _showResults  = false;
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _center = widget.initial;
+  }
+
+  @override
+  void dispose() {
+    _ctrl?.dispose();
+    _searchCtrl.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _geocode() async {
+    setState(() => _geocoding = true);
+    final addr = await MapsService.reverseGeocode(_center);
+    if (!mounted) return;
+    setState(() {
+      _address  = addr ??
+          '${_center.latitude.toStringAsFixed(4)}, '
+          '${_center.longitude.toStringAsFixed(4)}';
+      _geocoding = false;
+    });
+  }
+
+  void _onSearchChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() { _searchResults = []; _searching = false; _showResults = false; });
+      return;
+    }
+    setState(() => _searching = true);
+    _debounce = Timer(const Duration(milliseconds: 450), () async {
+      final results = await MapsService.searchAddress(q.trim());
+      if (!mounted) return;
+      setState(() {
+        _searchResults = results;
+        _searching     = false;
+        _showResults   = true;
+      });
+    });
+  }
+
+  void _selectResult(PlaceResult r) {
+    _ctrl?.animateCamera(CameraUpdate.newLatLngZoom(r.latLng, 16));
+    _center  = r.latLng;
+    _address = r.address;
+    _searchCtrl.clear();
+    FocusScope.of(context).unfocus();
+    setState(() { _searchResults = []; _showResults = false; _address = r.address; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).viewPadding.bottom;
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      body: Stack(children: [
+
+        // ── Map ───────────────────────────────────────────────────────────
+        GoogleMap(
+          onMapCreated: (c) {
+            _ctrl = c;
+            c.animateCamera(CameraUpdate.newLatLng(_center));
+            _geocode();
+          },
+          initialCameraPosition: CameraPosition(target: _center, zoom: 15),
+          onCameraMove: (pos) {
+            _center = pos.target;
+            if (_showResults) setState(() => _showResults = false);
+          },
+          onCameraIdle:  _geocode,
+          myLocationEnabled:       true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled:     false,
+          cameraTargetBounds:      CameraTargetBounds(_kPickerBounds),
+          minMaxZoomPreference:    const MinMaxZoomPreference(10, 20),
+        ),
+
+        // ── Green crosshair pin ───────────────────────────────────────────
+        const Center(child: _DeliveryCrosshair()),
+
+        // ── Top bar: back + search ────────────────────────────────────────
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(children: [
+                  // Back button
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            blurRadius: 8)],
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new,
+                          color: AppTheme.textPrimary, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Search field
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(22),
+                        boxShadow: [BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 8)],
+                      ),
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: _onSearchChanged,
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary, fontSize: 14),
+                        textAlignVertical: TextAlignVertical.center,
+                        decoration: InputDecoration(
+                          hintText: 'Search location…',
+                          hintStyle: const TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 14),
+                          prefixIcon: _searching
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16, height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Color(0xFF00C853)),
+                                  ),
+                                )
+                              : const Icon(Icons.search,
+                                  color: AppTheme.textSecondary, size: 20),
+                          suffixIcon: _searchCtrl.text.isNotEmpty
+                              ? GestureDetector(
+                                  onTap: () {
+                                    _searchCtrl.clear();
+                                    setState(() {
+                                      _searchResults = [];
+                                      _showResults   = false;
+                                      _searching     = false;
+                                    });
+                                    FocusScope.of(context).unfocus();
+                                  },
+                                  child: const Icon(Icons.close,
+                                      color: AppTheme.textSecondary, size: 18),
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 0),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                ]),
+
+                // Search results dropdown
+                if (_showResults && _searchResults.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    constraints: const BoxConstraints(maxHeight: 260),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.25),
+                          blurRadius: 12)],
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      itemCount: _searchResults.length > 6
+                          ? 6
+                          : _searchResults.length,
+                      separatorBuilder: (_, __) => const Divider(
+                          height: 1,
+                          indent: 50,
+                          color: AppTheme.cardBg),
+                      itemBuilder: (_, i) {
+                        final r = _searchResults[i];
+                        return InkWell(
+                          onTap: () => _selectResult(r),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            child: Row(children: [
+                              const Icon(Icons.location_on_outlined,
+                                  color: Color(0xFF00C853), size: 18),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(r.address,
+                                    style: const TextStyle(
+                                        color: AppTheme.textPrimary,
+                                        fontSize: 13),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                            ]),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+
+        // ── Bottom confirm bar ────────────────────────────────────────────
+        Positioned(
+          bottom: 0, left: 0, right: 0,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+            ),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomPad),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Row(children: [
+                const Icon(Icons.location_on,
+                    color: Color(0xFF00C853), size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _geocoding
+                      ? const Row(children: [
+                          SizedBox(width: 14, height: 14,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppTheme.accent)),
+                          SizedBox(width: 8),
+                          Text('Finding address…',
+                              style: TextStyle(
+                                  color: AppTheme.textSecondary, fontSize: 13)),
+                        ])
+                      : Text(
+                          _address.isEmpty
+                              ? 'Drag map to select location'
+                              : _address,
+                          style: TextStyle(
+                            color: _address.isEmpty
+                                ? AppTheme.textSecondary
+                                : AppTheme.textPrimary,
+                            fontSize: 14,
+                            fontWeight: _address.isEmpty
+                                ? FontWeight.normal
+                                : FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: (_geocoding || _address.isEmpty)
+                      ? null
+                      : () => Navigator.pop(
+                            context,
+                            _LocationResult(_address, _center),
+                          ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00C853),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppTheme.cardBg,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Confirm Location',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 15)),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── Green crosshair drag pin ──────────────────────────────────────────────────
+
+class _DeliveryCrosshair extends StatelessWidget {
+  const _DeliveryCrosshair();
+  static const _green = Color(0xFF00C853);
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: _green,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: const [
+                BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 8,
+                    offset: Offset(0, 3)),
+              ],
+            ),
+            child: const Icon(Icons.location_on,
+                color: Colors.white, size: 20),
+          ),
+          Container(
+            width: 3, height: 18,
+            decoration: const BoxDecoration(
+              color: _green,
+              borderRadius:
+                  BorderRadius.vertical(bottom: Radius.circular(2)),
+            ),
+          ),
+          Container(
+            width: 10, height: 4,
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(5),
+            ),
+          ),
+        ],
       ),
     );
   }

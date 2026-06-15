@@ -3,10 +3,12 @@ import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 
 class RateDriverScreen extends StatefulWidget {
-  final int? rideId;
-  final String driverName;
-  final String fare;
-  final String paymentMethod;
+  final int?    rideId;
+  final String  driverName;
+  final String  fare;
+  final String  paymentMethod;
+  final double? distanceKm;
+  final int?    durationMin;
 
   const RateDriverScreen({
     super.key,
@@ -14,6 +16,8 @@ class RateDriverScreen extends StatefulWidget {
     required this.driverName,
     required this.fare,
     this.paymentMethod = 'cash',
+    this.distanceKm,
+    this.durationMin,
   });
 
   @override
@@ -26,6 +30,10 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
   final _commentController = TextEditingController();
   bool _submitted = false;
   bool _submitting = false;
+  int? _selectedTip;   // KHR amount, null = no tip, 0 = explicitly "0 ৳"
+  bool _tipping = false;
+
+  static const _tipOptions = [0, 2000, 5000, 10000];
 
   static const _positiveTags = ['Great driving', 'Very friendly', 'Clean car', 'On time', 'Safe ride'];
   static const _negativeTags = ['Late pickup', 'Rude', 'Unsafe driving', 'Dirty car', 'Wrong route'];
@@ -84,7 +92,61 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
               style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
           Text('${widget.fare}  •  ${_methodLabel(widget.paymentMethod)}',
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+
+          // Distance & Duration stats
+          if (widget.distanceKm != null || widget.durationMin != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  if (widget.distanceKm != null) ...[
+                    Column(children: [
+                      const Icon(Icons.route_outlined,
+                          color: AppTheme.accent, size: 20),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${widget.distanceKm!.toStringAsFixed(1)} km',
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15),
+                      ),
+                      const Text('Distance',
+                          style: TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 11)),
+                    ]),
+                  ],
+                  if (widget.distanceKm != null && widget.durationMin != null)
+                    Container(width: 1, height: 36,
+                        color: AppTheme.cardBg),
+                  if (widget.durationMin != null) ...[
+                    Column(children: [
+                      const Icon(Icons.timer_outlined,
+                          color: AppTheme.accent, size: 20),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${widget.durationMin} min',
+                        style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15),
+                      ),
+                      const Text('Duration',
+                          style: TextStyle(
+                              color: AppTheme.textSecondary, fontSize: 11)),
+                    ]),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
           const Text('How was your trip?',
               style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 24),
@@ -192,25 +254,42 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
             ),
             const SizedBox(height: 10),
             Row(
-              children: ['0 ៛', '2,000 ៛', '5,000 ៛', '10,000 ៛'].map((t) => Expanded(child: Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: OutlinedButton(
-                  onPressed: () {},
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppTheme.accent),
-                    foregroundColor: AppTheme.accent,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              children: _tipOptions.asMap().entries.map((entry) {
+                final amount  = entry.value;
+                final label   = amount == 0 ? 'No tip' : '${amount ~/ 1000}k ៛';
+                final selected = _selectedTip == amount;
+                return Expanded(child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedTip = selected ? null : amount),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: selected ? AppTheme.accent : AppTheme.surface,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: selected ? AppTheme.accent : AppTheme.cardBg,
+                        ),
+                      ),
+                      child: Text(label,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: selected ? AppTheme.primary : AppTheme.textSecondary,
+                          fontWeight: FontWeight.w700, fontSize: 13,
+                        ),
+                      ),
+                    ),
                   ),
-                  child: Text(t, style: const TextStyle(fontWeight: FontWeight.w700)),
-                ),
-              ))).toList(),
+                ));
+              }).toList(),
             ),
             const SizedBox(height: 28),
 
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _submitting ? null : () async {
+                onPressed: (_submitting || _tipping) ? null : () async {
                   setState(() => _submitting = true);
                   try {
                     if (widget.rideId != null) {
@@ -221,6 +300,22 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             ? null
                             : _commentController.text.trim(),
                       );
+                      // Send tip if one was selected (skip 0 — "No tip")
+                      if (_selectedTip != null && _selectedTip! > 0) {
+                        setState(() => _tipping = true);
+                        try {
+                          await ApiService.tipDriver(widget.rideId!, amountKhr: _selectedTip!);
+                        } on ApiException catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('Tip failed: ${e.message}'),
+                              backgroundColor: Colors.orange,
+                              behavior: SnackBarBehavior.floating,
+                            ));
+                          }
+                        } catch (_) {}
+                        if (mounted) setState(() => _tipping = false);
+                      }
                     }
                   } catch (_) {}
                   if (mounted) setState(() { _submitting = false; _submitted = true; });
@@ -231,7 +326,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: _submitting
+                child: (_submitting || _tipping)
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
                     : const Text('Submit Rating', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),

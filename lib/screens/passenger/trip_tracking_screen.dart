@@ -4,6 +4,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/websocket_service.dart';
 import '../../services/notification_service.dart';
@@ -70,6 +71,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   StreamSubscription<DriverMarkerModel>? _firestoreSub;
   StreamSubscription<Map<String, dynamic>>? _rideStatusSub;
   TripUpdate? _lastUpdate;
+  // Server-side status string — more complete than TripStatus enum
+  // (covers 'requested', 'accepted', 'driver_arrived', 'in_progress',
+  //  'completed', 'cancelled')
+  String _rideStatus = 'requested';
 
   final Set<Marker>   _markers   = {};
   final Set<Polyline> _polylines = {};
@@ -92,6 +97,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // Trip sharing state
   String? _shareUrl;
   bool    _sharing = false;
+
+  // Masked driver phone (fetched once driver is assigned)
+  String? _driverPhone;
+
+  // SOS state
+  bool _sosLoading = false;
 
   // Mutable driver info — updated when driver is assigned after booking
   late String _driverName;
@@ -315,13 +326,65 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   // ── Cancel ride ────────────────────────────────────────────────────────────
 
+  // Cancellable: requested | accepted | driver_arrived
+  // Not cancellable: in_progress | completed | cancelled
+  bool get _canCancel => const {
+    'requested', 'accepted', 'driver_arrived'
+  }.contains(_rideStatus);
+
+  bool get _hasCancellationFee => _rideStatus == 'driver_arrived';
+
   Future<void> _cancelRide() async {
     if (widget.rideId == null || _cancelling) return;
+
+    if (!_canCancel) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(_rideStatus == 'in_progress'
+            ? 'Cannot cancel a ride in progress.'
+            : 'This ride cannot be cancelled.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
+    // Confirmation dialog — warn about fee when driver has arrived
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Cancel Ride?',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(_hasCancellationFee
+            ? 'Your driver has already arrived.\n\nA cancellation fee of 2,000 ៛ will be charged.'
+            : 'Are you sure you want to cancel this ride?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Keep Ride')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(_hasCancellationFee
+                ? 'Cancel (2,000 ៛ fee)' : 'Cancel Ride',
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() => _cancelling = true);
     try {
-      await ApiService.cancelRide(widget.rideId!);
+      await ApiService.cancelRideWithReason(widget.rideId!,
+          reason: 'Changed my mind');
       if (!mounted) return;
-      Navigator.pop(context);
+      _disposeMapAndPop();
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -333,6 +396,17 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     } catch (_) {
       if (mounted) setState(() => _cancelling = false);
     }
+  }
+
+  // Dispose map controller before pop to avoid iOS "recreating_view" error.
+  // The platform view is released asynchronously on UIKit; waiting one frame
+  // gives it enough time before the next screen's GoogleMap is created.
+  void _disposeMapAndPop() {
+    _mapController?.dispose();
+    _mapController = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.pop(context);
+    });
   }
 
   // ── Tracking ───────────────────────────────────────────────────────────────
@@ -402,6 +476,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _ridePollTimer?.cancel();
     _ridePollTimer = null;
 
+    if (status.isNotEmpty && mounted) {
+      setState(() => _rideStatus = status);
+    }
+
     if (status == 'accepted' && driverId.isNotEmpty &&
         driverId != _currentDriverId) {
       // New driver assigned — re-subscribe to their live position
@@ -439,6 +517,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     try {
       final ride = await ApiService.getRide(widget.rideId!);
       if (!mounted) return;
+      // Always sync server status
+      if (ride.status.isNotEmpty) setState(() => _rideStatus = ride.status);
       if (ride.driverId == null) return;
       final newId = ride.driverId.toString();
       if (newId == _currentDriverId) return;
@@ -458,6 +538,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           .listenDriver(_currentDriverId)
           .listen(_onDriverMarker);
       _ridePollTimer?.cancel();
+      // Fetch masked phone number for the Call button
+      if (widget.rideId != null) {
+        try {
+          final phone = await ApiService.getMaskedPhone(widget.rideId!);
+          if (mounted) setState(() => _driverPhone = phone);
+        } catch (_) {}
+      }
     } catch (_) {}
   }
 
@@ -763,7 +850,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _ActionBtn(icon: Icons.call_outlined, label: 'Call', onTap: () {}),
+                          _ActionBtn(
+                            icon: Icons.call_outlined,
+                            label: 'Call',
+                            onTap: _driverAssigned ? _callDriver : () {},
+                          ),
                           _ActionBtn(
                             icon: Icons.chat_bubble_outline,
                             label: 'Chat',
@@ -776,15 +867,31 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                             label: _shareUrl != null ? 'Sharing' : 'Share',
                             onTap: _sharing
                                 ? () {}
-                                : _shareUrl != null
-                                    ? () => _showShareSheet(_shareUrl!)
-                                    : _shareTrip,
+                                : !_canShare
+                                    ? () {}
+                                    : _shareUrl != null
+                                        ? () => _showShareSheet(_shareUrl!)
+                                        : _shareTrip,
                             highlight: _shareUrl != null,
                             loading:   _sharing,
+                            disabled:  !_canShare,
                           ),
-                          _ActionBtn(icon: Icons.more_horiz, label: 'More', onTap: () {
-                            _showMoreSheet(context);
-                          }),
+                          if (_canCancel)
+                            _ActionBtn(
+                              icon:    Icons.cancel_outlined,
+                              label:   _cancelling ? '...' : 'Cancel',
+                              onTap:   _cancelling ? () {} : _cancelRide,
+                              danger:  true,
+                              loading: _cancelling,
+                            )
+                          else if (_driverAssigned)
+                            _ActionBtn(
+                              icon:    Icons.sos_outlined,
+                              label:   _sosLoading ? '...' : 'SOS',
+                              onTap:   _sosLoading ? () {} : _sendSos,
+                              danger:  true,
+                              loading: _sosLoading,
+                            ),
                         ],
                       ),
                       const SizedBox(height: 14),
@@ -823,37 +930,57 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
                       // Buttons row
                       Row(children: [
-                        GestureDetector(
-                          onTap: _cancelling ? null : _cancelRide,
-                          child: Container(
-                            width: 52, height: 52,
-                            decoration: BoxDecoration(
-                              color: _cancelling
-                                  ? Colors.grey[300]
-                                  : _kGreen,
-                              borderRadius: BorderRadius.circular(14),
+                        if (_canCancel)
+                          GestureDetector(
+                            onTap: _cancelling ? null : _cancelRide,
+                            child: Container(
+                              width: 52, height: 52,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: _cancelling
+                                    ? Colors.grey[300]
+                                    : Colors.red,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: _cancelling
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(14),
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2))
+                                  : const Icon(Icons.cancel_outlined,
+                                      color: Colors.white, size: 26),
                             ),
-                            child: _cancelling
-                                ? const Padding(
-                                    padding: EdgeInsets.all(14),
-                                    child: CircularProgressIndicator(
-                                        color: Colors.white, strokeWidth: 2))
-                                : const Icon(Icons.keyboard_double_arrow_right,
-                                    color: Colors.white, size: 26),
                           ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (_isArrived) {
+                                // Fetch final ride to get server-confirmed distance/duration
+                                double? distKm;
+                                int?    durMin;
+                                if (widget.rideId != null) {
+                                  try {
+                                    final r = await ApiService.getRide(widget.rideId!);
+                                    distKm = r.distanceKm;
+                                    durMin = r.durationMin;
+                                  } catch (_) {}
+                                }
+                                // Fall back to live-tracked distance if server didn't return one
+                                distKm ??= _distanceKm > 0 ? _distanceKm : null;
+                                if (!mounted) return;
+                                // Dispose map before replacing route to avoid
+                                // iOS "recreating_view" PlatformException.
+                                _mapController?.dispose();
+                                _mapController = null;
                                 Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => RateDriverScreen(
-                                            rideId:     widget.rideId,
-                                            driverName: _driverName,
-                                            fare:       widget.fare,
+                                            rideId:      widget.rideId,
+                                            driverName:  _driverName,
+                                            fare:        widget.fare,
+                                            distanceKm:  distKm,
+                                            durationMin: durMin,
                                           )),
                                 );
                               } else {
@@ -909,6 +1036,114 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     ));
   }
 
+  // Sharing only valid while ride is active (not yet completed/cancelled)
+  bool get _canShare =>
+      _driverAssigned &&
+      _lastUpdate?.status != null &&
+      _lastUpdate!.status != TripStatus.searching;
+
+  // ── SOS ────────────────────────────────────────────────────────────────────
+
+  Future<void> _sendSos() async {
+    if (widget.rideId == null) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('🆘 Send SOS?',
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.w800)),
+        content: const Text(
+            'An SOS alert will be sent to all your emergency contacts immediately.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8))),
+            child: const Text('Send SOS',
+                style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _sosLoading = true);
+    try {
+      final result = await ApiService.sendSos(widget.rideId!);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(result.contactsNotified > 0
+            ? '🆘 SOS sent to ${result.contactsNotified} contact(s)'
+            : '🆘 SOS alert sent'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('SOS failed: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _sosLoading = false);
+    }
+  }
+
+  // ── Call driver ────────────────────────────────────────────────────────────
+
+  Future<void> _callDriver() async {
+    // Fetch masked phone on demand if not yet loaded
+    if (_driverPhone == null && widget.rideId != null) {
+      try {
+        final phone = await ApiService.getMaskedPhone(widget.rideId!);
+        if (mounted) setState(() => _driverPhone = phone);
+      } on ApiException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+        return;
+      }
+    }
+    final phone = _driverPhone;
+    if (phone == null || phone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Driver phone not available yet.'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+      return;
+    }
+    final uri = Uri.parse('tel:$phone');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Cannot dial $phone on this device.'),
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
+  }
+
   // ── Trip sharing ───────────────────────────────────────────────────────────
 
   Future<void> _shareTrip() async {
@@ -917,8 +1152,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     try {
       final result = await ApiService.shareTrip(widget.rideId!);
       if (!mounted) return;
-      setState(() { _shareUrl = result.shareUrl; _sharing = false; });
-      _showShareSheet(result.shareUrl);
+      final url = result.shareUrl.isNotEmpty ? result.shareUrl : null;
+      setState(() { _shareUrl = url; _sharing = false; });
+      if (url != null) {
+        _showShareSheet(url);
+      } else {
+        // Fallback: share driver location via coordinates if available
+        _shareLocationFallback();
+      }
     } on ApiException catch (e) {
       if (mounted) {
         setState(() => _sharing = false);
@@ -928,9 +1169,23 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           behavior: SnackBarBehavior.floating,
         ));
       }
-    } catch (_) {
-      if (mounted) setState(() => _sharing = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _sharing = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not generate share link: $e'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     }
+  }
+
+  void _shareLocationFallback() {
+    final pickup = _pickupPoint;
+    final text = 'I\'m on my way!\n'
+        'From: ${widget.from}\nTo: ${widget.to}\n'
+        'Track pickup: https://maps.google.com/?q=${pickup.latitude},${pickup.longitude}';
+    Share.share(text, subject: 'My AutoRide Trip');
   }
 
   Future<void> _stopSharing() async {
@@ -960,43 +1215,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     );
   }
 
-  void _showMoreSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-            ListTile(
-              leading: const Icon(Icons.cancel_outlined, color: Colors.red),
-              title: const Text('Cancel Ride',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
-              onTap: () {
-                Navigator.pop(context);
-                _cancelRide();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.report_outlined, color: _kTextSub),
-              title: const Text('Report an issue',
-                  style: TextStyle(color: _kTextMain)),
-              onTap: () => Navigator.pop(context),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 // ── Small widgets ─────────────────────────────────────────────────────────────
@@ -1033,6 +1251,8 @@ class _ActionBtn extends StatelessWidget {
   final VoidCallback onTap;
   final bool highlight;
   final bool loading;
+  final bool disabled;
+  final bool danger;
 
   const _ActionBtn({
     required this.icon,
@@ -1040,37 +1260,55 @@ class _ActionBtn extends StatelessWidget {
     required this.onTap,
     this.highlight = false,
     this.loading   = false,
+    this.disabled  = false,
+    this.danger    = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final Color activeColor = danger ? Colors.red : _kGreen;
+    final Color iconColor   = disabled
+        ? _kTextSub.withValues(alpha: 0.4)
+        : highlight || danger ? activeColor : activeColor;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       child: Column(children: [
         Container(
           width: 50, height: 50,
           decoration: BoxDecoration(
-            color: highlight
-                ? _kGreen.withValues(alpha: 0.18)
-                : _kGreen.withValues(alpha: 0.1),
+            color: disabled
+                ? Colors.grey.withValues(alpha: 0.08)
+                : highlight
+                    ? activeColor.withValues(alpha: 0.18)
+                    : activeColor.withValues(alpha: 0.1),
             shape: BoxShape.circle,
             border: highlight
-                ? Border.all(color: _kGreen, width: 1.5)
-                : null,
+                ? Border.all(color: activeColor, width: 1.5)
+                : danger
+                    ? Border.all(color: Colors.red.withValues(alpha: 0.4), width: 1)
+                    : null,
           ),
           child: loading
-              ? const Padding(
-                  padding: EdgeInsets.all(14),
+              ? Padding(
+                  padding: const EdgeInsets.all(14),
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: _kGreen))
-              : Icon(icon, color: _kGreen, size: 22),
+                      strokeWidth: 2, color: activeColor))
+              : Icon(icon, color: iconColor, size: 22),
         ),
         const SizedBox(height: 6),
         Text(label,
             style: TextStyle(
-              color: highlight ? _kGreen : _kTextSub,
+              color: disabled
+                  ? _kTextSub.withValues(alpha: 0.4)
+                  : highlight
+                      ? activeColor
+                      : danger
+                          ? Colors.red
+                          : _kTextSub,
               fontSize: 12,
-              fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
+              fontWeight:
+                  highlight || danger ? FontWeight.w600 : FontWeight.normal,
             )),
       ]),
     );

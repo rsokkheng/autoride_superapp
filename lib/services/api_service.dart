@@ -263,6 +263,16 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  // ── FCM device token ─────────────────────────────────────────────────────
+
+  static Future<void> saveFcmToken(String fcmToken) async {
+    final token = await getToken();
+    if (token == null) return;
+    try {
+      await _rawPost('/auth/fcm-token', {'fcm_token': fcmToken}, token: token);
+    } catch (_) {}
+  }
+
   // ── Logout ────────────────────────────────────────────────────────────────
 
   static Future<void> logout() async {
@@ -315,7 +325,8 @@ class ApiService {
     required String password,
     required String passwordConfirmation,
     String? phone,
-    String  role = 'passenger',
+    String  role       = 'passenger',
+    String? driverType,
   }) async {
     final payload = <String, dynamic>{
       'name':                  name,
@@ -323,7 +334,8 @@ class ApiService {
       'password':              password,
       'password_confirmation': passwordConfirmation,
       'role':                  role,
-      if (phone != null) 'phone': phone,
+      if (phone      != null) 'phone':       phone,
+      if (driverType != null) 'driver_type': driverType,
     };
     final raw  = await _rawPost('/auth/register', payload);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
@@ -424,7 +436,7 @@ class ApiService {
       if (lat != null) 'lat=$lat',
       if (lng != null) 'lng=$lng',
     ].join('&');
-    final path = '/surge/check${query.isNotEmpty ? '?$query' : ''}';
+    final path = '/surge/zones${query.isNotEmpty ? '?$query' : ''}';
     final raw  = await _rawGet(path, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
@@ -905,6 +917,7 @@ class ApiService {
     required double dropoffLng,
     String  serviceType    = 'standard',
     String  paymentMethod  = 'cash',
+    bool    surgeAccepted  = false,
     int?    vehicleId,
     String? scheduledAt,
     String? notes,
@@ -924,6 +937,7 @@ class ApiService {
       'dropoff_lng':     dropoffLng,
       'service_type':    serviceType,
       'payment_method':  paymentMethod,
+      'surge_accepted':  surgeAccepted,
       if (vehicleId      != null) 'vehicle_id':      vehicleId,
       if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
       if (notes          != null) 'notes':           notes,
@@ -2611,6 +2625,22 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
+  // ── Notifications ─────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getNotifications() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/notifications', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?)
+          ?? (body['notifications'] as List<dynamic>?)
+          ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
   // ── Saved Places ──────────────────────────────────────────────────────────
 
   static Future<List<SavedPlaceModel>> getSavedPlaces() async {
@@ -2932,6 +2962,110 @@ class ApiService {
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
+
+  // POST /rides/{id}/tip
+  static Future<int> tipDriver(int rideId, {required int amountKhr}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/rides/$rideId/tip', {'amount': amountKhr}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data = body['data'] as Map<String, dynamic>? ?? {};
+      return data['tip_amount'] as int? ?? amountKhr;
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to send tip.', raw.statusCode);
+  }
+
+  // POST /wallet/transfer
+  static Future<WalletTransferResult> walletTransfer({
+    required String phone,
+    required int amountKhr,
+    String? note,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final payload = <String, dynamic>{'phone': phone, 'amount': amountKhr};
+    if (note != null && note.isNotEmpty) payload['note'] = note;
+    final raw  = await _rawPost('/wallet/transfer', payload, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return WalletTransferResult.fromJson(body['data'] as Map<String, dynamic>? ?? {});
+    }
+    throw ApiException(body['message'] as String? ?? 'Transfer failed.', raw.statusCode);
+  }
+
+  // GET /charging-stations?lat=&lng=
+  static Future<List<ChargingStationModel>> getChargingStations({
+    double? lat,
+    double? lng,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final params = <String, String>{};
+    if (lat != null) params['lat'] = lat.toString();
+    if (lng != null) params['lng'] = lng.toString();
+    final query = params.isEmpty ? '' : '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    final raw  = await _rawGet('/charging-stations$query', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data    = body['data'] as Map<String, dynamic>? ?? {};
+      final list    = data['charging_stations'] as List<dynamic>? ?? [];
+      return list.whereType<Map<String, dynamic>>().map(ChargingStationModel.fromJson).toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load stations.', raw.statusCode);
+  }
+}
+
+// ── Wallet transfer result ────────────────────────────────────────────────────
+
+class WalletTransferResult {
+  final String message;
+  final int    balance;
+  final String recipientName;
+  final String recipientPhone;
+  const WalletTransferResult({
+    required this.message,
+    required this.balance,
+    required this.recipientName,
+    required this.recipientPhone,
+  });
+  factory WalletTransferResult.fromJson(Map<String, dynamic> j) {
+    final recipient = j['recipient'] as Map<String, dynamic>? ?? {};
+    return WalletTransferResult(
+      message:       j['message']       as String? ?? 'Transferred.',
+      balance:       j['balance']       as int?    ?? 0,
+      recipientName: recipient['name']  as String? ?? '',
+      recipientPhone: recipient['phone'] as String? ?? '',
+    );
+  }
+}
+
+// ── Charging station model ────────────────────────────────────────────────────
+
+class ChargingStationModel {
+  final int     id;
+  final String  name;
+  final String  address;
+  final double  lat;
+  final double  lng;
+  final double? distanceKm;
+  const ChargingStationModel({
+    required this.id,
+    required this.name,
+    required this.address,
+    required this.lat,
+    required this.lng,
+    this.distanceKm,
+  });
+  factory ChargingStationModel.fromJson(Map<String, dynamic> j) => ChargingStationModel(
+    id:         j['id']          as int,
+    name:       j['name']        as String? ?? '',
+    address:    j['address']     as String? ?? '',
+    lat:        (j['lat']  as num).toDouble(),
+    lng:        (j['lng']  as num).toDouble(),
+    distanceKm: j['distance_km'] != null
+        ? (j['distance_km'] as num).toDouble() : null,
+  );
 }
 
 // ── Safety models ─────────────────────────────────────────────────────────────
@@ -3303,6 +3437,7 @@ class SurgeInfo {
 class PublicTripModel {
   final int     rideId;
   final String  status;
+  final bool    isLive;
   final String  pickupAddress;
   final String  dropoffAddress;
   final double  pickupLat;
@@ -3311,6 +3446,7 @@ class PublicTripModel {
   final double  dropoffLng;
   final double? driverLat;
   final double? driverLng;
+  final bool    locationUpdated;   // false = driver GPS not yet received
   final String  driverName;
   final String  vehicleType;
   final String  plate;
@@ -3319,6 +3455,7 @@ class PublicTripModel {
   const PublicTripModel({
     required this.rideId,
     required this.status,
+    required this.isLive,
     required this.pickupAddress,
     required this.dropoffAddress,
     required this.pickupLat,
@@ -3327,6 +3464,7 @@ class PublicTripModel {
     required this.dropoffLng,
     this.driverLat,
     this.driverLng,
+    required this.locationUpdated,
     required this.driverName,
     required this.vehicleType,
     required this.plate,
@@ -3334,22 +3472,35 @@ class PublicTripModel {
   });
 
   factory PublicTripModel.fromJson(Map<String, dynamic> j) {
-    final driver = j['driver'] as Map<String, dynamic>? ?? {};
+    final driver  = j['driver']  as Map<String, dynamic>? ?? {};
+    final vehicle = driver['vehicle'] as Map<String, dynamic>? ?? {};
+
+    // Backend guarantees lat/lng are null when location_updated == false
+    final locationUpdated = driver['location_updated'] as bool? ?? false;
+    final driverLat = locationUpdated && driver['lat'] != null
+        ? (driver['lat'] as num).toDouble() : null;
+    final driverLng = locationUpdated && driver['lng'] != null
+        ? (driver['lng'] as num).toDouble() : null;
+
     return PublicTripModel(
-      rideId:         j['ride_id']         as int?    ?? j['id'] as int? ?? 0,
-      status:         j['status']          as String? ?? '',
-      pickupAddress:  j['pickup_address']  as String? ?? '',
-      dropoffAddress: j['dropoff_address'] as String? ?? '',
-      pickupLat:      (j['pickup_lat']  as num? ?? 0).toDouble(),
-      pickupLng:      (j['pickup_lng']  as num? ?? 0).toDouble(),
-      dropoffLat:     (j['dropoff_lat'] as num? ?? 0).toDouble(),
-      dropoffLng:     (j['dropoff_lng'] as num? ?? 0).toDouble(),
-      driverLat:      driver['lat']  != null ? (driver['lat']  as num).toDouble() : null,
-      driverLng:      driver['lng']  != null ? (driver['lng']  as num).toDouble() : null,
-      driverName:     driver['name'] as String? ?? '',
-      vehicleType:    driver['vehicle_type'] as String? ?? 'motorbike',
-      plate:          driver['plate']        as String? ?? '',
-      etaMinutes:     j['eta_minutes']       as int?,
+      rideId:          j['ride_id']        as int?    ?? j['id'] as int? ?? 0,
+      status:          j['status']         as String? ?? '',
+      isLive:          j['is_live']        as bool?   ?? false,
+      pickupAddress:   j['pickup_address'] as String? ?? '',
+      dropoffAddress:  j['dropoff_address'] as String? ?? '',
+      pickupLat:       (j['pickup_lat']  as num? ?? 0).toDouble(),
+      pickupLng:       (j['pickup_lng']  as num? ?? 0).toDouble(),
+      dropoffLat:      (j['dropoff_lat'] as num? ?? 0).toDouble(),
+      dropoffLng:      (j['dropoff_lng'] as num? ?? 0).toDouble(),
+      driverLat:       driverLat,
+      driverLng:       driverLng,
+      locationUpdated: locationUpdated,
+      driverName:      driver['name']  as String? ?? '',
+      vehicleType:     driver['vehicle_type'] as String?
+                       ?? vehicle['type']     as String? ?? '',
+      plate:           vehicle['plate']        as String?
+                       ?? vehicle['license_plate'] as String? ?? '',
+      etaMinutes:      j['eta_minutes'] as int?,
     );
   }
 }

@@ -87,6 +87,152 @@ class _WalletScreenState extends State<WalletScreen>
     }
   }
 
+  Future<void> _showTransferSheet(BuildContext context) async {
+    final phoneCtrl  = TextEditingController();
+    final amountCtrl = TextEditingController();
+    final noteCtrl   = TextEditingController();
+    bool sending = false;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(
+              24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+            )),
+            const SizedBox(height: 16),
+            const Text('Send Money',
+                style: TextStyle(color: AppTheme.textPrimary,
+                    fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 16),
+            TextField(
+              controller: phoneCtrl,
+              keyboardType: TextInputType.phone,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: "Recipient's phone number",
+                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                filled: true, fillColor: AppTheme.cardBg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                prefixIcon: const Icon(Icons.phone_outlined,
+                    color: AppTheme.textSecondary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: amountCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Amount (KHR, min 1,000)',
+                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                filled: true, fillColor: AppTheme.cardBg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                prefixIcon: const Icon(Icons.account_balance_wallet_outlined,
+                    color: AppTheme.textSecondary),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteCtrl,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'Note (optional)',
+                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                filled: true, fillColor: AppTheme.cardBg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                prefixIcon: const Icon(Icons.notes_outlined,
+                    color: AppTheme.textSecondary),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: sending ? null : () async {
+                  final phone  = phoneCtrl.text.trim();
+                  final amount = int.tryParse(amountCtrl.text.trim().replaceAll(',', ''));
+                  if (phone.isEmpty) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                      content: Text('Enter recipient phone number.'),
+                      behavior: SnackBarBehavior.floating));
+                    return;
+                  }
+                  if (amount == null || amount < 1000) {
+                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                      content: Text('Minimum transfer amount is 1,000 KHR.'),
+                      behavior: SnackBarBehavior.floating));
+                    return;
+                  }
+                  setSheet(() => sending = true);
+                  try {
+                    final result = await ApiService.walletTransfer(
+                        phone: phone,
+                        amountKhr: amount,
+                        note: noteCtrl.text.trim().isEmpty
+                            ? null : noteCtrl.text.trim());
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content: Text(result.message),
+                      backgroundColor: AppTheme.success,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                    _loadAll();
+                  } on ApiException catch (e) {
+                    if (!ctx.mounted) return;
+                    setSheet(() => sending = false);
+                    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                      content: Text(e.message),
+                      backgroundColor: Colors.red,
+                      behavior: SnackBarBehavior.floating,
+                    ));
+                  } catch (_) {
+                    if (ctx.mounted) setSheet(() => sending = false);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accent,
+                  foregroundColor: AppTheme.primary,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  elevation: 0,
+                ),
+                child: sending
+                    ? const SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2.5))
+                    : const Text('Send',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+
+    phoneCtrl.dispose();
+    amountCtrl.dispose();
+    noteCtrl.dispose();
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -129,6 +275,7 @@ class _WalletScreenState extends State<WalletScreen>
             onRefresh:      _loadAll,
             onLoadMore:     () => _loadTransactions(reset: false),
             onRetryTx:      () => _loadTransactions(reset: true),
+            onSend:         () => _showTransferSheet(context),
           ),
           _TopUpTab(
             balance:       _wallet?.balance ?? 0,
@@ -156,6 +303,7 @@ class _WalletTab extends StatelessWidget {
   final Future<void> Function() onRefresh;
   final VoidCallback onLoadMore;
   final VoidCallback onRetryTx;
+  final VoidCallback onSend;
 
   const _WalletTab({
     required this.wallet,
@@ -170,6 +318,7 @@ class _WalletTab extends StatelessWidget {
     required this.onRefresh,
     required this.onLoadMore,
     required this.onRetryTx,
+    required this.onSend,
   });
 
   @override
@@ -257,7 +406,7 @@ class _WalletTab extends StatelessWidget {
                       icon: Icons.add, label: 'Top Up', onTap: () {}),
                   const SizedBox(width: 16),
                   _WalletAction(
-                      icon: Icons.send, label: 'Send', onTap: () {}),
+                      icon: Icons.send, label: 'Send', onTap: onSend),
                   const SizedBox(width: 16),
                   _WalletAction(
                       icon: Icons.history, label: 'History', onTap: () {}),
