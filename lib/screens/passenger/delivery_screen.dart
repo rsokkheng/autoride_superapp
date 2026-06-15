@@ -5,7 +5,9 @@ import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/api_service.dart';
+import '../../models/delivery_model.dart' show MovingEstimateModel;
 import '../../services/maps_service.dart';
+import 'delivery_tracking_screen.dart';
 
 const _kPickerSW     = LatLng(10.4, 102.3);
 const _kPickerNE     = LatLng(14.7, 107.6);
@@ -67,6 +69,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   LatLng? _moveFromLatLng;
   LatLng? _moveToLatLng;
 
+  // ── Moving fare estimate (from API) ─────────────────────────────────────
+  MovingEstimateModel? _movingEstimate;
+  bool    _estimateLoading = false;
+
   // ── Shared ───────────────────────────────────────────────────────────────
   bool    _submitting = false;
   String? _error;
@@ -98,9 +104,35 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       setState(() => _error = 'Pickup and delivery address are required.');
       return;
     }
+
+    // ── Confirmation dialog ──────────────────────────────────────────────
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _DeliveryConfirmDialog(
+        pickupAddress:  pickup,
+        dropoffAddress: dropoff,
+        senderName:     _senderNameCtrl.text.trim().isEmpty    ? null : _senderNameCtrl.text.trim(),
+        senderPhone:    _senderPhoneCtrl.text.trim().isEmpty   ? null : _senderPhoneCtrl.text.trim(),
+        recipientName:  _recipientNameCtrl.text.trim().isEmpty ? null : _recipientNameCtrl.text.trim(),
+        recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty? null : _recipientPhoneCtrl.text.trim(),
+        packageDetails: _packageDetailsCtrl.text.trim().isEmpty
+            ? 'No description'
+            : _packageDetailsCtrl.text.trim(),
+        packageSize:    _packageSize,
+        serviceOption:  _deliveryServiceOption,
+        paymentBy:      _paymentBy,
+        paymentMethod:  _paymentMethod,
+        fee:            int.tryParse(_feeCtrl.text.trim()),
+        scheduledAt:    _isScheduled ? _scheduledTime : null,
+        notes:          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() { _submitting = true; _error = null; });
     try {
-      await ApiService.createDelivery(
+      final created = await ApiService.createDelivery(
         pickupAddress:  pickup,
         dropoffAddress: dropoff,
         packageDetails: _packageDetailsCtrl.text.trim().isEmpty
@@ -119,8 +151,20 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         scheduledAt:    _isScheduled ? _formatDateTime(_scheduledTime) : null,
       );
       if (!mounted) return;
-      _showSuccess('Delivery created successfully!');
-      Navigator.pop(context);
+      final recipientName = _recipientNameCtrl.text.trim();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DeliveryTrackingScreen(
+            deliveryId:    created.id,
+            from:          pickup,
+            to:            dropoff,
+            fareDisplay:   AppTheme.khr(created.fee),
+            serviceType:   'delivery',
+            recipientName: recipientName.isEmpty ? 'Recipient' : recipientName,
+          ),
+        ),
+      );
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
@@ -139,25 +183,70 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       setState(() => _error = 'From and To addresses are required.');
       return;
     }
+
+    // ── Confirmation dialog ──────────────────────────────────────────────
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _MovingConfirmDialog(
+        from:           from,
+        to:             to,
+        floorPickup:    _floorPickup,
+        floorDropoff:   _floorDropoff,
+        hasElevator:    _hasElevator,
+        requiresHelpers: _requiresHelpers,
+        heavyItems:     _heavyItems,
+        serviceOption:  _movingServiceOption,
+        paymentMethod:  _movePaymentMethod,
+        estimate:       _movingEstimate,
+        scheduledAt:    _isMoveScheduled ? _moveDate : null,
+        notes:          _moveNotesCtrl.text.trim().isEmpty
+                            ? null
+                            : _moveNotesCtrl.text.trim(),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
     setState(() { _submitting = true; _error = null; });
     try {
-      await ApiService.createMoving(
+      final createdMoving = await ApiService.createMoving(
         pickupAddress:    from,
         dropoffAddress:   to,
+        pickupLat:        _moveFromLatLng?.latitude,
+        pickupLng:        _moveFromLatLng?.longitude,
+        dropoffLat:       _moveToLatLng?.latitude,
+        dropoffLng:       _moveToLatLng?.longitude,
         floorPickup:      _floorPickup,
         floorDropoff:     _floorDropoff,
         hasElevator:      _hasElevator,
         needsStairsCarry: _needsStairsCarry,
         heavyItems:       _heavyItems,
         requiresHelpers:  _requiresHelpers,
+        helperType:       _heavyItems ? 'heavy_carry' : 'normal_carry',
         serviceOption:    _movingServiceOption,
         paymentMethod:    _movePaymentMethod,
-        notes:            _moveNotesCtrl.text.trim().isEmpty ? null : _moveNotesCtrl.text.trim(),
+        fee:              _movingEstimate?.total,
+        notes:            _moveNotesCtrl.text.trim().isEmpty
+                              ? null
+                              : _moveNotesCtrl.text.trim(),
         scheduledAt:      _isMoveScheduled ? _formatDateTime(_moveDate) : null,
       );
       if (!mounted) return;
-      _showSuccess('Moving scheduled successfully!');
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DeliveryTrackingScreen(
+            deliveryId:    createdMoving.id,
+            from:          from,
+            to:            to,
+            fareDisplay:   _movingEstimate != null
+                ? AppTheme.khr(_movingEstimate!.total)
+                : AppTheme.khr(createdMoving.fee),
+            serviceType:   'moving',
+            recipientName: 'Moving crew',
+          ),
+        ),
+      );
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
@@ -167,29 +256,41 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     }
   }
 
-  // ── Moving pricing preview (client-side estimate in USD) ──────────────────
+  // ── Moving fare estimate (real API) ──────────────────────────────────────
 
-  static const _kHelperFeeNormal = 5.0;
-  static const _kBaseFeeMoving   = 15.0;
+  Future<void> _fetchMovingEstimate() async {
+    final from = _moveFromLatLng;
+    final to   = _moveToLatLng;
+    if (from == null || to == null) return;
 
-  double get _floorFee {
-    final maxFloor = _floorPickup > _floorDropoff ? _floorPickup : _floorDropoff;
-    double fee;
-    if (maxFloor <= 1) {
-      fee = 0;
-    } else if (maxFloor <= 3) {
-      fee = 2 + (maxFloor - 1) * 1.5;
-    } else {
-      fee = 5 + (maxFloor - 3) * 1.5;
+    setState(() { _estimateLoading = true; });
+    try {
+      final est = await ApiService.estimateMoving(
+        pickupLat:      from.latitude,
+        pickupLng:      from.longitude,
+        dropoffLat:     to.latitude,
+        dropoffLng:     to.longitude,
+        floorPickup:    _floorPickup,
+        floorDropoff:   _floorDropoff,
+        hasElevator:    _hasElevator,
+        requiresHelpers: _requiresHelpers,
+        helperType:     _heavyItems ? 'heavy_carry' : 'normal_carry',
+        serviceOption:  _movingServiceOption,
+      );
+      if (!mounted) return;
+      setState(() { _movingEstimate = est; _estimateLoading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() { _estimateLoading = false; });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Could not fetch estimate: ${e is ApiException ? e.message : e.toString()}'),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
+      }
     }
-    return _hasElevator ? fee : fee * 1.5;
   }
-
-  double get _helperFee => _requiresHelpers * _kHelperFeeNormal;
-
-  double get _packingFee => _packingService ? 10.0 : 0.0;
-
-  double get _totalEstimate => _kBaseFeeMoving + _floorFee + _helperFee + _packingFee;
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -525,12 +626,18 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       const SizedBox(height: 14),
       _AddressWithMap(
         hint: 'Moving from (full address)', icon: Icons.location_on_outlined, controller: _moveFromCtrl,
-        onMapTap: () => _openLocationPicker(_moveFromCtrl, _moveFromLatLng, (ll) => _moveFromLatLng = ll),
+        onMapTap: () => _openLocationPicker(_moveFromCtrl, _moveFromLatLng, (ll) {
+          _moveFromLatLng = ll;
+          _fetchMovingEstimate();
+        }),
       ),
       const SizedBox(height: 10),
       _AddressWithMap(
         hint: 'Moving to (full address)', icon: Icons.location_on, controller: _moveToCtrl,
-        onMapTap: () => _openLocationPicker(_moveToCtrl, _moveToLatLng, (ll) => _moveToLatLng = ll),
+        onMapTap: () => _openLocationPicker(_moveToCtrl, _moveToLatLng, (ll) {
+          _moveToLatLng = ll;
+          _fetchMovingEstimate();
+        }),
       ),
       const SizedBox(height: 20),
 
@@ -555,7 +662,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           _DropItem(value: 'normal',  label: 'Normal',  subtitle: 'Standard moving service', icon: Icons.check_circle_outline),
           _DropItem(value: 'express', label: 'Express', subtitle: 'Priority moving service', icon: Icons.flash_on_outlined),
         ],
-        onChanged: (v) => setState(() => _movingServiceOption = v),
+        onChanged: (v) {
+          setState(() => _movingServiceOption = v);
+          _fetchMovingEstimate();
+        },
       ),
       const SizedBox(height: 12),
 
@@ -582,10 +692,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _FloorPicker(
         label: 'Pickup floor',
         value: _floorPickup,
-        onChanged: (v) => setState(() {
-          _floorPickup = v;
-          _needsStairsCarry = !_hasElevator && (_floorPickup > 1 || _floorDropoff > 1);
-        }),
+        onChanged: (v) {
+          setState(() {
+            _floorPickup = v;
+            _needsStairsCarry = !_hasElevator && (_floorPickup > 1 || _floorDropoff > 1);
+          });
+          _fetchMovingEstimate();
+        },
       ),
       const SizedBox(height: 10),
 
@@ -593,10 +706,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _FloorPicker(
         label: 'Dropoff floor',
         value: _floorDropoff,
-        onChanged: (v) => setState(() {
-          _floorDropoff = v;
-          _needsStairsCarry = !_hasElevator && (_floorPickup > 1 || _floorDropoff > 1);
-        }),
+        onChanged: (v) {
+          setState(() {
+            _floorDropoff = v;
+            _needsStairsCarry = !_hasElevator && (_floorPickup > 1 || _floorDropoff > 1);
+          });
+          _fetchMovingEstimate();
+        },
       ),
       const SizedBox(height: 14),
 
@@ -606,10 +722,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         subtitle: 'Building has a working elevator',
         icon: Icons.elevator_outlined,
         value: _hasElevator,
-        onChanged: (v) => setState(() {
-          _hasElevator = v;
-          _needsStairsCarry = !v && (_floorPickup > 1 || _floorDropoff > 1);
-        }),
+        onChanged: (v) {
+          setState(() {
+            _hasElevator = v;
+            _needsStairsCarry = !v && (_floorPickup > 1 || _floorDropoff > 1);
+          });
+          _fetchMovingEstimate();
+        },
       ),
       const SizedBox(height: 10),
 
@@ -630,7 +749,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       // Helpers count
       _HelperCountRow(
         value: _requiresHelpers,
-        onChanged: (v) => setState(() => _requiresHelpers = v),
+        onChanged: (v) {
+          setState(() => _requiresHelpers = v);
+          _fetchMovingEstimate();
+        },
       ),
       const SizedBox(height: 14),
 
@@ -640,7 +762,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         subtitle: 'Fridge, sofa, bed, wardrobe',
         icon: Icons.chair_outlined,
         value: _heavyItems,
-        onChanged: (v) => setState(() => _heavyItems = v),
+        onChanged: (v) {
+          setState(() => _heavyItems = v);
+          _fetchMovingEstimate();
+        },
       ),
       const SizedBox(height: 10),
 
@@ -693,17 +818,41 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ],
       const SizedBox(height: 20),
 
-      // ── 💰 Price Estimate ─────────────────────────────────────────────────
-      _PriceBreakdown(
-        baseFee:    _kBaseFeeMoving,
-        floorFee:   _floorFee,
-        helperFee:  _helperFee,
-        packingFee: _packingFee,
-        total:      _totalEstimate,
-        hasElevator: _hasElevator,
-        floorPickup: _floorPickup,
-        floorDropoff: _floorDropoff,
-      ),
+      // ── 💰 Price Estimate (real API) ──────────────────────────────────────
+      if (_moveFromLatLng == null || _moveToLatLng == null)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
+          ),
+          child: const Row(children: [
+            Icon(Icons.receipt_long_outlined, color: AppTheme.textSecondary, size: 18),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text('Select pickup and dropoff locations to see fare estimate',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            ),
+          ]),
+        )
+      else if (_estimateLoading)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppTheme.cardBg,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            SizedBox(width: 18, height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent)),
+            SizedBox(width: 12),
+            Text('Calculating fare…',
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          ]),
+        )
+      else if (_movingEstimate != null)
+        _MovingFareBreakdown(estimate: _movingEstimate!),
       const SizedBox(height: 8),
     ]);
   }
@@ -884,30 +1033,14 @@ class _HelperCountRow extends StatelessWidget {
 
 // ── Price breakdown ───────────────────────────────────────────────────────────
 
-class _PriceBreakdown extends StatelessWidget {
-  final double baseFee, floorFee, helperFee, packingFee, total;
-  final bool hasElevator;
-  final int floorPickup, floorDropoff;
-  const _PriceBreakdown({
-    required this.baseFee,
-    required this.floorFee,
-    required this.helperFee,
-    required this.packingFee,
-    required this.total,
-    required this.hasElevator,
-    required this.floorPickup,
-    required this.floorDropoff,
-  });
+// ── Moving fare breakdown (from API) ─────────────────────────────────────────
 
-  String _fmt(double v) => v == 0 ? 'Free' : '\$${v.toStringAsFixed(0)}';
+class _MovingFareBreakdown extends StatelessWidget {
+  final MovingEstimateModel estimate;
+  const _MovingFareBreakdown({required this.estimate});
 
   @override
   Widget build(BuildContext context) {
-    final maxFloor = floorPickup > floorDropoff ? floorPickup : floorDropoff;
-    String floorNote = '';
-    if (maxFloor > 1) {
-      floorNote = !hasElevator ? ' (×1.5 no elevator)' : '';
-    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -919,32 +1052,33 @@ class _PriceBreakdown extends StatelessWidget {
         const Row(children: [
           Icon(Icons.receipt_long_outlined, color: AppTheme.accent, size: 18),
           SizedBox(width: 6),
-          Text('Estimated Price', style: TextStyle(
+          Text('Fare Estimate', style: TextStyle(
               color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
         ]),
         const SizedBox(height: 12),
-        _PriceRow(label: 'Base fee',    value: _fmt(baseFee)),
-        if (floorFee > 0)
-          _PriceRow(label: 'Floor carry fee$floorNote', value: _fmt(floorFee)),
-        if (helperFee > 0)
-          _PriceRow(label: 'Helper fee', value: _fmt(helperFee)),
-        if (packingFee > 0)
-          _PriceRow(label: 'Packing service', value: _fmt(packingFee)),
+        _PriceRow(label: 'Base fee',     value: AppTheme.khr(estimate.baseFee)),
+        if (estimate.distanceFee > 0)
+          _PriceRow(label: 'Distance fee', value: AppTheme.khr(estimate.distanceFee)),
+        if (estimate.helperFee > 0)
+          _PriceRow(label: 'Helper fee',   value: AppTheme.khr(estimate.helperFee)),
+        if (estimate.floorFee > 0)
+          _PriceRow(label: 'Floor fee',    value: AppTheme.khr(estimate.floorFee)),
         const Divider(height: 16, color: AppTheme.cardBg),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           const Text('Total estimate',
               style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-          Text('\$${total.toStringAsFixed(0)}',
+          Text(AppTheme.khr(estimate.total),
               style: const TextStyle(
                   color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 18)),
         ]),
         const SizedBox(height: 4),
-        const Text('Final price confirmed by driver',
+        const Text('Final price confirmed after booking',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
       ]),
     );
   }
 }
+
 
 class _PriceRow extends StatelessWidget {
   final String label, value;
@@ -1770,6 +1904,466 @@ class _DeliveryCrosshair extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// ── Delivery booking confirmation dialog ─────────────────────────────────────
+
+class _DeliveryConfirmDialog extends StatelessWidget {
+  final String  pickupAddress;
+  final String  dropoffAddress;
+  final String? senderName;
+  final String? senderPhone;
+  final String? recipientName;
+  final String? recipientPhone;
+  final String  packageDetails;
+  final String  packageSize;
+  final String  serviceOption;
+  final String  paymentBy;
+  final String  paymentMethod;
+  final int?    fee;
+  final DateTime? scheduledAt;
+  final String? notes;
+
+  const _DeliveryConfirmDialog({
+    required this.pickupAddress,
+    required this.dropoffAddress,
+    required this.packageDetails,
+    required this.packageSize,
+    required this.serviceOption,
+    required this.paymentBy,
+    required this.paymentMethod,
+    this.senderName,
+    this.senderPhone,
+    this.recipientName,
+    this.recipientPhone,
+    this.fee,
+    this.scheduledAt,
+    this.notes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String payLabel = {
+      'cash': 'Cash',
+      'wallet': 'Wallet',
+      'aba': 'ABA Pay',
+      'wing': 'Wing Money',
+      'other_online': 'Other Online',
+    }[paymentMethod] ?? paymentMethod;
+
+    final String sizeLabel = {
+      'small':  'Small',
+      'medium': 'Medium',
+      'large':  'Large',
+    }[packageSize] ?? packageSize;
+
+    return Dialog(
+      backgroundColor: AppTheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: const BoxDecoration(
+              color: Color(0xFF00C853),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: const Column(children: [
+              Icon(Icons.delivery_dining_outlined, color: Colors.white, size: 32),
+              SizedBox(height: 6),
+              Text('Confirm Delivery Booking',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800)),
+            ]),
+          ),
+
+          // ── Body ────────────────────────────────────────────────────────
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+                // Addresses
+                _ConfirmRow(
+                  icon: Icons.location_on_outlined,
+                  iconColor: const Color(0xFF00C853),
+                  label: 'Pickup',
+                  value: pickupAddress,
+                ),
+                const SizedBox(height: 8),
+                _ConfirmRow(
+                  icon: Icons.location_on,
+                  iconColor: AppTheme.danger,
+                  label: 'Dropoff',
+                  value: dropoffAddress,
+                ),
+
+                const Divider(height: 20, color: AppTheme.cardBg),
+
+                // Sender / recipient
+                if (senderName != null)
+                  _ConfirmRow(icon: Icons.person_outline, label: 'Sender', value: senderName!),
+                if (senderPhone != null) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(icon: Icons.phone_outlined, label: 'Sender Ph.', value: senderPhone!),
+                ],
+                if (recipientName != null) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(icon: Icons.person_outline, iconColor: AppTheme.accentOrange, label: 'Recipient', value: recipientName!),
+                ],
+                if (recipientPhone != null) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(icon: Icons.phone_outlined, iconColor: AppTheme.accentOrange, label: 'Recip. Ph.', value: recipientPhone!),
+                ],
+
+                const Divider(height: 20, color: AppTheme.cardBg),
+
+                // Package
+                _ConfirmRow(
+                  icon: Icons.inventory_2_outlined,
+                  label: 'Package',
+                  value: packageDetails,
+                ),
+                const SizedBox(height: 6),
+                _ConfirmRow(
+                  icon: Icons.straighten_outlined,
+                  label: 'Size',
+                  value: sizeLabel,
+                ),
+                const SizedBox(height: 6),
+                _ConfirmRow(
+                  icon: Icons.flash_on_outlined,
+                  label: 'Service',
+                  value: serviceOption == 'express' ? 'Express' : 'Normal',
+                ),
+                const SizedBox(height: 6),
+                _ConfirmRow(
+                  icon: Icons.payment_outlined,
+                  label: 'Payment',
+                  value: '$payLabel (paid by ${paymentBy == 'recipient' ? 'recipient' : 'sender'})',
+                ),
+                if (fee != null) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(
+                    icon: Icons.receipt_long_outlined,
+                    iconColor: AppTheme.accent,
+                    label: 'Fee',
+                    value: AppTheme.khr(fee!),
+                  ),
+                ],
+                if (scheduledAt != null) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(
+                    icon: Icons.schedule_outlined,
+                    iconColor: AppTheme.warning,
+                    label: 'Scheduled',
+                    value: '${scheduledAt!.day}/${scheduledAt!.month}/${scheduledAt!.year}'
+                        '  ${scheduledAt!.hour.toString().padLeft(2, '0')}:'
+                        '${scheduledAt!.minute.toString().padLeft(2, '0')}',
+                  ),
+                ],
+                if (notes != null && notes!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(
+                    icon: Icons.notes_outlined,
+                    label: 'Notes',
+                    value: notes!,
+                  ),
+                ],
+                const SizedBox(height: 20),
+              ]),
+            ),
+          ),
+
+          // ── Buttons ─────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Row(children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE53935),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('No, Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1976D2),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Yes, Send Now',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Moving booking confirmation dialog ───────────────────────────────────────
+
+class _MovingConfirmDialog extends StatelessWidget {
+  final String  from;
+  final String  to;
+  final int     floorPickup;
+  final int     floorDropoff;
+  final bool    hasElevator;
+  final int     requiresHelpers;
+  final bool    heavyItems;
+  final String  serviceOption;
+  final String  paymentMethod;
+  final MovingEstimateModel? estimate;
+  final DateTime? scheduledAt;
+  final String? notes;
+
+  const _MovingConfirmDialog({
+    required this.from,
+    required this.to,
+    required this.floorPickup,
+    required this.floorDropoff,
+    required this.hasElevator,
+    required this.requiresHelpers,
+    required this.heavyItems,
+    required this.serviceOption,
+    required this.paymentMethod,
+    required this.estimate,
+    this.scheduledAt,
+    this.notes,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final String payLabel = {
+      'cash': 'Cash',
+      'wallet': 'Wallet',
+      'aba': 'ABA Pay',
+      'wing': 'Wing Money',
+      'other_online': 'Other Online',
+    }[paymentMethod] ?? paymentMethod;
+
+    return Dialog(
+      backgroundColor: AppTheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Header ──────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            decoration: const BoxDecoration(
+              color: Color(0xFF00C853),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: const Column(children: [
+              Icon(Icons.local_shipping_outlined, color: Colors.white, size: 32),
+              SizedBox(height: 6),
+              Text('Confirm Moving Booking',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800)),
+            ]),
+          ),
+
+          // ── Body ────────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+              // Addresses
+              _ConfirmRow(
+                icon: Icons.location_on_outlined,
+                iconColor: const Color(0xFF00C853),
+                label: 'From',
+                value: from,
+              ),
+              const SizedBox(height: 8),
+              _ConfirmRow(
+                icon: Icons.location_on,
+                iconColor: AppTheme.danger,
+                label: 'To',
+                value: to,
+              ),
+
+              const Divider(height: 20, color: AppTheme.cardBg),
+
+              // Building & helpers
+              _ConfirmRow(
+                icon: Icons.apartment_outlined,
+                label: 'Floors',
+                value: 'Pickup: $floorPickup  •  Dropoff: $floorDropoff',
+              ),
+              const SizedBox(height: 6),
+              _ConfirmRow(
+                icon: hasElevator
+                    ? Icons.elevator_outlined
+                    : Icons.stairs_outlined,
+                label: 'Elevator',
+                value: hasElevator ? 'Yes' : 'No (stairs carry)',
+              ),
+              const SizedBox(height: 6),
+              _ConfirmRow(
+                icon: Icons.people_outline,
+                label: 'Helpers',
+                value: '$requiresHelpers helper${requiresHelpers != 1 ? 's' : ''}'
+                    ' (${heavyItems ? 'heavy carry' : 'normal carry'})',
+              ),
+              const SizedBox(height: 6),
+              _ConfirmRow(
+                icon: Icons.flash_on_outlined,
+                label: 'Service',
+                value: serviceOption == 'express' ? 'Express' : 'Normal',
+              ),
+              const SizedBox(height: 6),
+              _ConfirmRow(
+                icon: Icons.payment_outlined,
+                label: 'Payment',
+                value: payLabel,
+              ),
+              if (scheduledAt != null) ...[
+                const SizedBox(height: 6),
+                _ConfirmRow(
+                  icon: Icons.schedule_outlined,
+                  iconColor: AppTheme.warning,
+                  label: 'Scheduled',
+                  value: '${scheduledAt!.day}/${scheduledAt!.month}/${scheduledAt!.year}'
+                      '  ${scheduledAt!.hour.toString().padLeft(2,'0')}:'
+                      '${scheduledAt!.minute.toString().padLeft(2,'0')}',
+                ),
+              ],
+              if (notes != null && notes!.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                _ConfirmRow(
+                  icon: Icons.notes_outlined,
+                  label: 'Notes',
+                  value: notes!,
+                ),
+              ],
+
+              // Fare
+              if (estimate != null) ...[
+                const Divider(height: 20, color: AppTheme.cardBg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Estimated Fare',
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 13)),
+                    Text(AppTheme.khr(estimate!.total),
+                        style: const TextStyle(
+                            color: AppTheme.accent,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ],
+
+              const SizedBox(height: 20),
+            ]),
+          ),
+
+          // ── Buttons ─────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            child: Row(children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE53935),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('No, Cancel',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1976D2),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Yes, Book Now',
+                      style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ConfirmRow extends StatelessWidget {
+  final IconData icon;
+  final Color    iconColor;
+  final String   label;
+  final String   value;
+
+  const _ConfirmRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.iconColor = AppTheme.textSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Icon(icon, color: iconColor, size: 16),
+      const SizedBox(width: 8),
+      SizedBox(
+        width: 68,
+        child: Text('$label:',
+            style: const TextStyle(
+                color: AppTheme.textSecondary, fontSize: 12)),
+      ),
+      Expanded(
+        child: Text(value,
+            style: const TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
+      ),
+    ]);
   }
 }
 

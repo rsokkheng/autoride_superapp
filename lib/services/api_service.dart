@@ -1270,8 +1270,10 @@ class ApiService {
     }
 
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      final data = (body['data'] as Map<String, dynamic>?) ?? body;
-      return DeliveryModel.fromJson(data['delivery'] as Map<String, dynamic>);
+      final data    = (body['data'] as Map<String, dynamic>?) ?? body;
+      final payload = (data['delivery'] ?? data['moving'] ?? data) as Map<String, dynamic>?;
+      if (payload == null) throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+      return DeliveryModel.fromJson(payload);
     }
 
     final message = body['message'] as String? ??
@@ -1442,7 +1444,9 @@ class ApiService {
       if (notes          != null) 'notes':           notes,
     };
 
+    AppLog.d('Delivery', 'POST /deliveries body: ${jsonEncode(body)}');
     final raw = await _rawPost('/deliveries', body, token: token);
+    AppLog.d('Delivery', 'POST /deliveries → ${raw.statusCode}: ${raw.body}');
     return _parseDeliveryResponse(raw);
   }
 
@@ -1451,24 +1455,29 @@ class ApiService {
   static Future<DeliveryModel> createMoving({
     required String pickupAddress,
     required String dropoffAddress,
+    double? pickupLat,
+    double? pickupLng,
+    double? dropoffLat,
+    double? dropoffLng,
     required int    floorPickup,
     required int    floorDropoff,
     required bool   hasElevator,
     required bool   needsStairsCarry,
     required bool   heavyItems,
-    required int    requiresHelpers,   // 1–4
-    String  serviceOption  = 'normal',       // 'normal' | 'express'
-    String  helperType     = 'normal_carry', // 'normal_carry' | 'heavy_carry'
-    String  paymentMethod  = 'cash',         // 'cash' | 'wallet' | 'aba' | 'wing' | 'other_online'
-    String  paymentModel   = 'customer_pays', // 'customer_pays'|'partner_pays'|'split_payment'|'sponsored'
-    String? packageDetails,
+    required int    requiresHelpers,
+    String  serviceOption = 'normal',        // 'normal' | 'express'
+    String  helperType    = 'normal_carry',  // 'normal_carry' | 'heavy_carry'
+    String  paymentMethod = 'cash',
+    String  paymentModel  = 'customer_pays',
     String? notes,
     String? scheduledAt,
+    int?    fee,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
     final body = <String, dynamic>{
+      'service_type':       'moving',
       'pickup_address':     pickupAddress,
       'dropoff_address':    dropoffAddress,
       'payment_method':     paymentMethod,
@@ -1481,63 +1490,65 @@ class ApiService {
       'requires_helpers':   requiresHelpers,
       'helper_type':        helperType,
       'service_option':     serviceOption,
-      if (packageDetails != null) 'package_details': packageDetails,
-      if (notes          != null) 'notes':           notes,
-      if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
+      if (pickupLat   != null) 'pickup_lat':    pickupLat,
+      if (pickupLng   != null) 'pickup_lng':    pickupLng,
+      if (dropoffLat  != null) 'dropoff_lat':   dropoffLat,
+      if (dropoffLng  != null) 'dropoff_lng':   dropoffLng,
+      if (notes       != null) 'notes':         notes,
+      if (scheduledAt != null) 'scheduled_at':  scheduledAt,
+      if (fee         != null) 'fee':           fee,
     };
 
+    AppLog.d('Moving', 'POST /movings body: ${jsonEncode(body)}');
     final raw = await _rawPost('/movings', body, token: token);
+    AppLog.d('Moving', 'POST /movings → ${raw.statusCode}: ${raw.body}');
     return _parseDeliveryResponse(raw);
   }
 
   // ── Estimate moving order ──────────────────────────────────────────────────
 
-  static Future<DeliveryEstimateModel> estimateMoving({
+  static Future<MovingEstimateModel> estimateMoving({
     required double pickupLat,
     required double pickupLng,
     required double dropoffLat,
     required double dropoffLng,
-    required int floorPickup,
-    required int floorDropoff,
-    required bool hasElevator,
-    required bool heavyItems,
-    required int requiresHelpers,
-    String serviceOption = 'normal',
-    String helperType = 'normal_carry', // 'normal_carry' | 'heavy_carry'
+    required int    floorPickup,
+    required int    floorDropoff,
+    required bool   hasElevator,
+    required int    requiresHelpers,
+    String serviceOption = 'normal',       // 'normal' | 'express'
+    String helperType    = 'normal_carry', // 'normal_carry' | 'heavy_carry'
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
     final body = <String, dynamic>{
-      'service_type': 'moving',
-      'service_option': serviceOption,
-      'pickup_lat': pickupLat,
-      'pickup_lng': pickupLng,
-      'dropoff_lat': dropoffLat,
-      'dropoff_lng': dropoffLng,
-      'floor_pickup': floorPickup,
-      'floor_dropoff': floorDropoff,
-      'has_elevator': hasElevator,
-      'heavy_items': heavyItems,
+      'pickup_lat':       pickupLat,
+      'pickup_lng':       pickupLng,
+      'dropoff_lat':      dropoffLat,
+      'dropoff_lng':      dropoffLng,
+      'service_option':   serviceOption,
+      'floor_pickup':     floorPickup,
+      'floor_dropoff':    floorDropoff,
+      'has_elevator':     hasElevator,
       'requires_helpers': requiresHelpers,
-      'helper_type': helperType,
+      'helper_type':      helperType,
     };
 
-    final raw = await _rawPost(
-      '/movings/estimate',
-      body,
-      token: token,
-    );
+    AppLog.d('Moving', 'POST /movings/estimate body: ${jsonEncode(body)}');
+    final raw = await _rawPost('/movings/estimate', body, token: token);
+    AppLog.d('Moving', 'POST /movings/estimate → ${raw.statusCode}: ${raw.body}');
 
     final Map<String, dynamic> responseBody;
     try {
       responseBody = jsonDecode(raw.body) as Map<String, dynamic>;
     } catch (_) {
-      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+      throw ApiException(
+          'Unexpected server response (${raw.statusCode}).', raw.statusCode);
     }
 
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return DeliveryEstimateModel.fromJson(responseBody);
+      return MovingEstimateModel.fromJson(responseBody);
     }
 
     final message = responseBody['message'] as String? ??

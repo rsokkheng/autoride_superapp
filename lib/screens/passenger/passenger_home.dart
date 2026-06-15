@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
@@ -61,14 +62,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
                     label: AppLocalizations.of(context).bookRide,
                     index: 1,
                     current: _tab,
-                    onTap: (i) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const RideBookingScreen(),
-                        ),
-                      );
-                    },
+                    onTap: (i) => setState(() => _tab = i),
                   ),
                 _NavItem(icon: Icons.ev_station_outlined, label: AppLocalizations.of(context).charging, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i)),
                 _NavItem(icon: Icons.chat_bubble_outline, label: AppLocalizations.of(context).chat, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i)),
@@ -182,10 +176,23 @@ class _HomeTabState extends State<_HomeTab> {
     if (ride == null) return;
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => TripTrackingScreen(
-        rideId: ride.id,
-        from:   ride.pickupAddress,
-        to:     ride.dropoffAddress,
-        fare:   AppTheme.khr(ride.fareKhr),
+        rideId:       ride.id,
+        driverId:     ride.driverId?.toString() ?? '',
+        driverName:   ride.driver?.name ?? 'Finding driver...',
+        vehicle:      ride.vehicle != null
+            ? '${ride.vehicle!.make} ${ride.vehicle!.model} ${ride.vehicle!.year}'
+            : '--',
+        vehicleType:  ride.vehicle?.type ?? 'motorbike',
+        plate:        ride.vehicle?.licensePlate ?? '--',
+        from:         ride.pickupAddress,
+        to:           ride.dropoffAddress,
+        fare:         AppTheme.khr(ride.fareKhr),
+        pickupLatLng: ride.pickupLat != null && ride.pickupLng != null
+            ? LatLng(ride.pickupLat!, ride.pickupLng!)
+            : null,
+        destLatLng:   ride.dropoffLat != null && ride.dropoffLng != null
+            ? LatLng(ride.dropoffLat!, ride.dropoffLng!)
+            : null,
       ),
     ));
   }

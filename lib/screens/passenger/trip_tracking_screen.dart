@@ -94,6 +94,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   bool _cancelling = false;
 
+  // ETA live countdown
+  Timer?  _etaCountdownTimer;
+  int     _etaSecondsLeft = 0;
+
   // Trip sharing state
   String? _shareUrl;
   bool    _sharing = false;
@@ -309,6 +313,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     setState(() {
       _etaMinutes = result.etaMinutes;
       _distanceKm = result.distanceKm;
+      _resetEtaCountdown(_etaMinutes);
       // Replace only the live-route polyline; keep the full static route
       _polylines
         ..removeWhere((p) => p.polylineId.value == 'live_route')
@@ -347,42 +352,19 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       return;
     }
 
-    // Confirmation dialog — warn about fee when driver has arrived
-    final confirmed = await showDialog<bool>(
+    // Step 1: Pick a reason
+    final reason = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel Ride?',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-        content: Text(_hasCancellationFee
-            ? 'Your driver has already arrived.\n\nA cancellation fee of 2,000 ៛ will be charged.'
-            : 'Are you sure you want to cancel this ride?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Keep Ride')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text(_hasCancellationFee
-                ? 'Cancel (2,000 ៛ fee)' : 'Cancel Ride',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-          ),
-        ],
+      builder: (ctx) => _CancelReasonDialog(
+        hasFee: _hasCancellationFee,
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (reason == null || !mounted) return;
 
     setState(() => _cancelling = true);
     try {
       await ApiService.cancelRideWithReason(widget.rideId!,
-          reason: 'Changed my mind');
+          reason: reason);
       if (!mounted) return;
       _disposeMapAndPop();
     } on ApiException catch (e) {
@@ -491,9 +473,30 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     }
   }
 
+  void _resetEtaCountdown(int etaMinutes) {
+    _etaCountdownTimer?.cancel();
+    _etaSecondsLeft = etaMinutes * 60;
+    _etaCountdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {
+        if (_etaSecondsLeft > 0) _etaSecondsLeft--;
+      });
+    });
+  }
+
+  String get _etaCountdownText {
+    if (_etaSecondsLeft <= 0) return 'Arriving now';
+    final m = _etaSecondsLeft ~/ 60;
+    final s = _etaSecondsLeft % 60;
+    return m > 0
+        ? '$m min ${s.toString().padLeft(2, '0')} sec'
+        : '${s.toString().padLeft(2, '0')} sec';
+  }
+
   @override
   void dispose() {
     _ridePollTimer?.cancel();
+    _etaCountdownTimer?.cancel();
     _trackingSub?.cancel();
     _firestoreSub?.cancel();
     _rideStatusSub?.cancel();
@@ -554,10 +557,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   bool get _driverAssigned => _currentDriverId.isNotEmpty;
 
   bool get _isArrived =>
-      _driverAssigned && _lastUpdate?.status == TripStatus.arrived;
+      _driverAssigned &&
+      (_lastUpdate?.status == TripStatus.arrived ||
+       _rideStatus == 'driver_arrived');
 
   String get _statusTitle {
     if (!_driverAssigned) return 'Finding your driver...';
+    if (_rideStatus == 'driver_arrived') return 'Driver has arrived!';
+    if (_rideStatus == 'in_progress')    return 'Trip in progress';
     switch (_lastUpdate?.status) {
       case TripStatus.pickingUp:   return 'Your driver is on the way';
       case TripStatus.inProgress:  return 'Trip in progress';
@@ -764,11 +771,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                             children: [
                               const TextSpan(text: 'Arriving in '),
                               TextSpan(
-                                  text: '$eta min',
+                                  text: _isArrived ? 'Now' : _etaCountdownText,
                                   style: const TextStyle(
                                       color: _kGreen,
-                                      fontWeight: FontWeight.w600)),
-                              TextSpan(text: ' ($dist km)'),
+                                      fontWeight: FontWeight.w700)),
+                              if (!_isArrived)
+                                TextSpan(text: ' · $dist km'),
                             ],
                           ),
                         )
@@ -1039,6 +1047,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // Sharing only valid while ride is active (not yet completed/cancelled)
   bool get _canShare =>
       _driverAssigned &&
+      _rideStatus != 'completed' &&
+      _rideStatus != 'cancelled' &&
       _lastUpdate?.status != null &&
       _lastUpdate!.status != TripStatus.searching;
 
@@ -1515,6 +1525,89 @@ class _TripShareSheet extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── Cancel Reason Dialog ─────────────────────────────────────────────────────
+
+class _CancelReasonDialog extends StatefulWidget {
+  final bool hasFee;
+  const _CancelReasonDialog({required this.hasFee});
+
+  @override
+  State<_CancelReasonDialog> createState() => _CancelReasonDialogState();
+}
+
+class _CancelReasonDialogState extends State<_CancelReasonDialog> {
+  static const _reasons = [
+    'Changed my mind',
+    'Driver is taking too long',
+    'Wrong pickup location',
+    'Found another ride',
+    'Emergency came up',
+    'Other',
+  ];
+
+  String? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      titlePadding: EdgeInsets.zero,
+      title: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+        decoration: const BoxDecoration(
+          color: _kGreen,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Cancel Ride',
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(
+            widget.hasFee
+                ? 'Driver has arrived — a 2,000 ៛ fee applies.'
+                : 'Please tell us why you\'re cancelling.',
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ]),
+      ),
+      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _reasons.map((r) => RadioListTile<String>(
+          value: r,
+          groupValue: _selected,
+          onChanged: (v) => setState(() => _selected = v),
+          activeColor: _kGreen,
+          title: Text(r, style: const TextStyle(fontSize: 14)),
+          dense: true,
+        )).toList(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Keep Ride',
+              style: TextStyle(color: _kTextSub, fontWeight: FontWeight.w600)),
+        ),
+        ElevatedButton(
+          onPressed: _selected == null
+              ? null
+              : () => Navigator.pop(context, _selected),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text(
+            widget.hasFee ? 'Cancel (2,000 ៛ fee)' : 'Cancel Ride',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ],
     );
   }
 }

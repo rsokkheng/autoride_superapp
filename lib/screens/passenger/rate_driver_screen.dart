@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import 'trip_receipt_screen.dart';
 
 class RateDriverScreen extends StatefulWidget {
   final int?    rideId;
@@ -318,7 +319,31 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                       }
                     }
                   } catch (_) {}
-                  if (mounted) setState(() { _submitting = false; _submitted = true; });
+                  if (!mounted) return;
+                  setState(() => _submitting = false);
+                  // Navigate to receipt screen then mark submitted
+                  await Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TripReceiptScreen(
+                        rideId:           widget.rideId,
+                        from:             '--',
+                        to:               '--',
+                        driverName:       widget.driverName,
+                        starsGiven:       _stars.clamp(1, 5),
+                        fareTotal:        widget.fare,
+                        baseFareKhr:      0,
+                        distanceFeeKhr:   0,
+                        surgeKhr:         0,
+                        promoDiscountKhr: 0,
+                        distanceKm:       widget.distanceKm,
+                        durationMin:      widget.durationMin,
+                        paymentMethod:    widget.paymentMethod,
+                        tripDate:         DateTime.now(),
+                      ),
+                    ),
+                  );
+                  if (mounted) setState(() => _submitted = true);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accent,

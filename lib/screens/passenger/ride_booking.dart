@@ -55,7 +55,7 @@ class _RideType {
 const _kRideTypes = [
   _RideType(name: 'Standard', serviceType: 'standard',   icon: Icons.directions_car,      eta: '4 min', desc: '4 seats'),
   _RideType(name: 'Premium',  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '6 min', desc: 'Luxury'),
-  _RideType(name: 'Shared',   serviceType: 'shared',     icon: Icons.airport_shuttle,     eta: '8 min', desc: 'Shared'),
+  _RideType(name: 'Shared',   serviceType: 'shared',     icon: Icons.airport_shuttle,     eta: '8 min', desc: 'Shared · Split fare'),
   _RideType(name: 'Van',      serviceType: 'van',        icon: Icons.directions_bus,      eta: '6 min', desc: '6+ seats'),
 ];
 
@@ -168,12 +168,15 @@ Future<_LabeledMarker> _buildLabeledMarker(
   final picture = recorder.endRecording();
   final img     = await picture.toImage(canvasW.ceil(), canvasH.ceil());
   final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+  if (bytes == null) {
+    return _LabeledMarker(BitmapDescriptor.defaultMarker, const Offset(0.5, 1.0));
+  }
 
   // imagePixelRatio tells the map that this image was drawn at 3× density,
   // so it displays at canvasW/3 × canvasH/3 logical dp on all screen types.
   return _LabeledMarker(
     BitmapDescriptor.bytes(
-        bytes!.buffer.asUint8List(), imagePixelRatio: scale),
+        bytes.buffer.asUint8List(), imagePixelRatio: scale),
     Offset(cx / canvasW, cy / canvasH),
   );
 }
@@ -207,8 +210,9 @@ Future<BitmapDescriptor> _buildPickupMarker({double logical = 26.0}) async {
   final picture = recorder.endRecording();
   final img     = await picture.toImage(size.ceil(), size.ceil());
   final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+  if (bytes == null) return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
   return BitmapDescriptor.bytes(
-      bytes!.buffer.asUint8List(), imagePixelRatio: scale);
+      bytes.buffer.asUint8List(), imagePixelRatio: scale);
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -274,6 +278,12 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   DateTime _scheduledTime   = DateTime.now().add(const Duration(hours: 1));
   bool     _isBooking       = false;
 
+  // Surge pricing
+  SurgeInfo? _surgeInfo;
+
+  // Saved places (Home / Work shortcuts)
+  List<SavedPlaceModel> _savedPlaces = [];
+
   // Promo code
   String? _promoCode;
   double? _promoDiscount;   // discount amount in KHR
@@ -288,6 +298,22 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     super.initState();
     _searchCtrl.addListener(_onSearchChanged);
     _detectGps();
+    _loadSurge();
+    _loadSavedPlaces();
+  }
+
+  Future<void> _loadSurge() async {
+    try {
+      final info = await ApiService.checkSurge();
+      if (mounted && info.surgeActive) setState(() => _surgeInfo = info);
+    } catch (_) {}
+  }
+
+  Future<void> _loadSavedPlaces() async {
+    try {
+      final places = await ApiService.getSavedPlaces();
+      if (mounted) setState(() => _savedPlaces = places.take(4).toList());
+    } catch (_) {}
   }
 
   @override
@@ -494,6 +520,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             final code = ctrl.text.trim().toUpperCase();
             if (code.isEmpty) return;
             setLocal(() { _promoLoading = true; _promoError = null; });
+            bool success = false;
             try {
               final fare = _fareByType[_kRideTypes
                   .firstWhere((r) => r.name == _selectedRide,
@@ -510,13 +537,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 _promoDiscount = result.discountAmount;
                 _promoError    = null;
               });
+              success = true;
               Navigator.pop(sheetCtx);
             } on ApiException catch (e) {
               setLocal(() { _promoError = e.message; _promoLoading = false; });
             } catch (_) {
               setLocal(() { _promoError = 'Invalid or expired code.'; _promoLoading = false; });
             } finally {
-              setLocal(() => _promoLoading = false);
+              if (!success) setLocal(() => _promoLoading = false);
             }
           }
 
@@ -982,6 +1010,51 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 ]),
               ),
             ),
+
+            // ── Saved places shortcuts (Home / Work / etc.) ────────────
+            if (_savedPlaces.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: _savedPlaces.map((place) {
+                    final icon = place.label.toLowerCase().contains('home')
+                        ? Icons.home_outlined
+                        : place.label.toLowerCase().contains('work')
+                            ? Icons.work_outline
+                            : Icons.bookmark_outline;
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _stops[0].address = place.address;
+                          _stops[0].latLng  = LatLng(place.lat, place.lng);
+                          _activeStopIdx    = -1;
+                        });
+                        _afterStopFilled();
+                        _goToStep(1);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: AppTheme.cardBg,
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(icon, size: 16, color: AppTheme.accent),
+                          const SizedBox(width: 6),
+                          Text(place.label,
+                              style: const TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500)),
+                        ]),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ]),
         ),
       ),
@@ -1478,7 +1551,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_geocodingDest || _mapPickerAddress.isEmpty)
+                  onPressed: (_geocodingDest || _mapPickerAddress.isEmpty || _activeStopIdx < 0)
                       ? null
                       : () {
                           setState(() {
@@ -1775,12 +1848,31 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 ],
               ]),
               const SizedBox(height: 10),
+              if (_surgeInfo != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.local_fire_department, color: AppTheme.warning, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(
+                      '${_surgeInfo!.multiplier.toStringAsFixed(1)}× surge pricing — high demand in your area',
+                      style: const TextStyle(color: AppTheme.warning, fontSize: 12, fontWeight: FontWeight.w600),
+                    )),
+                  ]),
+                ),
               ..._kRideTypes.map((r) => _RideTypeCard(
                     type:        r,
                     selected:    _selectedRide == r.name,
                     onTap:       () => setState(() => _selectedRide = r.name),
                     fareInfo:    _fareByType[r.serviceType],
                     fareLoading: _fareLoading,
+                    surgeMultiplier: _surgeInfo?.surgeActive == true ? _surgeInfo!.multiplier : 1.0,
                   )),
               const SizedBox(height: 14),
 
@@ -2326,19 +2418,30 @@ class _RideTypeCard extends StatelessWidget {
   final VoidCallback onTap;
   final FareInfo?    fareInfo;
   final bool         fareLoading;
+  final double       surgeMultiplier;
   const _RideTypeCard({
     required this.type,
     required this.selected,
     required this.onTap,
     this.fareInfo,
     this.fareLoading = false,
+    this.surgeMultiplier = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final priceText = fareInfo != null
-        ? fareInfo!.formattedTotal
-        : fareLoading ? '...' : '—';
+    String priceText;
+    if (fareInfo != null) {
+      if (surgeMultiplier > 1.0) {
+        final surgedTotal = (fareInfo!.total * surgeMultiplier).round();
+        priceText = AppTheme.khr(surgedTotal);
+      } else {
+        priceText = fareInfo!.formattedTotal;
+      }
+    } else {
+      priceText = fareLoading ? '...' : '—';
+    }
+    final hasSurge = surgeMultiplier > 1.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -2372,7 +2475,7 @@ class _RideTypeCard extends StatelessWidget {
           ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Row(mainAxisSize: MainAxisSize.min, children: [
-              if (fareInfo?.surgeActive == true) ...[
+              if (hasSurge) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                   margin: const EdgeInsets.only(right: 6),
@@ -2380,8 +2483,8 @@ class _RideTypeCard extends StatelessWidget {
                     color: AppTheme.warning.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('Surge',
-                      style: TextStyle(color: AppTheme.warning,
+                  child: Text('${surgeMultiplier.toStringAsFixed(1)}×',
+                      style: const TextStyle(color: AppTheme.warning,
                           fontSize: 9, fontWeight: FontWeight.w700)),
                 ),
               ],

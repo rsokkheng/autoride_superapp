@@ -228,6 +228,39 @@ class DeliveryEstimateModel {
       v == null ? 0 : v is int ? v : (v is num ? v.round() : int.tryParse(v.toString()) ?? 0);
 }
 
+// ─── Moving estimate (POST /movings/estimate) ────────────────────────────────
+
+class MovingEstimateModel {
+  final int total;
+  final int baseFee;
+  final int distanceFee;
+  final int helperFee;
+  final int floorFee;
+
+  const MovingEstimateModel({
+    required this.total,
+    required this.baseFee,
+    required this.distanceFee,
+    required this.helperFee,
+    required this.floorFee,
+  });
+
+  static int _i(dynamic v) =>
+      v == null ? 0 : v is int ? v : (v is num ? v.round() : int.tryParse(v.toString()) ?? 0);
+
+  factory MovingEstimateModel.fromJson(Map<String, dynamic> json) {
+    final data = (json['data'] as Map<String, dynamic>?) ?? json;
+    final fare = (data['fare'] as Map<String, dynamic>?) ?? {};
+    return MovingEstimateModel(
+      total:       _i(fare['total']),
+      baseFee:     _i(fare['base_fee']),
+      distanceFee: _i(fare['distance_fee']),
+      helperFee:   _i(fare['helper_fee']),
+      floorFee:    _i(fare['floor_fee']),
+    );
+  }
+}
+
 // ─── Tracking (for POST /deliveries/{id}/track) ───────────────────────────────
 
 class DeliveryTrackingModel {
