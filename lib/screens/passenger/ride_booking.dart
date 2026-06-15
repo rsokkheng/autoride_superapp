@@ -251,6 +251,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   String _mapPickerAddress = '';
   bool   _geocodingDest  = false;
 
+  // ── Step-1 mini-map ─────────────────────────────────────────────────────────
+  GoogleMapController? _step1MapCtrl;
+
   // ── Confirm ─────────────────────────────────────────────────────────────────
   GoogleMapController? _confirmMapCtrl;
   List<LatLng>         _routePoints   = [];   // combined (for camera fit)
@@ -293,6 +296,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _searchDebounce?.cancel();
     _pickupMapCtrl?.dispose();
     _destMapCtrl?.dispose();
+    _step1MapCtrl?.dispose();
     _confirmMapCtrl?.dispose();
     super.dispose();
   }
@@ -403,11 +407,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     final searchFrom = _activeStopIdx < 0 ? 0 : _activeStopIdx + 1;
     final next = _stops.indexWhere((s) => !s.isFilled, searchFrom);
     if (next == -1) {
-      // All stops filled — move focus to -1 so every row renders as confirmed
       setState(() { _activeStopIdx = -1; _searchCtrl.clear(); });
     } else {
       setState(() { _activeStopIdx = next; _searchCtrl.clear(); });
     }
+    _buildMarkerIcons().then((_) => _fitStep1Camera());
   }
 
 
@@ -989,12 +993,62 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   // Step 1 — Destination search
   // ═══════════════════════════════════════════════════════════════════════════
 
+  // Mini-map markers for step 1 overlay
+  Set<Marker> get _step1Markers {
+    final set = <Marker>{
+      Marker(
+        markerId: const MarkerId('step1_pickup'),
+        position: _pickupCenter,
+        icon: _pickupIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      ),
+      for (int i = 0; i < _stops.length; i++)
+        if (_stops[i].latLng != null)
+          Marker(
+            markerId: MarkerId('step1_stop_$i'),
+            position: _stops[i].latLng!,
+            icon: (_stopMarkers.length > i)
+                ? _stopMarkers[i].icon
+                : BitmapDescriptor.defaultMarkerWithHue(
+                    i == _stops.length - 1
+                        ? BitmapDescriptor.hueRed
+                        : BitmapDescriptor.hueOrange),
+            anchor: _stopMarkers.length > i
+                ? _stopMarkers[i].anchor
+                : const Offset(0.5, 1.0),
+          ),
+    };
+    return set;
+  }
+
+  void _fitStep1Camera() {
+    if (_step1MapCtrl == null) return;
+    final filledLatLngs = [
+      _pickupCenter,
+      ..._stops.where((s) => s.latLng != null).map((s) => s.latLng!),
+    ];
+    if (filledLatLngs.length == 1) {
+      _step1MapCtrl!.animateCamera(
+          CameraUpdate.newLatLngZoom(filledLatLngs.first, 15));
+      return;
+    }
+    final lats = filledLatLngs.map((l) => l.latitude);
+    final lngs = filledLatLngs.map((l) => l.longitude);
+    final sw = LatLng(lats.reduce((a, b) => a < b ? a : b) - 0.005,
+                     lngs.reduce((a, b) => a < b ? a : b) - 0.005);
+    final ne = LatLng(lats.reduce((a, b) => a > b ? a : b) + 0.005,
+                     lngs.reduce((a, b) => a > b ? a : b) + 0.005);
+    _step1MapCtrl!.animateCamera(
+        CameraUpdate.newLatLngBounds(LatLngBounds(southwest: sw, northeast: ne), 48));
+  }
+
   Widget _buildDestination() {
     if (_choosingDestOnMap) return _buildDestinationMapPicker();
 
-    final hasQuery = _searchCtrl.text.trim().isNotEmpty;
+    final hasQuery    = _searchCtrl.text.trim().isNotEmpty;
+    final allFilled   = _stops.every((s) => s.isFilled);
 
     return Column(children: [
+
       // ── Route card (Grab-style) ──────────────────────────────────────────
       Container(
         color: AppTheme.surface,
@@ -1044,23 +1098,28 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   // Stop icon
                   isLast && _stops.length == 1
-                    // Single destination → red pin
+                    // Single destination → plain red pin (no number)
                     ? const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 20)
-                    : isLast
-                    // Final stop of multi-stop → red pin
-                    ? const Icon(Icons.location_on, color: AppTheme.danger, size: 20)
-                    // Intermediate stop → numbered circle
+                    // All multi-stop items (including last) get a numbered circle
                     : Container(
                         width: 20, height: 20,
                         decoration: BoxDecoration(
-                          color: AppTheme.warning.withValues(alpha: 0.15),
+                          color: (isLast
+                              ? const Color(0xFFE53935)
+                              : AppTheme.warning).withValues(alpha: 0.15),
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppTheme.warning, width: 1.5),
+                          border: Border.all(
+                            color: isLast ? const Color(0xFFE53935) : AppTheme.warning,
+                            width: 1.5),
                         ),
                         child: Center(
                           child: Text('${i + 1}',
-                              style: const TextStyle(color: AppTheme.warning,
-                                  fontSize: 10, fontWeight: FontWeight.w800)),
+                              style: TextStyle(
+                                color: isLast
+                                    ? const Color(0xFFE53935)
+                                    : AppTheme.warning,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800)),
                         ),
                       ),
 
@@ -1143,8 +1202,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ]);
           }),
 
-          // ── "Add a stop" — always visible when < 4 stops ───────────────
-          if (_stops.length < 4) ...[
+          // ── "Add a stop" — always visible when < 5 stops ───────────────
+          if (_stops.length < 5) ...[
             const SizedBox(height: 10),
             GestureDetector(
               onTap: () {
@@ -1181,37 +1240,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
       const Divider(height: 1, color: AppTheme.cardBg),
 
-      // ── Search results / tabs — hidden when all stops are confirmed ───────
-      if (_activeStopIdx == -1) const SizedBox.shrink()
-      else Expanded(
-        child: _searching
-            ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
-            : hasQuery && _searchResults.isEmpty
-                ? const Center(child: Text('No results found',
-                    style: TextStyle(color: AppTheme.textSecondary)))
-                : hasQuery
-                    ? ListView(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        children: _searchResults
-                            .map((r) {
-                              final isAlreadySelected = _stops.any((s) => s.address == r.address);
-                              return _DestTile(
-                                icon: Icons.location_on,
-                                iconColor: AppTheme.accent,
-                                title: r.address,
-                                trailing: isAlreadySelected
-                                    ? const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
-                                    : null,
-                                onTap: () => _selectResult(r),
-                              );
-                            })
-                            .toList(),
-                      )
-                    : _buildWhereToTabs(),
-      ),
-      if (_stops.every((s) => s.isFilled))
+      // ── Confirm button (shown when all stops are filled, above the map) ───
+      if (allFilled)
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1219,7 +1251,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accent,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: Text(
@@ -1229,6 +1261,68 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
           ),
         ),
+
+      // ── Live map (when all filled) or search results ──────────────────────
+      Expanded(
+        child: _activeStopIdx == -1
+            // All stops confirmed → full live map showing route
+            ? GoogleMap(
+                onMapCreated: (c) {
+                  _step1MapCtrl = c;
+                  _fitStep1Camera();
+                },
+                initialCameraPosition:
+                    CameraPosition(target: _pickupCenter, zoom: 14),
+                style: _kDarkMapStyle,
+                markers: _step1Markers,
+                polylines: {
+                  for (int i = 0; i < _segmentRoutes.length; i++)
+                    if (_segmentRoutes[i].length >= 2)
+                      Polyline(
+                        polylineId: PolylineId('step1_seg_$i'),
+                        points: _segmentRoutes[i],
+                        color: const [
+                          Color(0xFF00C48C),
+                          Color(0xFFE53935),
+                          Color(0xFF1976D2),
+                          Color(0xFFFF9800),
+                          Color(0xFF9C27B0),
+                        ][i % 5],
+                        width: 4,
+                      ),
+                },
+                myLocationEnabled:       true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled:     false,
+              )
+            // Still searching / selecting → search results or tabs
+            : _searching
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppTheme.accent))
+                : hasQuery && _searchResults.isEmpty
+                    ? const Center(
+                        child: Text('No results found',
+                            style: TextStyle(color: AppTheme.textSecondary)))
+                    : hasQuery
+                        ? ListView(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            children: _searchResults.map((r) {
+                              final isAlreadySelected =
+                                  _stops.any((s) => s.address == r.address);
+                              return _DestTile(
+                                icon: Icons.location_on,
+                                iconColor: AppTheme.accent,
+                                title: r.address,
+                                trailing: isAlreadySelected
+                                    ? const Icon(Icons.check_circle,
+                                        color: AppTheme.success, size: 20)
+                                    : null,
+                                onTap: () => _selectResult(r),
+                              );
+                            }).toList(),
+                          )
+                        : _buildWhereToTabs(),
+      ),
     ]);
   }
 
@@ -1591,8 +1685,12 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       DraggableScrollableSheet(
         initialChildSize: 0.45,
         minChildSize:     0.18,
-        maxChildSize:     0.88,
-        builder: (ctx, scrollCtrl) => Container(
+        maxChildSize:     0.95,
+        snap:             true,
+        snapSizes:        const [0.45, 0.95],
+        builder: (ctx, scrollCtrl) {
+          final safeBottom = MediaQuery.of(ctx).viewPadding.bottom;
+          return Container(
           decoration: const BoxDecoration(
             color: AppTheme.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -1600,7 +1698,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           ),
           child: ListView(
             controller: scrollCtrl,
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 96 + safeBottom),
             children: [
               // Drag handle
               Center(
@@ -1615,8 +1713,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
               // Route summary — Grab-style numbered list
               _RouteSummary(
-                pickupAddress: _pickupAddress,
+                pickupAddress: _pickupAddress.isEmpty ||
+                        _pickupAddress == 'Detecting location…'
+                    ? 'Current location'
+                    : _pickupAddress,
                 stops: _stops,
+                onEditPickup: () => setState(() {
+                  _step = 0;
+                  _searchCtrl.clear();
+                  _choosingDestOnMap = false;
+                }),
                 onEditStop: (i) => setState(() {
                   _step = 1; _activeStopIdx = i;
                   _searchCtrl.clear(); _choosingDestOnMap = false;
@@ -1626,8 +1732,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   _fetchRoute();
                   _buildMarkerIcons();
                 } : null,
-                onAddStop: _stops.length < 4 ? () {
-                  // Insert a new empty stop before the final destination
+                onAddStop: _stops.length < 5 ? () {
                   final insertAt = _stops.length - 1;
                   setState(() {
                     _stops.insert(insertAt, _WayStop());
@@ -1788,30 +1893,52 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     ),
                 ]),
               ),
-              const SizedBox(height: 16),
-
-              // Confirm button
-              ElevatedButton(
-                onPressed: _isBooking ? null : _bookRide,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
-                child: _isBooking
-                    ? const SizedBox(width: 22, height: 22,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : Text(
-                        _isScheduled
-                            ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
-                            : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-              ),
             ],
           ),
-        ),
+        );
+        },
+      ),
+
+      // ── Fixed confirm button (footer) ─────────────────────────────────────
+      Positioned(
+        left: 0, right: 0, bottom: 0,
+        child: Builder(builder: (ctx) {
+          final safeBot = MediaQuery.of(ctx).viewPadding.bottom;
+          return Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4)),
+              ],
+            ),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + safeBot),
+            child: ElevatedButton(
+              onPressed: _isBooking ? null : _bookRide,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: _isBooking
+                  ? const SizedBox(
+                      width: 22, height: 22,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2.5))
+                  : Text(
+                      _isScheduled
+                          ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
+                          : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 15)),
+            ),
+          );
+        }),
       ),
 
     ]);
@@ -2055,6 +2182,7 @@ class _DestTile extends StatelessWidget {
 class _RouteSummary extends StatelessWidget {
   final String pickupAddress;
   final List<_WayStop> stops;
+  final VoidCallback? onEditPickup;
   final void Function(int stopIndex) onEditStop;
   final void Function(int stopIndex)? onRemoveStop;
   final VoidCallback? onAddStop;
@@ -2062,6 +2190,7 @@ class _RouteSummary extends StatelessWidget {
   const _RouteSummary({
     required this.pickupAddress,
     required this.stops,
+    this.onEditPickup,
     required this.onEditStop,
     this.onRemoveStop,
     this.onAddStop,
@@ -2075,24 +2204,30 @@ class _RouteSummary extends StatelessWidget {
       child: Column(
         children: [
           // ── Pickup row ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-            child: Row(children: [
-              Container(
-                width: 10, height: 10,
-                decoration: const BoxDecoration(
-                    color: AppTheme.accent, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  pickupAddress,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 13),
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
+          GestureDetector(
+            onTap: onEditPickup,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              child: Row(children: [
+                Container(
+                  width: 10, height: 10,
+                  decoration: const BoxDecoration(
+                      color: AppTheme.accent, shape: BoxShape.circle),
                 ),
-              ),
-            ]),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    pickupAddress,
+                    style: const TextStyle(
+                        color: AppTheme.textSecondary, fontSize: 13),
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (onEditPickup != null)
+                  const Icon(Icons.edit_outlined,
+                      color: AppTheme.textSecondary, size: 15),
+              ]),
+            ),
           ),
 
           // ── Stop rows ─────────────────────────────────────────────────────
@@ -2153,7 +2288,7 @@ class _RouteSummary extends StatelessWidget {
           }),
 
           // ── Add a stop ────────────────────────────────────────────────────
-          if (onAddStop != null && stops.length < 4) ...[
+          if (onAddStop != null && stops.length < 5) ...[
             Divider(height: 1, indent: 40, color: AppTheme.surface.withValues(alpha: 0.8)),
             GestureDetector(
               onTap: onAddStop,
