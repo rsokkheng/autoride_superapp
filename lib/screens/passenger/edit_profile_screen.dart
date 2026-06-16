@@ -67,8 +67,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     setState(() => _saving = true);
     try {
-      // TODO: call PUT /api/v1/auth/me when endpoint is available
-      await Future.delayed(const Duration(milliseconds: 500));
+      await ApiService.updateProfile(
+        name:  _nameCtrl.text.trim().isNotEmpty  ? _nameCtrl.text.trim()  : null,
+        phone: newPhone.isNotEmpty               ? newPhone               : null,
+        email: _emailCtrl.text.trim().isNotEmpty ? _emailCtrl.text.trim() : null,
+      );
       if (!mounted) return;
       setState(() { _saving = false; _originalPhone = newPhone; });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -78,8 +81,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ));
       Navigator.pop(context);
-    } catch (_) {
-      if (mounted) setState(() => _saving = false);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.toString()),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
     }
   }
 
@@ -125,21 +144,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     const SizedBox(height: 8),
 
                     // Avatar
-                    Stack(children: [
-                      CircleAvatar(
-                        radius: 52,
-                        backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-                        child: const Icon(Icons.person, color: AppTheme.accent, size: 52),
-                      ),
-                      Positioned(
-                        bottom: 0, right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
-                          child: const Icon(Icons.camera_alt, color: AppTheme.primary, size: 16),
+                    GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            backgroundColor: AppTheme.surface,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: const Text('Change Photo',
+                                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                            content: const Text('Feature coming soon',
+                                style: TextStyle(color: AppTheme.textSecondary)),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('OK', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: Stack(children: [
+                        CircleAvatar(
+                          radius: 52,
+                          backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
+                          child: const Icon(Icons.person, color: AppTheme.accent, size: 52),
                         ),
-                      ),
-                    ]),
+                        Positioned(
+                          bottom: 0, right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                            child: const Icon(Icons.camera_alt, color: AppTheme.primary, size: 16),
+                          ),
+                        ),
+                      ]),
+                    ),
                     const SizedBox(height: 8),
                     const Text('Tap photo to change', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
                     const SizedBox(height: 28),

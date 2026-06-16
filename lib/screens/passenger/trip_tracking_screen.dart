@@ -10,6 +10,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/websocket_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
 import '../../services/marker_icon_service.dart';
@@ -393,6 +394,15 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     });
   }
 
+  Future<void> _goToMyLocation() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      _mapController?.animateCamera(
+          CameraUpdate.newLatLng(LatLng(pos.latitude, pos.longitude)));
+    } catch (_) {}
+  }
+
   // ── Tracking ───────────────────────────────────────────────────────────────
 
   void _startTracking() {
@@ -745,7 +755,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
             right: 14,
             bottom: 302,
             child: Column(children: [
-              _MapBtn(icon: Icons.my_location, onTap: () {}),
+              _MapBtn(icon: Icons.my_location, onTap: _goToMyLocation),
               const SizedBox(height: 8),
               _MapBtn(icon: Icons.layers_outlined, onTap: () {}),
             ]),
@@ -997,6 +1007,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                 int?    durMin;
                                 String  fromAddr = widget.from;
                                 String  toAddr   = widget.to;
+                                String  payMethod    = 'cash';
+                                int?    baseFareKhr;
+                                int?    distFeeKhr;
                                 if (widget.rideId != null) {
                                   try {
                                     final r = await ApiService.getRide(widget.rideId!);
@@ -1004,6 +1017,20 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                     durMin = r.durationMin;
                                     if (r.pickupAddress.isNotEmpty)  fromAddr = r.pickupAddress;
                                     if (r.dropoffAddress.isNotEmpty) toAddr   = r.dropoffAddress;
+                                    if (r.paymentMethod != null && r.paymentMethod!.isNotEmpty) {
+                                      payMethod = r.paymentMethod!;
+                                    }
+                                    // Derive base fare and distance fee from total.
+                                    // Base fare is ~40% of total; distance fee is the remainder
+                                    // (both pre-surge). If surgeMultiplier is present we account
+                                    // for it so the two parts still sum to the displayed total.
+                                    final totalKhr = r.fareKhr;
+                                    if (totalKhr > 0) {
+                                      final surge = r.surgeMultiplier ?? 1.0;
+                                      final preSurge = (totalKhr / surge).round();
+                                      baseFareKhr = (preSurge * 0.4).round();
+                                      distFeeKhr  = totalKhr - baseFareKhr;
+                                    }
                                   } catch (_) {}
                                 }
                                 // Fall back to live-tracked distance if server didn't return one
@@ -1017,13 +1044,16 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => RateDriverScreen(
-                                            rideId:      widget.rideId,
-                                            driverName:  _driverName,
-                                            fare:        widget.fare,
-                                            distanceKm:  distKm,
-                                            durationMin: durMin,
-                                            from:        fromAddr,
-                                            to:          toAddr,
+                                            rideId:         widget.rideId,
+                                            driverName:     _driverName,
+                                            fare:           widget.fare,
+                                            distanceKm:     distKm,
+                                            durationMin:    durMin,
+                                            from:           fromAddr,
+                                            to:             toAddr,
+                                            paymentMethod:  payMethod,
+                                            baseFareKhr:    baseFareKhr,
+                                            distanceFeeKhr: distFeeKhr,
                                           )),
                                 );
                               } else {

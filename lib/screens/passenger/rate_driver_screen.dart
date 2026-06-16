@@ -12,6 +12,8 @@ class RateDriverScreen extends StatefulWidget {
   final int?    durationMin;
   final String  from;
   final String  to;
+  final int?    baseFareKhr;
+  final int?    distanceFeeKhr;
 
   const RateDriverScreen({
     super.key,
@@ -23,6 +25,8 @@ class RateDriverScreen extends StatefulWidget {
     this.durationMin,
     this.from = '',
     this.to   = '',
+    this.baseFareKhr,
+    this.distanceFeeKhr,
   });
 
   @override
@@ -336,8 +340,8 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                         driverName:       widget.driverName,
                         starsGiven:       _stars.clamp(1, 5),
                         fareTotal:        widget.fare,
-                        baseFareKhr:      0,
-                        distanceFeeKhr:   0,
+                        baseFareKhr:      widget.baseFareKhr ?? 0,
+                        distanceFeeKhr:   widget.distanceFeeKhr ?? 0,
                         surgeKhr:         0,
                         promoDiscountKhr: 0,
                         distanceKm:       widget.distanceKm,

@@ -438,6 +438,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           (_tripStartTime != null
               ? DateTime.now().difference(_tripStartTime!).inMinutes
               : null);
+
+      // Show passenger rating dialog before navigating to summary
+      await _showPassengerRatingDialog(finalRide.id);
+      if (!mounted) return;
+
       await Navigator.push(
         context,
         MaterialPageRoute(
@@ -494,6 +499,196 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   );
 
   // ── Dialogs / actions ─────────────────────────────────────────────────────────
+
+  Future<void> _showPassengerRatingDialog(int rideId) async {
+    int stars = 0;
+    final Set<String> selectedTags = {};
+    final commentController = TextEditingController();
+    bool submitting = false;
+
+    const tags = [
+      'Professional',
+      'Polite',
+      'Paid promptly',
+      'No show',
+      'Rude',
+      'Cancelled late',
+    ];
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          title: Column(children: [
+            CircleAvatar(
+              radius: 30,
+              backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
+              child: Text(
+                _passengerName.isNotEmpty ? _passengerName[0] : 'P',
+                style: const TextStyle(
+                  color: AppTheme.accent,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Rate Your Passenger',
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            Text(
+              _passengerName,
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ]),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const SizedBox(height: 16),
+              // Star rating
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) => GestureDetector(
+                  onTap: () => setDialogState(() {
+                    stars = i + 1;
+                    selectedTags.clear();
+                  }),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Icon(
+                      i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: i < stars ? AppTheme.gold : AppTheme.textSecondary,
+                      size: 38,
+                    ),
+                  ),
+                )),
+              ),
+              if (stars > 0) ...[
+                const SizedBox(height: 6),
+                Text(
+                  stars == 1 ? 'Terrible' :
+                  stars == 2 ? 'Bad' :
+                  stars == 3 ? 'Okay' :
+                  stars == 4 ? 'Good' : 'Excellent!',
+                  style: TextStyle(
+                    color: stars >= 4 ? AppTheme.success : AppTheme.danger,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Quick tags
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: tags.map((tag) {
+                    final selected = selectedTags.contains(tag);
+                    final isNegative = ['No show', 'Rude', 'Cancelled late'].contains(tag);
+                    final tagColor = isNegative ? AppTheme.danger : AppTheme.accent;
+                    return GestureDetector(
+                      onTap: () => setDialogState(() {
+                        selected ? selectedTags.remove(tag) : selectedTags.add(tag);
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? tagColor.withValues(alpha: 0.12)
+                              : AppTheme.cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: selected ? tagColor : Colors.transparent,
+                          ),
+                        ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            color: selected ? tagColor : AppTheme.textSecondary,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 14),
+                // Comment field
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardBg,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    controller: commentController,
+                    maxLines: 2,
+                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                    decoration: const InputDecoration(
+                      hintText: 'Add a comment (optional)...',
+                      hintStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: submitting ? null : () {
+                commentController.dispose();
+                Navigator.pop(ctx);
+              },
+              child: const Text('Skip', style: TextStyle(color: AppTheme.textSecondary)),
+            ),
+            ElevatedButton(
+              onPressed: (submitting || stars == 0) ? null : () async {
+                setDialogState(() => submitting = true);
+                try {
+                  await ApiService.ratePassenger(
+                    rideId,
+                    stars.toDouble(),
+                    comment: commentController.text.trim().isEmpty
+                        ? null
+                        : commentController.text.trim(),
+                  );
+                } catch (_) {}
+                commentController.dispose();
+                if (ctx.mounted) Navigator.pop(ctx);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: submitting
+                  ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Submit', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showSOS() {
     showDialog(

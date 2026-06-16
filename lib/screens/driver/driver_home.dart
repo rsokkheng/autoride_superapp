@@ -21,6 +21,8 @@ import '../passenger/safety_screen.dart';
 import 'driver_active_trip_screen.dart';
 import 'driver_delivery_active_screen.dart';
 import 'driver_missions_screen.dart';
+import 'driver_history_screen.dart';
+import 'driver_earnings_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -2040,9 +2042,10 @@ class _DriverProfileState extends State<_DriverProfile> {
             return Column(children: [
               ...([
                 (l.bankPayouts,     Icons.account_balance_outlined, () => widget.onGoToEarnings(), false),
+                ('My Earnings',     Icons.account_balance_wallet_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverEarningsScreen())), false),
                 (l.safetySettings,  Icons.shield_outlined,          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())),  false),
                 (l.documents,       Icons.description_outlined,     () {}, false),
-                (l.tripHistory,     Icons.history_outlined,         () {}, false),
+                (l.tripHistory,     Icons.history_outlined,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverHistoryScreen())), false),
                 (l.signOut, Icons.logout, () async {
                   await ApiService.logout();
                   if (!context.mounted) return;

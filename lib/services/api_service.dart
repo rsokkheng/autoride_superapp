@@ -1379,6 +1379,41 @@ class ApiService {
     }
   }
 
+  static Future<void> ratePassenger(int rideId, double rating, {String? comment}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final body = <String, dynamic>{
+      'rating': rating,
+      if (comment != null && comment.isNotEmpty) 'comment': comment,
+    };
+    final raw = await _rawPost('/rides/$rideId/rate-passenger', body, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final resBody = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(
+        resBody['message'] as String? ?? 'Rating failed (${raw.statusCode}).',
+        raw.statusCode,
+      );
+    }
+  }
+
+  static Future<Map<String, dynamic>> getDriverTrips({int page = 1, String? filter}) async {
+    final token = await getToken();
+    if (token == null) return {'data': [], 'total': 0};
+    var url = '/driver/trips?page=$page';
+    if (filter != null && filter != 'all') url += '&filter=$filter';
+    final raw = await _rawGet(url, token: token);
+    if (raw.statusCode != 200) return {'data': [], 'total': 0};
+    return jsonDecode(raw.body) as Map<String, dynamic>;
+  }
+
+  static Future<Map<String, dynamic>> getDriverEarningsSummary({String period = 'today'}) async {
+    final token = await getToken();
+    if (token == null) return {'total': 0, 'trips': [], 'trip_count': 0};
+    final raw = await _rawGet('/driver/earnings?period=$period', token: token);
+    if (raw.statusCode != 200) return {'total': 0, 'trips': [], 'trip_count': 0};
+    return jsonDecode(raw.body) as Map<String, dynamic>;
+  }
+
   static Future<RideModel> declineRide(int id) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -2761,6 +2796,18 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
+  static Future<void> markNotificationRead(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    await _rawPost('/notifications/$id/read', {}, token: token);
+  }
+
+  static Future<void> markAllNotificationsRead() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    await _rawPost('/notifications/read-all', {}, token: token);
+  }
+
   // ── Saved Places ──────────────────────────────────────────────────────────
 
   static Future<List<SavedPlaceModel>> getSavedPlaces() async {
@@ -3133,6 +3180,105 @@ class ApiService {
       return list.whereType<Map<String, dynamic>>().map(ChargingStationModel.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed to load stations.', raw.statusCode);
+  }
+
+  // ── Scheduled rides ─────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getScheduledRides() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/rides/scheduled', token: token);
+    if (raw.statusCode != 200) return [];
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    final data = body['data'];
+    if (data is List) return List<Map<String, dynamic>>.from(data);
+    if (data is Map<String, dynamic>) {
+      final inner = data['data'] ?? data['rides'];
+      if (inner is List) return List<Map<String, dynamic>>.from(inner);
+    }
+    return [];
+  }
+
+  static Future<void> cancelScheduledRide(int rideId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/rides/$rideId/cancel', {}, token: token);
+    if (raw.statusCode != 200) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>;
+      throw ApiException(body['message'] as String? ?? 'Cancel failed', raw.statusCode);
+    }
+  }
+
+  // ── Loyalty / Rewards ────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getLoyaltyPoints() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/loyalty', token: token);
+    if (raw.statusCode != 200) return {'points': 0, 'tier': 'bronze', 'history': []};
+    return jsonDecode(raw.body) as Map<String, dynamic>;
+  }
+
+  static Future<void> redeemPoints(int points) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/loyalty/redeem', {'points': points}, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>;
+      throw ApiException(body['message'] as String? ?? 'Redemption failed', raw.statusCode);
+    }
+  }
+
+  // ── Referrals ────────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getReferralInfo() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/referrals', token: token);
+    if (raw.statusCode != 200) {
+      return {'code': 'AUTORIDE', 'referred_count': 0, 'points_earned': 0, 'referrals': []};
+    }
+    return jsonDecode(raw.body) as Map<String, dynamic>;
+  }
+
+  // ── Car Rental ───────────────────────────────────────────────────────────────
+
+  static Future<void> createCarRental({
+    required String pickupLocation,
+    required DateTime pickupDate,
+    required DateTime returnDate,
+    required String vehicleCategory,
+    required bool withDriver,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/rentals', {
+      'pickup_location':  pickupLocation,
+      'pickup_at':        pickupDate.toIso8601String(),
+      'return_at':        returnDate.toIso8601String(),
+      'vehicle_category': vehicleCategory,
+      'with_driver':      withDriver,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      throw ApiException(body['message'] as String? ?? 'Booking failed', raw.statusCode);
+    }
+  }
+
+  // ── Promo code ───────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> applyPromoCode(String code, int estimatedFareKhr) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/promo/apply', {
+      'code': code,
+      'fare': estimatedFareKhr,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Invalid promo code', raw.statusCode);
+    }
+    return body;
   }
 }
 

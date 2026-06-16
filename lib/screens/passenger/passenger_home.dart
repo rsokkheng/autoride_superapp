@@ -23,6 +23,11 @@ import 'promo_screen.dart';
 import 'edit_profile_screen.dart';
 import 'saved_places_screen.dart';
 import 'support_screen.dart';
+import 'scheduled_rides_screen.dart';
+import 'loyalty_screen.dart';
+import 'referral_screen.dart';
+import 'car_rental_screen.dart';
+import 'cancellation_policy_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -381,6 +386,20 @@ class _HomeTabState extends State<_HomeTab> {
                     color: AppTheme.warning,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
+                  ServiceCard(
+                    icon: Icons.drive_eta_outlined,
+                    title: 'Car Rental',
+                    subtitle: 'Rent a car',
+                    color: const Color(0xFF00838F),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen())),
+                  ),
+                  ServiceCard(
+                    icon: Icons.calendar_month_outlined,
+                    title: 'Scheduled',
+                    subtitle: 'Plan ahead',
+                    color: const Color(0xFF5E35B1),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledRidesScreen())),
+                  ),
                 ],
               );
             }),
@@ -394,8 +413,11 @@ class _HomeTabState extends State<_HomeTab> {
                   Expanded(child: _QuickAction(icon: Icons.account_balance_wallet_outlined, label: 'Wallet', color: AppTheme.accent,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())))),
                   const SizedBox(width: 12),
-                  Expanded(child: _QuickAction(icon: Icons.local_offer_outlined, label: 'Promos', color: AppTheme.warning,
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen())))),
+                  Expanded(child: _QuickAction(icon: Icons.star_outline, label: 'Rewards', color: AppTheme.gold,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen())))),
+                  const SizedBox(width: 12),
+                  Expanded(child: _QuickAction(icon: Icons.card_giftcard_outlined, label: 'Refer', color: AppTheme.success,
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen())))),
                   const SizedBox(width: 12),
                   Expanded(child: _QuickAction(icon: Icons.shield_outlined, label: l.safety, color: AppTheme.danger,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())))),
@@ -577,6 +599,16 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
                 _ProfileMenuItem(icon: Icons.local_offer_outlined, label: 'Promos & Vouchers',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen()))),
+                _ProfileMenuItem(icon: Icons.calendar_month_outlined, label: 'Scheduled Rides',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledRidesScreen()))),
+                _ProfileMenuItem(icon: Icons.star_outline, label: 'Rewards & Loyalty',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen()))),
+                _ProfileMenuItem(icon: Icons.card_giftcard_outlined, label: 'Refer & Earn',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen()))),
+                _ProfileMenuItem(icon: Icons.drive_eta_outlined, label: 'Car Rental',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen()))),
+                _ProfileMenuItem(icon: Icons.cancel_outlined, label: 'Cancellation Policy',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CancellationPolicyScreen()))),
                 _ProfileMenuItem(icon: Icons.payment_outlined, label: l.paymentMethods,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentScreen()))),
                 _ProfileMenuItem(icon: Icons.shield_outlined, label: l.safetySettings,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
+import '../../services/api_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -9,18 +10,97 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final Set<int> _read = {};
+  List<Map<String, dynamic>> _notifications = [];
+  final Set<int> _locallyRead = {};
+  bool _loading = true;
 
-  static const _notifications = [
-    _Notif(id: 0, title: 'Driver Found!', body: 'Chantha M. is on the way • ETA 8 min', time: 'Just now', type: _NotifType.ride, unread: true),
-    _Notif(id: 1, title: 'Payment Successful', body: '\$3.50 paid via ABA Bank for your trip to Royal Palace', time: '2h ago', type: _NotifType.payment, unread: true),
-    _Notif(id: 2, title: '🎉 Promo Unlocked', body: 'You earned 15% off your next ride! Valid for 24 hours.', time: '5h ago', type: _NotifType.promo, unread: true),
-    _Notif(id: 3, title: 'Driver Arrived', body: 'Dara K. is waiting at BKK Market', time: 'Yesterday', type: _NotifType.ride, unread: false),
-    _Notif(id: 4, title: 'Delivery Picked Up', body: 'Your package has been picked up and is on the way', time: 'Yesterday', type: _NotifType.delivery, unread: false),
-    _Notif(id: 5, title: 'Top-up Successful', body: '\$20.00 added to your AutoRide Pay wallet via ABA', time: 'May 22', type: _NotifType.payment, unread: false),
-    _Notif(id: 6, title: 'Rate Your Trip', body: 'How was your trip with Vanna S.? Share your experience!', time: 'May 22', type: _NotifType.rating, unread: false),
-    _Notif(id: 7, title: 'Safety Alert', body: 'Your live location was shared with your emergency contact', time: 'May 20', type: _NotifType.safety, unread: false),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() => _loading = true);
+    try {
+      final list = await ApiService.getNotifications();
+      if (!mounted) return;
+      setState(() {
+        _notifications = list;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _markRead(int id) async {
+    setState(() => _locallyRead.add(id));
+    try {
+      await ApiService.markNotificationRead(id);
+    } catch (_) {}
+  }
+
+  Future<void> _markAllRead() async {
+    setState(() {
+      for (final n in _notifications) {
+        final id = n['id'];
+        if (id is int) _locallyRead.add(id);
+      }
+    });
+    try {
+      await ApiService.markAllNotificationsRead();
+    } catch (_) {}
+  }
+
+  bool _isRead(Map<String, dynamic> n) {
+    final id = n['id'];
+    if (id is int && _locallyRead.contains(id)) return true;
+    final readAt = n['read_at'];
+    return readAt != null && readAt.toString().isNotEmpty;
+  }
+
+  String _relativeTime(String? rawTime) {
+    if (rawTime == null || rawTime.isEmpty) return '';
+    final dt = DateTime.tryParse(rawTime);
+    if (dt == null) return rawTime;
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 1)  return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24)   return '${diff.inHours} hrs ago';
+    if (diff.inDays == 1)    return 'Yesterday';
+    if (diff.inDays < 7)     return '${diff.inDays} days ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  IconData _typeIcon(String? type) {
+    if (type == null) return Icons.notifications;
+    final t = type.toLowerCase();
+    if (t.contains('ride') || t.contains('booking') || t.contains('trip') || t.contains('accepted') || t.contains('driver_arrived') || t.contains('driver'))
+      return Icons.directions_car;
+    if (t.contains('payment') || t.contains('fare') || t.contains('wallet'))
+      return Icons.account_balance_wallet;
+    if (t.contains('promo') || t.contains('discount'))
+      return Icons.local_offer;
+    if (t.contains('rating') || t.contains('star'))
+      return Icons.star;
+    return Icons.notifications;
+  }
+
+  Color _typeColor(String? type) {
+    if (type == null) return AppTheme.textSecondary;
+    final t = type.toLowerCase();
+    if (t.contains('ride') || t.contains('booking') || t.contains('trip') || t.contains('accepted') || t.contains('driver'))
+      return AppTheme.accent;
+    if (t.contains('payment') || t.contains('fare') || t.contains('wallet'))
+      return AppTheme.success;
+    if (t.contains('promo') || t.contains('discount'))
+      return AppTheme.accentOrange;
+    if (t.contains('rating') || t.contains('star'))
+      return AppTheme.gold;
+    return AppTheme.textSecondary;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,89 +109,115 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         title: const Text('Notifications'),
         actions: [
           TextButton(
-            onPressed: () => setState(() => _read.addAll(_notifications.map((n) => n.id))),
+            onPressed: _notifications.isEmpty ? null : _markAllRead,
             child: const Text('Mark all read', style: TextStyle(color: AppTheme.accent, fontSize: 13)),
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: _notifications.length,
-        itemBuilder: (_, i) {
-          final n = _notifications[i];
-          final isRead = _read.contains(n.id) || !n.unread;
-          return GestureDetector(
-            onTap: () => setState(() => _read.add(n.id)),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              color: isRead ? Colors.transparent : AppTheme.accent.withValues(alpha: 0.05),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                // Icon
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: _typeColor(n.type).withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(_typeIcon(n.type), color: _typeColor(n.type), size: 20),
-                ),
-                const SizedBox(width: 12),
-                // Content
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Expanded(
-                      child: Text(n.title,
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontWeight: isRead ? FontWeight.w500 : FontWeight.w800,
-                            fontSize: 14,
-                          )),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          : RefreshIndicator(
+              color: AppTheme.accent,
+              onRefresh: _loadNotifications,
+              child: _notifications.isEmpty
+                  ? ListView(
+                      children: [
+                        SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.65,
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.notifications_none_outlined,
+                                  color: AppTheme.textSecondary, size: 64),
+                              SizedBox(height: 16),
+                              Text('No notifications yet',
+                                  style: TextStyle(
+                                      color: AppTheme.textSecondary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    )
+                  : ListView.builder(
+                      itemCount: _notifications.length,
+                      itemBuilder: (_, i) {
+                        final n      = _notifications[i];
+                        final id     = n['id'];
+                        final read   = _isRead(n);
+                        final type   = n['type']?.toString();
+                        final title  = n['title']?.toString() ?? n['data']?['title']?.toString() ?? 'Notification';
+                        final body   = n['body']?.toString() ?? n['message']?.toString() ?? n['data']?['body']?.toString() ?? '';
+                        final time   = _relativeTime(n['created_at']?.toString());
+                        final color  = _typeColor(type);
+                        final icon   = _typeIcon(type);
+
+                        return GestureDetector(
+                          onTap: () {
+                            if (!read && id is int) _markRead(id);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color: read
+                                  ? Colors.transparent
+                                  : AppTheme.accent.withValues(alpha: 0.05),
+                              border: Border(
+                                left: BorderSide(
+                                  color: read ? Colors.transparent : AppTheme.accent,
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(icon, color: color, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Row(children: [
+                                    Expanded(
+                                      child: Text(title,
+                                          style: TextStyle(
+                                            color: AppTheme.textPrimary,
+                                            fontWeight: read ? FontWeight.w500 : FontWeight.w800,
+                                            fontSize: 14,
+                                          )),
+                                    ),
+                                    if (!read)
+                                      Container(
+                                          width: 8, height: 8,
+                                          decoration: const BoxDecoration(
+                                              color: AppTheme.accent, shape: BoxShape.circle)),
+                                  ]),
+                                  if (body.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(body,
+                                        style: const TextStyle(
+                                            color: AppTheme.textSecondary, fontSize: 12, height: 1.4)),
+                                  ],
+                                  if (time.isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(time,
+                                        style: const TextStyle(
+                                            color: AppTheme.textSecondary, fontSize: 11)),
+                                  ],
+                                ]),
+                              ),
+                            ]),
+                          ),
+                        );
+                      },
                     ),
-                    if (!isRead)
-                      Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle)),
-                  ]),
-                  const SizedBox(height: 4),
-                  Text(n.body, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4)),
-                  const SizedBox(height: 4),
-                  Text(n.time, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                ])),
-              ]),
             ),
-          );
-        },
-      ),
     );
   }
-
-  Color _typeColor(_NotifType type) {
-    switch (type) {
-      case _NotifType.ride:     return AppTheme.accent;
-      case _NotifType.payment:  return AppTheme.success;
-      case _NotifType.promo:    return AppTheme.warning;
-      case _NotifType.delivery: return AppTheme.accentOrange;
-      case _NotifType.rating:   return AppTheme.gold;
-      case _NotifType.safety:   return AppTheme.danger;
-    }
-  }
-
-  IconData _typeIcon(_NotifType type) {
-    switch (type) {
-      case _NotifType.ride:     return Icons.directions_car_outlined;
-      case _NotifType.payment:  return Icons.payment_outlined;
-      case _NotifType.promo:    return Icons.local_offer_outlined;
-      case _NotifType.delivery: return Icons.delivery_dining_outlined;
-      case _NotifType.rating:   return Icons.star_outline;
-      case _NotifType.safety:   return Icons.shield_outlined;
-    }
-  }
-}
-
-enum _NotifType { ride, payment, promo, delivery, rating, safety }
-
-class _Notif {
-  final int id;
-  final String title, body, time;
-  final _NotifType type;
-  final bool unread;
-  const _Notif({required this.id, required this.title, required this.body, required this.time, required this.type, required this.unread});
 }
