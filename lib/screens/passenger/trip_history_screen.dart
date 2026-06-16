@@ -278,9 +278,7 @@ class _StatsBar extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 4, 16, 12),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [Color(0xFF00C48C), Color(0xFF00A37A)],
-            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: const Color(0xFF00B14F),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(

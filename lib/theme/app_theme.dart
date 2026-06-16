@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // ROTEH brand — light theme
-  static const Color primary       = Color(0xFFF5F6FA); // page background
-  static const Color accent        = Color(0xFF1A3FAA); // brand navy blue
-  static const Color accentOrange  = Color(0xFFFF6B35); // secondary accent
+  // Grab-style green theme
+  static const Color primary       = Color(0xFFF5F7F5); // page background (light green-gray)
+  static const Color accent        = Color(0xFF00B14F); // Grab brand green
+  static const Color accentOrange  = Color(0xFFFF6B00); // promo / secondary accent
   static const Color surface       = Color(0xFFFFFFFF); // card / surface white
-  static const Color cardBg        = Color(0xFFF0F2F5); // secondary background / dividers
-  static const Color textPrimary   = Color(0xFF1A1A2E); // dark text
-  static const Color textSecondary = Color(0xFF6B7280); // gray text
-  static const Color success       = Color(0xFF00C48C); // green
+  static const Color cardBg        = Color(0xFFF0F4F0); // secondary background / dividers
+  static const Color textPrimary   = Color(0xFF1A1A1A); // near-black text
+  static const Color textSecondary = Color(0xFF767676); // gray text
+  static const Color success       = Color(0xFF00B14F); // Grab green
   static const Color warning       = Color(0xFFFFB300); // amber
-  static const Color danger        = Color(0xFFD32F2F); // red / CTA confirm
+  static const Color danger        = Color(0xFFEE0033); // red / error
   static const Color gold          = Color(0xFFFFD700); // gold
 
   // ── Currency helpers ──────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ class AppTheme {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: danger,
+            backgroundColor: accent,
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
