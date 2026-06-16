@@ -385,13 +385,6 @@ class _HomeTabState extends State<_HomeTab> {
                     color: AppTheme.warning,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
-                  ServiceCard(
-                    icon: Icons.calendar_month_outlined,
-                    title: 'Scheduled',
-                    subtitle: 'Plan ahead',
-                    color: const Color(0xFF5E35B1),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledRidesScreen())),
-                  ),
                 ],
               );
             }),
