@@ -319,8 +319,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
         ApiService.getActiveDelivery(),
       ]);
       if (!mounted) return;
-      final activeRide     = results[3] as RideModel?;
-      final activeDelivery = results[4] as DeliveryModel?;
+      final rawRide     = results[3] as RideModel?;
+      final rawDelivery = results[4] as DeliveryModel?;
+
+      // Only treat as truly active if the ride/delivery is still in-progress
+      final activeRide     = (rawRide != null &&
+          !rawRide.isCompleted && !rawRide.isCancelled) ? rawRide : null;
+      final activeDelivery = (rawDelivery != null &&
+          !rawDelivery.isCompleted && !rawDelivery.isCancelled &&
+          rawDelivery.status != 'delivered') ? rawDelivery : null;
+
       setState(() {
         _stats = results[0] as DriverStatsModel;
         final rides = results[1] as List<RideModel>;
@@ -341,7 +349,10 @@ class _DriverDashboardState extends State<_DriverDashboard>
       await Navigator.push(context, MaterialPageRoute(
         builder: (_) => DriverActiveTripScreen(ride: _activeRide!),
       ));
-      if (mounted) widget.onTripCompleted();
+      if (mounted) {
+        setState(() => _activeRide = null);
+        widget.onTripCompleted();
+      }
     } else if (_activeDelivery != null) {
       final user = await ApiService.getSavedUser();
       final driverIdStr = user?.id.toString() ?? 'unknown';
@@ -352,7 +363,10 @@ class _DriverDashboardState extends State<_DriverDashboard>
           driverIdStr: driverIdStr,
         ),
       ));
-      if (mounted) widget.onTripCompleted();
+      if (mounted) {
+        setState(() => _activeDelivery = null);
+        widget.onTripCompleted();
+      }
     }
   }
 
