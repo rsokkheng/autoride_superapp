@@ -15,9 +15,11 @@ import '../../models/driver_stats_model.dart';
 import '../../models/wallet_model.dart';
 import '../auth/role_selection.dart';
 import '../auth/login_screen.dart';
+import '../passenger/passenger_home.dart';
 import '../shared/chat_screen.dart';
 import '../passenger/safety_screen.dart';
 import 'driver_active_trip_screen.dart';
+import 'driver_delivery_active_screen.dart';
 import 'driver_missions_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -244,18 +246,39 @@ class _DriverDashboard extends StatefulWidget {
   State<_DriverDashboard> createState() => _DriverDashboardState();
 }
 
-class _DriverDashboardState extends State<_DriverDashboard> {
+class _DriverDashboardState extends State<_DriverDashboard>
+    with WidgetsBindingObserver {
   DriverStatsModel? _stats;
   RideModel?     _pendingRide;
   DeliveryModel? _pendingDelivery;
+  RideModel?     _activeRide;
+  DeliveryModel? _activeDelivery;
   Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
     if (widget.driverStatus == DriverStatus.online) {
       _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRequests());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // Stop polling while app is backgrounded to save battery
+      _pollTimer?.cancel();
+      _pollTimer = null;
+    } else if (state == AppLifecycleState.resumed) {
+      // Immediately reload data and restart polling
+      if (widget.driverStatus == DriverStatus.online) {
+        _loadData();
+        _pollTimer?.cancel();
+        _pollTimer = Timer.periodic(
+            const Duration(seconds: 5), (_) => _pollRequests());
+      }
     }
   }
 
@@ -279,6 +302,7 @@ class _DriverDashboardState extends State<_DriverDashboard> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
     super.dispose();
   }
@@ -289,16 +313,45 @@ class _DriverDashboardState extends State<_DriverDashboard> {
         ApiService.getDriverStats(),
         ApiService.getAvailableRides(),
         ApiService.getAvailableDeliveries(),
+        ApiService.getActiveRide(),
+        ApiService.getActiveDelivery(),
       ]);
       if (!mounted) return;
+      final activeRide     = results[3] as RideModel?;
+      final activeDelivery = results[4] as DeliveryModel?;
       setState(() {
         _stats = results[0] as DriverStatsModel;
         final rides = results[1] as List<RideModel>;
         _pendingRide = rides.isNotEmpty ? rides.first : null;
         final deliveries = results[2] as List<DeliveryModel>;
         _pendingDelivery = deliveries.isNotEmpty ? deliveries.first : null;
+        _activeRide     = activeRide;
+        _activeDelivery = activeDelivery;
       });
+      if ((activeRide != null || activeDelivery != null) && !widget.isBusy) {
+        widget.onBusy();
+      }
     } catch (_) {}
+  }
+
+  Future<void> _openActiveTrip() async {
+    if (_activeRide != null) {
+      await Navigator.push(context, MaterialPageRoute(
+        builder: (_) => DriverActiveTripScreen(ride: _activeRide!),
+      ));
+      if (mounted) widget.onTripCompleted();
+    } else if (_activeDelivery != null) {
+      final user = await ApiService.getSavedUser();
+      final driverIdStr = user?.id.toString() ?? 'unknown';
+      if (!mounted) return;
+      await Navigator.push(context, MaterialPageRoute(
+        builder: (_) => DriverDeliveryActiveScreen(
+          delivery: _activeDelivery!,
+          driverIdStr: driverIdStr,
+        ),
+      ));
+      if (mounted) widget.onTripCompleted();
+    }
   }
 
   Future<void> _pollRequests() async {
@@ -427,10 +480,10 @@ class _DriverDashboardState extends State<_DriverDashboard> {
               mainAxisSpacing: 12,
               childAspectRatio: 1.6,
               children: [
-                _StatCard(label: 'Accepted',        value: '${_stats?.acceptedRides  ?? 0}', icon: Icons.check_circle_outline,  color: AppTheme.accent),
-                _StatCard(label: 'Completed',        value: '${_stats?.completedRides ?? 0}', icon: Icons.directions_car,        color: AppTheme.accentOrange),
-                _StatCard(label: 'Hours Online',     value: '5.2h',    icon: Icons.access_time,        color: const Color(0xFF9C27B0)),
-                _StatCard(label: 'Acceptance Rate',  value: '94%',     icon: Icons.thumb_up_outlined,  color: AppTheme.success),
+                _StatCard(label: 'Accepted',       value: '${_stats?.acceptedRides  ?? 0}',                                     icon: Icons.check_circle_outline, color: AppTheme.accent),
+                _StatCard(label: 'Completed',      value: '${_stats?.completedRides ?? 0}',                                     icon: Icons.directions_car,       color: AppTheme.accentOrange),
+                _StatCard(label: 'Hours Online',   value: _stats == null ? '--' : '${_stats!.hoursOnline.toStringAsFixed(1)}h', icon: Icons.access_time,          color: const Color(0xFF9C27B0)),
+                _StatCard(label: 'Acceptance Rate',value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', icon: Icons.thumb_up_outlined, color: AppTheme.success),
               ],
             ),
             const SizedBox(height: 20),
@@ -513,32 +566,53 @@ class _DriverDashboardState extends State<_DriverDashboard> {
 
             // Active mode cards (one per active mode)
             if (widget.isOnline) ...[
-              // While busy — show "on a trip" card, hide all new requests
+              // While busy — show resume card
               if (widget.isBusy) ...[
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warning.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
-                  ),
-                  child: Row(children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppTheme.warning.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.directions_car, color: AppTheme.warning, size: 24),
+                GestureDetector(
+                  onTap: _openActiveTrip,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
                     ),
-                    const SizedBox(width: 14),
-                    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('On a Trip', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
-                      SizedBox(height: 2),
-                      Text('New requests are paused. You\'ll be available again automatically when the trip ends.',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    ])),
-                  ]),
+                    child: Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _activeDelivery != null
+                              ? Icons.delivery_dining
+                              : Icons.directions_car,
+                          color: AppTheme.warning, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(
+                          _activeDelivery != null
+                              ? (_activeDelivery!.isMoving ? 'Moving In Progress' : 'Delivery In Progress')
+                              : 'Ride In Progress',
+                          style: const TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
+                        const SizedBox(height: 2),
+                        const Text('Tap to open the map and see where to go.',
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      ])),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text('Resume',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                      ),
+                    ]),
+                  ),
                 ),
                 const SizedBox(height: 14),
               ] else ...[
@@ -548,12 +622,18 @@ class _DriverDashboardState extends State<_DriverDashboard> {
                     const SizedBox(height: 14),
                     _RideRequestCard(
                       ride: _pendingRide!,
-                      onAccepted: () {
-                        setState(() => _pendingRide = null);
-                        widget.onBusy();
-                      },
                       onDeclined: () => setState(() => _pendingRide = null),
-                      onTripCompleted: widget.onTripCompleted,
+                      onAccept: (RideModel ride) async {
+                        setState(() { _pendingRide = null; _activeRide = ride; });
+                        widget.onBusy();
+                        await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => DriverActiveTripScreen(ride: ride),
+                        ));
+                        if (mounted) {
+                          setState(() => _activeRide = null);
+                          widget.onTripCompleted();
+                        }
+                      },
                     ),
                   ] else ...[
                     _ModeEmptyCard(
@@ -571,8 +651,20 @@ class _DriverDashboardState extends State<_DriverDashboard> {
                     const SizedBox(height: 14),
                     _DeliveryRequestCard(
                       delivery: _pendingDelivery!,
-                      onAccepted: () => setState(() => _pendingDelivery = null),
                       onDeclined: () => setState(() => _pendingDelivery = null),
+                      onAccept: (DeliveryModel delivery) async {
+                        setState(() { _pendingDelivery = null; _activeDelivery = delivery; });
+                        final user = await ApiService.getSavedUser();
+                        final driverIdStr = user?.id.toString() ?? 'unknown';
+                        if (!mounted) return;
+                        await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => DriverDeliveryActiveScreen(
+                            delivery: delivery,
+                            driverIdStr: driverIdStr,
+                          ),
+                        ));
+                        if (mounted) setState(() => _activeDelivery = null);
+                      },
                     ),
                   ] else ...[
                     _ModeEmptyCard(
@@ -814,15 +906,14 @@ class _StatCard extends StatelessWidget {
 // ─── Ride request card with countdown ─────────────────────────────────────────
 class _RideRequestCard extends StatefulWidget {
   final RideModel    ride;
-  final VoidCallback onAccepted;
+  // Parent dashboard owns navigation so it stays mounted for the full trip.
+  final Future<void> Function(RideModel) onAccept;
   final VoidCallback onDeclined;
-  final VoidCallback? onTripCompleted; // fired when DriverActiveTripScreen closes
 
   const _RideRequestCard({
     required this.ride,
-    required this.onAccepted,
+    required this.onAccept,
     required this.onDeclined,
-    this.onTripCompleted,
   });
 
   @override
@@ -861,12 +952,10 @@ class _RideRequestCardState extends State<_RideRequestCard> {
     try {
       await ApiService.acceptRide(widget.ride.id);
       if (!mounted) return;
-      widget.onAccepted();
-      // When the trip screen pops (complete or cancel) → restore Online status
-      await Navigator.push(context, MaterialPageRoute(
-        builder: (_) => DriverActiveTripScreen(ride: widget.ride),
-      ));
-      if (mounted) widget.onTripCompleted?.call();
+      // Delegate all state changes and navigation to the parent dashboard.
+      // The card may be unmounted immediately after this call — that is fine
+      // because the parent context stays alive for the whole trip.
+      await widget.onAccept(widget.ride);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1010,12 +1099,13 @@ class _RideRequestCardState extends State<_RideRequestCard> {
 // ─── Delivery request card with countdown ─────────────────────────────────────
 class _DeliveryRequestCard extends StatefulWidget {
   final DeliveryModel delivery;
-  final VoidCallback onAccepted;
+  // Parent dashboard owns navigation so it stays mounted for the full delivery.
+  final Future<void> Function(DeliveryModel) onAccept;
   final VoidCallback onDeclined;
 
   const _DeliveryRequestCard({
     required this.delivery,
-    required this.onAccepted,
+    required this.onAccept,
     required this.onDeclined,
   });
 
@@ -1055,13 +1145,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
     try {
       await ApiService.acceptDelivery(widget.delivery.id);
       if (!mounted) return;
-      widget.onAccepted();
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Delivery accepted! Go to Missions tab to manage it.'),
-        backgroundColor: AppTheme.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      await widget.onAccept(widget.delivery);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -1977,6 +2061,37 @@ class _DriverProfileState extends State<_DriverProfile> {
                   onTap: item.$3,
                 ),
               ))),
+              // ── Switch to Passenger Mode ────────────────────────────────
+              GestureDetector(
+                onTap: () => Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const PassengerHomeScreen()),
+                  (_) => false,
+                ),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      padding: const EdgeInsets.all(7),
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(child: Text('Switch to Passenger Mode',
+                        style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14))),
+                    const Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
+                  ]),
+                ),
+              ),
+              // ── Language ────────────────────────────────────────────────
               Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

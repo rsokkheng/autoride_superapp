@@ -40,7 +40,7 @@ class DriverActiveTripScreen extends StatefulWidget {
 }
 
 class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
 
   GoogleMapController? _mapController;
   _TripPhase _phase     = _TripPhase.headingToPickup;
@@ -50,6 +50,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   int    _etaMinutes    = 0;
   double _distanceKm    = 0.0;
   DateTime? _lastRouteFetch;
+
+  // Client-side trip distance/duration fallback when API doesn't return them
+  double?   _tripDistanceKm;
+  DateTime? _tripStartTime;
 
   // Driver position — plain fields; updated in GPS callback without setState
   LatLng? _driverLatLng;
@@ -116,15 +120,38 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
     _initMap();
     _startTracking();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     LocationService.instance.stopTracking(_driverId);
     _pulseCtrl.dispose();
     _markerAnimCtrl.dispose();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _onAppResumed();
+  }
+
+  void _onAppResumed() {
+    if (!mounted || _phase == _TripPhase.completed) return;
+    // Force map widget redraw (fixes tile blank on iOS after lock screen)
+    setState(() {});
+    // Restart GPS stream — LocationService cancels the old sub before starting a new one
+    _startTracking();
+    // Re-fetch route and restore camera with last known position
+    if (_driverLatLng != null) {
+      _lastRouteFetch = null;
+      _fetchLiveRoute(_driverLatLng!);
+      final waypoint = _phase == _TripPhase.inProgress ? _destLatLng : _pickupLatLng;
+      Future.delayed(const Duration(milliseconds: 300),
+          () => mounted ? _fitCamera(_driverLatLng!, waypoint) : null);
+    }
   }
 
   // ── Map initialisation ────────────────────────────────────────────────────────
@@ -383,6 +410,16 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       if (widget.ride != null) {
         try {
           completedRide = await ApiService.completeRide(widget.ride!.id);
+          // The complete endpoint may not return distance/duration —
+          // fetch the finalized ride to get server-computed values.
+          if (completedRide.distanceKm == null || completedRide.durationMin == null) {
+            try {
+              final fresh = await ApiService.getRide(widget.ride!.id);
+              if (fresh.distanceKm != null || fresh.durationMin != null) {
+                completedRide = fresh;
+              }
+            } catch (_) {}
+          }
         } catch (_) {
           completedRide = widget.ride;
         }
@@ -395,11 +432,19 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         body:  'You earned ${AppTheme.khr((completedRide ?? widget.ride)?.fareKhr ?? 0)}',
       );
       if (!mounted) return;
+      final finalRide = completedRide ?? widget.ride ?? _fakeSummaryRide();
+      final fallbackDist = finalRide.distanceKm ?? _tripDistanceKm;
+      final fallbackDur  = finalRide.durationMin ??
+          (_tripStartTime != null
+              ? DateTime.now().difference(_tripStartTime!).inMinutes
+              : null);
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => DriverTripSummaryScreen(
-            ride: completedRide ?? widget.ride ?? _fakeSummaryRide(),
+            ride:            finalRide,
+            distanceKmFallback: fallbackDist,
+            durationMinFallback: fallbackDur,
           ),
         ),
       );
@@ -424,10 +469,14 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     if (!mounted) return;
     setState(() => _phase = _TripPhase.values[_phase.index + 1]);
 
-    // When trip starts (inProgress), re-fetch route to destination
-    if (_phase == _TripPhase.inProgress && _driverLatLng != null) {
-      _lastRouteFetch = null;
-      _fetchLiveRoute(_driverLatLng!);
+    // When trip starts (inProgress), record start time and snapshot route distance
+    if (_phase == _TripPhase.inProgress) {
+      _tripStartTime   = DateTime.now();
+      _tripDistanceKm  = _distanceKm > 0 ? _distanceKm : null;
+      if (_driverLatLng != null) {
+        _lastRouteFetch = null;
+        _fetchLiveRoute(_driverLatLng!);
+      }
     }
   }
 

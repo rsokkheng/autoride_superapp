@@ -185,8 +185,10 @@ class TripReceiptScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 14),
-          _FareRow(label: 'Base fare', amount: AppTheme.khr(baseFareKhr)),
-          _FareRow(label: 'Distance fee', amount: AppTheme.khr(distanceFeeKhr)),
+          if (baseFareKhr > 0)
+            _FareRow(label: 'Base fare', amount: AppTheme.khr(baseFareKhr)),
+          if (distanceFeeKhr > 0)
+            _FareRow(label: 'Distance fee', amount: AppTheme.khr(distanceFeeKhr)),
           if (surgeKhr > 0)
             _FareRow(
               label: 'Surge fee',
@@ -199,10 +201,11 @@ class TripReceiptScreen extends StatelessWidget {
               amount: '-${AppTheme.khr(promoDiscountKhr)}',
               amountColor: AppTheme.success,
             ),
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(color: AppTheme.cardBg, height: 1),
-          ),
+          if (baseFareKhr > 0 || distanceFeeKhr > 0 || surgeKhr > 0 || promoDiscountKhr > 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(color: AppTheme.cardBg, height: 1),
+            ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -364,8 +367,8 @@ class TripReceiptScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
-              onPressed: () {
-                Share.share(_shareText);
+              onPressed: () async {
+                await Share.share(_shareText, subject: 'AutoRide Trip Receipt #$rideId');
               },
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,

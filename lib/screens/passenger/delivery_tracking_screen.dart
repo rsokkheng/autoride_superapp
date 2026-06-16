@@ -15,13 +15,22 @@ const _kDivider  = Color(0xFFEEEEEE);
 const _kDefaultPickup  = LatLng(11.5680, 104.9195);
 const _kDefaultDropoff = LatLng(11.5550, 104.9300);
 
-/// Status order for the progress bar.
-const _kStatusSteps = [
+/// Status order for delivery progress bar.
+const _kDeliverySteps = [
   'requested',
   'accepted',
   'picked_up',
   'in_progress',
   'delivered',
+];
+
+/// Status order for moving progress bar.
+const _kMovingSteps = [
+  'accepted',
+  'arrived',
+  'loading',
+  'in_transit',
+  'completed',
 ];
 
 class DeliveryTrackingScreen extends StatefulWidget {
@@ -55,8 +64,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   String?        _error;
 
   // Rating dialog state
-  int    _stars   = 5;
-  String _comment = '';
+  int _stars = 5;
 
   // Cancel in-progress guard
   bool _cancelling = false;
@@ -99,6 +107,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
         _loading  = false;
         _error    = null;
       });
+      _updateMarkersFromDelivery(d);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -109,6 +118,14 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   }
 
   // ── Map ───────────────────────────────────────────────────────────────────────
+
+  LatLng get _pickupPos => (_delivery?.pickupLat != null && _delivery?.pickupLng != null)
+      ? LatLng(_delivery!.pickupLat!, _delivery!.pickupLng!)
+      : _kDefaultPickup;
+
+  LatLng get _dropoffPos => (_delivery?.dropoffLat != null && _delivery?.dropoffLng != null)
+      ? LatLng(_delivery!.dropoffLat!, _delivery!.dropoffLng!)
+      : _kDefaultDropoff;
 
   void _initMarkers() {
     _markers.addAll([
@@ -127,25 +144,50 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     ]);
   }
 
+  void _updateMarkersFromDelivery(DeliveryModel d) {
+    if (d.pickupLat == null) return;
+    setState(() {
+      _markers
+        ..removeWhere((m) => m.markerId.value == 'pickup' || m.markerId.value == 'dropoff')
+        ..addAll([
+          Marker(
+            markerId: const MarkerId('pickup'),
+            position: _pickupPos,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            infoWindow: InfoWindow(title: widget.from),
+          ),
+          Marker(
+            markerId: const MarkerId('dropoff'),
+            position: _dropoffPos,
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: InfoWindow(title: widget.to),
+          ),
+        ]);
+    });
+    _fitMarkers();
+  }
+
   void _fitMarkers() {
+    final pickup  = _pickupPos;
+    final dropoff = _dropoffPos;
     _mapController?.animateCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           southwest: LatLng(
-            _kDefaultPickup.latitude  < _kDefaultDropoff.latitude
-                ? _kDefaultPickup.latitude  - 0.01
-                : _kDefaultDropoff.latitude - 0.01,
-            _kDefaultPickup.longitude < _kDefaultDropoff.longitude
-                ? _kDefaultPickup.longitude  - 0.01
-                : _kDefaultDropoff.longitude - 0.01,
+            pickup.latitude  < dropoff.latitude
+                ? pickup.latitude  - 0.01
+                : dropoff.latitude - 0.01,
+            pickup.longitude < dropoff.longitude
+                ? pickup.longitude  - 0.01
+                : dropoff.longitude - 0.01,
           ),
           northeast: LatLng(
-            _kDefaultPickup.latitude  > _kDefaultDropoff.latitude
-                ? _kDefaultPickup.latitude  + 0.01
-                : _kDefaultDropoff.latitude + 0.01,
-            _kDefaultPickup.longitude > _kDefaultDropoff.longitude
-                ? _kDefaultPickup.longitude  + 0.01
-                : _kDefaultDropoff.longitude + 0.01,
+            pickup.latitude  > dropoff.latitude
+                ? pickup.latitude  + 0.01
+                : dropoff.latitude + 0.01,
+            pickup.longitude > dropoff.longitude
+                ? pickup.longitude  + 0.01
+                : dropoff.longitude + 0.01,
           ),
         ),
         72,
@@ -155,14 +197,31 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   // ── Status helpers ────────────────────────────────────────────────────────────
 
+  bool get _isMoving => widget.serviceType == 'moving';
+
   String get _status => _delivery?.status ?? 'requested';
 
+  List<String> get _steps => _isMoving ? _kMovingSteps : _kDeliverySteps;
+
   int get _stepIndex {
-    final idx = _kStatusSteps.indexOf(_status);
+    final idx = _steps.indexOf(_status);
     return idx < 0 ? 0 : idx;
   }
 
   String get _statusLabel {
+    if (_isMoving) {
+      switch (_status) {
+        case 'pending':
+        case 'requested': return 'Looking for a driver...';
+        case 'accepted':  return 'Driver assigned';
+        case 'arrived':   return 'Driver arrived at pickup';
+        case 'loading':   return 'Loading items...';
+        case 'in_transit':return 'On the way to destination';
+        case 'completed': return 'Moving completed!';
+        case 'cancelled': return 'Cancelled';
+        default:          return 'Processing...';
+      }
+    }
     switch (_status) {
       case 'requested':   return 'Looking for a driver...';
       case 'accepted':    return 'Driver assigned';
@@ -174,10 +233,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     }
   }
 
-  bool get _isDelivered  => _status == 'delivered';
-  bool get _canCancel    => _status == 'requested';
+  bool get _isDelivered  =>
+      _status == 'delivered' || _status == 'completed';
+  bool get _canCancel    =>
+      _status == 'requested' || _status == 'pending';
   bool get _driverAssigned =>
-      _status != 'requested' && _delivery?.driver != null;
+      _status != 'requested' && _status != 'pending' &&
+      _delivery?.driver != null;
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
@@ -254,8 +316,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   }
 
   Future<void> _showRatingDialog() async {
-    _stars   = 5;
-    _comment = '';
+    _stars = 5;
     await showDialog(
       context: context,
       builder: (ctx) => _RatingDialog(
@@ -268,12 +329,6 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               rating: stars.toDouble(),
               comment: comment.isNotEmpty ? comment : null,
             );
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-              content: Text('Thank you for your rating!'),
-              backgroundColor: _kGreen,
-              behavior: SnackBarBehavior.floating,
-            ));
           } on ApiException catch (e) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -282,15 +337,11 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 behavior: SnackBarBehavior.floating,
               ));
             }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Rating failed: $e'),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ));
-            }
-          }
+            return;
+          } catch (_) {}
+          if (!mounted) return;
+          // Navigate home after successful rating
+          Navigator.of(context).popUntil((route) => route.isFirst);
         },
       ),
     );
@@ -434,11 +485,6 @@ class _BottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final eta = delivery?.status == 'accepted' ||
-                delivery?.status == 'in_progress' ||
-                delivery?.status == 'picked_up'
-        ? null  // ETA placeholder; real value would come from API
-        : null;
 
     return Container(
       decoration: const BoxDecoration(
@@ -504,7 +550,10 @@ class _BottomSheet extends StatelessWidget {
               const SizedBox(height: 14),
 
               // Progress bar
-              _StatusProgressBar(stepIndex: stepIndex),
+              _StatusProgressBar(
+                stepIndex:   stepIndex,
+                isMoving:    serviceType == 'moving',
+              ),
               const SizedBox(height: 18),
 
               // Driver info card (shown when driver is assigned)
@@ -594,11 +643,15 @@ class _BottomSheet extends StatelessWidget {
 // ── Status progress bar ───────────────────────────────────────────────────────
 
 class _StatusProgressBar extends StatelessWidget {
-  final int stepIndex;
+  final int  stepIndex;
+  final bool isMoving;
 
-  const _StatusProgressBar({required this.stepIndex});
+  const _StatusProgressBar({
+    required this.stepIndex,
+    this.isMoving = false,
+  });
 
-  static const _labels = [
+  static const _deliveryLabels = [
     'Order',
     'Driver\nAssigned',
     'Picked Up',
@@ -606,10 +659,21 @@ class _StatusProgressBar extends StatelessWidget {
     'Delivered',
   ];
 
+  static const _movingLabels = [
+    'Accepted',
+    'Arrived',
+    'Loading',
+    'In Transit',
+    'Done',
+  ];
+
+  List<String> get _labels => isMoving ? _movingLabels : _deliveryLabels;
+  List<String> get _steps  => isMoving ? _kMovingSteps : _kDeliverySteps;
+
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: List.generate(_kStatusSteps.length * 2 - 1, (i) {
+      children: List.generate(_steps.length * 2 - 1, (i) {
         // Even indices → step circles; odd indices → connectors
         if (i.isOdd) {
           final stepIdx = i ~/ 2;
@@ -968,7 +1032,11 @@ class _RatingDialogState extends State<_RatingDialog> {
         Row(children: [
           Expanded(
             child: OutlinedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pop(context);           // close dialog
+                Navigator.of(context).popUntil(  // go home
+                    (route) => route.isFirst);
+              },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(

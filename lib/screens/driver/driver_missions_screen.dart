@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/delivery_model.dart';
 import '../../services/api_service.dart';
+import 'driver_delivery_active_screen.dart';
 
 class DriverMissionsScreen extends StatefulWidget {
   const DriverMissionsScreen({super.key});
@@ -14,17 +15,19 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Delivery tab state
   List<DeliveryModel> _deliveries = [];
-  bool _loading = true;
-  String? _error;
-  final Set<int> _accepting = {};
+  List<DeliveryModel> _movings    = [];
+  bool   _loadingDeliveries = true;
+  bool   _loadingMovings    = true;
+  String? _errorDeliveries;
+  String? _errorMovings;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _load();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadDeliveries();
+    _loadMovings();
   }
 
   @override
@@ -33,73 +36,108 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+  Future<void> _loadDeliveries() async {
+    setState(() { _loadingDeliveries = true; _errorDeliveries = null; });
     try {
       final list = await ApiService.getDeliveries();
-      if (mounted) setState(() { _deliveries = list; _loading = false; });
+      if (mounted) setState(() { _deliveries = list; _loadingDeliveries = false; });
     } on ApiException catch (e) {
-      if (mounted) setState(() { _error = e.message; _loading = false; });
+      if (mounted) setState(() { _errorDeliveries = e.message; _loadingDeliveries = false; });
     } catch (_) {
-      if (mounted) setState(() { _error = 'Failed to load deliveries.'; _loading = false; });
+      if (mounted) setState(() { _errorDeliveries = 'Failed to load deliveries.'; _loadingDeliveries = false; });
     }
   }
 
-  Future<void> _accept(DeliveryModel d) async {
-    setState(() => _accepting.add(d.id));
+  Future<void> _loadMovings() async {
+    setState(() { _loadingMovings = true; _errorMovings = null; });
     try {
-      final updated = await ApiService.acceptDelivery(d.id);
-      if (!mounted) return;
-      setState(() {
-        final idx = _deliveries.indexWhere((x) => x.id == updated.id);
-        if (idx >= 0) _deliveries[idx] = updated;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Delivery accepted!'),
-        backgroundColor: AppTheme.success,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
+      final list = await ApiService.getMovings();
+      if (mounted) setState(() { _movings = list; _loadingMovings = false; });
     } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(e.message),
-        backgroundColor: AppTheme.danger,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ));
-    } finally {
-      if (mounted) setState(() => _accepting.remove(d.id));
+      if (mounted) setState(() { _errorMovings = e.message; _loadingMovings = false; });
+    } catch (_) {
+      if (mounted) setState(() { _errorMovings = 'Failed to load movings.'; _loadingMovings = false; });
     }
   }
+
+  // Active = accepted or in_progress
+  List<DeliveryModel> get _activeDeliveries =>
+      _deliveries.where((d) => d.isAccepted || d.isInProgress).toList();
+  List<DeliveryModel> get _activeMovings =>
+      _movings.where((d) => d.isAccepted || d.isInProgress).toList();
 
   @override
   Widget build(BuildContext context) {
+    final totalActive = _activeDeliveries.length + _activeMovings.length;
+
     return Scaffold(
+      backgroundColor: AppTheme.primary,
       appBar: AppBar(
-        title: const Text('Missions'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Missions'),
+            if (totalActive > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentOrange,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$totalActive',
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ],
+        ),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.accentOrange,
           labelColor: AppTheme.accentOrange,
           unselectedLabelColor: AppTheme.textSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.delivery_dining_outlined), text: 'Delivery'),
-            Tab(icon: Icon(Icons.car_rental_outlined),      text: 'Car Rental'),
+          tabs: [
+            Tab(
+              child: _TabLabel(
+                icon: Icons.delivery_dining_outlined,
+                label: 'Delivery',
+                count: _activeDeliveries.length,
+              ),
+            ),
+            Tab(
+              child: _TabLabel(
+                icon: Icons.local_shipping_outlined,
+                label: 'Moving',
+                count: _activeMovings.length,
+              ),
+            ),
+            const Tab(icon: Icon(Icons.car_rental_outlined), text: 'Rental'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          _DeliveryTab(
-            loading:   _loading,
-            error:     _error,
-            deliveries: _deliveries,
-            accepting: _accepting,
-            onRefresh: _load,
-            onAccept:  _accept,
+          // ── Delivery tab ───────────────────────────────────────────────
+          _MissionList(
+            loading:  _loadingDeliveries,
+            error:    _errorDeliveries,
+            items:    _deliveries,
+            type:     _MissionType.delivery,
+            onRefresh: _loadDeliveries,
           ),
+          // ── Moving tab ─────────────────────────────────────────────────
+          _MissionList(
+            loading:  _loadingMovings,
+            error:    _errorMovings,
+            items:    _movings,
+            type:     _MissionType.moving,
+            onRefresh: _loadMovings,
+          ),
+          // ── Rental tab ─────────────────────────────────────────────────
           const _RentalPlaceholder(),
         ],
       ),
@@ -107,36 +145,71 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
   }
 }
 
-// ─── Delivery tab ─────────────────────────────────────────────────────────────
+// ─── Tab label with active-count badge ───────────────────────────────────────
 
-class _DeliveryTab extends StatelessWidget {
-  final bool loading;
-  final String? error;
-  final List<DeliveryModel> deliveries;
-  final Set<int> accepting;
+class _TabLabel extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final int      count;
+  const _TabLabel({required this.icon, required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 18),
+      const SizedBox(width: 4),
+      Text(label, style: const TextStyle(fontSize: 13)),
+      if (count > 0) ...[
+        const SizedBox(width: 4),
+        Container(
+          width: 16, height: 16,
+          decoration: const BoxDecoration(
+              color: AppTheme.accentOrange, shape: BoxShape.circle),
+          child: Center(
+            child: Text('$count',
+                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
+          ),
+        ),
+      ],
+    ]);
+  }
+}
+
+// ─── Mission type ─────────────────────────────────────────────────────────────
+
+enum _MissionType { delivery, moving }
+
+// ─── Mission list tab ─────────────────────────────────────────────────────────
+
+class _MissionList extends StatelessWidget {
+  final bool                    loading;
+  final String?                 error;
+  final List<DeliveryModel>     items;
+  final _MissionType            type;
   final Future<void> Function() onRefresh;
-  final Future<void> Function(DeliveryModel) onAccept;
 
-  const _DeliveryTab({
+  const _MissionList({
     required this.loading,
     required this.error,
-    required this.deliveries,
-    required this.accepting,
+    required this.items,
+    required this.type,
     required this.onRefresh,
-    required this.onAccept,
   });
 
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.accentOrange));
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.accentOrange));
     }
 
     if (error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
         const SizedBox(height: 12),
-        Text(error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+        Text(error!,
+            style: const TextStyle(color: AppTheme.textSecondary),
+            textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton(
           onPressed: onRefresh,
@@ -146,21 +219,29 @@ class _DeliveryTab extends StatelessWidget {
       ]));
     }
 
-    final requested   = deliveries.where((d) => d.isRequested).toList();
-    final active      = deliveries.where((d) => d.isAccepted || d.isInProgress).toList();
-    final completed   = deliveries.where((d) => d.isCompleted || d.isCancelled).toList();
+    final active    = items.where((d) => d.isAccepted || d.isInProgress).toList();
+    final completed = items.where((d) => d.isCompleted || d.isCancelled).toList();
 
-    if (deliveries.isEmpty) {
+    if (items.isEmpty) {
+      final label = type == _MissionType.delivery ? 'delivery' : 'moving';
       return RefreshIndicator(
         onRefresh: onRefresh,
         color: AppTheme.accentOrange,
         child: ListView(padding: const EdgeInsets.all(32), children: [
-          const Icon(Icons.delivery_dining_outlined, color: AppTheme.textSecondary, size: 56),
+          Icon(
+            type == _MissionType.delivery
+                ? Icons.delivery_dining_outlined
+                : Icons.local_shipping_outlined,
+            color: AppTheme.textSecondary,
+            size: 56,
+          ),
           const SizedBox(height: 16),
-          const Text('No delivery jobs right now', textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+          Text('No $label tasks right now',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
           const SizedBox(height: 8),
-          const Text('Pull to refresh', textAlign: TextAlign.center,
+          const Text('Accept a job from the home screen\nto see it here.',
+              textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
         ]),
       );
@@ -169,50 +250,65 @@ class _DeliveryTab extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: AppTheme.accentOrange,
-      child: ListView(padding: const EdgeInsets.all(16), children: [
-        // Summary banner
-        Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF0F3460), Color(0xFF1A2A00)]),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(children: [
-            const Icon(Icons.local_fire_department, color: AppTheme.accentOrange, size: 24),
-            const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(
-                '${requested.length} new job${requested.length == 1 ? '' : 's'} available',
-                style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700),
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // ── Summary header ──────────────────────────────────────────────
+          if (active.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF0F3460), Color(0xFF1A2A4A)]),
+                borderRadius: BorderRadius.circular(14),
               ),
-              if (active.isNotEmpty)
-                Text('${active.length} active delivery',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-            ])),
-          ]),
-        ),
+              child: Row(children: [
+                const Icon(Icons.local_fire_department,
+                    color: AppTheme.accentOrange, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(
+                      '${active.length} active task${active.length == 1 ? '' : 's'}',
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w700),
+                    ),
+                    const Text(
+                      'Tap to refresh for latest status',
+                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ]),
+                ),
+                IconButton(
+                  onPressed: onRefresh,
+                  icon: const Icon(Icons.refresh, color: Colors.white70, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ]),
+            ),
 
-        if (active.isNotEmpty) ...[
-          _SectionLabel('Active (${active.length})'),
-          ...active.map((d) => _DeliveryCard(d: d, accepting: accepting, onAccept: onAccept)),
-          const SizedBox(height: 8),
-        ],
+          // ── Active tasks ────────────────────────────────────────────────
+          if (active.isNotEmpty) ...[
+            _SectionLabel('Active (${active.length})'),
+            ...active.map((d) => _MissionCard(d: d, type: type)),
+            const SizedBox(height: 8),
+          ],
 
-        if (requested.isNotEmpty) ...[
-          _SectionLabel('Available (${requested.length})'),
-          ...requested.map((d) => _DeliveryCard(d: d, accepting: accepting, onAccept: onAccept)),
-          const SizedBox(height: 8),
+          // ── Completed / cancelled tasks ─────────────────────────────────
+          if (completed.isNotEmpty) ...[
+            _SectionLabel('Completed (${completed.length})'),
+            ...completed.map((d) => _MissionCard(d: d, type: type)),
+          ],
         ],
-
-        if (completed.isNotEmpty) ...[
-          _SectionLabel('Completed (${completed.length})'),
-          ...completed.map((d) => _DeliveryCard(d: d, accepting: accepting, onAccept: onAccept)),
-        ],
-      ]),
+      ),
     );
   }
 }
+
+// ─── Section label ────────────────────────────────────────────────────────────
 
 class _SectionLabel extends StatelessWidget {
   final String text;
@@ -220,43 +316,174 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text, style: const TextStyle(
-      color: AppTheme.textSecondary,
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 0.5,
-    )),
+    padding: const EdgeInsets.only(bottom: 8, top: 4),
+    child: Text(text,
+        style: const TextStyle(
+            color: AppTheme.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6)),
   );
 }
 
-class _DeliveryCard extends StatelessWidget {
-  final DeliveryModel d;
-  final Set<int> accepting;
-  final Future<void> Function(DeliveryModel) onAccept;
+// ─── Progress stepper ─────────────────────────────────────────────────────────
 
-  const _DeliveryCard({required this.d, required this.accepting, required this.onAccept});
+class _ProgressStepper extends StatelessWidget {
+  final List<String> steps;
+  final int          currentStep; // 0-based index of current active step
+
+  const _ProgressStepper({required this.steps, required this.currentStep});
 
   @override
   Widget build(BuildContext context) {
-    final isAccepting = accepting.contains(d.id);
-    final statusColor = _statusColor(d.status);
+    return Row(
+      children: List.generate(steps.length, (i) {
+        final done   = i < currentStep;
+        final active = i == currentStep;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+        return Expanded(
+          child: Column(children: [
+            Row(children: [
+              // Left connector line
+              if (i > 0)
+                Expanded(
+                  child: Container(
+                    height: 2,
+                    color: done || active ? AppTheme.success : AppTheme.cardBg,
+                  ),
+                ),
+              // Step dot
+              Container(
+                width: 18, height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: done
+                      ? AppTheme.success
+                      : active
+                          ? AppTheme.accentOrange
+                          : AppTheme.cardBg,
+                  border: Border.all(
+                    color: done
+                        ? AppTheme.success
+                        : active
+                            ? AppTheme.accentOrange
+                            : AppTheme.textSecondary.withValues(alpha: 0.3),
+                    width: 1.5,
+                  ),
+                ),
+                child: Center(
+                  child: done
+                      ? const Icon(Icons.check, size: 10, color: Colors.white)
+                      : active
+                          ? Container(
+                              width: 7, height: 7,
+                              decoration: const BoxDecoration(
+                                  color: Colors.white, shape: BoxShape.circle),
+                            )
+                          : null,
+                ),
+              ),
+              // Right connector line
+              if (i < steps.length - 1)
+                Expanded(
+                  child: Container(
+                    height: 2,
+                    color: done ? AppTheme.success : AppTheme.cardBg,
+                  ),
+                ),
+            ]),
+            const SizedBox(height: 4),
+            Text(
+              steps[i],
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: done || active
+                    ? AppTheme.textPrimary
+                    : AppTheme.textSecondary,
+                fontSize: 9,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ]),
+        );
+      }),
+    );
+  }
+}
+
+// ─── Mission card (read-only, non-tappable) ───────────────────────────────────
+
+class _MissionCard extends StatelessWidget {
+  final DeliveryModel d;
+  final _MissionType  type;
+
+  const _MissionCard({required this.d, required this.type});
+
+  static const _deliverySteps = ['Accepted', 'Picked Up', 'In Transit', 'Delivered'];
+  static const _movingSteps   = ['Accepted', 'Arrived', 'Loading', 'In Transit', 'Done'];
+
+  int _deliveryStep(String status) {
+    switch (status) {
+      case 'accepted':    return 0;
+      case 'in_progress': return 2;
+      case 'completed':   return 3;
+      default:            return 0;
+    }
+  }
+
+  int _movingStep(String status) {
+    switch (status) {
+      case 'accepted':    return 0;
+      case 'in_progress': return 3;
+      case 'completed':   return 4;
+      default:            return 0;
+    }
+  }
+
+  Color get _borderColor {
+    if (d.isCompleted) return AppTheme.success;
+    if (d.isCancelled) return AppTheme.danger;
+    if (d.isInProgress) return AppTheme.accentOrange;
+    return AppTheme.accent.withValues(alpha: 0.4);
+  }
+
+  Future<void> _openDetail(BuildContext context) async {
+    final user = await ApiService.getSavedUser();
+    final driverIdStr = user?.id.toString() ?? 'unknown';
+    if (!context.mounted) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DriverDeliveryActiveScreen(
+          delivery:    d,
+          driverIdStr: driverIdStr,
+          readOnly:    true,
+        ),
+      ),
+    );
+  }
+
+  Widget build(BuildContext context) {
+    final isMoving = type == _MissionType.moving;
+    final steps    = isMoving ? _movingSteps : _deliverySteps;
+    final step     = isMoving ? _movingStep(d.status) : _deliveryStep(d.status);
+
+    return GestureDetector(
+      onTap: () => _openDetail(context),
+      child: Container(
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: d.isAccepted || d.isInProgress
-            ? Border.all(color: AppTheme.success, width: 1.5)
-            : d.isRequested
-                ? Border.all(color: AppTheme.accentOrange.withValues(alpha: 0.5))
-                : null,
+        border: Border.all(color: _borderColor, width: 1.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header
+
+          // ── Header: icon + title + status badge ───────────────────────
           Row(children: [
             Container(
               padding: const EdgeInsets.all(8),
@@ -264,138 +491,160 @@ class _DeliveryCard extends StatelessWidget {
                 color: AppTheme.accentOrange.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.delivery_dining, color: AppTheme.accentOrange, size: 20),
+              child: Icon(
+                isMoving
+                    ? Icons.local_shipping_outlined
+                    : Icons.delivery_dining_outlined,
+                color: AppTheme.accentOrange,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
-                _title(d),
-                style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+                _title(),
+                style: const TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14),
               ),
               Text(
-                d.packageSize != null ? d.packageSize!.toUpperCase() : 'DELIVERY',
-                style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w600),
+                isMoving ? 'MOVING' : (d.packageSize?.toUpperCase() ?? 'DELIVERY'),
+                style: TextStyle(
+                    color: AppTheme.accentOrange.withValues(alpha: 0.8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600),
               ),
             ])),
-            // Status badge
+            _StatusBadge(status: d.status),
+          ]),
+
+          const SizedBox(height: 12),
+
+          // ── Progress stepper ───────────────────────────────────────────
+          if (!d.isCancelled)
+            _ProgressStepper(steps: steps, currentStep: step),
+
+          if (d.isCancelled)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.15),
+                color: AppTheme.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(
-                _statusLabel(d.status),
-                style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w800),
-              ),
+              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.cancel_outlined, color: AppTheme.danger, size: 14),
+                SizedBox(width: 6),
+                Text('This order was cancelled',
+                    style: TextStyle(color: AppTheme.danger, fontSize: 12)),
+              ]),
             ),
-          ]),
-          const SizedBox(height: 10),
 
-          // Route
+          const SizedBox(height: 12),
+
+          // ── Route ─────────────────────────────────────────────────────
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+                color: AppTheme.cardBg, borderRadius: BorderRadius.circular(10)),
             child: Column(children: [
               Row(children: [
                 const Icon(Icons.circle, color: AppTheme.success, size: 8),
                 const SizedBox(width: 8),
-                Expanded(child: Text(d.pickupAddress,
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+                Expanded(child: Text(
+                  d.pickupAddress,
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                )),
               ]),
-              const SizedBox(height: 4),
+              Container(
+                margin: const EdgeInsets.only(left: 3),
+                width: 2, height: 12,
+                color: AppTheme.cardBg,
+              ),
               Row(children: [
                 const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
                 const SizedBox(width: 8),
-                Expanded(child: Text(d.dropoffAddress,
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                    maxLines: 1, overflow: TextOverflow.ellipsis)),
+                Expanded(child: Text(
+                  d.dropoffAddress,
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                )),
               ]),
             ]),
           ),
+
           const SizedBox(height: 10),
 
-          // Fee + recipient + action button
+          // ── Footer: fee + recipient ────────────────────────────────────
           Row(children: [
             if (d.fee > 0) ...[
               const Icon(Icons.payments_outlined, color: AppTheme.textSecondary, size: 14),
               const SizedBox(width: 4),
               Text(AppTheme.khr(d.fee),
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+                  style: const TextStyle(
+                      color: AppTheme.textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700)),
               const SizedBox(width: 12),
             ],
             if (d.recipientName != null) ...[
               const Icon(Icons.person_outline, color: AppTheme.textSecondary, size: 14),
               const SizedBox(width: 4),
-              Expanded(child: Text(d.recipientName!,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
-                  maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(child: Text(
+                d.recipientName!,
+                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+              )),
             ] else
               const Spacer(),
-
-            if (d.isRequested)
-              SizedBox(
-                height: 34,
-                child: ElevatedButton(
-                  onPressed: isAccepting ? null : () => onAccept(d),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accentOrange,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: isAccepting
-                      ? const SizedBox(width: 14, height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Accept', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
-                ),
-              )
-            else if (d.isAccepted || d.isInProgress)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.success.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.check, color: AppTheme.success, size: 14),
-                  SizedBox(width: 4),
-                  Text('In Progress', style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w700, fontSize: 12)),
-                ]),
-              ),
           ]),
-
-          // Payment method row
-          if (d.paymentMethod != 'cash') ...[
-            const SizedBox(height: 6),
-            Row(children: [
-              const Icon(Icons.credit_card_outlined, color: AppTheme.textSecondary, size: 12),
-              const SizedBox(width: 4),
-              Text(d.paymentMethod.replaceAll('_', ' ').toUpperCase(),
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-            ]),
-          ],
         ]),
       ),
-    );
+    )); // GestureDetector + Container
   }
 
-  String _title(DeliveryModel d) {
+  String _title() {
+    if (type == _MissionType.moving) {
+      return 'Moving #${d.id}';
+    }
     if (d.packageDetails.isNotEmpty && d.packageDetails != 'No description') {
-      return d.packageDetails.length > 40 ? '${d.packageDetails.substring(0, 40)}…' : d.packageDetails;
+      return d.packageDetails.length > 38
+          ? '${d.packageDetails.substring(0, 38)}…'
+          : d.packageDetails;
     }
     if (d.packageSize != null) {
       return '${d.packageSize![0].toUpperCase()}${d.packageSize!.substring(1)} Package';
     }
     return 'Delivery #${d.id}';
   }
+}
 
-  String _statusLabel(String status) {
+// ─── Status badge ─────────────────────────────────────────────────────────────
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _color();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        _label(),
+        style: TextStyle(
+            color: color, fontSize: 10, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+
+  String _label() {
     switch (status) {
-      case 'requested':   return 'NEW';
       case 'accepted':    return 'ACCEPTED';
       case 'in_progress': return 'IN PROGRESS';
       case 'completed':   return 'DONE';
@@ -404,11 +653,10 @@ class _DeliveryCard extends StatelessWidget {
     }
   }
 
-  Color _statusColor(String status) {
+  Color _color() {
     switch (status) {
-      case 'requested':   return AppTheme.accentOrange;
       case 'accepted':    return AppTheme.accent;
-      case 'in_progress': return AppTheme.success;
+      case 'in_progress': return AppTheme.accentOrange;
       case 'completed':   return AppTheme.success;
       case 'cancelled':   return AppTheme.danger;
       default:            return AppTheme.textSecondary;
@@ -426,9 +674,12 @@ class _RentalPlaceholder extends StatelessWidget {
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.car_rental_outlined, color: AppTheme.textSecondary, size: 56),
       SizedBox(height: 16),
-      Text('Car Rental missions', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+      Text('Car Rental missions',
+          style: TextStyle(
+              color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
       SizedBox(height: 8),
-      Text('Coming soon', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+      Text('Coming soon',
+          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
     ]),
   );
 }

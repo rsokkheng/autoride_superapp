@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' show min, max, sin, cos, atan2, pi;
 import 'dart:ui' show lerpDouble;
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
@@ -116,7 +117,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   late String _vehicleColor;
   late String _vehicleType;
   late String _plate;
-  String _currentDriverId = '';
+  String  _currentDriverId = '';
+  String? _driverAvatarUrl;
   Timer? _ridePollTimer;
 
   // Dynamic vehicle icon — loaded async; null means use default pin
@@ -527,15 +529,30 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (newId == _currentDriverId) return;
       setState(() {
         _currentDriverId = newId;
-        _driverName   = ride.driver?.name ?? 'Driver #${ride.driverId}';
-        _driverRating = '--';
-        _driverTrips  = '--';
+        _driverName      = ride.driver?.name ?? 'Driver #${ride.driverId}';
+        _driverAvatarUrl = ride.driver?.photoUrl;
+        _driverRating    = ride.driver?.rating != null
+            ? ride.driver!.rating!.toStringAsFixed(1)
+            : '--';
+        _driverTrips     = ride.driver?.totalTrips != null
+            ? ride.driver!.totalTrips!.toString()
+            : '--';
         _vehicle      = ride.vehicle != null
             ? '${ride.vehicle!.make} ${ride.vehicle!.model} ${ride.vehicle!.year}'
             : '--';
         _vehicleColor = '';
         _plate        = ride.vehicle?.licensePlate ?? '--';
+        if (ride.vehicle?.type != null) {
+          final newType = DriverMarkerModel.normalise(ride.vehicle!.type);
+          if (newType != _vehicleType) _vehicleType = newType;
+        }
       });
+      if (ride.vehicle?.type != null) {
+        MarkerIconService.forType(
+            DriverMarkerModel.normalise(ride.vehicle!.type)).then((icon) {
+          if (mounted) setState(() => _driverIcon = icon);
+        });
+      }
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
@@ -552,6 +569,15 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
+
+  static IconData _vehicleTypeIcon(String type) {
+    switch (type) {
+      case 'motorbike': return Icons.two_wheeler;
+      case 'van':       return Icons.airport_shuttle;
+      case 'truck':     return Icons.local_shipping;
+      default:          return Icons.directions_car;
+    }
+  }
 
   // Status must not advance past "searching" until a driver is actually assigned.
   bool get _driverAssigned => _currentDriverId.isNotEmpty;
@@ -790,6 +816,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                         CircleAvatar(
                           radius: 28,
                           backgroundColor: Colors.grey[200],
+                          foregroundImage: _driverAvatarUrl != null
+                              ? CachedNetworkImageProvider(_driverAvatarUrl!)
+                              : null,
                           child: Text(
                             _driverName.isNotEmpty
                                 ? _driverName[0].toUpperCase()
@@ -832,7 +861,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            const Icon(Icons.directions_car,
+                            Icon(_vehicleTypeIcon(_vehicleType),
                                 size: 42, color: _kTextSub),
                             Text(_plate,
                                 style: const TextStyle(
@@ -963,14 +992,18 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           child: ElevatedButton(
                             onPressed: () async {
                               if (_isArrived) {
-                                // Fetch final ride to get server-confirmed distance/duration
+                                // Fetch final ride to get server-confirmed distance/duration/addresses
                                 double? distKm;
                                 int?    durMin;
+                                String  fromAddr = widget.from;
+                                String  toAddr   = widget.to;
                                 if (widget.rideId != null) {
                                   try {
                                     final r = await ApiService.getRide(widget.rideId!);
                                     distKm = r.distanceKm;
                                     durMin = r.durationMin;
+                                    if (r.pickupAddress.isNotEmpty)  fromAddr = r.pickupAddress;
+                                    if (r.dropoffAddress.isNotEmpty) toAddr   = r.dropoffAddress;
                                   } catch (_) {}
                                 }
                                 // Fall back to live-tracked distance if server didn't return one
@@ -989,6 +1022,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                             fare:        widget.fare,
                                             distanceKm:  distKm,
                                             durationMin: durMin,
+                                            from:        fromAddr,
+                                            to:          toAddr,
                                           )),
                                 );
                               } else {

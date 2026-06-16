@@ -10,6 +10,8 @@ class RateDriverScreen extends StatefulWidget {
   final String  paymentMethod;
   final double? distanceKm;
   final int?    durationMin;
+  final String  from;
+  final String  to;
 
   const RateDriverScreen({
     super.key,
@@ -19,6 +21,8 @@ class RateDriverScreen extends StatefulWidget {
     this.paymentMethod = 'cash',
     this.distanceKm,
     this.durationMin,
+    this.from = '',
+    this.to   = '',
   });
 
   @override
@@ -327,8 +331,8 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     MaterialPageRoute(
                       builder: (_) => TripReceiptScreen(
                         rideId:           widget.rideId,
-                        from:             '--',
-                        to:               '--',
+                        from:             widget.from.isNotEmpty ? widget.from : '--',
+                        to:               widget.to.isNotEmpty   ? widget.to   : '--',
                         driverName:       widget.driverName,
                         starsGiven:       _stars.clamp(1, 5),
                         fareTotal:        widget.fare,

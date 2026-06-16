@@ -37,6 +37,11 @@ class DeliveryModel {
   final bool?   packingService;
   final int?    requiresHelpers;  // 1–4
   final String? helperType;       // 'normal' | 'heavy'
+  // Coordinates
+  final double? pickupLat;
+  final double? pickupLng;
+  final double? dropoffLat;
+  final double? dropoffLng;
   // Vehicle type (delivery-specific)
   final String? vehicleType;      // 'motorbike' | 'small_car' | 'van' | 'truck'
   // Payment model (moving-specific)
@@ -69,6 +74,10 @@ class DeliveryModel {
     this.vehicle,
     this.rating,
     this.ratingComment,
+    this.pickupLat,
+    this.pickupLng,
+    this.dropoffLat,
+    this.dropoffLng,
     // delivery vehicle
     this.vehicleType,
     // moving
@@ -120,6 +129,10 @@ class DeliveryModel {
           : null,
       rating:        json['rating'] == null ? null : (json['rating'] as num).toDouble(),
       ratingComment: json['rating_comment'] as String?,
+      pickupLat:     json['pickup_lat']  == null ? null : (json['pickup_lat']  as num).toDouble(),
+      pickupLng:     json['pickup_lng']  == null ? null : (json['pickup_lng']  as num).toDouble(),
+      dropoffLat:    json['dropoff_lat'] == null ? null : (json['dropoff_lat'] as num).toDouble(),
+      dropoffLng:    json['dropoff_lng'] == null ? null : (json['dropoff_lng'] as num).toDouble(),
       // delivery vehicle
       vehicleType:      json['vehicle_type'] as String?,
       // moving

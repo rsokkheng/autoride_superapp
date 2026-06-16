@@ -5,6 +5,7 @@ import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/screens/auth/role_selection.dart';
 import 'package:autoride_superapp/screens/auth/login_screen.dart';
+import 'package:autoride_superapp/screens/driver/driver_home.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 import 'package:autoride_superapp/models/ride_model.dart';
 import 'ride_booking.dart';
@@ -600,6 +601,15 @@ class _ProfileTabState extends State<_ProfileTab> {
                     const Spacer(),
                     const LanguagePickerButton(),
                   ]),
+                ),
+                _ProfileMenuItem(
+                  icon: Icons.drive_eta_outlined,
+                  label: 'Switch to Driver Mode',
+                  color: AppTheme.accentOrange,
+                  onTap: () => Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+                    (_) => false,
+                  ),
                 ),
                 _ProfileMenuItem(
                   icon: Icons.logout,

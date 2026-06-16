@@ -4,8 +4,15 @@ import '../../models/ride_model.dart';
 
 class DriverTripSummaryScreen extends StatelessWidget {
   final RideModel ride;
+  final double?   distanceKmFallback;
+  final int?      durationMinFallback;
 
-  const DriverTripSummaryScreen({super.key, required this.ride});
+  const DriverTripSummaryScreen({
+    super.key,
+    required this.ride,
+    this.distanceKmFallback,
+    this.durationMinFallback,
+  });
 
   static const _kGreen    = Color(0xFF00B14F);
   static const _kTextMain = Color(0xFF1A1A1A);
@@ -27,6 +34,9 @@ class DriverTripSummaryScreen extends StatelessWidget {
       default:        return 'Standard';
     }
   }
+
+  double? get _distKm  => ride.distanceKm  ?? distanceKmFallback;
+  int?    get _durMin  => ride.durationMin ?? durationMinFallback;
 
   @override
   Widget build(BuildContext context) {
@@ -131,15 +141,15 @@ class DriverTripSummaryScreen extends StatelessWidget {
                   _StatItem(
                     icon: Icons.straighten_outlined,
                     label: 'Distance',
-                    value: ride.distanceKm != null
-                        ? '${ride.distanceKm!.toStringAsFixed(1)} km'
+                    value: _distKm != null
+                        ? '${_distKm!.toStringAsFixed(1)} km'
                         : '--',
                   ),
                   _Divider(),
                   _StatItem(
                     icon: Icons.access_time_outlined,
                     label: 'Duration',
-                    value: ride.durationMin != null ? '${ride.durationMin} min' : '--',
+                    value: _durMin != null ? '$_durMin min' : '--',
                   ),
                   _Divider(),
                   _StatItem(
@@ -155,14 +165,14 @@ class DriverTripSummaryScreen extends StatelessWidget {
                   const Text('FARE SUMMARY',
                       style: TextStyle(color: _kTextSub, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                   const SizedBox(height: 14),
-                  if (ride.distanceKm != null) ...[
+                  if (_distKm != null) ...[
                     _FareRow(
                       label: 'Base fare',
                       value: AppTheme.khr(3000),
                     ),
                     const SizedBox(height: 8),
                     _FareRow(
-                      label: 'Distance (${ride.distanceKm!.toStringAsFixed(1)} km)',
+                      label: 'Distance (${_distKm!.toStringAsFixed(1)} km)',
                       value: AppTheme.khr((fareKhr - 3000).clamp(0, fareKhr)),
                     ),
                     const SizedBox(height: 8),

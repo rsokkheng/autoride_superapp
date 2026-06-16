@@ -17,6 +17,7 @@ import '../models/conversation_model.dart';
 import '../models/chat_message_model.dart';
 import '../models/wallet_model.dart';
 import '../models/marketplace_model.dart';
+import '../models/trip_model.dart';
 
 class ApiService {
   static String get _baseUrl =>
@@ -981,6 +982,37 @@ class ApiService {
     return _parseDeliveryList(raw);
   }
 
+  static Future<List<DeliveryModel>> getMovings({int page = 1, String? status}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final query = [
+      'page=$page',
+      if (status != null) 'status=$status',
+    ].join('&');
+
+    final raw = await _rawGet('/movings?$query', token: token);
+    return _parseDeliveryList(raw);
+  }
+
+  // ── Active delivery/moving (restore after app reopen) ────────────────────
+  static Future<DeliveryModel?> getActiveDelivery() async {
+    try {
+      final results = await Future.wait([
+        getDeliveries(status: 'accepted'),
+        getDeliveries(status: 'in_progress'),
+        getMovings(status: 'accepted'),
+        getMovings(status: 'in_progress'),
+      ]);
+      for (final deliveries in results) {
+        if (deliveries.isNotEmpty) return deliveries.first;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<DeliveryModel> getDelivery(int id) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -1205,6 +1237,28 @@ class ApiService {
     return _parseDeliveryResponse(raw);
   }
 
+  static Future<DeliveryModel> startDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/start', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<void> updateDeliveryLocation(
+    int deliveryId, {
+    required double latitude,
+    required double longitude,
+    double? heading,
+  }) async {
+    final token = await getToken();
+    if (token == null) return;
+    await _rawPost('/tracking/deliveries/$deliveryId', {
+      'latitude':  latitude,
+      'longitude': longitude,
+      if (heading != null) 'heading': heading,
+    }, token: token);
+  }
+
   static Future<DeliveryModel> rateDelivery(
     int id, {
     required double rating,
@@ -1248,8 +1302,9 @@ class ApiService {
 
     if (raw.statusCode == 200) {
       final data       = (body['data'] as Map<String, dynamic>?) ?? body;
-      final pagination = (data['deliveries'] as Map<String, dynamic>?) ?? {};
-      final list       = pagination['data'] as List<dynamic>? ?? [];
+      // Support both /deliveries (key: "deliveries") and /movings (key: "movings")
+      final pagination = (data['deliveries'] ?? data['movings'] ?? data) as Map<String, dynamic>?;
+      final list       = (pagination?['data'] as List<dynamic>?) ?? [];
       return list
           .map((e) => DeliveryModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -1477,7 +1532,6 @@ class ApiService {
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
     final body = <String, dynamic>{
-      'service_type':       'moving',
       'pickup_address':     pickupAddress,
       'dropoff_address':    dropoffAddress,
       'payment_method':     paymentMethod,
@@ -1687,31 +1741,13 @@ class ApiService {
     return _parseDeliveryResponse(raw);
   }
 
-  static Future<DeliveryModel> cancelMoving(int id) async {
+  static Future<DeliveryModel> cancelMoving(int id, {String? reason}) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw = await _rawPost('/movings/$id/cancel', {}, token: token);
+    final raw = await _rawPost('/movings/$id/cancel', {
+      if (reason != null) 'reason': reason,
+    }, token: token);
     return _parseDeliveryResponse(raw);
-  }
-
-  static Future<DeliveryTrackingModel> trackMoving(int id) async {
-    final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw = await _rawPost('/movings/$id/track', {}, token: token);
-
-    final Map<String, dynamic> body;
-    try {
-      body = jsonDecode(raw.body) as Map<String, dynamic>;
-    } catch (_) {
-      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
-    }
-
-    if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return DeliveryTrackingModel.fromJson(body['data'] as Map<String, dynamic>? ?? body);
-    }
-
-    final message = body['message'] as String? ?? 'Failed to track moving (${raw.statusCode}).';
-    throw ApiException(message, raw.statusCode);
   }
 
   static Future<DeliveryModel> completeMoving(int id) async {
@@ -1719,6 +1755,28 @@ class ApiService {
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw = await _rawPost('/movings/$id/complete', {}, token: token);
     return _parseDeliveryResponse(raw);
+  }
+
+  static Future<DeliveryModel> startMoving(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/movings/$id/start', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  static Future<void> updateMovingLocation(
+    int movingId, {
+    required double latitude,
+    required double longitude,
+    double? heading,
+  }) async {
+    final token = await getToken();
+    if (token == null) return;
+    // Endpoint: POST /movings/{id}/track — fields: lat, lng
+    await _rawPost('/movings/$movingId/track', {
+      'lat': latitude,
+      'lng': longitude,
+    }, token: token);
   }
 
   static Future<DeliveryModel> rateMoving(
@@ -1733,7 +1791,7 @@ class ApiService {
       '/movings/$id/rate',
       {
         'rating': rating,
-        if (comment != null) 'rating_comment': comment,
+        if (comment != null) 'comment': comment,
       },
       token: token,
     );
@@ -1767,6 +1825,57 @@ class ApiService {
         raw.statusCode,
       );
     }
+  }
+
+  // ── Unified trip history ─────────────────────────────────────────────────
+
+  static Future<TripListResult> getTrips({
+    String filter = 'recent', // recent | day | month
+    String? date,             // 2026-06-15  (when filter=day)
+    String? month,            // 2026-06     (when filter=month)
+    String type   = 'all',   // all | ride | delivery | moving
+    String status = 'all',   // all | completed | cancelled
+    int    page   = 1,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final params = <String, String>{
+      'filter': filter,
+      'type':   type,
+      'status': status,
+      'page':   '$page',
+      if (date  != null) 'date':  date,
+      if (month != null) 'month': month,
+    };
+    final query = params.entries
+        .map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}')
+        .join('&');
+
+    final raw  = await _rawGet('/trips?$query', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return TripListResult.fromJson(body);
+    throw ApiException(
+        body['message'] as String? ?? 'Failed to load trips (${raw.statusCode}).',
+        raw.statusCode);
+  }
+
+  static Future<List<TripMonthOption>> getTripMonths() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw  = await _rawGet('/trips/months', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data   = (body['data'] as Map<String, dynamic>?) ?? body;
+      final months = data['months'] as List<dynamic>? ?? [];
+      return months
+          .map((e) => TripMonthOption.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw ApiException(
+        body['message'] as String? ?? 'Failed to load months.',
+        raw.statusCode);
   }
 
   // ── Marketplace ───────────────────────────────────────────────────────────

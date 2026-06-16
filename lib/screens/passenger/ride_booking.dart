@@ -810,8 +810,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           builder: (_) => TripTrackingScreen(
             rideId:       ride.id,
             fare:         AppTheme.khr(ride.fareKhr),
-            from:         ride.pickupAddress,
-            to:           ride.dropoffAddress,
+            from:         _pickupAddress.isNotEmpty ? _pickupAddress : (ride.pickupAddress.isNotEmpty ? ride.pickupAddress : '--'),
+            to:           _destAddress.isNotEmpty   ? _destAddress   : (ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : '--'),
             isScheduled:  _isScheduled,
             pickupLatLng: _pickupCenter,
             destLatLng:   _destLatLng,
