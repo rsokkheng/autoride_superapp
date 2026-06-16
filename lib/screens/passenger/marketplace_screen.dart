@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'car_rental_screen.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -397,6 +398,50 @@ class _BrowseTabState extends State<_BrowseTab> {
               ),
             ),
           ],
+
+          // Services
+          _SectionTitle('Services'),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CarRentalScreen())),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF00838F), Color(0xFF006064)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(children: [
+                  Container(
+                    width: 52, height: 52,
+                    decoration: BoxDecoration(
+                      color: _white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.drive_eta_outlined, color: _white, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      const Text('Car Rental',
+                          style: TextStyle(color: _white, fontSize: 16,
+                              fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 3),
+                      Text('Rent Economy, SUV & more',
+                          style: TextStyle(color: _white.withValues(alpha: 0.8),
+                              fontSize: 12)),
+                    ]),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: _white, size: 16),
+                ]),
+              ),
+            ),
+          ),
 
           // Featured grid
           if (featured.isNotEmpty) ...[

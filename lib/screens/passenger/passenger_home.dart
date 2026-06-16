@@ -26,7 +26,6 @@ import 'support_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'loyalty_screen.dart';
 import 'referral_screen.dart';
-import 'car_rental_screen.dart';
 import 'cancellation_policy_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
@@ -387,13 +386,6 @@ class _HomeTabState extends State<_HomeTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
                   ServiceCard(
-                    icon: Icons.drive_eta_outlined,
-                    title: 'Car Rental',
-                    subtitle: 'Rent a car',
-                    color: const Color(0xFF00838F),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen())),
-                  ),
-                  ServiceCard(
                     icon: Icons.calendar_month_outlined,
                     title: 'Scheduled',
                     subtitle: 'Plan ahead',
@@ -605,8 +597,6 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen()))),
                 _ProfileMenuItem(icon: Icons.card_giftcard_outlined, label: 'Refer & Earn',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen()))),
-                _ProfileMenuItem(icon: Icons.drive_eta_outlined, label: 'Car Rental',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen()))),
                 _ProfileMenuItem(icon: Icons.cancel_outlined, label: 'Cancellation Policy',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CancellationPolicyScreen()))),
                 _ProfileMenuItem(icon: Icons.payment_outlined, label: l.paymentMethods,
