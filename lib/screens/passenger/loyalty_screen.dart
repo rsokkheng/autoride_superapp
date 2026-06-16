@@ -41,34 +41,39 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   String get _tier {
-    if (_points >= 5000) return 'Gold';
-    if (_points >= 1000) return 'Silver';
+    if (_points >= 10000) return 'Platinum';
+    if (_points >= 5000)  return 'Gold';
+    if (_points >= 1000)  return 'Silver';
     return 'Bronze';
   }
 
   Color get _tierColor {
     switch (_tier) {
-      case 'Gold':   return AppTheme.gold;
-      case 'Silver': return Colors.grey.shade400;
-      default:       return const Color(0xFFCD7F32);
+      case 'Platinum': return const Color(0xFF00BCD4);
+      case 'Gold':     return AppTheme.gold;
+      case 'Silver':   return Colors.grey.shade400;
+      default:         return const Color(0xFFCD7F32);
     }
   }
 
   int get _nextTierPoints {
-    if (_points < 1000) return 1000;
-    if (_points < 5000) return 5000;
-    return 5000;
+    if (_points < 1000)  return 1000;
+    if (_points < 5000)  return 5000;
+    if (_points < 10000) return 10000;
+    return 10000;
   }
 
   double get _tierProgress {
-    if (_points >= 5000) return 1.0;
-    if (_points >= 1000) return (_points - 1000) / 4000;
+    if (_points >= 10000) return 1.0;
+    if (_points >= 5000)  return (_points - 5000) / 5000;
+    if (_points >= 1000)  return (_points - 1000) / 4000;
     return _points / 1000;
   }
 
   String get _nextTierLabel {
-    if (_points >= 5000) return 'Max tier reached';
-    if (_points >= 1000) return '${_nextTierPoints - _points} pts to Gold';
+    if (_points >= 10000) return 'Max tier reached';
+    if (_points >= 5000)  return '${_nextTierPoints - _points} pts to Platinum';
+    if (_points >= 1000)  return '${_nextTierPoints - _points} pts to Gold';
     return '${_nextTierPoints - _points} pts to Silver';
   }
 

@@ -23,6 +23,10 @@ class DirectionsResult {
 class MapsService {
   static const _apiKey = 'AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc';
 
+  static bool _isInCambodia(LatLng p) =>
+      p.latitude  >= 9.0   && p.latitude  <= 15.5 &&
+      p.longitude >= 102.0 && p.longitude <= 108.0;
+
   // ── Routes API (v2) — traffic-aware, replaces legacy Directions API ──────────
 
   static Future<DirectionsResult?> getRoute({
@@ -108,11 +112,11 @@ class MapsService {
   // ── Geocoding API — reverse geocode & address search ─────────────────────────
 
   static Future<String?> reverseGeocode(LatLng pos) async {
-    final url = Uri.parse(
-      'https://maps.googleapis.com/maps/api/geocode/json'
-      '?latlng=${pos.latitude},${pos.longitude}'
-      '&key=$_apiKey',
-    );
+    final url = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+      'latlng':   '${pos.latitude},${pos.longitude}',
+      'language': 'km',
+      'key':      _apiKey,
+    });
     try {
       final res = await http.get(url).timeout(const Duration(seconds: 8));
       if (res.statusCode != 200) {
@@ -129,6 +133,85 @@ class MapsService {
           as String?;
     } catch (e, s) {
       AppLog.e('Maps', 'reverseGeocode failed', e, s);
+      return null;
+    }
+  }
+
+  // Returns a short area name like "ដូនពេញ, ភ្នំពេញ" in Khmer.
+  // No result_type filter — Cambodia uses non-standard admin levels and the
+  // filter (with URL-encoded | ) can return zero results for Sangkat/Khan.
+  // Returns null when pos is outside Cambodia.
+  static Future<String?> getAreaName(LatLng pos) async {
+    if (!_isInCambodia(pos)) return null;
+    final url = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
+      'latlng':   '${pos.latitude},${pos.longitude}',
+      'language': 'km',
+      'key':      _apiKey,
+    });
+    try {
+      final res = await http.get(url).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) return null;
+      final body    = jsonDecode(res.body) as Map<String, dynamic>;
+      final results = body['results'] as List<dynamic>?;
+      if (results == null || results.isEmpty) return null;
+
+      // Walk all results' components and pick the most specific area name.
+      // Priority for Cambodia: neighborhood > sublocality_level_2 > sublocality_level_1
+      //   > sublocality > administrative_area_level_2 (Khan) > administrative_area_level_1
+      // Then pair with locality (city).
+      String? area;
+      String? city;
+
+      for (final result in results) {
+        final components =
+            (result as Map<String, dynamic>)['address_components'] as List<dynamic>?;
+        if (components == null) continue;
+        for (final comp in components) {
+          final c     = comp as Map<String, dynamic>;
+          final types = (c['types'] as List<dynamic>).cast<String>();
+          final name  = c['long_name'] as String? ?? '';
+          if (name.isEmpty) continue;
+
+          if (area == null && (
+              types.contains('neighborhood')           ||
+              types.contains('sublocality_level_2')    ||
+              types.contains('sublocality_level_1')    ||
+              types.contains('sublocality')            ||
+              types.contains('administrative_area_level_2') ||
+              types.contains('administrative_area_level_3'))) {
+            area = name;
+          }
+          if (city == null && (
+              types.contains('locality') ||
+              types.contains('administrative_area_level_1'))) {
+            city = name;
+          }
+        }
+        if (area != null && city != null) break;
+      }
+
+      // Last-resort: parse the first result's formatted_address.
+      // e.g. "Wat Phnom, Phsar Kandal I, Phnom Penh, Cambodia"
+      //   → take index 1 (Phsar Kandal I) and index 2 (Phnom Penh)
+      if (area == null || city == null) {
+        final formatted = (results.first as Map<String, dynamic>)['formatted_address'] as String?;
+        if (formatted != null) {
+          final parts = formatted.split(',').map((s) => s.trim()).toList();
+          if (parts.length >= 3) {
+            area ??= parts[1];
+            city ??= parts[2];
+          } else if (parts.length == 2) {
+            area ??= parts[0];
+            city ??= parts[1];
+          }
+        }
+      }
+
+      if (area == null && city == null) return null;
+      if (area != null && city != null && area != city) return '$area, $city';
+      return area ?? city;
+    } catch (e, s) {
+      AppLog.e('Maps', 'getAreaName failed', e, s);
       return null;
     }
   }

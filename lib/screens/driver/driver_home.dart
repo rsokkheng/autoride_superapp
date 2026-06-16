@@ -6,6 +6,8 @@ import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
+import '../../services/maps_service.dart';
 import '../../services/location_service.dart' show LocationService, DriverStatus;
 import '../../models/user_model.dart';
 import '../../models/vehicle_model.dart';
@@ -255,31 +257,35 @@ class _DriverDashboardState extends State<_DriverDashboard>
   DeliveryModel? _pendingDelivery;
   RideModel?     _activeRide;
   DeliveryModel? _activeDelivery;
+  SurgeInfo?     _surgeInfo;
+  String?        _locationZone;
   Timer? _pollTimer;
+  Timer? _surgeTimer;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadData();
+    _loadSurge();
     if (widget.driverStatus == DriverStatus.online) {
-      _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollRequests());
+      _pollTimer  = Timer.periodic(const Duration(seconds: 5),  (_) => _pollRequests());
+      _surgeTimer = Timer.periodic(const Duration(minutes: 2),  (_) => _loadSurge());
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      // Stop polling while app is backgrounded to save battery
-      _pollTimer?.cancel();
-      _pollTimer = null;
+      _pollTimer?.cancel();  _pollTimer  = null;
+      _surgeTimer?.cancel(); _surgeTimer = null;
     } else if (state == AppLifecycleState.resumed) {
-      // Immediately reload data and restart polling
       if (widget.driverStatus == DriverStatus.online) {
         _loadData();
+        _loadSurge();
         _pollTimer?.cancel();
-        _pollTimer = Timer.periodic(
-            const Duration(seconds: 5), (_) => _pollRequests());
+        _pollTimer  = Timer.periodic(const Duration(seconds: 5),  (_) => _pollRequests());
+        _surgeTimer = Timer.periodic(const Duration(minutes: 2),  (_) => _loadSurge());
       }
     }
   }
@@ -289,15 +295,18 @@ class _DriverDashboardState extends State<_DriverDashboard>
     super.didUpdateWidget(old);
     if (old.driverStatus != widget.driverStatus) {
       if (widget.driverStatus == DriverStatus.busy) {
-        _pollTimer?.cancel(); // Stop looking for requests while on a trip
-      } else if (widget.driverStatus == DriverStatus.online) {
-        // Resume polling when back online
         _pollTimer?.cancel();
-        _pollTimer = Timer.periodic(
-            const Duration(seconds: 5), (_) => _pollRequests());
+        _surgeTimer?.cancel();
+      } else if (widget.driverStatus == DriverStatus.online) {
+        _pollTimer?.cancel();
+        _surgeTimer?.cancel();
+        _pollTimer  = Timer.periodic(const Duration(seconds: 5),  (_) => _pollRequests());
+        _surgeTimer = Timer.periodic(const Duration(minutes: 2),  (_) => _loadSurge());
         _pollRequests();
+        _loadSurge();
       } else {
         _pollTimer?.cancel();
+        _surgeTimer?.cancel();
       }
     }
   }
@@ -306,7 +315,56 @@ class _DriverDashboardState extends State<_DriverDashboard>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pollTimer?.cancel();
+    _surgeTimer?.cancel();
     super.dispose();
+  }
+
+  String _surgeSubtitle(SurgeInfo info) {
+    final parts = <String>[];
+    if (!info.youAreInside && info.nearbyDistanceKm != null) {
+      parts.add('${info.nearbyDistanceKm!.toStringAsFixed(1)} km away');
+    }
+    if (info.endsAt != null) {
+      final diff = info.endsAt!.difference(DateTime.now());
+      if (diff.inMinutes > 0) {
+        parts.add(diff.inHours >= 1
+            ? 'ends in ${diff.inHours}h ${diff.inMinutes % 60}m'
+            : 'ends in ${diff.inMinutes} min');
+      }
+    }
+    if (parts.isNotEmpty) return parts.join(' · ');
+    return info.youAreInside
+        ? (info.message ?? 'High demand in your area')
+        : 'Head there for higher earnings';
+  }
+
+  Future<void> _loadSurge() async {
+    try {
+      double? lat, lng;
+      try {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      } catch (_) {}
+
+      final futures = await Future.wait([
+        ApiService.checkSurge(lat: lat, lng: lng),
+        if (lat != null && lng != null)
+          MapsService.getAreaName(LatLng(lat, lng))
+        else
+          Future.value(null),
+      ]);
+
+      if (!mounted) return;
+      final info = futures[0] as SurgeInfo;
+      final zone = futures[1] as String?;
+      setState(() {
+        _surgeInfo    = info.shouldShowBanner ? info : null;
+        if (zone != null) _locationZone = zone;
+      });
+    } catch (_) {}
   }
 
   Future<void> _loadData() async {
@@ -430,45 +488,84 @@ class _DriverDashboardState extends State<_DriverDashboard>
             ]),
             const SizedBox(height: 16),
 
-            // Surge zone alert banner
-            if (widget.isOnline)
-              Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppTheme.danger.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
-                ),
-                child: Row(children: [
-                  const Icon(Icons.local_fire_department, color: AppTheme.danger, size: 20),
-                  const SizedBox(width: 10),
-                  const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('🔥 Surge Zone Active', style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w700, fontSize: 13)),
-                    Text('1.8× near Aeon Mall Sen Sok · 6 PM–9 PM', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-                  ])),
-                  const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 18),
-                ]),
-              ),
+            // Surge zone banner — red when inside, amber when nearby
+            if (_surgeInfo != null)
+              Builder(builder: (_) {
+                final inside = _surgeInfo!.youAreInside;
+                final color  = inside ? AppTheme.danger : AppTheme.warning;
+                final icon   = inside ? Icons.local_fire_department : Icons.directions_outlined;
+                final title  = inside
+                    ? '🔥 ${_surgeInfo!.multiplier.toStringAsFixed(1)}× Surge Zone — You\'re Inside!'
+                    : '📍 ${_surgeInfo!.multiplier.toStringAsFixed(1)}× Surge Nearby — ${_surgeInfo!.zone ?? 'Zone'}';
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withValues(alpha: 0.40)),
+                  ),
+                  child: Row(children: [
+                    Icon(icon, color: color, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(title,
+                          style: TextStyle(color: color,
+                              fontWeight: FontWeight.w700, fontSize: 13)),
+                      Text(_surgeSubtitle(_surgeInfo!),
+                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    ])),
+                    Icon(Icons.chevron_right, color: color.withValues(alpha: 0.6), size: 18),
+                  ]),
+                );
+              }),
 
             // Status card
             GradientCard(
               colors: widget.isBusy
-                  ? [const Color(0xFF3D2B00), const Color(0xFF3D1F00)]
+                  ? [const Color(0xFFE65100), const Color(0xFFBF360C)]
                   : widget.isOnline
-                      ? [const Color(0xFF0F3460), const Color(0xFF003B2F)]
+                      ? [const Color(0xFF00C48C), const Color(0xFF00A37A)]
                       : [AppTheme.surface, AppTheme.cardBg],
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   StatusBadge(
                     label: widget.isBusy ? '🟡 Busy — On a Trip' : widget.isOnline ? '🟢 Online — Ready' : '⭕ Offline',
-                    color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : AppTheme.textSecondary,
+                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : AppTheme.textSecondary,
                   ),
                   const SizedBox(height: 8),
-                  Text(widget.isBusy ? 'Complete your trip to receive new requests' : widget.isOnline ? 'Waiting for requests...' : 'Toggle online to accept rides',
-                      style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(
+                    widget.isBusy ? 'Complete your trip to receive new requests' : widget.isOnline ? 'Waiting for requests...' : 'Toggle online to accept rides',
+                    style: TextStyle(
+                      color: (widget.isBusy || widget.isOnline) ? Colors.white : AppTheme.textPrimary,
+                      fontSize: 14, fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (_locationZone != null) ...[
+                    const SizedBox(height: 6),
+                    Row(children: [
+                      Icon(Icons.location_on_outlined,
+                          color: (widget.isBusy || widget.isOnline)
+                              ? Colors.white70
+                              : AppTheme.textSecondary,
+                          size: 13),
+                      const SizedBox(width: 3),
+                      Flexible(child: Text(
+                        _locationZone!,
+                        style: TextStyle(
+                          color: (widget.isBusy || widget.isOnline)
+                              ? Colors.white70
+                              : AppTheme.textSecondary,
+                          fontSize: 12,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      )),
+                    ]),
+                  ],
                 ])),
-                Icon(Icons.directions_car, color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : AppTheme.textSecondary, size: 50),
+                Icon(Icons.directions_car,
+                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : AppTheme.textSecondary,
+                    size: 50),
               ]),
             ),
             const SizedBox(height: 16),
@@ -999,97 +1096,102 @@ class _RideRequestCardState extends State<_RideRequestCard> {
   @override
   Widget build(BuildContext context) {
     final progress = _seconds / 30.0;
-    final urgent = _seconds <= 8;
+    final urgent   = _seconds <= 8;
+    final accentColor = urgent ? AppTheme.danger : AppTheme.accent;
     final passengerLabel = widget.ride.passenger?.name ?? 'Passenger #${widget.ride.passengerId}';
-
-    final cardColor = urgent ? AppTheme.danger : AppTheme.success;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accentColor.withValues(alpha: 0.5), width: 1.5),
         boxShadow: [BoxShadow(
-            color: cardColor.withValues(alpha: 0.4),
-            blurRadius: 14, offset: const Offset(0, 5))],
+            color: accentColor.withValues(alpha: 0.15),
+            blurRadius: 16, offset: const Offset(0, 4))],
       ),
       child: Column(children: [
+        // Header row: badge + countdown
         Row(children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
             child: Text(urgent ? '⚡ URGENT' : '🆕 NEW REQUEST',
-                style: const TextStyle(color: Colors.white,
+                style: TextStyle(color: accentColor,
                     fontWeight: FontWeight.w800, fontSize: 11)),
           ),
           const Spacer(),
-          Text('$_seconds s', style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+          Text('$_seconds s', style: TextStyle(
+              color: accentColor, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: Colors.white.withValues(alpha: 0.25),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            backgroundColor: AppTheme.cardBg,
+            valueColor: AlwaysStoppedAnimation<Color>(accentColor),
             minHeight: 5,
           ),
         ),
         const SizedBox(height: 12),
 
+        // Passenger + fare
         Row(children: [
           CircleAvatar(
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            backgroundColor: accentColor.withValues(alpha: 0.15),
             radius: 18,
             child: Text(passengerLabel[0],
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: accentColor, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: 10),
           Expanded(child: Text(passengerLabel,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
           Text(AppTheme.khr(widget.ride.fareKhr),
-              style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+              style: const TextStyle(color: AppTheme.textPrimary,
+                  fontSize: 20, fontWeight: FontWeight.w800)),
         ]),
         const SizedBox(height: 12),
 
+        // Addresses
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: AppTheme.cardBg,
               borderRadius: BorderRadius.circular(10)),
           child: Column(children: [
             Row(children: [
-              const Icon(Icons.circle, color: Colors.white, size: 10),
+              Icon(Icons.circle, color: accentColor, size: 8),
               const SizedBox(width: 8),
               Expanded(child: Text(widget.ride.pickupAddress,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
             const SizedBox(height: 6),
             Row(children: [
-              const Icon(Icons.location_on, color: Colors.white70, size: 10),
+              const Icon(Icons.location_on, color: AppTheme.danger, size: 10),
               const SizedBox(width: 8),
               Expanded(child: Text(widget.ride.dropoffAddress,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
           ]),
         ),
         const SizedBox(height: 14),
 
+        // Buttons
         Row(children: [
           Expanded(child: GestureDetector(
             onTap: _acting ? null : _decline,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  border: Border.all(color: AppTheme.textSecondary.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(10)),
               child: const Center(child: Text('Decline',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+                  style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600))),
             ),
           )),
           const SizedBox(width: 12),
@@ -1098,12 +1200,12 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                  color: AppTheme.accent, borderRadius: BorderRadius.circular(10)),
               child: Center(child: _acting
-                  ? SizedBox(width: 18, height: 18,
-                      child: CircularProgressIndicator(color: cardColor, strokeWidth: 2))
-                  : Text('Accept Ride',
-                      style: TextStyle(color: cardColor, fontWeight: FontWeight.w800))),
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Accept Ride',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             ),
           )),
         ]),

@@ -326,8 +326,10 @@ class ApiService {
     required String password,
     required String passwordConfirmation,
     String? phone,
-    String  role       = 'passenger',
+    String  role            = 'passenger',
     String? driverType,
+    String? city,
+    String? referredByCode,
   }) async {
     final payload = <String, dynamic>{
       'name':                  name,
@@ -335,8 +337,10 @@ class ApiService {
       'password':              password,
       'password_confirmation': passwordConfirmation,
       'role':                  role,
-      if (phone      != null) 'phone':       phone,
-      if (driverType != null) 'driver_type': driverType,
+      if (phone          != null) 'phone':            phone,
+      if (driverType     != null) 'driver_type':      driverType,
+      if (city           != null) 'city':             city,
+      if (referredByCode != null) 'referred_by_code': referredByCode,
     };
     final raw  = await _rawPost('/auth/register', payload);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
@@ -430,21 +434,58 @@ class ApiService {
 
   // ── Surge zone check ──────────────────────────────────────────────────────
 
-  static Future<SurgeInfo> checkSurge({double? lat, double? lng}) async {
+  static Future<List<SurgeZone>> getSurgeZones({
+    double? lat, double? lng, String? type,
+  }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final query = [
-      if (lat != null) 'lat=$lat',
-      if (lng != null) 'lng=$lng',
-    ].join('&');
-    final path = '/surge/zones${query.isNotEmpty ? '?$query' : ''}';
+    final params = [
+      if (lat  != null) 'lat=$lat',
+      if (lng  != null) 'lng=$lng',
+      if (type != null) 'type=$type',
+    ];
+    final path = '/surge/zones${params.isNotEmpty ? '?${params.join('&')}' : ''}';
     final raw  = await _rawGet(path, token: token);
-    final body = jsonDecode(raw.body) as Map<String, dynamic>;
-    if (raw.statusCode == 200) {
-      final data = (body['data'] as Map<String, dynamic>?) ?? body;
-      return SurgeInfo.fromJson(data);
+    if (raw.statusCode != 200) return [];
+    final body  = jsonDecode(raw.body) as Map<String, dynamic>;
+    final data  = (body['data']  as Map<String, dynamic>?) ?? body;
+    final list  = (data['zones'] as List<dynamic>?) ?? [];
+    return list.whereType<Map<String, dynamic>>().map(SurgeZone.fromJson).toList();
+  }
+
+  static Future<SurgeInfo> checkSurge({double? lat, double? lng}) async {
+    final zones = await getSurgeZones(lat: lat, lng: lng);
+    if (zones.isEmpty) return const SurgeInfo(surgeActive: false, multiplier: 1.0);
+
+    final inside = zones.where((z) => z.youAreInside).toList();
+    if (inside.isNotEmpty) {
+      final best = inside.reduce((a, b) => a.multiplier >= b.multiplier ? a : b);
+      return SurgeInfo(
+        surgeActive:  true,
+        multiplier:   best.multiplier,
+        zone:         best.name,
+        message:      best.description,
+        endsAt:       best.endsAt,
+        youAreInside: true,
+      );
     }
-    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+
+    // Not inside any zone — show nearest/highest as a "head there" tip
+    final nearby = zones.reduce((a, b) {
+      if (a.multiplier != b.multiplier) return a.multiplier > b.multiplier ? a : b;
+      final da = a.distanceKm ?? double.maxFinite;
+      final db = b.distanceKm ?? double.maxFinite;
+      return da <= db ? a : b;
+    });
+    return SurgeInfo(
+      surgeActive:      false,
+      multiplier:       nearby.multiplier,
+      zone:             nearby.name,
+      message:          nearby.description,
+      endsAt:           nearby.endsAt,
+      youAreInside:     false,
+      nearbyDistanceKm: nearby.distanceKm,
+    );
   }
 
   // ── Active ride (restore after app reopen) ────────────────────────────────
@@ -3074,16 +3115,47 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
+  // ── Driver documents ─────────────────────────────────────────────────────
+
+  static Future<void> uploadDriverDocument({
+    required String type,
+    required File   file,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPostMultipart(
+      '/driver/documents',
+      fields: {'type': type},
+      files:  [MapEntry('file', file)],
+      token:  token,
+    );
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Upload failed.', raw.statusCode);
+  }
+
+  static Future<List<DriverDocument>> getDriverDocuments() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/driver/documents', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().map(DriverDocument.fromJson).toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
   // ── Driver approval status ────────────────────────────────────────────────
 
-  static Future<String> getDriverApprovalStatus() async {
+  static Future<DriverApprovalStatus> getDriverApprovalStatus() async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw  = await _rawGet('/driver/approval-status', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
       final data = (body['data'] as Map<String, dynamic>?) ?? body;
-      return data['status'] as String? ?? 'pending';
+      return DriverApprovalStatus.fromJson(data);
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
@@ -3105,12 +3177,43 @@ class ApiService {
   static Future<void> adminApproveDriver(int driverId, {
     required String action,
     String? reason,
+    String? serviceZone,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final payload = <String, dynamic>{'action': action};
-    if (reason != null) payload['reason'] = reason;
+    if (reason      != null) payload['reason']       = reason;
+    if (serviceZone != null) payload['service_zone'] = serviceZone;
     final raw  = await _rawPost('/admin/drivers/$driverId/approve', payload, token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> adminGetDriverWithDocuments(int driverId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/drivers/$driverId/documents', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> adminReviewDriverDocument(int driverId, int docId, {
+    required String action,
+    String? note,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final payload = <String, dynamic>{'action': action};
+    if (note != null) payload['note'] = note;
+    final raw = await _rawPost(
+      '/admin/drivers/$driverId/documents/$docId/review',
+      payload,
+      token: token,
+    );
     if (raw.statusCode == 200 || raw.statusCode == 201) return;
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
@@ -3245,19 +3348,21 @@ class ApiService {
 
   static Future<void> createCarRental({
     required String pickupLocation,
-    required DateTime pickupDate,
-    required DateTime returnDate,
-    required String vehicleCategory,
-    required bool withDriver,
+    required DateTime startDate,
+    required DateTime endDate,
+    required String vehicleType,
+    String? paymentMethod,
+    String? notes,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw  = await _rawPost('/rentals', {
-      'pickup_location':  pickupLocation,
-      'pickup_at':        pickupDate.toIso8601String(),
-      'return_at':        returnDate.toIso8601String(),
-      'vehicle_category': vehicleCategory,
-      'with_driver':      withDriver,
+      'pickup_location': pickupLocation,
+      'start_date':      startDate.toIso8601String(),
+      'end_date':        endDate.toIso8601String(),
+      'vehicle_type':    vehicleType,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
     }, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode != 200 && raw.statusCode != 201) {
@@ -3265,14 +3370,26 @@ class ApiService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getRentalHistory() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/rentals', token: token);
+    if (raw.statusCode != 200) return [];
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    final list = body['data'] ?? body['rentals'] ?? body ?? [];
+    return List<Map<String, dynamic>>.from(list is List ? list : []);
+  }
+
   // ── Promo code ───────────────────────────────────────────────────────────────
 
-  static Future<Map<String, dynamic>> applyPromoCode(String code, int estimatedFareKhr) async {
+  static Future<Map<String, dynamic>> applyPromoCode(
+      String code, int orderAmount, {String serviceType = 'ride'}) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw  = await _rawPost('/promo/apply', {
-      'code': code,
-      'fare': estimatedFareKhr,
+      'code':         code,
+      'service_type': serviceType,
+      'order_amount': orderAmount,
     }, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode != 200) {
@@ -3677,25 +3794,69 @@ class DriverIncentiveModel {
 
 // ── Surge info model ──────────────────────────────────────────────────────────
 
+class SurgeZone {
+  final int     id;
+  final String  name;
+  final String? description;
+  final double  centerLat;
+  final double  centerLng;
+  final double  radiusKm;
+  final double  multiplier;
+  final String  type;
+  final DateTime? endsAt;
+  final double? distanceKm;
+  final bool    youAreInside;
+
+  const SurgeZone({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.centerLat,
+    required this.centerLng,
+    required this.radiusKm,
+    required this.multiplier,
+    required this.type,
+    this.endsAt,
+    this.distanceKm,
+    required this.youAreInside,
+  });
+
+  factory SurgeZone.fromJson(Map<String, dynamic> j) => SurgeZone(
+    id:          j['id'] as int,
+    name:        j['name'] as String? ?? '',
+    description: j['description'] as String?,
+    centerLat:   (j['center_lat'] as num).toDouble(),
+    centerLng:   (j['center_lng'] as num).toDouble(),
+    radiusKm:    (j['radius_km']  as num? ?? 1.0).toDouble(),
+    multiplier:  (j['multiplier'] as num? ?? 1.0).toDouble(),
+    type:        j['type'] as String? ?? 'rides',
+    endsAt:      j['ends_at'] != null ? DateTime.tryParse(j['ends_at'] as String) : null,
+    distanceKm:  j['distance_km'] != null ? (j['distance_km'] as num).toDouble() : null,
+    youAreInside: j['you_are_inside'] as bool? ?? false,
+  );
+}
+
 class SurgeInfo {
-  final bool   surgeActive;
-  final double multiplier;
-  final String? zone;
-  final String? message;
+  final bool      surgeActive;    // true = driver IS inside a surge zone
+  final double    multiplier;
+  final String?   zone;
+  final String?   message;
+  final DateTime? endsAt;
+  final bool      youAreInside;   // false = nearby zone only
+  final double?   nearbyDistanceKm;
 
   const SurgeInfo({
     required this.surgeActive,
     required this.multiplier,
     this.zone,
     this.message,
+    this.endsAt,
+    this.youAreInside    = false,
+    this.nearbyDistanceKm,
   });
 
-  factory SurgeInfo.fromJson(Map<String, dynamic> j) => SurgeInfo(
-    surgeActive: j['surge_active'] as bool?    ?? j['active'] as bool? ?? false,
-    multiplier:  (j['multiplier']  as num?     ?? 1.0).toDouble(),
-    zone:        j['zone']         as String?,
-    message:     j['message']      as String?,
-  );
+  // A banner should show when inside a zone OR when there's a nearby zone worth showing
+  bool get shouldShowBanner => surgeActive || (zone != null && multiplier > 1.0);
 }
 
 // ── Public trip model ─────────────────────────────────────────────────────────
@@ -3861,4 +4022,67 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+// ── Driver document model ─────────────────────────────────────────────────────
+
+class DriverDocument {
+  final int    id;
+  final String type;
+  final String status; // pending / approved / rejected
+  final String? fileUrl;
+  final String? note;
+
+  const DriverDocument({
+    required this.id,
+    required this.type,
+    required this.status,
+    this.fileUrl,
+    this.note,
+  });
+
+  factory DriverDocument.fromJson(Map<String, dynamic> j) => DriverDocument(
+    id:      (j['id'] as num).toInt(),
+    type:    j['type']   as String? ?? '',
+    status:  j['status'] as String? ?? 'pending',
+    fileUrl: j['file_url'] as String?,
+    note:    j['note']    as String?,
+  );
+
+  bool get isPending  => status == 'pending';
+  bool get isApproved => status == 'approved';
+  bool get isRejected => status == 'rejected';
+}
+
+// ── Driver approval status model ──────────────────────────────────────────────
+
+class DriverApprovalStatus {
+  final String approvalStatus; // pending / approved / rejected
+  final String? serviceZone;
+  final String? city;
+  final List<DriverDocument> documents;
+
+  const DriverApprovalStatus({
+    required this.approvalStatus,
+    this.serviceZone,
+    this.city,
+    this.documents = const [],
+  });
+
+  factory DriverApprovalStatus.fromJson(Map<String, dynamic> j) {
+    final docs = (j['documents'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(DriverDocument.fromJson)
+        .toList();
+    return DriverApprovalStatus(
+      approvalStatus: j['approval_status'] as String? ?? j['status'] as String? ?? 'pending',
+      serviceZone:    j['service_zone'] as String?,
+      city:           j['city']         as String?,
+      documents:      docs,
+    );
+  }
+
+  bool get isPending  => approvalStatus == 'pending';
+  bool get isApproved => approvalStatus == 'approved';
+  bool get isRejected => approvalStatus == 'rejected';
 }

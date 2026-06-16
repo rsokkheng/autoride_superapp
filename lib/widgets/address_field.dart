@@ -14,6 +14,12 @@ const _kHttpApiKey = 'AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc';
 
 const _kDefaultCenter = LatLng(11.5564, 104.9282); // Phnom Penh
 
+// Reject GPS positions outside Cambodia — prevents iOS simulator (SF) from
+// hijacking the map when running outside the country.
+bool _isInCambodia(LatLng p) =>
+    p.latitude  >= 9.0  && p.latitude  <= 15.5 &&
+    p.longitude >= 102.0 && p.longitude <= 108.0;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public address field
 // ─────────────────────────────────────────────────────────────────────────────
@@ -218,6 +224,7 @@ class _PickerSheetState extends State<_PickerSheet>
   Future<void> _jumpToMyLocation() async {
     final ll = await _getPosition();
     if (ll == null || !mounted) return;
+    if (!_isInCambodia(ll)) return;
     _mapCenter = ll;
     _mapCtrl?.animateCamera(CameraUpdate.newLatLngZoom(ll, 16));
     _reverseGeocode(ll);

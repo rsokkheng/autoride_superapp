@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
@@ -170,7 +171,16 @@ class _HomeTabState extends State<_HomeTab> {
 
   Future<void> _loadSurge() async {
     try {
-      final info = await ApiService.checkSurge();
+      double? lat, lng;
+      try {
+        final pos = await Geolocator.getLastKnownPosition() ??
+            await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.low,
+            );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      } catch (_) {}
+      final info = await ApiService.checkSurge(lat: lat, lng: lng);
       if (!mounted) return;
       if (info.surgeActive) setState(() => _surgeInfo = info);
     } catch (_) {}

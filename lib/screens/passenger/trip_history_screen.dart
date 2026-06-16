@@ -279,7 +279,7 @@ class _StatsBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-            colors: [Color(0xFF0F3460), Color(0xFF003B2F)],
+            colors: [Color(0xFF00C48C), Color(0xFF00A37A)],
             begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -288,10 +288,10 @@ class _StatsBar extends StatelessWidget {
         children: [
           _Bubble('Total', '${stats?.totalTrips ?? '--'}',     Icons.receipt_long_outlined),
           _Vdivider(),
-          _Bubble('Done',  '${stats?.completed  ?? '--'}',     Icons.check_circle_outline, AppTheme.success),
+          _Bubble('Done',  '${stats?.completed  ?? '--'}',     Icons.check_circle_outline),
           _Vdivider(),
           _Bubble('Spent', stats != null ? AppTheme.khr(stats!.totalSpentKhr) : '--',
-              Icons.account_balance_wallet_outlined, AppTheme.accentOrange),
+              Icons.account_balance_wallet_outlined),
         ],
       ),
     );
@@ -307,15 +307,14 @@ class _Vdivider extends StatelessWidget {
 class _Bubble extends StatelessWidget {
   final String label, value;
   final IconData icon;
-  final Color color;
-  const _Bubble(this.label, this.value, this.icon, [this.color = Colors.white]);
+  const _Bubble(this.label, this.value, this.icon);
 
   @override
   Widget build(BuildContext context) => Column(children: [
-    Icon(icon, color: color, size: 18),
+    Icon(icon, color: Colors.white, size: 18),
     const SizedBox(height: 4),
-    Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 15)),
-    Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 10)),
+    Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+    Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 10)),
   ]);
 }
 

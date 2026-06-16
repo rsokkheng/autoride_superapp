@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../passenger/passenger_home.dart';
 import '../driver/driver_home.dart';
+import '../driver/driver_approval_pending_screen.dart';
 import 'role_selection.dart';
 import 'register_screen.dart';
 
@@ -43,10 +44,23 @@ class _LoginScreenState extends State<LoginScreen> {
       final result = await ApiService.login(email, password);
       if (!mounted) return;
 
-      final destination = result.user.isDriver
-          ? const DriverHomeScreen()
-          : const PassengerHomeScreen();
+      Widget destination;
+      if (result.user.isDriver) {
+        // Check approval status — send pending/rejected drivers to the waiting screen
+        try {
+          final approval = await ApiService.getDriverApprovalStatus();
+          destination = approval.isApproved
+              ? const DriverHomeScreen()
+              : const DriverApprovalPendingScreen();
+        } catch (_) {
+          // If status check fails, allow into home — server will gate access
+          destination = const DriverHomeScreen();
+        }
+      } else {
+        destination = const PassengerHomeScreen();
+      }
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => destination),

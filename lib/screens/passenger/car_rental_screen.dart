@@ -11,44 +11,55 @@ class CarRentalScreen extends StatefulWidget {
 
 class _CarRentalScreenState extends State<CarRentalScreen> {
   final _locationCtrl = TextEditingController();
-  DateTime _pickupDate  = DateTime.now().add(const Duration(hours: 2));
-  DateTime _returnDate  = DateTime.now().add(const Duration(days: 1, hours: 2));
-  String _selectedCategory = 'economy';
-  bool _withDriver = true;
+  final _notesCtrl    = TextEditingController();
+  DateTime _startDate   = DateTime.now().add(const Duration(hours: 2));
+  DateTime _endDate     = DateTime.now().add(const Duration(days: 1, hours: 2));
+  String _selectedType    = 'sedan';
+  String _paymentMethod   = 'cash';
   bool _booking = false;
   String? _bookError;
 
-  static const _categories = [
-    _VehicleCategory('economy',  'Economy',  Icons.directions_car_outlined,  60000),
-    _VehicleCategory('standard', 'Standard', Icons.directions_car,            80000),
-    _VehicleCategory('suv',      'SUV',      Icons.airport_shuttle,          120000),
-    _VehicleCategory('luxury',   'Luxury',   Icons.star_outline,             200000),
+  static const _vehicles = [
+    _VehicleType('sedan',      'Sedan',      Icons.directions_car_outlined,   60000),
+    _VehicleType('suv',        'SUV',        Icons.airport_shuttle,           100000),
+    _VehicleType('van',        'Van',        Icons.directions_bus_outlined,   120000),
+    _VehicleType('motorcycle', 'Motorcycle', Icons.two_wheeler,                20000),
+    _VehicleType('truck',      'Truck',      Icons.local_shipping_outlined,   150000),
+    _VehicleType('tuk_tuk',   'Tuk Tuk',   Icons.electric_rickshaw,          30000),
+    _VehicleType('electric',   'Electric',   Icons.electric_car_outlined,      80000),
+  ];
+
+  static const _paymentOptions = [
+    ('cash',   'Cash',     Icons.money),
+    ('wallet', 'Wallet',   Icons.account_balance_wallet_outlined),
+    ('aba',    'ABA Pay',  Icons.payment),
   ];
 
   @override
   void dispose() {
     _locationCtrl.dispose();
+    _notesCtrl.dispose();
     super.dispose();
   }
 
   int get _totalDays {
-    final diff = _returnDate.difference(_pickupDate);
+    final diff = _endDate.difference(_startDate);
     return diff.inDays.clamp(1, 365);
   }
 
   int get _ratePerDay {
-    final cat = _categories.firstWhere(
-      (c) => c.id == _selectedCategory,
-      orElse: () => _categories.first,
+    final v = _vehicles.firstWhere(
+      (v) => v.id == _selectedType,
+      orElse: () => _vehicles.first,
     );
-    return cat.pricePerDay;
+    return v.pricePerDay;
   }
 
   int get _totalPrice => _totalDays * _ratePerDay;
 
-  Future<void> _pickDate(bool isPickup) async {
-    final initial = isPickup ? _pickupDate : _returnDate;
-    final firstDate = isPickup ? DateTime.now() : _pickupDate.add(const Duration(days: 1));
+  Future<void> _pickDate(bool isStart) async {
+    final initial = isStart ? _startDate : _endDate;
+    final firstDate = isStart ? DateTime.now() : _startDate.add(const Duration(days: 1));
 
     final date = await showDatePicker(
       context: context,
@@ -74,13 +85,13 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       time?.hour ?? initial.hour, time?.minute ?? initial.minute,
     );
     setState(() {
-      if (isPickup) {
-        _pickupDate = combined;
-        if (_returnDate.isBefore(_pickupDate.add(const Duration(hours: 1)))) {
-          _returnDate = _pickupDate.add(const Duration(days: 1));
+      if (isStart) {
+        _startDate = combined;
+        if (_endDate.isBefore(_startDate.add(const Duration(hours: 1)))) {
+          _endDate = _startDate.add(const Duration(days: 1));
         }
       } else {
-        _returnDate = combined;
+        _endDate = combined;
       }
     });
   }
@@ -103,10 +114,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     try {
       await ApiService.createCarRental(
         pickupLocation: _locationCtrl.text.trim(),
-        pickupDate: _pickupDate,
-        returnDate: _returnDate,
-        vehicleCategory: _selectedCategory,
-        withDriver: _withDriver,
+        startDate:      _startDate,
+        endDate:        _endDate,
+        vehicleType:    _selectedType,
+        paymentMethod:  _paymentMethod,
+        notes:          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -144,23 +156,23 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
             style: const TextStyle(color: AppTheme.textPrimary),
           ),
           const SizedBox(height: 20),
-          _sectionTitle('Pickup Date & Time'),
+          _sectionTitle('Start Date & Time'),
           const SizedBox(height: 8),
           _DateTile(
-            label: _formatDateTime(_pickupDate),
+            label: _formatDateTime(_startDate),
             icon: Icons.calendar_today_outlined,
             onTap: () => _pickDate(true),
           ),
           const SizedBox(height: 12),
-          _sectionTitle('Return Date & Time'),
+          _sectionTitle('End Date & Time'),
           const SizedBox(height: 8),
           _DateTile(
-            label: _formatDateTime(_returnDate),
+            label: _formatDateTime(_endDate),
             icon: Icons.event_available_outlined,
             onTap: () => _pickDate(false),
           ),
           const SizedBox(height: 20),
-          _sectionTitle('Vehicle Category'),
+          _sectionTitle('Vehicle Type'),
           const SizedBox(height: 10),
           GridView.count(
             shrinkWrap: true,
@@ -169,10 +181,10 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
             childAspectRatio: 1.4,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
-            children: _categories.map((cat) {
-              final selected = _selectedCategory == cat.id;
+            children: _vehicles.map((v) {
+              final selected = _selectedType == v.id;
               return GestureDetector(
-                onTap: () => setState(() => _selectedCategory = cat.id),
+                onTap: () => setState(() => _selectedType = v.id),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
                   padding: const EdgeInsets.all(14),
@@ -188,15 +200,15 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(cat.icon,
+                      Icon(v.icon,
                           color: selected ? AppTheme.accent : AppTheme.textSecondary, size: 28),
                       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(cat.label,
+                        Text(v.label,
                             style: TextStyle(
                               color: selected ? AppTheme.accent : AppTheme.textPrimary,
                               fontWeight: FontWeight.w700, fontSize: 13,
                             )),
-                        Text('${AppTheme.khr(cat.pricePerDay)}/day',
+                        Text('${AppTheme.khr(v.pricePerDay)}/day',
                             style: const TextStyle(
                                 color: AppTheme.textSecondary, fontSize: 11)),
                       ]),
@@ -207,27 +219,52 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
             }).toList(),
           ),
           const SizedBox(height: 20),
-          _sectionTitle('Driver Option'),
+          _sectionTitle('Payment Method'),
+          const SizedBox(height: 8),
+          Row(children: _paymentOptions.map((p) {
+            final selected = _paymentMethod == p.$1;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _paymentMethod = p.$1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: selected ? AppTheme.accent.withValues(alpha: 0.1) : AppTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected ? AppTheme.accent : Colors.transparent, width: 1.5),
+                  ),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(p.$3, color: selected ? AppTheme.accent : AppTheme.textSecondary, size: 20),
+                    const SizedBox(height: 4),
+                    Text(p.$2,
+                        style: TextStyle(
+                          color: selected ? AppTheme.accent : AppTheme.textSecondary,
+                          fontSize: 11, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              ),
+            );
+          }).toList()),
+          const SizedBox(height: 20),
+          _sectionTitle('Notes (optional)'),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
-              color: AppTheme.surface,
-              borderRadius: BorderRadius.circular(14),
+              color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+            child: TextField(
+              controller: _notesCtrl,
+              maxLines: 3,
+              style: const TextStyle(color: AppTheme.textPrimary),
+              decoration: const InputDecoration(
+                hintText: 'Any special requests or notes…',
+                hintStyle: TextStyle(color: AppTheme.textSecondary),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.all(14),
+              ),
             ),
-            child: Row(children: [
-              Expanded(child: _DriverToggle(
-                label: 'With Driver',
-                icon: Icons.person_outline,
-                selected: _withDriver,
-                onTap: () => setState(() => _withDriver = true),
-              )),
-              Expanded(child: _DriverToggle(
-                label: 'Self Drive',
-                icon: Icons.drive_eta_outlined,
-                selected: !_withDriver,
-                onTap: () => setState(() => _withDriver = false),
-              )),
-            ]),
           ),
           const SizedBox(height: 20),
           Container(
@@ -302,12 +339,12 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
           fontSize: 14, fontWeight: FontWeight.w600));
 }
 
-class _VehicleCategory {
+class _VehicleType {
   final String id;
   final String label;
   final IconData icon;
   final int pricePerDay;
-  const _VehicleCategory(this.id, this.label, this.icon, this.pricePerDay);
+  const _VehicleType(this.id, this.label, this.icon, this.pricePerDay);
 }
 
 class _DateTile extends StatelessWidget {
@@ -338,40 +375,6 @@ class _DateTile extends StatelessWidget {
   }
 }
 
-class _DriverToggle extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-  const _DriverToggle({required this.label, required this.icon,
-      required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.all(4),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.accent : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: selected ? Colors.white : AppTheme.textSecondary, size: 22),
-          const SizedBox(height: 4),
-          Text(label,
-              style: TextStyle(
-                color: selected ? Colors.white : AppTheme.textSecondary,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-                fontSize: 13,
-              )),
-        ]),
-      ),
-    );
-  }
-}
 
 class _SummaryRow extends StatelessWidget {
   final String label;

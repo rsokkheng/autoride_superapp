@@ -304,7 +304,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
   Future<void> _loadSurge() async {
     try {
-      final info = await ApiService.checkSurge();
+      double? lat, lng;
+      try {
+        final pos = await Geolocator.getLastKnownPosition() ??
+            await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.low,
+            );
+        lat = pos.latitude;
+        lng = pos.longitude;
+      } catch (_) {}
+      final info = await ApiService.checkSurge(lat: lat, lng: lng);
       if (mounted && info.surgeActive) setState(() => _surgeInfo = info);
     } catch (_) {}
   }

@@ -462,7 +462,7 @@ class _DriverDeliveryActiveScreenState
           ),
           markers:              _markers,
           polylines:            _polylines,
-          myLocationEnabled:    true,
+          myLocationEnabled:    false,
           myLocationButtonEnabled: false,
           zoomControlsEnabled:  false,
           mapToolbarEnabled:    false,

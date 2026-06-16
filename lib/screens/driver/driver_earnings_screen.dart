@@ -14,9 +14,9 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
   late TabController _tabController;
 
   static const _periods = [
-    ('today', 'Today'),
-    ('week',  'This Week'),
-    ('month', 'This Month'),
+    ('daily',   'Today'),
+    ('weekly',  'This Week'),
+    ('monthly', 'This Month'),
   ];
 
   Map<String, dynamic> _data     = {'total': 0, 'trips': [], 'trip_count': 0};

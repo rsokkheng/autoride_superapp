@@ -18,10 +18,11 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
   bool _hasMore     = true;
 
   static const _filters = [
-    ('all',   'All'),
-    ('today', 'Today'),
-    ('week',  'This Week'),
-    ('month', 'This Month'),
+    ('all',         'All'),
+    ('rides',       'Rides'),
+    ('deliveries',  'Deliveries'),
+    ('completed',   'Completed'),
+    ('cancelled',   'Cancelled'),
   ];
 
   @override
