@@ -10,7 +10,7 @@ class LoyaltyScreen extends StatefulWidget {
 }
 
 class _LoyaltyScreenState extends State<LoyaltyScreen> {
-  Map<String, dynamic> _data = {'points': 0, 'tier': 'bronze', 'history': []};
+  Map<String, dynamic> _data = {};
   bool _loading = true;
   String? _error;
   bool _redeeming = false;
@@ -24,23 +24,27 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final data = await ApiService.getLoyaltyPoints();
+      final data = await ApiService.getMembership();
       if (!mounted) return;
       setState(() { _data = data; _loading = false; });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
     }
   }
 
   int get _points {
-    final p = _data['points'];
+    final p = _data['loyalty_points'] ?? _data['points'];
     if (p is int) return p;
     if (p is double) return p.toInt();
     return int.tryParse(p?.toString() ?? '0') ?? 0;
   }
 
   String get _tier {
+    final t = _data['current_tier'];
+    if (t is String && t.isNotEmpty) {
+      return t[0].toUpperCase() + t.substring(1).toLowerCase();
+    }
     if (_points >= 10000) return 'Platinum';
     if (_points >= 5000)  return 'Gold';
     if (_points >= 1000)  return 'Silver';
@@ -131,7 +135,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.primary,
-      appBar: AppBar(title: const Text('AutoRide Rewards')),
+      appBar: AppBar(title: const Text('ROTEH Rewards')),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
@@ -149,6 +153,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                     padding: EdgeInsets.zero,
                     children: [
                       _buildHeader(),
+                      const SizedBox(height: 16),
+                      _buildTierBenefits(),
                       const SizedBox(height: 16),
                       _buildHowToEarn(),
                       const SizedBox(height: 16),
@@ -194,7 +200,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('AutoRide Points',
+            const Text('ROTEH Points',
                 style: TextStyle(color: Colors.white70, fontSize: 14)),
             const SizedBox(height: 4),
             Text('$_points pts',
@@ -230,6 +236,122 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
         const SizedBox(height: 8),
         Text(_nextTierLabel,
             style: const TextStyle(color: Colors.white70, fontSize: 12)),
+      ]),
+    );
+  }
+
+  Widget _buildTierBenefits() {
+    const tiers = [
+      _TierDef(
+        name: 'Bronze',
+        color: Color(0xFFCD7F32),
+        minPts: 0,
+        maxPts: 999,
+        benefits: ['10 pts per 1,000 ៛ spent', 'Birthday bonus 100 pts', 'Basic support'],
+      ),
+      _TierDef(
+        name: 'Silver',
+        color: Colors.grey,
+        minPts: 1000,
+        maxPts: 4999,
+        benefits: ['12 pts per 1,000 ៛ spent', 'Priority matching', '5% fare discount'],
+      ),
+      _TierDef(
+        name: 'Gold',
+        color: Color(0xFFFFD700),
+        minPts: 5000,
+        maxPts: 9999,
+        benefits: ['15 pts per 1,000 ៛ spent', '10% fare discount', 'Free cancellation ×3/mo'],
+      ),
+      _TierDef(
+        name: 'Platinum',
+        color: Color(0xFF00BCD4),
+        minPts: 10000,
+        maxPts: null,
+        benefits: ['20 pts per 1,000 ៛ spent', '15% fare discount', 'Dedicated support line', 'Free cancellation unlimited'],
+      ),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Membership Tiers',
+            style: TextStyle(color: AppTheme.textPrimary,
+                fontSize: 17, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        ...tiers.map((tier) {
+          final isCurrent = tier.name == _tier;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: isCurrent
+                  ? Border.all(color: tier.color, width: 2)
+                  : null,
+            ),
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                leading: Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: tier.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.star_rounded, color: tier.color, size: 22),
+                ),
+                title: Row(children: [
+                  Text(tier.name,
+                      style: TextStyle(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15)),
+                  if (isCurrent) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: tier.color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('Current',
+                          style: TextStyle(
+                              color: tier.color,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ]),
+                subtitle: Text(
+                  tier.maxPts != null
+                      ? '${tier.minPts}–${tier.maxPts} pts'
+                      : '${tier.minPts}+ pts',
+                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: tier.benefits.map((b) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(children: [
+                          Icon(Icons.check_circle_outline,
+                              color: tier.color, size: 16),
+                          const SizedBox(width: 10),
+                          Text(b,
+                              style: const TextStyle(
+                                  color: AppTheme.textSecondary, fontSize: 13)),
+                        ]),
+                      )).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
       ]),
     );
   }
@@ -287,7 +409,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   Widget _buildHistory() {
-    final history = (_data['history'] as List<dynamic>?) ?? [];
+    final history = (_data['history'] as List<dynamic>?) ?? (_data['transactions'] as List<dynamic>?) ?? [];
     if (history.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -312,6 +434,21 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       ]),
     );
   }
+}
+
+class _TierDef {
+  final String name;
+  final Color color;
+  final int minPts;
+  final int? maxPts;
+  final List<String> benefits;
+  const _TierDef({
+    required this.name,
+    required this.color,
+    required this.minPts,
+    this.maxPts,
+    required this.benefits,
+  });
 }
 
 class _EarnItem {

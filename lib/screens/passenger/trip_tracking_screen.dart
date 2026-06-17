@@ -1260,7 +1260,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final text = 'I\'m on my way!\n'
         'From: ${widget.from}\nTo: ${widget.to}\n'
         'Track pickup: https://maps.google.com/?q=${pickup.latitude},${pickup.longitude}';
-    Share.share(text, subject: 'My AutoRide Trip');
+    final box = context.findRenderObject() as RenderBox?;
+    Share.share(text,
+        subject: 'My AutoRide Trip',
+        sharePositionOrigin:
+            box != null ? box.localToGlobal(Offset.zero) & box.size : null);
   }
 
   Future<void> _stopSharing() async {
@@ -1418,12 +1422,15 @@ class _TripShareSheet extends StatelessWidget {
     ));
   }
 
-  void _shareNative() {
+  void _shareNative(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox?;
     Share.share(
       'Track my AutoRide trip live 🚗\n'
       'Driver: $driverName · ETA: $etaMinutes min\n'
       'From: $from\nTo: $to\n\n$url',
       subject: 'Track my ride live',
+      sharePositionOrigin:
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
   }
 
@@ -1562,7 +1569,7 @@ class _TripShareSheet extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: _shareNative,
+                onPressed: () => _shareNative(context),
                 icon: const Icon(Icons.share_rounded, size: 16),
                 label: const Text('Share via...'),
                 style: ElevatedButton.styleFrom(

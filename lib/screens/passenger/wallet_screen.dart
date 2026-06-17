@@ -189,7 +189,7 @@ class _WalletScreenState extends State<WalletScreen> {
     return Scaffold(
       backgroundColor: AppTheme.primary,
       appBar: AppBar(
-        title: const Text('AutoRide Pay'),
+        title: const Text('ROTEH Pay'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -219,14 +219,14 @@ class _WalletScreenState extends State<WalletScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF1A3FAA), Color(0xFF2A6AFF)],
+          colors: [Color(0xFF00843A), Color(0xFF00B14F)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1A3FAA).withValues(alpha: 0.35),
+            color: Color(0xFF00B14F),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -241,7 +241,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   color: Colors.white70, size: 18),
               const SizedBox(width: 6),
               const Text(
-                'AutoRide Pay',
+                'ROTEH Pay',
                 style: TextStyle(
                     color: Colors.white70,
                     fontSize: 13,
@@ -709,7 +709,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Top Up AutoRide Pay',
+              'Top Up ROTEH Pay',
               style: TextStyle(
                   color: AppTheme.textPrimary,
                   fontSize: 18,

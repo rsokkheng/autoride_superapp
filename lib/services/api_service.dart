@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_log.dart';
 import '../models/user_model.dart';
@@ -262,6 +263,21 @@ class ApiService {
         body['error'] as String? ??
         'Login failed (${raw.statusCode}).';
     throw ApiException(message, raw.statusCode);
+  }
+
+  // ── Biometric token login ─────────────────────────────────────────────────
+
+  static Future<({UserModel user, String token})> loginWithToken(String token) async {
+    final raw  = await _rawGet('/auth/me', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson = data['user'] ?? data;
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, token);
+      return (user: user, token: token);
+    }
+    throw ApiException(body['message'] as String? ?? 'Session expired.', raw.statusCode);
   }
 
   // ── FCM device token ─────────────────────────────────────────────────────
@@ -2357,6 +2373,38 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  /// Verify OTP and return the logged-in user + token (login flow).
+  static Future<({UserModel user, String token})> loginWithOtp(String phone, String code) async {
+    final raw = await _rawPost('/auth/otp/verify', {
+      'phone': phone,
+      'code':  code,
+    });
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data        = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson    = data['user'];
+      final accessToken = data['access_token'] as String? ?? data['token'] as String?;
+      if (userJson == null || accessToken == null) {
+        throw ApiException('OTP verified but no session returned.', raw.statusCode);
+      }
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, accessToken,
+          refreshToken: data['refresh_token'] as String?);
+      return (user: user, token: accessToken);
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'OTP verification failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
   // ── Chat ──────────────────────────────────────────────────────────────────
 
   // Primary: GET /rides/{id}/conversation — direct ride → conversation link.
@@ -2539,6 +2587,11 @@ class ApiService {
   }
 
   static Future<bool> isLoggedIn() async => (await getToken()) != null;
+
+  static Future<String?> getEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyEmail);
+  }
 
   // ── Wallet ────────────────────────────────────────────────────────────────
 
@@ -3399,6 +3452,1003 @@ class ApiService {
     }
     return body;
   }
+
+  // ── Social Login ─────────────────────────────────────────────────────────────
+
+  static Future<({UserModel user, String token})> socialLogin({
+    required String provider,
+    required String providerToken,
+  }) async {
+    final raw  = await _rawPost('/auth/social', {
+      'provider': provider,
+      'token':    providerToken,
+    });
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson    = data['user'];
+      final accessToken = data['access_token'] as String? ?? data['token'] as String?;
+      if (userJson == null || accessToken == null) {
+        throw ApiException('Missing user or token in social login response.', raw.statusCode);
+      }
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, accessToken,
+          refreshToken: data['refresh_token'] as String?);
+      return (user: user, token: accessToken);
+    }
+    throw ApiException(body['message'] as String? ?? 'Social login failed.', raw.statusCode);
+  }
+
+  // ── Biometric — device registration & challenge/verify ────────────────────
+
+  static Future<void> registerBiometricDevice({
+    required String deviceId,
+    required String publicKey,
+    String? deviceName,
+    String? platform,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/auth/biometric/register', {
+      'device_id':  deviceId,
+      'public_key': publicKey,
+      if (deviceName != null) 'device_name': deviceName,
+      if (platform   != null) 'platform':    platform,
+    }, token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Biometric registration failed.', raw.statusCode);
+  }
+
+  static Future<({String challenge, int expiresIn})> getBiometricChallenge(String deviceId) async {
+    final raw  = await _rawPost('/auth/biometric/challenge', {'device_id': deviceId});
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return (
+        challenge:  data['challenge']  as String? ?? '',
+        expiresIn:  data['expires_in'] as int?    ?? 120,
+      );
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to get challenge.', raw.statusCode);
+  }
+
+  static Future<({UserModel user, String token})> verifyBiometric({
+    required String deviceId,
+    required String signedChallenge,
+  }) async {
+    final raw  = await _rawPost('/auth/biometric/verify', {
+      'device_id':        deviceId,
+      'signed_challenge': signedChallenge,
+    });
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson    = data['user'];
+      final accessToken = data['access_token'] as String? ?? data['token'] as String?;
+      if (userJson == null || accessToken == null) {
+        throw ApiException('Missing user or token.', raw.statusCode);
+      }
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, accessToken);
+      return (user: user, token: accessToken);
+    }
+    throw ApiException(body['message'] as String? ?? 'Biometric verification failed.', raw.statusCode);
+  }
+
+  static Future<List<Map<String, dynamic>>> getBiometricDevices() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/auth/biometric/devices', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteBiometricDevice(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/auth/biometric/devices/$id', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  // ── Multi-Account (server-side) ───────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getLinkedAccounts() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/accounts', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> linkAccount({
+    required String email,
+    required String password,
+    String? label,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/accounts/link', {
+      'email':    email,
+      'password': password,
+      if (label != null) 'label': label,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    throw ApiException(body['message'] as String? ?? 'Link failed.', raw.statusCode);
+  }
+
+  static Future<({UserModel user, String token})> switchLinkedAccount(int linkId) async {
+    final currentToken = await getToken();
+    if (currentToken == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/accounts/switch/$linkId', {}, token: currentToken);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson    = data['user'];
+      final accessToken = data['access_token'] as String? ?? data['token'] as String?;
+      if (userJson == null || accessToken == null) {
+        throw ApiException('Missing user or token.', raw.statusCode);
+      }
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, accessToken);
+      return (user: user, token: accessToken);
+    }
+    throw ApiException(body['message'] as String? ?? 'Switch failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteLinkedAccount(int linkId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/accounts/$linkId', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  // ── QR Payment ───────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> generateQrPayment({
+    required int amountKhr,
+    String? paymentType,
+    String? payableType,
+    int?    payableId,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/payments/qr/generate', {
+      'amount_khr': amountKhr,
+      if (paymentType != null) 'payment_type': paymentType,
+      if (payableType != null) 'payable_type':  payableType,
+      if (payableId   != null) 'payable_id':    payableId,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    throw ApiException(body['message'] as String? ?? 'QR generation failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> getQrPaymentStatus(String reference) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/payments/qr/$reference/status', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<List<Map<String, dynamic>>> getQrPaymentHistory({int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/payments/qr?page=$page', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) {
+        final inner = (data['data'] as List<dynamic>?) ?? [];
+        return inner.whereType<Map<String, dynamic>>().toList();
+      }
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Membership / Tiers ────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getMembership() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/membership', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<List<Map<String, dynamic>>> getPublicTiers() async {
+    final raw  = await _rawGet('/membership/tiers');
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Voucher Store ─────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAvailableVouchers() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/vouchers', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> claimVoucher(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/vouchers/$id/claim', {}, token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Claim failed.', raw.statusCode);
+  }
+
+  static Future<List<Map<String, dynamic>>> getMyVouchers() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/vouchers/mine', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> applyVoucher({
+    required int userVoucherId,
+    required int fare,
+    required String category,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/vouchers/apply', {
+      'user_voucher_id': userVoucherId,
+      'fare':            fare,
+      'category':        category,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Apply failed.', raw.statusCode);
+  }
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getOnboardingProgress() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/onboarding', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> completeOnboardingStep(String step) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/onboarding/step', {'step': step}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> skipOnboarding() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/onboarding/skip', {}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Accessibility Settings ─────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAccessibilitySettings() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/accessibility', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> updateAccessibilitySettings(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPatch('/accessibility', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  // ── Voice Call (Agora) ─────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getRideCallToken(int rideId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/rides/$rideId/call-token', {}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed to get call token.', raw.statusCode);
+  }
+
+  // ── Helmet Detection ──────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> checkHelmet(List<int> imageBytes, String filename) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final uri = Uri.parse('$_baseUrl/driver/helmet-check');
+    final request = http.MultipartRequest('POST', uri)
+      ..headers['Authorization'] = 'Bearer $token'
+      ..headers['Accept']        = 'application/json'
+      ..files.add(http.MultipartFile.fromBytes(
+        'image', imageBytes, filename: filename,
+        contentType: MediaType('image', filename.split('.').last),
+      ));
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
+    final raw  = await http.Response.fromStream(streamed);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Helmet check failed.', raw.statusCode);
+  }
+
+  // ── Promotional Banners ────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getBanners() async {
+    final token = await getToken();
+    final raw   = await _rawGet('/banners', token: token);
+    final body  = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    return [];
+  }
+
+  // ── Driver Withdrawals ─────────────────────────────────────────────────────
+
+  static Future<void> requestWithdrawal({
+    required int    amountKhr,
+    required String paymentMethod,
+    required String accountNumber,
+    required String accountName,
+    String? bankName,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/driver/withdraw', {
+      'amount_khr':     amountKhr,
+      'payment_method': paymentMethod,
+      'account_number': accountNumber,
+      'account_name':   accountName,
+      if (bankName != null) 'bank_name': bankName,
+    }, token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Withdrawal failed.', raw.statusCode);
+  }
+
+  static Future<List<Map<String, dynamic>>> getWithdrawalHistory() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/driver/withdrawals', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Dashboard stats ───────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAdminStats() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/stats', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return body['data'] as Map<String, dynamic>? ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Fare management ───────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminFareRules() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/fares', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> updateAdminFareRule(int id, Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPatch('/admin/fares/$id', data, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> createAdminFareRule(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/fares', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) return body['data'] as Map<String, dynamic>? ?? body;
+    throw ApiException(body['message'] as String? ?? 'Create failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteAdminFareRule(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/admin/fares/$id', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  // ── Admin — Surge settings ────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAdminSurgeSettings() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/surge', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return body['data'] as Map<String, dynamic>? ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> updateAdminSurgeSettings(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/surge', data, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  // ── Admin — Promo codes ───────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminPromos() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/promos', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List<dynamic>?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> createAdminPromo(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/promos', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) return body['data'] as Map<String, dynamic>? ?? body;
+    throw ApiException(body['message'] as String? ?? 'Create failed.', raw.statusCode);
+  }
+
+  static Future<void> updateAdminPromo(int id, Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPatch('/admin/promos/$id', data, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteAdminPromo(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/admin/promos/$id', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  // ── Admin — Auth ──────────────────────────────────────────────────────────
+
+  static Future<({Map<String, dynamic> admin, String token})> adminLogin(String email, String password) async {
+    final raw  = await _rawPost('/admin/login', {'email': email, 'password': password});
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final token = body['access_token'] as String? ?? body['token'] as String?;
+      final admin = body['admin'] as Map<String, dynamic>? ?? {};
+      if (token == null) throw const ApiException('No token in admin login response.', 500);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyToken, token);
+      await prefs.setString(_keyRole,  'admin');
+      await prefs.setString(_keyName,  admin['name'] as String? ?? 'Admin');
+      await prefs.setString(_keyEmail, admin['email'] as String? ?? email);
+      return (admin: admin, token: token);
+    }
+    throw ApiException(body['message'] as String? ?? 'Admin login failed.', raw.statusCode);
+  }
+
+  static Future<void> adminLogout() async {
+    final token = await getToken();
+    if (token != null) {
+      try { await _rawPost('/admin/logout', {}, token: token); } catch (_) {}
+    }
+    await clearSession();
+  }
+
+  // ── Admin — Users ─────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminUsers({String? role, String? search, int perPage = 20, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'per_page=$perPage', 'page=$page',
+      if (role   != null) 'role=$role',
+      if (search != null) 'search=${Uri.encodeComponent(search)}',
+    ].join('&');
+    final raw  = await _rawGet('/admin/users?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> getAdminUser(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/users/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> updateAdminUser(int id, Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/admin/users/$id', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteAdminUser(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/admin/users/$id', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  static Future<void> creditAdminUser(int id, int amountKhr, {String? note}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/users/$id/credit', {
+      'amount_khr': amountKhr,
+      if (note != null) 'note': note,
+    }, token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Credit failed.', raw.statusCode);
+  }
+
+  // ── Admin — Drivers ───────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminDrivers({String? approvalStatus, String? search, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'page=$page',
+      if (approvalStatus != null) 'approval_status=$approvalStatus',
+      if (search         != null) 'search=${Uri.encodeComponent(search)}',
+    ].join('&');
+    final raw  = await _rawGet('/admin/drivers?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> getAdminDriver(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/drivers/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> adminApproveDriverV2(int id, String status, {String? note}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/drivers/$id/approve', {
+      'status': status,
+      if (note != null) 'note': note,
+    }, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> adminReviewDocumentV2(int driverId, int docId, String status, {String? note}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/drivers/$driverId/documents/$docId/review', {
+      'status': status,
+      if (note != null) 'note': note,
+    }, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Rides ─────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminRides({String? status, String? date, int perPage = 20, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'per_page=$perPage', 'page=$page',
+      if (status != null) 'status=$status',
+      if (date   != null) 'date=$date',
+    ].join('&');
+    final raw  = await _rawGet('/admin/rides?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> getAdminRide(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/rides/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> cancelAdminRide(int id, String reason) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/rides/$id/cancel', {'reason': reason}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Cancel failed.', raw.statusCode);
+  }
+
+  // ── Admin — Deliveries ────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminDeliveries({String? status, String? serviceType, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'page=$page',
+      if (status      != null) 'status=$status',
+      if (serviceType != null) 'service_type=$serviceType',
+    ].join('&');
+    final raw  = await _rawGet('/admin/deliveries?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> getAdminDelivery(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/deliveries/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Withdrawals ───────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminWithdrawals({String? status, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = 'page=$page${status != null ? '&status=$status' : ''}';
+    final raw  = await _rawGet('/admin/withdrawals?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> approveAdminWithdrawal(int id, {String? note}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/withdrawals/$id/approve',
+        note != null ? {'note': note} : {}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> rejectAdminWithdrawal(int id, String reason) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/withdrawals/$id/reject', {'reason': reason}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Top-ups ───────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminTopups({String? status, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = 'page=$page${status != null ? '&status=$status' : ''}';
+    final raw  = await _rawGet('/admin/topups?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> approveAdminTopup(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/topups/$id/approve', {}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> rejectAdminTopup(int id, String reason) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/topups/$id/reject', {'reason': reason}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Support tickets ───────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminSupportTickets({String? status, String? priority, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'page=$page',
+      if (status   != null) 'status=$status',
+      if (priority != null) 'priority=$priority',
+    ].join('&');
+    final raw  = await _rawGet('/admin/support?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> getAdminSupportTicket(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/support/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> replyAdminSupportTicket(int id, String message) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/support/$id/reply', {'message': message}, token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 201) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> updateAdminSupportTicketStatus(int id, String status) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/admin/support/$id/status', {'status': status}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Transactions ──────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminTransactions({String? type, int? userId, String? date, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'page=$page',
+      if (type   != null) 'type=$type',
+      if (userId != null) 'user_id=$userId',
+      if (date   != null) 'date=$date',
+    ].join('&');
+    final raw  = await _rawGet('/admin/transactions?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Banners ───────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminBanners() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/banners', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> createAdminBanner(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/banners', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Create failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> updateAdminBanner(int id, Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/admin/banners/$id', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteAdminBanner(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/admin/banners/$id', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  // ── Admin — Surge zones ───────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminSurgeZones() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/surge-zones', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List?) ?? [];
+      return list.whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> createAdminSurgeZone(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/surge-zones', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Create failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> updateAdminSurgeZone(int id, Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/admin/surge-zones/$id', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  static Future<void> deleteAdminSurgeZone(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/admin/surge-zones/$id', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Delete failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> toggleAdminSurgeZone(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/admin/surge-zones/$id/toggle', {}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Toggle failed.', raw.statusCode);
+  }
+
+  // ── Admin — Pricing ───────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>> getAdminPricing() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/pricing', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> updateAdminPricingSettings(Map<String, dynamic> settings) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/admin/pricing/settings', {'settings': settings}, token: token);
+    if (raw.statusCode == 200) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
+  }
+
+  // ── Admin — Safety ────────────────────────────────────────────────────────
+
+  static Future<List<Map<String, dynamic>>> getAdminSafetyIncidents({String? type, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = 'page=$page${type != null ? '&type=$type' : ''}';
+    final raw  = await _rawGet('/admin/safety?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
 }
 
 // ── Wallet transfer result ────────────────────────────────────────────────────
@@ -3434,6 +4484,11 @@ class ChargingStationModel {
   final double  lat;
   final double  lng;
   final double? distanceKm;
+  final int     availablePorts;
+  final String  operator;
+  final double? rating;
+  final String  details;
+
   const ChargingStationModel({
     required this.id,
     required this.name,
@@ -3441,15 +4496,25 @@ class ChargingStationModel {
     required this.lat,
     required this.lng,
     this.distanceKm,
+    this.availablePorts = 0,
+    this.operator = '',
+    this.rating,
+    this.details = '',
   });
+
   factory ChargingStationModel.fromJson(Map<String, dynamic> j) => ChargingStationModel(
-    id:         j['id']          as int,
-    name:       j['name']        as String? ?? '',
-    address:    j['address']     as String? ?? '',
-    lat:        (j['lat']  as num).toDouble(),
-    lng:        (j['lng']  as num).toDouble(),
-    distanceKm: j['distance_km'] != null
+    id:             j['id']               as int,
+    name:           j['name']             as String? ?? '',
+    address:        j['address']          as String? ?? '',
+    lat:            double.parse((j['latitude']  ?? j['lat']  ?? 0).toString()),
+    lng:            double.parse((j['longitude'] ?? j['lng']  ?? 0).toString()),
+    distanceKm:     j['distance_km'] != null
         ? (j['distance_km'] as num).toDouble() : null,
+    availablePorts: j['available_ports']  as int? ?? 0,
+    operator:       j['operator']         as String? ?? '',
+    rating:         j['rating'] != null
+        ? double.tryParse(j['rating'].toString()) : null,
+    details:        j['details']          as String? ?? '',
   );
 }
 

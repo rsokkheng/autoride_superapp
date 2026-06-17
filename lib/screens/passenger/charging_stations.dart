@@ -213,7 +213,9 @@ class _StationCard extends StatelessWidget {
       decoration: BoxDecoration(
           color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row
           Row(
             children: [
               Container(
@@ -247,7 +249,49 @@ class _StationCard extends StatelessWidget {
                         color: AppTheme.textSecondary, fontSize: 12)),
             ],
           ),
+
+          // Operator / rating / ports
+          if (station.operator.isNotEmpty || station.rating != null || station.availablePorts > 0) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                if (station.operator.isNotEmpty)
+                  _Chip(
+                    icon: Icons.business_outlined,
+                    label: station.operator,
+                    color: AppTheme.accent,
+                  ),
+                if (station.availablePorts > 0)
+                  _Chip(
+                    icon: Icons.power_outlined,
+                    label: '${station.availablePorts} ports',
+                    color: AppTheme.success,
+                  ),
+                if (station.rating != null)
+                  _Chip(
+                    icon: Icons.star_rounded,
+                    label: station.rating!.toStringAsFixed(1),
+                    color: AppTheme.gold,
+                  ),
+              ],
+            ),
+          ],
+
+          // Details
+          if (station.details.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(station.details,
+                style: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+          ],
+
           const SizedBox(height: 12),
+
+          // Navigate row
           Row(
             children: [
               const Icon(Icons.location_on_outlined,
@@ -255,8 +299,7 @@ class _StationCard extends StatelessWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  'Lat: ${station.lat.toStringAsFixed(4)}, '
-                  'Lng: ${station.lng.toStringAsFixed(4)}',
+                  '${station.lat.toStringAsFixed(4)}, ${station.lng.toStringAsFixed(4)}',
                   style: const TextStyle(
                       color: AppTheme.textSecondary, fontSize: 11),
                 ),
@@ -284,6 +327,32 @@ class _StationCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _Chip({required this.icon, required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: color, size: 12),
+        const SizedBox(width: 4),
+        Text(label,
+            style: TextStyle(
+                color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }

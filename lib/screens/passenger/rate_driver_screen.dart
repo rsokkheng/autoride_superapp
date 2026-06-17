@@ -82,290 +82,291 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(children: [
-          const SizedBox(height: 16),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              child: Column(children: [
+                const SizedBox(height: 8),
 
-          // Driver avatar
-          CircleAvatar(
-            radius: 48,
-            backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2),
-            child: Text(
-              widget.driverName[0],
-              style: const TextStyle(color: AppTheme.accentOrange, fontSize: 36, fontWeight: FontWeight.w800),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(widget.driverName,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-          Text('${widget.fare}  •  ${_methodLabel(widget.paymentMethod)}',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-          const SizedBox(height: 12),
-
-          // Distance & Duration stats
-          if (widget.distanceKm != null || widget.durationMin != null)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  if (widget.distanceKm != null) ...[
-                    Column(children: [
-                      const Icon(Icons.route_outlined,
-                          color: AppTheme.accent, size: 20),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${widget.distanceKm!.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15),
-                      ),
-                      const Text('Distance',
-                          style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 11)),
-                    ]),
-                  ],
-                  if (widget.distanceKm != null && widget.durationMin != null)
-                    Container(width: 1, height: 36,
-                        color: AppTheme.cardBg),
-                  if (widget.durationMin != null) ...[
-                    Column(children: [
-                      const Icon(Icons.timer_outlined,
-                          color: AppTheme.accent, size: 20),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${widget.durationMin} min',
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15),
-                      ),
-                      const Text('Duration',
-                          style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 11)),
-                    ]),
-                  ],
-                ],
-              ),
-            ),
-          const SizedBox(height: 12),
-          const Text('How was your trip?',
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 24),
-
-          // Star rating
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(5, (i) => GestureDetector(
-              onTap: () => setState(() { _stars = i + 1; _tags.clear(); }),
-              child: AnimatedScale(
-                scale: _stars == i + 1 ? 1.3 : 1.0,
-                duration: const Duration(milliseconds: 150),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Icon(
-                    i < _stars ? Icons.star_rounded : Icons.star_outline_rounded,
-                    color: i < _stars ? AppTheme.gold : AppTheme.textSecondary,
-                    size: 44,
-                  ),
-                ),
-              ),
-            )),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _stars == 0 ? 'Tap to rate' :
-            _stars == 1 ? 'Terrible' :
-            _stars == 2 ? 'Bad' :
-            _stars == 3 ? 'Okay' :
-            _stars == 4 ? 'Good' : 'Excellent!',
-            style: TextStyle(
-              color: _stars >= 4 ? AppTheme.success : _stars > 0 ? AppTheme.danger : AppTheme.textSecondary,
-              fontWeight: FontWeight.w700, fontSize: 15,
-            ),
-          ),
-
-          if (_stars > 0) ...[
-            const SizedBox(height: 24),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                _stars >= 4 ? 'What did you love?' : 'What went wrong?',
-                style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
-              ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _activeTags.map((tag) => GestureDetector(
-                onTap: () => setState(() {
-                  _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
-                }),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _tags.contains(tag)
-                        ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger).withValues(alpha: 0.15)
-                        : AppTheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: _tags.contains(tag)
-                          ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger)
-                          : AppTheme.surface,
-                    ),
-                  ),
+                // Driver avatar
+                CircleAvatar(
+                  radius: 48,
+                  backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2),
                   child: Text(
-                    tag,
-                    style: TextStyle(
-                      color: _tags.contains(tag)
-                          ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger)
-                          : AppTheme.textSecondary,
-                      fontWeight: FontWeight.w500, fontSize: 13,
-                    ),
+                    widget.driverName[0],
+                    style: const TextStyle(color: AppTheme.accentOrange, fontSize: 36, fontWeight: FontWeight.w800),
                   ),
                 ),
-              )).toList(),
-            ),
-            const SizedBox(height: 20),
+                const SizedBox(height: 12),
+                Text(widget.driverName,
+                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+                Text('${widget.fare}  •  ${_methodLabel(widget.paymentMethod)}',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                const SizedBox(height: 12),
 
-            // Comment
-            Container(
-              decoration: BoxDecoration(
-                color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
-              child: TextField(
-                controller: _commentController,
-                maxLines: 3,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  hintText: 'Add a comment (optional)...',
-                  hintStyle: TextStyle(color: AppTheme.textSecondary),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(14),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
+                // Distance & Duration stats
+                if (widget.distanceKm != null || widget.durationMin != null)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        if (widget.distanceKm != null) ...[
+                          Column(children: [
+                            const Icon(Icons.route_outlined, color: AppTheme.accent, size: 20),
+                            const SizedBox(height: 4),
+                            Text('${widget.distanceKm!.toStringAsFixed(1)} km',
+                                style: const TextStyle(color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w700, fontSize: 15)),
+                            const Text('Distance',
+                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          ]),
+                        ],
+                        if (widget.distanceKm != null && widget.durationMin != null)
+                          Container(width: 1, height: 36, color: AppTheme.cardBg),
+                        if (widget.durationMin != null) ...[
+                          Column(children: [
+                            const Icon(Icons.timer_outlined, color: AppTheme.accent, size: 20),
+                            const SizedBox(height: 4),
+                            Text('${widget.durationMin} min',
+                                style: const TextStyle(color: AppTheme.textPrimary,
+                                    fontWeight: FontWeight.w700, fontSize: 15)),
+                            const Text('Duration',
+                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          ]),
+                        ],
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                const Text('How was your trip?',
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 24),
 
-            // Tip section
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Add a tip?',
-                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: _tipOptions.asMap().entries.map((entry) {
-                final amount  = entry.value;
-                final label   = amount == 0 ? 'No tip' : '${amount ~/ 1000}k ៛';
-                final selected = _selectedTip == amount;
-                return Expanded(child: Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedTip = selected ? null : amount),
-                    child: AnimatedContainer(
+                // Star rating
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(5, (i) => GestureDetector(
+                    onTap: () => setState(() { _stars = i + 1; _tags.clear(); }),
+                    child: AnimatedScale(
+                      scale: _stars == i + 1 ? 1.3 : 1.0,
                       duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: selected ? AppTheme.accent : AppTheme.surface,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: selected ? AppTheme.accent : AppTheme.cardBg,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(
+                          i < _stars ? Icons.star_rounded : Icons.star_outline_rounded,
+                          color: i < _stars ? AppTheme.gold : AppTheme.textSecondary,
+                          size: 44,
                         ),
                       ),
-                      child: Text(label,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: selected ? AppTheme.primary : AppTheme.textSecondary,
-                          fontWeight: FontWeight.w700, fontSize: 13,
+                    ),
+                  )),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _stars == 0 ? 'Tap to rate' :
+                  _stars == 1 ? 'Terrible' :
+                  _stars == 2 ? 'Bad' :
+                  _stars == 3 ? 'Okay' :
+                  _stars == 4 ? 'Good' : 'Excellent!',
+                  style: TextStyle(
+                    color: _stars >= 4 ? AppTheme.success : _stars > 0 ? AppTheme.danger : AppTheme.textSecondary,
+                    fontWeight: FontWeight.w700, fontSize: 15,
+                  ),
+                ),
+
+                if (_stars > 0) ...[
+                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      _stars >= 4 ? 'What did you love?' : 'What went wrong?',
+                      style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _activeTags.map((tag) => GestureDetector(
+                      onTap: () => setState(() {
+                        _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
+                      }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: _tags.contains(tag)
+                              ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger).withValues(alpha: 0.15)
+                              : AppTheme.surface,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _tags.contains(tag)
+                                ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger)
+                                : AppTheme.surface,
+                          ),
                         ),
+                        child: Text(
+                          tag,
+                          style: TextStyle(
+                            color: _tags.contains(tag)
+                                ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger)
+                                : AppTheme.textSecondary,
+                            fontWeight: FontWeight.w500, fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    )).toList(),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Comment
+                  Container(
+                    decoration: BoxDecoration(
+                        color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+                    child: TextField(
+                      controller: _commentController,
+                      maxLines: 3,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'Add a comment (optional)...',
+                        hintStyle: TextStyle(color: AppTheme.textSecondary),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(14),
                       ),
                     ),
                   ),
-                ));
-              }).toList(),
-            ),
-            const SizedBox(height: 28),
+                  const SizedBox(height: 24),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: (_submitting || _tipping) ? null : () async {
-                  setState(() => _submitting = true);
-                  try {
-                    if (widget.rideId != null) {
-                      await ApiService.rateRide(
-                        widget.rideId!,
-                        _stars.toDouble(),
-                        comment: _commentController.text.trim().isEmpty
-                            ? null
-                            : _commentController.text.trim(),
-                      );
-                      // Send tip if one was selected (skip 0 — "No tip")
-                      if (_selectedTip != null && _selectedTip! > 0) {
-                        setState(() => _tipping = true);
-                        try {
-                          await ApiService.tipDriver(widget.rideId!, amountKhr: _selectedTip!);
-                        } on ApiException catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text('Tip failed: ${e.message}'),
-                              backgroundColor: Colors.orange,
-                              behavior: SnackBarBehavior.floating,
-                            ));
+                  // Tip section
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Add a tip?',
+                        style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: _tipOptions.asMap().entries.map((entry) {
+                      final amount   = entry.value;
+                      final label    = amount == 0 ? 'No tip' : '${amount ~/ 1000}k ៛';
+                      final selected = _selectedTip == amount;
+                      return Expanded(child: Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _selectedTip = selected ? null : amount),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selected ? AppTheme.accent : AppTheme.surface,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: selected ? AppTheme.accent : AppTheme.cardBg),
+                            ),
+                            child: Text(label,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: selected ? AppTheme.primary : AppTheme.textSecondary,
+                                fontWeight: FontWeight.w700, fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ));
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ]),
+            ),
+          ),
+
+          // ── Sticky submit button ─────────────────────────────────────────
+          if (_stars > 0)
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (_submitting || _tipping) ? null : () async {
+                      setState(() => _submitting = true);
+                      try {
+                        if (widget.rideId != null) {
+                          await ApiService.rateRide(
+                            widget.rideId!,
+                            _stars.toDouble(),
+                            comment: _commentController.text.trim().isEmpty
+                                ? null
+                                : _commentController.text.trim(),
+                          );
+                          if (_selectedTip != null && _selectedTip! > 0) {
+                            setState(() => _tipping = true);
+                            try {
+                              await ApiService.tipDriver(widget.rideId!, amountKhr: _selectedTip!);
+                            } on ApiException catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                  content: Text('Tip failed: ${e.message}'),
+                                  backgroundColor: Colors.orange,
+                                  behavior: SnackBarBehavior.floating,
+                                ));
+                              }
+                            } catch (_) {}
+                            if (mounted) setState(() => _tipping = false);
                           }
-                        } catch (_) {}
-                        if (mounted) setState(() => _tipping = false);
-                      }
-                    }
-                  } catch (_) {}
-                  if (!mounted) return;
-                  setState(() => _submitting = false);
-                  // Navigate to receipt screen then mark submitted
-                  await Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TripReceiptScreen(
-                        rideId:           widget.rideId,
-                        from:             widget.from.isNotEmpty ? widget.from : '--',
-                        to:               widget.to.isNotEmpty   ? widget.to   : '--',
-                        driverName:       widget.driverName,
-                        starsGiven:       _stars.clamp(1, 5),
-                        fareTotal:        widget.fare,
-                        baseFareKhr:      widget.baseFareKhr ?? 0,
-                        distanceFeeKhr:   widget.distanceFeeKhr ?? 0,
-                        surgeKhr:         0,
-                        promoDiscountKhr: 0,
-                        distanceKm:       widget.distanceKm,
-                        durationMin:      widget.durationMin,
-                        paymentMethod:    widget.paymentMethod,
-                        tripDate:         DateTime.now(),
-                      ),
+                        }
+                      } catch (_) {}
+                      if (!mounted) return;
+                      setState(() => _submitting = false);
+                      await Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TripReceiptScreen(
+                            rideId:           widget.rideId,
+                            from:             widget.from.isNotEmpty ? widget.from : '--',
+                            to:               widget.to.isNotEmpty   ? widget.to   : '--',
+                            driverName:       widget.driverName,
+                            starsGiven:       _stars.clamp(1, 5),
+                            fareTotal:        widget.fare,
+                            baseFareKhr:      widget.baseFareKhr ?? 0,
+                            distanceFeeKhr:   widget.distanceFeeKhr ?? 0,
+                            surgeKhr:         0,
+                            promoDiscountKhr: 0,
+                            distanceKm:       widget.distanceKm,
+                            durationMin:      widget.durationMin,
+                            paymentMethod:    widget.paymentMethod,
+                            tripDate:         DateTime.now(),
+                          ),
+                        ),
+                      );
+                      if (mounted) setState(() => _submitted = true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.accent,
+                      disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.5),
+                      foregroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      elevation: 0,
                     ),
-                  );
-                  if (mounted) setState(() => _submitted = true);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accent,
-                  foregroundColor: AppTheme.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: (_submitting || _tipping)
+                        ? const SizedBox(width: 22, height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                        : const Text('Submit Rating',
+                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  ),
                 ),
-                child: (_submitting || _tipping)
-                    ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : const Text('Submit Rating', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ),
-          ],
-        ]),
+        ],
       ),
     );
   }

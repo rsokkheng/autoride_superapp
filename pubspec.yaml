@@ -38,6 +38,19 @@ dependencies:
   flutter_dotenv: ^5.2.1
   # State management (theme toggle)
   provider: ^6.1.2
+  # Biometric authentication
+  local_auth: ^2.3.0
+  # QR code display
+  qr_flutter: ^4.1.0
+  # Social login
+  google_sign_in: ^6.2.2
+  # HTTP multipart (already transitive but explicit for MediaType)
+  http_parser: ^4.1.0
+  # Crypto / device identity
+  crypto: ^3.0.3
+  uuid: ^4.4.0
+  flutter_secure_storage: ^9.2.2
+  device_info_plus: ^10.1.2
   # Firebase
   cloud_firestore: ^6.3.0
   firebase_core: ^4.6.0  

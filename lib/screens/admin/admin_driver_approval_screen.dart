@@ -25,7 +25,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final list = await ApiService.getAdminPendingDrivers();
+      final list = await ApiService.getAdminDrivers(approvalStatus: 'pending');
       if (mounted) setState(() { _drivers = list; _loading = false; });
     } on ApiException catch (e) {
       if (mounted) setState(() { _error = e.message; _loading = false; });
@@ -38,7 +38,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
     final id = driver['id'] as int;
     setState(() => _processing.add(id));
     try {
-      await ApiService.adminApproveDriver(id, action: action);
+      await ApiService.adminApproveDriverV2(id, action);
       if (!mounted) return;
       setState(() {
         _drivers.removeWhere((d) => d['id'] == id);

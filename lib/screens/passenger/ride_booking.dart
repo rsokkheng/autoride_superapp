@@ -959,9 +959,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                               color: AppTheme.accent, strokeWidth: 2),
                         ),
                         const SizedBox(width: 10),
-                        Text(_pickupAddress,
-                            style: const TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 13)),
+                        Expanded(
+                          child: Text(_pickupAddress,
+                              style: const TextStyle(
+                                  color: AppTheme.textSecondary, fontSize: 13),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ),
                       ])
                     : Text(_pickupAddress,
                         style: const TextStyle(

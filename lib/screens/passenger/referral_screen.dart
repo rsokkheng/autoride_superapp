@@ -13,7 +13,7 @@ class ReferralScreen extends StatefulWidget {
 
 class _ReferralScreenState extends State<ReferralScreen> {
   Map<String, dynamic> _data = {
-    'code': 'AUTORIDE',
+    'code': 'ROTEH',
     'referred_count': 0,
     'points_earned': 0,
     'referrals': [],
@@ -21,6 +21,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
   bool _loading = true;
   String? _error;
   bool _copied = false;
+  final _shareKey = GlobalKey();
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
     }
   }
 
-  String get _code => _data['code'] as String? ?? 'AUTORIDE';
+  String get _code => _data['code'] as String? ?? 'ROTEH';
   int get _referredCount => _data['referred_count'] as int? ?? 0;
   int get _pointsEarned => _data['points_earned'] as int? ?? 0;
   List<dynamic> get _referrals => _data['referrals'] as List<dynamic>? ?? [];
@@ -61,9 +62,12 @@ class _ReferralScreenState extends State<ReferralScreen> {
   }
 
   void _share() {
+    final box = _shareKey.currentContext?.findRenderObject() as RenderBox?;
     Share.share(
-      'Join AutoRide with my code: $_code and get 10,000 ៛ off your first ride!\n'
-      'Download AutoRide now.',
+      'Join ROTEH with my code: $_code and get 10,000 ៛ off your first ride!\n'
+      'Download ROTEH now.',
+      sharePositionOrigin:
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
   }
 
@@ -176,6 +180,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
 
   Widget _buildShareButton() {
     return ElevatedButton.icon(
+      key: _shareKey,
       onPressed: _share,
       style: ElevatedButton.styleFrom(
         backgroundColor: AppTheme.accent,

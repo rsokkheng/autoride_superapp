@@ -41,7 +41,7 @@ class TripReceiptScreen extends StatelessWidget {
       case 'cash':
         return 'Cash';
       case 'wallet':
-        return 'AutoRide Wallet';
+        return 'ROTEH Wallet';
       case 'aba':
         return 'ABA Pay';
       default:
@@ -368,7 +368,12 @@ class TripReceiptScreen extends StatelessWidget {
                 textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
               ),
               onPressed: () async {
-                await Share.share(_shareText, subject: 'AutoRide Trip Receipt #$rideId');
+                final box = context.findRenderObject() as RenderBox?;
+                await Share.share(_shareText,
+                    subject: 'AutoRide Trip Receipt #$rideId',
+                    sharePositionOrigin: box != null
+                        ? box.localToGlobal(Offset.zero) & box.size
+                        : null);
               },
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,

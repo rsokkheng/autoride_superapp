@@ -4,8 +4,10 @@ import '../theme/app_theme.dart';
 import '../l10n/app_localizations.dart';
 import '../services/api_service.dart';
 import 'auth/login_screen.dart';
+import 'onboarding/onboarding_screen.dart';
 import 'passenger/passenger_home.dart';
 import 'driver/driver_home.dart';
+import 'admin/admin_dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -121,12 +123,15 @@ class _SplashScreenState extends State<SplashScreen>
     if (!mounted) return;
 
     Widget destination;
-    if (role == 'driver') {
+    if (role == 'admin') {
+      destination = const AdminDashboardScreen();
+    } else if (role == 'driver') {
       destination = const DriverHomeScreen();
     } else if (role == 'passenger') {
       destination = const PassengerHomeScreen();
     } else {
-      destination = const LoginScreen();
+      final seenOnboarding = await OnboardingScreen.hasSeenOnboarding();
+      destination = seenOnboarding ? const LoginScreen() : const OnboardingScreen();
     }
 
     Navigator.of(context).pushReplacement(

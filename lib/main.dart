@@ -9,6 +9,7 @@ import 'utils/app_log.dart';
 
 import 'l10n/app_localizations.dart';
 import 'providers/theme_provider.dart';
+import 'providers/biometric_provider.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
@@ -37,12 +38,16 @@ void main() async {
 
   await NotificationService.instance.initialize();
 
-  final themeProvider = ThemeProvider();
-  await themeProvider.load();
+  final themeProvider    = ThemeProvider();
+  final biometricProvider = BiometricProvider();
+  await Future.wait([themeProvider.load(), biometricProvider.load()]);
 
   runApp(
-    ChangeNotifierProvider.value(
-      value: themeProvider,
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: themeProvider),
+        ChangeNotifierProvider.value(value: biometricProvider),
+      ],
       child: const AutoRideApp(),
     ),
   );

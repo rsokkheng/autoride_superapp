@@ -27,6 +27,8 @@ import 'driver_delivery_active_screen.dart';
 import 'driver_missions_screen.dart';
 import 'driver_history_screen.dart';
 import 'driver_earnings_screen.dart';
+import 'driver_withdrawal_screen.dart';
+import 'helmet_check_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -844,7 +846,11 @@ class _DriverShareLocationCardState extends State<_DriverShareLocationCard> {
       final mapsUrl = 'https://maps.google.com/?q=$lat,$lng';
       final text    = 'My current location as an AutoRide driver:\n$mapsUrl';
 
-      await Share.share(text, subject: 'My live location');
+      final box = context.findRenderObject() as RenderBox?;
+      await Share.share(text,
+          subject: 'My live location',
+          sharePositionOrigin:
+              box != null ? box.localToGlobal(Offset.zero) & box.size : null);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -2161,6 +2167,8 @@ class _DriverProfileState extends State<_DriverProfile> {
               ...([
                 (l.bankPayouts,     Icons.account_balance_outlined, () => widget.onGoToEarnings(), false),
                 ('My Earnings',     Icons.account_balance_wallet_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverEarningsScreen())), false),
+                ('Withdraw Earnings', Icons.send_rounded,           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverWithdrawalScreen())), false),
+                ('Helmet Check',    Icons.security_rounded,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelmetCheckScreen())), false),
                 (l.safetySettings,  Icons.shield_outlined,          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())),  false),
                 (l.documents,       Icons.description_outlined,     () {}, false),
                 (l.tripHistory,     Icons.history_outlined,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverHistoryScreen())), false),
