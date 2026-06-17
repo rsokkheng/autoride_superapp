@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
+import 'package:autoride_superapp/providers/theme_provider.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/screens/auth/role_selection.dart';
@@ -614,6 +616,30 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedPlacesScreen()))),
                 _ProfileMenuItem(icon: Icons.help_outline, label: l.helpSupport,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()))),
+                // Dark mode toggle
+                Consumer<ThemeProvider>(
+                  builder: (context, tp, _) => Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(14)),
+                    child: Row(children: [
+                      const Icon(Icons.dark_mode_outlined,
+                          color: AppTheme.textSecondary, size: 20),
+                      const SizedBox(width: 14),
+                      const Text('Dark Mode',
+                          style: TextStyle(color: AppTheme.textPrimary,
+                              fontSize: 14, fontWeight: FontWeight.w500)),
+                      const Spacer(),
+                      Switch(
+                        value: tp.isDark,
+                        activeColor: AppTheme.accent,
+                        onChanged: tp.setDark,
+                      ),
+                    ]),
+                  ),
+                ),
                 // Language switcher row
                 Container(
                   margin: const EdgeInsets.only(bottom: 10),

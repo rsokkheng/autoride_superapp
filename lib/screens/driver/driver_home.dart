@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/theme_provider.dart';
 import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
@@ -2207,6 +2209,30 @@ class _DriverProfileState extends State<_DriverProfile> {
                     const Expanded(child: Text('Switch to Passenger Mode',
                         style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14))),
                     const Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
+                  ]),
+                ),
+              ),
+              // ── Dark mode ───────────────────────────────────────────────
+              Consumer<ThemeProvider>(
+                builder: (context, tp, _) => Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: AppTheme.surface,
+                      borderRadius: BorderRadius.circular(14)),
+                  child: Row(children: [
+                    const Icon(Icons.dark_mode_outlined,
+                        color: AppTheme.textSecondary, size: 20),
+                    const SizedBox(width: 14),
+                    const Text('Dark Mode',
+                        style: TextStyle(color: AppTheme.textPrimary,
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                    const Spacer(),
+                    Switch(
+                      value: tp.isDark,
+                      activeColor: AppTheme.accent,
+                      onChanged: tp.setDark,
+                    ),
                   ]),
                 ),
               ),

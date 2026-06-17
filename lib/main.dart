@@ -3,10 +3,12 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
 import 'package:google_maps_flutter_platform_interface/google_maps_flutter_platform_interface.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'utils/app_log.dart';
 
 import 'l10n/app_localizations.dart';
+import 'providers/theme_provider.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
@@ -17,31 +19,33 @@ final ValueNotifier<Locale> appLocale =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Catch uncaught Flutter framework errors
   FlutterError.onError = (details) {
     AppLog.e('Flutter', details.exceptionAsString(), details.exception, details.stack);
     FlutterError.presentError(details);
   };
 
-
-  // Legacy renderer has broader device support on Android
   final mapsImpl = GoogleMapsFlutterPlatform.instance;
   if (mapsImpl is GoogleMapsFlutterAndroid) {
     await mapsImpl.initializeWithRenderer(AndroidMapRenderer.legacy);
   }
 
-  // Load environment variables
   await dotenv.load(fileName: '.env');
 
-  // Initialize Firebase (IMPORTANT)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Notification setup
   await NotificationService.instance.initialize();
 
-  runApp(const AutoRideApp());
+  final themeProvider = ThemeProvider();
+  await themeProvider.load();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: themeProvider,
+      child: const AutoRideApp(),
+    ),
+  );
 }
 
 class AutoRideApp extends StatelessWidget {
@@ -49,17 +53,19 @@ class AutoRideApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
     return ValueListenableBuilder<Locale>(
       valueListenable: appLocale,
       builder: (context, locale, _) {
         return MaterialApp(
           title: 'ROTEH App',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.darkTheme,
+          theme:     AppTheme.lightTheme,
+          darkTheme: AppTheme.darkModeTheme,
+          themeMode: themeProvider.mode,
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates:
-              AppLocalizations.localizationsDelegates,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
           home: const SplashScreen(),
         );
       },

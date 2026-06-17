@@ -11,6 +11,7 @@ import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
+import '../../widgets/vehicle_type_selector.dart';
 
 const _kCambodiaSW = LatLng(10.4, 102.3);
 const _kCambodiaNE = LatLng(14.7, 107.6);
@@ -272,8 +273,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   BitmapDescriptor? _pickupIcon;
   List<_LabeledMarker> _stopMarkers = [];
 
-  String   _selectedRide    = 'Standard';
-  String   _paymentMethod   = 'cash';
+  String   _selectedRide       = 'Standard';
+  String   _selectedVehicleType = 'car';
+  String   _paymentMethod      = 'cash';
   bool     _isScheduled     = false;
   DateTime _scheduledTime   = DateTime.now().add(const Duration(hours: 1));
   bool     _isBooking       = false;
@@ -798,6 +800,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         dropoffLat:     _destLatLng!.latitude,
         dropoffLng:     _destLatLng!.longitude,
         serviceType:    type.serviceType,
+        vehicleType:    _selectedVehicleType,
         paymentMethod:  _paymentMethod,
         promoCode:      _promoCode,
         scheduledAt: _isScheduled
@@ -1875,6 +1878,21 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     )),
                   ]),
                 ),
+              // Vehicle type selector (car / bike / tuk-tuk / van)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 8, top: 4),
+                child: Text('Vehicle Type',
+                    style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+              ),
+              VehicleTypeSelector(
+                selected: _selectedVehicleType,
+                onChanged: (t) => setState(() => _selectedVehicleType = t),
+              ),
+              const SizedBox(height: 12),
+
               ..._kRideTypes.map((r) => _RideTypeCard(
                     type:        r,
                     selected:    _selectedRide == r.name,

@@ -36,6 +36,8 @@ dependencies:
   http: ^1.2.0
   shared_preferences: ^2.3.0
   flutter_dotenv: ^5.2.1
+  # State management (theme toggle)
+  provider: ^6.1.2
   # Firebase
   cloud_firestore: ^6.3.0
   firebase_core: ^4.6.0  
