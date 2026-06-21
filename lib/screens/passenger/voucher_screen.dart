@@ -28,14 +28,14 @@ class _VoucherScreenState extends State<VoucherScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Vouchers'),
+        title: Text('Vouchers'),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.appTextSecondary,
           tabs: const [
             Tab(icon: Icon(Icons.store_outlined), text: 'Store'),
             Tab(icon: Icon(Icons.wallet_giftcard_rounded), text: 'My Vouchers'),
@@ -120,18 +120,18 @@ class _StoreTabState extends State<_StoreTab> {
     if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     if (_error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-        const SizedBox(height: 12),
-        Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        SizedBox(height: 12),
+        Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
       ]));
     }
     if (_vouchers.isEmpty) {
-      return const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.discount_outlined, color: AppTheme.textSecondary, size: 48),
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.discount_outlined, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No vouchers available', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+        Text('No vouchers available', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       ]));
     }
     return RefreshIndicator(
@@ -193,20 +193,20 @@ class _MyVouchersTabState extends State<_MyVouchersTab> {
     if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     if (_error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-        const SizedBox(height: 12),
-        Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        SizedBox(height: 12),
+        Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
       ]));
     }
     if (_vouchers.isEmpty) {
-      return const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.wallet_giftcard_rounded, color: AppTheme.textSecondary, size: 48),
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.wallet_giftcard_rounded, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No vouchers yet', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+        Text('No vouchers yet', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
         SizedBox(height: 6),
-        Text('Claim from the Store tab', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text('Claim from the Store tab', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       ]));
     }
     return RefreshIndicator(
@@ -227,7 +227,7 @@ class _MyVouchersTabState extends State<_MyVouchersTab> {
             actionLabel: used ? 'Used' : 'Available',
             onAction:   null,
             badge:      used ? 'USED' : (short.isNotEmpty ? 'Exp $short' : null),
-            badgeColor: used ? AppTheme.textSecondary : AppTheme.accent,
+            badgeColor: used ? context.appTextSecondary : AppTheme.accent,
           );
         },
       ),
@@ -264,32 +264,32 @@ class _VoucherCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.cardBg),
+        border: Border.all(color: context.appCardBg),
       ),
       child: Row(children: [
         Container(
           width: 72,
           decoration: BoxDecoration(
             color: AppTheme.accent.withValues(alpha: 0.12),
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+            borderRadius: BorderRadius.horizontal(left: Radius.circular(16)),
           ),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.discount_rounded, color: AppTheme.accent, size: 28),
-            const SizedBox(height: 6),
-            Text(discText, style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w900, fontSize: 13), textAlign: TextAlign.center),
+            Icon(Icons.discount_rounded, color: AppTheme.accent, size: 28),
+            SizedBox(height: 6),
+            Text(discText, style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w900, fontSize: 13), textAlign: TextAlign.center),
           ]),
         ),
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14))),
+                Expanded(child: Text(title, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14))),
                 if (badge != null)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: (badgeColor ?? AppTheme.accent).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -298,8 +298,8 @@ class _VoucherCard extends StatelessWidget {
                   ),
               ]),
               if (desc.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(desc, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4)),
+                SizedBox(height: 4),
+                Text(desc, style: TextStyle(color: context.appTextSecondary, fontSize: 12, height: 1.4)),
               ],
               if (onAction != null) ...[
                 const SizedBox(height: 10),

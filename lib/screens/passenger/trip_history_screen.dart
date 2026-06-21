@@ -127,16 +127,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     final stats = _result?.stats;
 
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.primary,
+        backgroundColor: context.appBackground,
         elevation: 0,
-        title: const Text('Trip History',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-        iconTheme: const IconThemeData(color: AppTheme.textPrimary),
+        title: Text('Trip History',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        iconTheme: IconThemeData(color: context.appTextPrimary),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: AppTheme.textSecondary),
+            icon: Icon(Icons.refresh, color: context.appTextSecondary),
             onPressed: () => _loadTrips(reset: true),
           ),
         ],
@@ -239,9 +239,9 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
     // Flat list for day / month / or recent without groups
     if (flat.isEmpty) {
-      return const Center(
+      return Center(
         child: Text('No trips found',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       );
     }
     return _FlatList(
@@ -376,19 +376,19 @@ class _DateFilterRow extends StatelessWidget {
     if (months.isEmpty) return;
     showModalBottomSheet(
       context:         context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Select Month',
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 14),
+          Text('Select Month',
+              style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+          SizedBox(height: 14),
           ...months.map((m) => ListTile(
             title: Text(m.label,
                 style: TextStyle(
-                  color: m.value == selectedMonth ? AppTheme.accent : AppTheme.textPrimary,
+                  color: m.value == selectedMonth ? AppTheme.accent : context.appTextPrimary,
                   fontWeight: m.value == selectedMonth ? FontWeight.w700 : FontWeight.w400,
                 )),
             trailing: m.value == selectedMonth
@@ -418,23 +418,23 @@ class _DateChip extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      duration: Duration(milliseconds: 180),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: active ? AppTheme.accent : AppTheme.surface,
+        color: active ? AppTheme.accent : context.appSurface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: active ? AppTheme.accent : AppTheme.surface),
+        border: Border.all(color: active ? AppTheme.accent : context.appSurface),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[
           Icon(icon, size: 13,
-              color: active ? AppTheme.primary : AppTheme.textSecondary),
-          const SizedBox(width: 4),
+              color: active ? AppTheme.primary : context.appTextSecondary),
+          SizedBox(width: 4),
         ],
         Flexible(child: Text(label,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: active ? AppTheme.primary : AppTheme.textSecondary,
+              color: active ? AppTheme.primary : context.appTextSecondary,
               fontSize: 12, fontWeight: FontWeight.w600,
             ))),
       ]),
@@ -459,14 +459,14 @@ class _ChipRow extends StatelessWidget {
         final (value, label, icon) = opt;
         final active = selected == value;
         return Padding(
-          padding: const EdgeInsets.only(right: 8),
+          padding: EdgeInsets.only(right: 8),
           child: GestureDetector(
             onTap: () => onSelect(value),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              duration: Duration(milliseconds: 180),
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: active ? AppTheme.accentOrange.withValues(alpha: 0.12) : AppTheme.surface,
+                color: active ? AppTheme.accentOrange.withValues(alpha: 0.12) : context.appSurface,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                     color: active
@@ -475,10 +475,10 @@ class _ChipRow extends StatelessWidget {
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(icon, size: 14,
-                    color: active ? AppTheme.accentOrange : AppTheme.textSecondary),
-                const SizedBox(width: 5),
+                    color: active ? AppTheme.accentOrange : context.appTextSecondary),
+                SizedBox(width: 5),
                 Text(label, style: TextStyle(
-                  color: active ? AppTheme.accentOrange : AppTheme.textSecondary,
+                  color: active ? AppTheme.accentOrange : context.appTextSecondary,
                   fontSize: 12, fontWeight: FontWeight.w600,
                 )),
               ]),
@@ -526,15 +526,15 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
     onTap: () => onTap(value),
     child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      duration: Duration(milliseconds: 180),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
         color: _active ? color.withValues(alpha: 0.12) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _active ? color : AppTheme.surface),
+        border: Border.all(color: _active ? color : context.appSurface),
       ),
       child: Text(label, style: TextStyle(
-        color: _active ? color : AppTheme.textSecondary,
+        color: _active ? color : context.appTextSecondary,
         fontSize: 12, fontWeight: FontWeight.w600,
       )),
     ),
@@ -603,17 +603,17 @@ class _MonthHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 16, bottom: 8),
+    padding: EdgeInsets.only(top: 16, bottom: 8),
     child: Row(children: [
       Text(month,
-          style: const TextStyle(
-              color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-      const SizedBox(width: 8),
+          style: TextStyle(
+              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+      SizedBox(width: 8),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         decoration: BoxDecoration(
-            color: AppTheme.surface, borderRadius: BorderRadius.circular(10)),
-        child: Text('$count', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+            color: context.appSurface, borderRadius: BorderRadius.circular(10)),
+        child: Text('$count', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ),
     ]),
   );
@@ -627,17 +627,17 @@ class _LoadMoreButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 12),
+    padding: EdgeInsets.symmetric(vertical: 12),
     child: Center(
       child: loading
-          ? const SizedBox(width: 22, height: 22,
+          ? SizedBox(width: 22, height: 22,
               child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2.5))
           : GestureDetector(
               onTap: onTap,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 10),
+                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 10),
                 decoration: BoxDecoration(
-                    color: AppTheme.surface, borderRadius: BorderRadius.circular(20)),
+                    color: context.appSurface, borderRadius: BorderRadius.circular(20)),
                 child: const Text('Load more',
                     style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w600, fontSize: 13)),
               ),
@@ -682,33 +682,33 @@ class _TripCard extends StatelessWidget {
     final netAmount = trip.amount - trip.discount + trip.tip;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-          color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+          color: context.appSurface, borderRadius: BorderRadius.circular(16)),
       child: Column(children: [
         Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Top row: type badge + ref + date
             Row(children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                     color: _typeColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8)),
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(_typeIcon, color: _typeColor, size: 12),
-                  const SizedBox(width: 4),
+                  SizedBox(width: 4),
                   Text(trip.typeLabel,
                       style: TextStyle(color: _typeColor, fontSize: 11, fontWeight: FontWeight.w700)),
                 ]),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Text(trip.ref,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-              const Spacer(),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+              Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                padding: EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
                     color: _statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8)),
@@ -717,24 +717,24 @@ class _TripCard extends StatelessWidget {
                         color: _statusColor, fontSize: 11, fontWeight: FontWeight.w600)),
               ),
             ]),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
 
             // Route
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Column(children: [
                 Container(width: 8, height: 8,
                     decoration: BoxDecoration(color: _typeColor, shape: BoxShape.circle)),
-                Container(width: 1, height: 18, color: AppTheme.textSecondary.withValues(alpha: 0.3)),
-                const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
+                Container(width: 1, height: 18, color: context.appTextSecondary.withValues(alpha: 0.3)),
+                Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
               ]),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(trip.pickup,
-                    style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13),
+                    style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Text(trip.dropoff,
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ])),
               const SizedBox(width: 10),
@@ -746,13 +746,13 @@ class _TripCard extends StatelessWidget {
                       style: const TextStyle(color: AppTheme.success, fontSize: 11)),
                 if (trip.tip > 0)
                   Text('+${AppTheme.khr(trip.tip)} tip',
-                      style: const TextStyle(color: AppTheme.warning, fontSize: 11)),
+                      style: TextStyle(color: AppTheme.warning, fontSize: 11)),
               ]),
             ]),
 
-            const SizedBox(height: 10),
-            const Divider(color: AppTheme.cardBg, height: 1),
-            const SizedBox(height: 8),
+            SizedBox(height: 10),
+            Divider(color: context.appCardBg, height: 1),
+            SizedBox(height: 8),
 
             // Bottom row: driver / date / rating
             Row(children: [
@@ -765,9 +765,9 @@ class _TripCard extends StatelessWidget {
                     style: TextStyle(color: _typeColor, fontSize: 11, fontWeight: FontWeight.w700),
                   ),
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Expanded(child: Text(trip.otherParty!.name,
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                     overflow: TextOverflow.ellipsis)),
               ] else
                 const Spacer(),
@@ -775,11 +775,11 @@ class _TripCard extends StatelessWidget {
                 const Icon(Icons.star_rounded, color: AppTheme.gold, size: 13),
                 const SizedBox(width: 2),
                 Text('${trip.rating!.toStringAsFixed(1)}',
-                    style: const TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 8),
+                    style: TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600)),
+                SizedBox(width: 8),
               ],
               Text(trip.dateLabel,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
             ]),
           ]),
         ),
@@ -787,15 +787,15 @@ class _TripCard extends StatelessWidget {
         // Action row (Rebook / Rate)
         if (trip.canRebook || trip.canRate)
           Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.cardBg,
+            decoration: BoxDecoration(
+              color: context.appCardBg,
               borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
             child: Row(children: [
               if (trip.canRebook)
                 Expanded(child: GestureDetector(
                   onTap: () {},
-                  child: const Padding(
+                  child: Padding(
                     padding: EdgeInsets.symmetric(vertical: 10),
                     child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(Icons.replay_rounded, color: AppTheme.accent, size: 14),
@@ -806,7 +806,7 @@ class _TripCard extends StatelessWidget {
                   ),
                 )),
               if (trip.canRebook && trip.canRate)
-                Container(width: 1, height: 36, color: AppTheme.surface),
+                Container(width: 1, height: 36, color: context.appSurface),
               if (trip.canRate)
                 Expanded(child: GestureDetector(
                   onTap: () => onRate(trip),

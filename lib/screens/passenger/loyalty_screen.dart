@@ -85,18 +85,18 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Redeem Points',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-        content: const Text(
+        title: Text('Redeem Points',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text(
           'Redeem 500 pts for 5,000 ៛ discount on your next ride?',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: context.appTextSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -134,14 +134,14 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      appBar: AppBar(title: const Text('ROTEH Rewards')),
+      backgroundColor: context.appBackground,
+      appBar: AppBar(title: Text('ROTEH Rewards')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_error!, style: const TextStyle(color: AppTheme.textSecondary)),
+                    Text(_error!, style: TextStyle(color: context.appTextSecondary)),
                     const SizedBox(height: 16),
                     ElevatedButton(onPressed: _load, child: const Text('Retry')),
                   ]),
@@ -273,18 +273,18 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     ];
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Membership Tiers',
-            style: TextStyle(color: AppTheme.textPrimary,
+        Text('Membership Tiers',
+            style: TextStyle(color: context.appTextPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         ...tiers.map((tier) {
           final isCurrent = tier.name == _tier;
           return Container(
-            margin: const EdgeInsets.only(bottom: 10),
+            margin: EdgeInsets.only(bottom: 10),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: context.appSurface,
               borderRadius: BorderRadius.circular(14),
               border: isCurrent
                   ? Border.all(color: tier.color, width: 2)
@@ -304,7 +304,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                 title: Row(children: [
                   Text(tier.name,
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: context.appTextPrimary,
                           fontWeight: FontWeight.w700,
                           fontSize: 15)),
                   if (isCurrent) ...[
@@ -327,22 +327,22 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                   tier.maxPts != null
                       ? '${tier.minPts}–${tier.maxPts} pts'
                       : '${tier.minPts}+ pts',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                 ),
                 children: [
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: tier.benefits.map((b) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: EdgeInsets.only(bottom: 8),
                         child: Row(children: [
                           Icon(Icons.check_circle_outline,
                               color: tier.color, size: 16),
-                          const SizedBox(width: 10),
+                          SizedBox(width: 10),
                           Text(b,
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary, fontSize: 13)),
+                              style: TextStyle(
+                                  color: context.appTextSecondary, fontSize: 13)),
                         ]),
                       )).toList(),
                     ),
@@ -363,40 +363,40 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       _EarnItem(Icons.person_add_alt_outlined, 'Refer a friend', '500 pts per referral'),
     ];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('How to Earn',
-            style: TextStyle(color: AppTheme.textPrimary,
+        Text('How to Earn',
+            style: TextStyle(color: context.appTextPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.surface,
+            color: context.appSurface,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(children: [
             for (int i = 0; i < items.length; i++) ...[
               if (i > 0)
-                const Divider(height: 1, color: AppTheme.cardBg, indent: 56),
+                Divider(height: 1, color: context.appCardBg, indent: 56),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Row(children: [
                   Container(
-                    padding: const EdgeInsets.all(10),
+                    padding: EdgeInsets.all(10),
                     decoration: BoxDecoration(
                       color: AppTheme.accent.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(items[i].icon, color: AppTheme.accent, size: 20),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(items[i].title,
-                          style: const TextStyle(color: AppTheme.textPrimary,
+                          style: TextStyle(color: context.appTextPrimary,
                               fontWeight: FontWeight.w600)),
                       Text(items[i].subtitle,
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     ]),
                   ),
                 ]),
@@ -412,21 +412,21 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     final history = (_data['history'] as List<dynamic>?) ?? (_data['transactions'] as List<dynamic>?) ?? [];
     if (history.isEmpty) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Points Activity',
-            style: TextStyle(color: AppTheme.textPrimary,
+        Text('Points Activity',
+            style: TextStyle(color: context.appTextPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.surface,
+            color: context.appSurface,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(children: [
             for (int i = 0; i < history.length; i++) ...[
               if (i > 0)
-                const Divider(height: 1, color: AppTheme.cardBg, indent: 16),
+                Divider(height: 1, color: context.appCardBg, indent: 16),
               _HistoryRow(item: history[i] as Map<String, dynamic>),
             ],
           ]),
@@ -471,10 +471,10 @@ class _HistoryRow extends StatelessWidget {
     final short  = date.length >= 10 ? date.substring(0, 10) : date;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: earned
                 ? AppTheme.success.withValues(alpha: 0.1)
@@ -484,14 +484,14 @@ class _HistoryRow extends StatelessWidget {
           child: Icon(earned ? Icons.add : Icons.remove,
               color: earned ? AppTheme.success : AppTheme.danger, size: 16),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(desc,
-                style: const TextStyle(color: AppTheme.textPrimary,
+                style: TextStyle(color: context.appTextPrimary,
                     fontWeight: FontWeight.w600, fontSize: 13)),
             if (short.isNotEmpty)
-              Text(short, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              Text(short, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ]),
         ),
         Text('${earned ? '+' : ''}$pts pts',

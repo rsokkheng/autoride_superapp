@@ -66,13 +66,13 @@ class _AddressFieldState extends State<AddressField> {
     final bool dark = widget.darkBackground;
 
     // Colours that flip based on background
-    final Color textColor  = dark ? Colors.white : AppTheme.textPrimary;
-    final Color hintColor  = dark ? Colors.white60 : AppTheme.textSecondary;
-    final Color iconColor  = dark ? Colors.white70 : AppTheme.textSecondary;
+    final Color textColor  = dark ? Colors.white : context.appTextPrimary;
+    final Color hintColor  = dark ? Colors.white60 : context.appTextSecondary;
+    final Color iconColor  = dark ? Colors.white70 : context.appTextSecondary;
     final Color mapIconColor = dark ? Colors.white : AppTheme.accent;
     final Color fillColor  = dark
         ? Colors.white.withValues(alpha: 0.12)  // translucent white on navy
-        : AppTheme.surface;
+        : context.appSurface;
     final Color focusBorderColor = dark ? Colors.white : AppTheme.accent;
 
     return TextField(
@@ -378,27 +378,27 @@ class _PickerSheetState extends State<_PickerSheet>
   Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.92,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(children: [
         Container(
-          margin: const EdgeInsets.symmetric(vertical: 12),
+          margin: EdgeInsets.symmetric(vertical: 12),
           width: 40, height: 4,
           decoration: BoxDecoration(
-              color: AppTheme.cardBg, borderRadius: BorderRadius.circular(2)),
+              color: context.appCardBg, borderRadius: BorderRadius.circular(2)),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: EdgeInsets.symmetric(horizontal: 20),
           child: Container(
             decoration: BoxDecoration(
-                color: AppTheme.cardBg,
+                color: context.appCardBg,
                 borderRadius: BorderRadius.circular(12)),
             child: TabBar(
               controller: _tabs,
               labelColor: Colors.white,
-              unselectedLabelColor: AppTheme.textSecondary,
+              unselectedLabelColor: context.appTextSecondary,
               indicator: BoxDecoration(
                   color: AppTheme.accent,
                   borderRadius: BorderRadius.circular(10)),
@@ -428,19 +428,19 @@ class _PickerSheetState extends State<_PickerSheet>
   Widget _buildSearchTab() {
     return Column(children: [
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+        padding: EdgeInsets.symmetric(horizontal: 20),
         child: TextField(
           controller: _searchCtrl,
           autofocus: !widget.startOnMap,
-          style: const TextStyle(color: AppTheme.textPrimary),
+          style: TextStyle(color: context.appTextPrimary),
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
             hintText: 'Search address, place or landmark…',
-            hintStyle: const TextStyle(color: AppTheme.textSecondary),
-            prefixIcon: const Icon(Icons.search,
-                color: AppTheme.textSecondary, size: 20),
+            hintStyle: TextStyle(color: context.appTextSecondary),
+            prefixIcon: Icon(Icons.search,
+                color: context.appTextSecondary, size: 20),
             suffixIcon: _searching
-                ? const Padding(
+                ? Padding(
                     padding: EdgeInsets.all(14),
                     child: SizedBox(
                         width: 16, height: 16,
@@ -448,8 +448,8 @@ class _PickerSheetState extends State<_PickerSheet>
                             strokeWidth: 2, color: AppTheme.accent)))
                 : _searchCtrl.text.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear,
-                            size: 18, color: AppTheme.textSecondary),
+                        icon: Icon(Icons.clear,
+                            size: 18, color: context.appTextSecondary),
                         onPressed: () {
                           _searchCtrl.clear();
                           setState(() {
@@ -459,7 +459,7 @@ class _PickerSheetState extends State<_PickerSheet>
                         })
                     : null,
             filled: true,
-            fillColor: AppTheme.surface,
+            fillColor: context.appSurface,
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none),
@@ -507,43 +507,43 @@ class _PickerSheetState extends State<_PickerSheet>
           }
         },
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(children: [
             Container(
               width: 38, height: 38,
               decoration: BoxDecoration(
                   color: AppTheme.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.my_location,
+              child: Icon(Icons.my_location,
                   color: AppTheme.accent, size: 20),
             ),
-            const SizedBox(width: 14),
-            const Expanded(
+            SizedBox(width: 14),
+            Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Use my current location',
                         style: TextStyle(
-                            color: AppTheme.textPrimary,
+                            color: context.appTextPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14)),
                     Text('Detected via GPS',
                         style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12)),
+                            color: context.appTextSecondary, fontSize: 12)),
                   ]),
             ),
-            const Icon(Icons.chevron_right,
-                color: AppTheme.textSecondary, size: 20),
+            Icon(Icons.chevron_right,
+                color: context.appTextSecondary, size: 20),
           ]),
         ),
       ),
 
-      const Divider(
-          height: 1, color: AppTheme.cardBg, indent: 20, endIndent: 20),
+      Divider(
+          height: 1, color: context.appCardBg, indent: 20, endIndent: 20),
 
       Expanded(
         child: _searching
-            ? const Center(
+            ? Center(
                 child: CircularProgressIndicator(color: AppTheme.accent))
             : _suggestions.isEmpty
                 ? Center(
@@ -552,53 +552,53 @@ class _PickerSheetState extends State<_PickerSheet>
                           _searchCtrl.text.isEmpty
                               ? Icons.location_on_outlined
                               : Icons.search_off,
-                          color: AppTheme.cardBg,
+                          color: context.appCardBg,
                           size: 48),
                       const SizedBox(height: 8),
                       Text(
                           _searchCtrl.text.isEmpty
                               ? 'Type to search for a place'
                               : 'No results for "${_searchCtrl.text}"',
-                          style: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 13)),
+                          style: TextStyle(
+                              color: context.appTextSecondary, fontSize: 13)),
                     ]),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: 20, vertical: 4),
                     itemCount: _suggestions.length,
                     separatorBuilder: (_, __) =>
-                        const Divider(height: 1, color: AppTheme.cardBg),
+                        Divider(height: 1, color: context.appCardBg),
                     itemBuilder: (_, i) {
                       final s = _suggestions[i];
                       return InkWell(
                         onTap: () => _selectSuggestion(s),
                         borderRadius: BorderRadius.circular(10),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          padding: EdgeInsets.symmetric(vertical: 12),
                           child: Row(children: [
-                            const Icon(Icons.location_on_outlined,
+                            Icon(Icons.location_on_outlined,
                                 color: AppTheme.accent, size: 20),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
                                     Text(s.mainText,
-                                        style: const TextStyle(
-                                            color: AppTheme.textPrimary,
+                                        style: TextStyle(
+                                            color: context.appTextPrimary,
                                             fontWeight: FontWeight.w600,
                                             fontSize: 14)),
                                     if (s.secondaryText.isNotEmpty)
                                       Text(s.secondaryText,
-                                          style: const TextStyle(
-                                              color: AppTheme.textSecondary,
+                                          style: TextStyle(
+                                              color: context.appTextSecondary,
                                               fontSize: 12)),
                                   ]),
                             ),
-                            const Icon(Icons.north_west,
-                                color: AppTheme.textSecondary, size: 14),
+                            Icon(Icons.north_west,
+                                color: context.appTextSecondary, size: 14),
                           ]),
                         ),
                       );
@@ -648,8 +648,8 @@ class _PickerSheetState extends State<_PickerSheet>
       IgnorePointer(
         child: Center(
           child: Transform.translate(
-            offset: const Offset(0, -20),
-            child: const Icon(Icons.location_on,
+            offset: Offset(0, -20),
+            child: Icon(Icons.location_on,
                 color: AppTheme.danger, size: 40),
           ),
         ),
@@ -664,25 +664,25 @@ class _PickerSheetState extends State<_PickerSheet>
             valueListenable: _confirmedAddress,
             builder: (_, addr, __) => Card(
               elevation: 4,
-              color: AppTheme.surface,
+              color: context.appSurface,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                     horizontal: 14, vertical: 12),
                 child: Row(children: [
-                  const Icon(Icons.location_on_outlined,
+                  Icon(Icons.location_on_outlined,
                       color: AppTheme.accent, size: 20),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (loading)
-                            const LinearProgressIndicator(
+                            LinearProgressIndicator(
                                 color: AppTheme.accent,
-                                backgroundColor: AppTheme.cardBg,
+                                backgroundColor: context.appCardBg,
                                 minHeight: 2)
                           else
                             Text(
@@ -691,18 +691,18 @@ class _PickerSheetState extends State<_PickerSheet>
                                   : addr,
                               style: TextStyle(
                                 color: addr.isEmpty
-                                    ? AppTheme.textSecondary
-                                    : AppTheme.textPrimary,
+                                    ? context.appTextSecondary
+                                    : context.appTextPrimary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
                               maxLines: 2,
                             ),
                           if (loading && addr.isNotEmpty) ...[
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(addr,
-                                style: const TextStyle(
-                                    color: AppTheme.textSecondary,
+                                style: TextStyle(
+                                    color: context.appTextSecondary,
                                     fontSize: 11),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis),
@@ -721,7 +721,7 @@ class _PickerSheetState extends State<_PickerSheet>
         bottom: 90, right: 16,
         child: FloatingActionButton.small(
           heroTag: 'addrPickerMyLoc',
-          backgroundColor: AppTheme.surface,
+          backgroundColor: context.appSurface,
           elevation: 3,
           onPressed: _jumpToMyLocation,
           child: const Icon(Icons.my_location,
@@ -744,7 +744,7 @@ class _PickerSheetState extends State<_PickerSheet>
               return ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      canConfirm ? AppTheme.accent : AppTheme.cardBg,
+                      canConfirm ? AppTheme.accent : context.appCardBg,
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(52),
                   shape: RoundedRectangleBorder(

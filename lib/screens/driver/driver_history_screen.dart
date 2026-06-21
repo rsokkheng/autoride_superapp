@@ -140,7 +140,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
       body: Column(children: [
         // Filter chips
         Container(
-          color: AppTheme.surface,
+          color: context.appSurface,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -156,16 +156,16 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                       _load(reset: true);
                     },
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      duration: Duration(milliseconds: 180),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(
-                        color: selected ? AppTheme.accent : AppTheme.cardBg,
+                        color: selected ? AppTheme.accent : context.appCardBg,
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         f.$2,
                         style: TextStyle(
-                          color: selected ? Colors.white : AppTheme.textSecondary,
+                          color: selected ? Colors.white : context.appTextSecondary,
                           fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
                           fontSize: 13,
                         ),
@@ -177,7 +177,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
             ),
           ),
         ),
-        const Divider(height: 1, color: AppTheme.cardBg),
+        Divider(height: 1, color: context.appCardBg),
 
         // Body
         Expanded(
@@ -197,15 +197,15 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                           return false;
                         },
                         child: ListView(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(16),
                           children: [
                             ..._groupByDate(_trips).expand((entry) => [
                               Padding(
-                                padding: const EdgeInsets.only(bottom: 10, top: 6),
+                                padding: EdgeInsets.only(bottom: 10, top: 6),
                                 child: Text(
                                   entry.key,
-                                  style: const TextStyle(
-                                    color: AppTheme.textSecondary,
+                                  style: TextStyle(
+                                    color: context.appTextSecondary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),
@@ -219,7 +219,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                               )),
                             ]),
                             if (_loadingMore)
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(
                                   child: CircularProgressIndicator(
@@ -227,13 +227,13 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                                 ),
                               ),
                             if (!_hasMore && _trips.isNotEmpty)
-                              const Padding(
+                              Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(
                                   child: Text(
                                     'No more trips',
                                     style: TextStyle(
-                                        color: AppTheme.textSecondary, fontSize: 13),
+                                        color: context.appTextSecondary, fontSize: 13),
                                   ),
                                 ),
                               ),
@@ -271,16 +271,16 @@ class _TripCard extends StatelessWidget {
     final durMin   = (trip['duration_min'] as num?)?.toInt();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 6,
-            offset: const Offset(0, 2),
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -288,7 +288,7 @@ class _TripCard extends StatelessWidget {
         Row(children: [
           // Service type chip
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: serviceColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
@@ -302,23 +302,23 @@ class _TripCard extends StatelessWidget {
               ),
             ),
           ),
-          const Spacer(),
+          Spacer(),
           Text(
             timeLabel,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 12),
           ),
         ]),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
 
         // From → To
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Icon(Icons.circle, color: AppTheme.success, size: 10),
-          const SizedBox(width: 8),
+          Icon(Icons.circle, color: AppTheme.success, size: 10),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               from,
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
+              style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -328,44 +328,44 @@ class _TripCard extends StatelessWidget {
           ),
         ]),
         Padding(
-          padding: const EdgeInsets.only(left: 4),
+          padding: EdgeInsets.only(left: 4),
           child: Container(
             width: 1,
             height: 14,
-            color: AppTheme.cardBg,
-            margin: const EdgeInsets.symmetric(vertical: 2),
+            color: context.appCardBg,
+            margin: EdgeInsets.symmetric(vertical: 2),
           ),
         ),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 12),
-          const SizedBox(width: 8),
+          Icon(Icons.location_on, color: AppTheme.accentOrange, size: 12),
+          SizedBox(width: 8),
           Expanded(
             child: Text(
               to,
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
         ]),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
 
         Row(children: [
           if (distKm != null) ...[
-            const Icon(Icons.route_outlined, color: AppTheme.textSecondary, size: 13),
+            Icon(Icons.route_outlined, color: context.appTextSecondary, size: 13),
             const SizedBox(width: 4),
             Text(
               '${distKm.toStringAsFixed(1)} km',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 12),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
           ],
           if (durMin != null) ...[
-            const Icon(Icons.timer_outlined, color: AppTheme.textSecondary, size: 13),
-            const SizedBox(width: 4),
+            Icon(Icons.timer_outlined, color: context.appTextSecondary, size: 13),
+            SizedBox(width: 4),
             Text(
               '$durMin min',
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 12),
             ),
           ],
           const Spacer(),
@@ -390,7 +390,7 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(40),
+        padding: EdgeInsets.all(40),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(
             width: 80, height: 80,
@@ -398,23 +398,23 @@ class _EmptyState extends StatelessWidget {
               color: AppTheme.accent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.directions_car_outlined,
+            child: Icon(Icons.directions_car_outlined,
                 color: AppTheme.accent, size: 40),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: 20),
+          Text(
             'No trips yet',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: context.appTextPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          SizedBox(height: 8),
+          Text(
             'Your completed trips will appear here.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13),
           ),
         ]),
       ),

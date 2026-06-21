@@ -7,10 +7,6 @@ import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
 
 const _kGreen   = Color(0xFF00B14F);
-const _kTextMain = Color(0xFF1A1A1A);
-const _kTextSub  = Color(0xFF757575);
-const _kDivider  = Color(0xFFEEEEEE);
-
 // Phnom Penh fallback coords used when no geocoded positions are available.
 const _kDefaultPickup  = LatLng(11.5680, 104.9195);
 const _kDefaultDropoff = LatLng(11.5550, 104.9300);
@@ -303,7 +299,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => RideChatScreen(
-          rideId:      widget.deliveryId.toString(),
+          rideId:      'delivery-${widget.deliveryId}',
           driverId:    driverId,
           passengerId: saved?.id ?? 0,
           myId:        saved?.id ?? 0,
@@ -487,7 +483,7 @@ class _BottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         boxShadow: [
@@ -501,7 +497,7 @@ class _BottomSheet extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,7 +505,7 @@ class _BottomSheet extends StatelessWidget {
               // Handle
               Center(
                 child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  margin: EdgeInsets.symmetric(vertical: 10),
                   width: 40, height: 4,
                   decoration: BoxDecoration(
                     color: Colors.grey[300],
@@ -524,7 +520,7 @@ class _BottomSheet extends StatelessWidget {
                   child: Text(
                     statusLabel,
                     style: TextStyle(
-                      color: isDelivered ? _kGreen : _kTextMain,
+                      color: isDelivered ? _kGreen : context.appTextPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                     ),
@@ -560,7 +556,7 @@ class _BottomSheet extends StatelessWidget {
               if (driverAssigned && delivery?.driver != null) ...[
                 _DriverCard(driver: delivery!.driver!),
                 const SizedBox(height: 16),
-                const Divider(color: _kDivider, height: 1),
+                Divider(color: Theme.of(context).dividerColor, height: 1),
                 const SizedBox(height: 14),
               ],
 
@@ -581,7 +577,7 @@ class _BottomSheet extends StatelessWidget {
                 value: serviceType == 'moving' ? 'Moving' : 'Delivery',
               ),
               const SizedBox(height: 16),
-              const Divider(color: _kDivider, height: 1),
+              Divider(color: Theme.of(context).dividerColor, height: 1),
               const SizedBox(height: 14),
 
               // Action buttons row
@@ -701,15 +697,15 @@ class _StatusProgressBar extends StatelessWidget {
                 ),
               ),
               child: done
-                  ? const Icon(Icons.check, color: Colors.white, size: 14)
+                  ? Icon(Icons.check, color: Colors.white, size: 14)
                   : null,
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               _labels[stepIdx],
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: done ? _kGreen : _kTextSub,
+                color: done ? _kGreen : context.appTextSecondary,
                 fontSize: 9,
                 fontWeight: done ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -739,29 +735,29 @@ class _DriverCard extends StatelessWidget {
         backgroundColor: Colors.grey[200],
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : 'D',
-          style: const TextStyle(
-            color: _kTextMain,
+          style: TextStyle(
+            color: context.appTextPrimary,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
-      const SizedBox(width: 14),
+      SizedBox(width: 14),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(name,
-                style: const TextStyle(
-                    color: _kTextMain,
+                style: TextStyle(
+                    color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 15)),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Row(children: [
-              const Icon(Icons.phone_outlined, color: _kTextSub, size: 14),
-              const SizedBox(width: 4),
+              Icon(Icons.phone_outlined, color: context.appTextSecondary, size: 14),
+              SizedBox(width: 4),
               Text(phone,
-                  style: const TextStyle(color: _kTextSub, fontSize: 13)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
             ]),
           ],
         ),
@@ -788,7 +784,7 @@ class _RouteCard extends StatelessWidget {
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -796,40 +792,40 @@ class _RouteCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(children: [
               Container(
                 width: 10, height: 10,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: _kGreen, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: 10),
               Expanded(
                 child: Text(from,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: _kTextMain,
+                    style: TextStyle(
+                        color: context.appTextPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.w500)),
               ),
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.only(left: 19, top: 2, bottom: 2),
+            padding: EdgeInsets.only(left: 19, top: 2, bottom: 2),
             child: Row(children: [
               Container(width: 2, height: 12, color: Colors.grey[300]),
             ]),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: Row(children: [
-              const Icon(Icons.location_on, color: Colors.red, size: 16),
-              const SizedBox(width: 6),
+              Icon(Icons.location_on, color: Colors.red, size: 16),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(to,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: _kTextMain,
+                    style: TextStyle(
+                        color: context.appTextPrimary,
                         fontSize: 13,
                         fontWeight: FontWeight.w500)),
               ),
@@ -857,15 +853,15 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Icon(icon, color: _kTextSub, size: 16),
-      const SizedBox(width: 8),
+      Icon(icon, color: context.appTextSecondary, size: 16),
+      SizedBox(width: 8),
       Text('$label: ',
-          style: const TextStyle(color: _kTextSub, fontSize: 13)),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       Expanded(
         child: Text(value,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: _kTextMain,
+            style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w500)),
       ),
@@ -896,7 +892,7 @@ class _ActionBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color active  = danger ? Colors.red : _kGreen;
     final Color iconClr = disabled
-        ? _kTextSub.withValues(alpha: 0.4)
+        ? context.appTextSecondary.withValues(alpha: 0.4)
         : active;
 
     return GestureDetector(
@@ -916,20 +912,20 @@ class _ActionBtn extends StatelessWidget {
             ),
             child: loading
                 ? Padding(
-                    padding: const EdgeInsets.all(14),
+                    padding: EdgeInsets.all(14),
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: active))
                 : Icon(icon, color: iconClr, size: 22),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(
               color: disabled
-                  ? _kTextSub.withValues(alpha: 0.4)
+                  ? context.appTextSecondary.withValues(alpha: 0.4)
                   : danger
                       ? Colors.red
-                      : _kTextSub,
+                      : context.appTextSecondary,
               fontSize: 12,
               fontWeight: danger ? FontWeight.w600 : FontWeight.normal,
             ),
@@ -975,16 +971,16 @@ class _RatingDialogState extends State<_RatingDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: const Text(
+      title: Text(
         'Rate Delivery',
         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
+          Text(
             'How was your delivery experience?',
-            style: TextStyle(color: _kTextSub, fontSize: 13),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -1008,14 +1004,14 @@ class _RatingDialogState extends State<_RatingDialog> {
               );
             }),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           // Comment
           TextField(
             controller: _ctrl,
             maxLines: 3,
             decoration: InputDecoration(
               hintText: 'Leave a comment (optional)',
-              hintStyle: const TextStyle(color: _kTextSub, fontSize: 13),
+              hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 13),
               filled: true,
               fillColor: Colors.grey[100],
               border: OutlineInputBorder(
@@ -1079,25 +1075,25 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.error_outline, color: Colors.red[400], size: 48),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(
               'Could not load delivery',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: context.appTextPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(
               error,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: _kTextSub, fontSize: 13),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13),
             ),
             const SizedBox(height: 20),
             ElevatedButton(

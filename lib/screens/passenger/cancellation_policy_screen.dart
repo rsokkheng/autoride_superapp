@@ -51,7 +51,7 @@ class CancellationPolicyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(title: const Text('Cancellation Policy')),
       body: Column(children: [
         Expanded(
@@ -140,16 +140,16 @@ class _PolicyTileState extends State<_PolicyTile> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           leading: Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: widget.item.color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
@@ -157,24 +157,24 @@ class _PolicyTileState extends State<_PolicyTile> {
             child: Icon(widget.item.icon, color: widget.item.color, size: 20),
           ),
           title: Text(widget.item.title,
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 14)),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: 2),
+            padding: EdgeInsets.only(top: 2),
             child: Text(widget.item.description,
                 style: TextStyle(color: widget.item.color,
                     fontWeight: FontWeight.w700, fontSize: 13)),
           ),
           trailing: Icon(
             _expanded ? Icons.expand_less : Icons.expand_more,
-            color: AppTheme.textSecondary,
+            color: context.appTextSecondary,
           ),
           onExpansionChanged: (v) => setState(() => _expanded = v),
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Text(widget.item.detail,
-                  style: const TextStyle(color: AppTheme.textSecondary,
+                  style: TextStyle(color: context.appTextSecondary,
                       fontSize: 13, height: 1.5)),
             ),
           ],

@@ -102,7 +102,7 @@ class TripReceiptScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -112,13 +112,13 @@ class TripReceiptScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     const SizedBox(height: 8),
-                    _buildHeader(),
+                    _buildHeader(context),
                     const SizedBox(height: 20),
-                    _buildFareCard(),
+                    _buildFareCard(context),
                     const SizedBox(height: 16),
-                    _buildTripDetailsCard(),
+                    _buildTripDetailsCard(context),
                     const SizedBox(height: 16),
-                    _buildDriverCard(),
+                    _buildDriverCard(context),
                     const SizedBox(height: 8),
                   ],
                 ),
@@ -131,7 +131,7 @@ class TripReceiptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Column(
       children: [
         Container(
@@ -141,28 +141,28 @@ class TripReceiptScreen extends StatelessWidget {
             color: AppTheme.success.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
+          child: Icon(
             Icons.check_circle_rounded,
             color: AppTheme.success,
             size: 52,
           ),
         ),
-        const SizedBox(height: 14),
-        const Text(
+        SizedBox(height: 14),
+        Text(
           'Trip Complete',
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: context.appTextPrimary,
             fontSize: 24,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.3,
           ),
         ),
         if (rideId != null) ...[
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             'Ride #$rideId',
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
+            style: TextStyle(
+              color: context.appTextSecondary,
               fontSize: 13,
             ),
           ),
@@ -171,15 +171,15 @@ class TripReceiptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFareCard() {
+  Widget _buildFareCard(BuildContext context) {
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Fare Breakdown',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: context.appTextPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
@@ -202,17 +202,17 @@ class TripReceiptScreen extends StatelessWidget {
               amountColor: AppTheme.success,
             ),
           if (baseFareKhr > 0 || distanceFeeKhr > 0 || surgeKhr > 0 || promoDiscountKhr > 0)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 10),
-              child: Divider(color: AppTheme.cardBg, height: 1),
+              child: Divider(color: context.appCardBg, height: 1),
             ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Total',
                 style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: context.appTextPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -232,33 +232,33 @@ class TripReceiptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTripDetailsCard() {
+  Widget _buildTripDetailsCard(BuildContext context) {
     return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Trip Details',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: context.appTextPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: 'Pickup', address: from),
           Padding(
-            padding: const EdgeInsets.only(left: 9),
+            padding: EdgeInsets.only(left: 9),
             child: Container(
               width: 2,
               height: 20,
-              color: AppTheme.cardBg,
+              color: context.appCardBg,
             ),
           ),
           _TripAddressRow(icon: Icons.location_on, color: AppTheme.danger, label: 'Dropoff', address: to),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(color: AppTheme.cardBg, height: 1),
+            child: Divider(color: context.appCardBg, height: 1),
           ),
           _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date & Time', value: _formattedDate),
           if (distanceKm != null)
@@ -283,33 +283,33 @@ class TripReceiptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDriverCard() {
+  Widget _buildDriverCard(BuildContext context) {
     return _Card(
       child: Row(
         children: [
           CircleAvatar(
             radius: 26,
             backgroundColor: AppTheme.accent.withOpacity(0.12),
-            child: const Icon(Icons.person_rounded, color: AppTheme.accent, size: 30),
+            child: Icon(Icons.person_rounded, color: AppTheme.accent, size: 30),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   driverName,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                  style: TextStyle(
+                    color: context.appTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
+                SizedBox(height: 4),
+                Text(
                   'Your Driver',
                   style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: context.appTextSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -328,11 +328,11 @@ class TripReceiptScreen extends StatelessWidget {
                   );
                 }),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
               Text(
                 'Your rating',
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
+                style: TextStyle(
+                  color: context.appTextSecondary,
                   fontSize: 11,
                 ),
               ),
@@ -345,8 +345,8 @@ class TripReceiptScreen extends StatelessWidget {
 
   Widget _buildActions(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.surface,
+      decoration: BoxDecoration(
+        color: context.appSurface,
         boxShadow: [
           BoxShadow(
             color: Color(0x14000000),
@@ -418,9 +418,9 @@ class _Card extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: const [
           BoxShadow(
@@ -438,29 +438,29 @@ class _Card extends StatelessWidget {
 class _FareRow extends StatelessWidget {
   final String label;
   final String amount;
-  final Color amountColor;
+  final Color? amountColor;
 
   const _FareRow({
     required this.label,
     required this.amount,
-    this.amountColor = AppTheme.textPrimary,
+    this.amountColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 14),
           ),
           Text(
             amount,
             style: TextStyle(
-              color: amountColor,
+              color: amountColor ?? context.appTextPrimary,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -490,23 +490,23 @@ class _TripAddressRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(icon, color: color, size: 20),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
+                style: TextStyle(
+                  color: context.appTextSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               Text(
                 address,
-                style: const TextStyle(
-                  color: AppTheme.textPrimary,
+                style: TextStyle(
+                  color: context.appTextPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -535,21 +535,21 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(icon, color: AppTheme.textSecondary, size: 18),
-          const SizedBox(width: 12),
+          Icon(icon, color: context.appTextSecondary, size: 18),
+          SizedBox(width: 12),
           Text(
             label,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13),
           ),
-          const Spacer(),
+          Spacer(),
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
+              style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),

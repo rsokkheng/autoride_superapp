@@ -89,7 +89,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Color _typeColor(String? type) {
-    if (type == null) return AppTheme.textSecondary;
+    if (type == null) return context.appTextSecondary;
     final t = type.toLowerCase();
     if (t.contains('ride') || t.contains('booking') || t.contains('trip') || t.contains('accepted') || t.contains('driver'))
       return AppTheme.accent;
@@ -99,23 +99,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       return AppTheme.accentOrange;
     if (t.contains('rating') || t.contains('star'))
       return AppTheme.gold;
-    return AppTheme.textSecondary;
+    return context.appTextSecondary;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text('Notifications'),
         actions: [
           TextButton(
             onPressed: _notifications.isEmpty ? null : _markAllRead,
-            child: const Text('Mark all read', style: TextStyle(color: AppTheme.accent, fontSize: 13)),
+            child: Text('Mark all read', style: TextStyle(color: AppTheme.accent, fontSize: 13)),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : RefreshIndicator(
               color: AppTheme.accent,
               onRefresh: _loadNotifications,
@@ -124,15 +124,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       children: [
                         SizedBox(
                           height: MediaQuery.of(context).size.height * 0.65,
-                          child: const Column(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.notifications_none_outlined,
-                                  color: AppTheme.textSecondary, size: 64),
+                                  color: context.appTextSecondary, size: 64),
                               SizedBox(height: 16),
                               Text('No notifications yet',
                                   style: TextStyle(
-                                      color: AppTheme.textSecondary,
+                                      color: context.appTextSecondary,
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500)),
                             ],
@@ -158,7 +158,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             if (!read && id is int) _markRead(id);
                           },
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
+                            duration: Duration(milliseconds: 200),
                             decoration: BoxDecoration(
                               color: read
                                   ? Colors.transparent
@@ -170,24 +170,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                 ),
                               ),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Container(
-                                padding: const EdgeInsets.all(10),
+                                padding: EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color: color.withValues(alpha: 0.12),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(icon, color: color, size: 20),
                               ),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                   Row(children: [
                                     Expanded(
                                       child: Text(title,
                                           style: TextStyle(
-                                            color: AppTheme.textPrimary,
+                                            color: context.appTextPrimary,
                                             fontWeight: read ? FontWeight.w500 : FontWeight.w800,
                                             fontSize: 14,
                                           )),
@@ -195,20 +195,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                     if (!read)
                                       Container(
                                           width: 8, height: 8,
-                                          decoration: const BoxDecoration(
+                                          decoration: BoxDecoration(
                                               color: AppTheme.accent, shape: BoxShape.circle)),
                                   ]),
                                   if (body.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     Text(body,
-                                        style: const TextStyle(
-                                            color: AppTheme.textSecondary, fontSize: 12, height: 1.4)),
+                                        style: TextStyle(
+                                            color: context.appTextSecondary, fontSize: 12, height: 1.4)),
                                   ],
                                   if (time.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
+                                    SizedBox(height: 4),
                                     Text(time,
-                                        style: const TextStyle(
-                                            color: AppTheme.textSecondary, fontSize: 11)),
+                                        style: TextStyle(
+                                            color: context.appTextSecondary, fontSize: 11)),
                                   ],
                                 ]),
                               ),

@@ -54,7 +54,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
       case 'aba':    return 'ABA Pay';
       case 'acleda': return 'ACLEDA';
       case 'wing':   return 'Wing Money';
-      case 'wallet': return 'AutoRide Pay';
+      case 'wallet': return 'ROTEH Pay';
       default:       return 'Cash';
     }
   }
@@ -73,12 +73,12 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rate Your Trip'),
+        title: Text('Rate Your Trip'),
         automaticallyImplyLeading: false,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-            child: const Text('Skip', style: TextStyle(color: AppTheme.textSecondary)),
+            child: Text('Skip', style: TextStyle(color: context.appTextSecondary)),
           ),
         ],
       ),
@@ -86,9 +86,9 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              padding: EdgeInsets.fromLTRB(24, 24, 24, 16),
               child: Column(children: [
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
 
                 // Driver avatar
                 CircleAvatar(
@@ -96,23 +96,23 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2),
                   child: Text(
                     widget.driverName[0],
-                    style: const TextStyle(color: AppTheme.accentOrange, fontSize: 36, fontWeight: FontWeight.w800),
+                    style: TextStyle(color: AppTheme.accentOrange, fontSize: 36, fontWeight: FontWeight.w800),
                   ),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
                 Text(widget.driverName,
-                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
                 Text('${widget.fare}  •  ${_methodLabel(widget.paymentMethod)}',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
-                const SizedBox(height: 12),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
+                SizedBox(height: 12),
 
                 // Distance & Duration stats
                 if (widget.distanceKm != null || widget.durationMin != null)
                   Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    margin: EdgeInsets.symmetric(horizontal: 8),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: context.appSurface,
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
@@ -123,31 +123,31 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             const Icon(Icons.route_outlined, color: AppTheme.accent, size: 20),
                             const SizedBox(height: 4),
                             Text('${widget.distanceKm!.toStringAsFixed(1)} km',
-                                style: const TextStyle(color: AppTheme.textPrimary,
+                                style: TextStyle(color: context.appTextPrimary,
                                     fontWeight: FontWeight.w700, fontSize: 15)),
-                            const Text('Distance',
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                            Text('Distance',
+                                style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                           ]),
                         ],
                         if (widget.distanceKm != null && widget.durationMin != null)
-                          Container(width: 1, height: 36, color: AppTheme.cardBg),
+                          Container(width: 1, height: 36, color: context.appCardBg),
                         if (widget.durationMin != null) ...[
                           Column(children: [
                             const Icon(Icons.timer_outlined, color: AppTheme.accent, size: 20),
                             const SizedBox(height: 4),
                             Text('${widget.durationMin} min',
-                                style: const TextStyle(color: AppTheme.textPrimary,
+                                style: TextStyle(color: context.appTextPrimary,
                                     fontWeight: FontWeight.w700, fontSize: 15)),
-                            const Text('Duration',
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                            Text('Duration',
+                                style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                           ]),
                         ],
                       ],
                     ),
                   ),
-                const SizedBox(height: 12),
-                const Text('How was your trip?',
-                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                SizedBox(height: 12),
+                Text('How was your trip?',
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 24),
 
                 // Star rating
@@ -157,19 +157,19 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     onTap: () => setState(() { _stars = i + 1; _tags.clear(); }),
                     child: AnimatedScale(
                       scale: _stars == i + 1 ? 1.3 : 1.0,
-                      duration: const Duration(milliseconds: 150),
+                      duration: Duration(milliseconds: 150),
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        padding: EdgeInsets.symmetric(horizontal: 6),
                         child: Icon(
                           i < _stars ? Icons.star_rounded : Icons.star_outline_rounded,
-                          color: i < _stars ? AppTheme.gold : AppTheme.textSecondary,
+                          color: i < _stars ? AppTheme.gold : context.appTextSecondary,
                           size: 44,
                         ),
                       ),
                     ),
                   )),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   _stars == 0 ? 'Tap to rate' :
                   _stars == 1 ? 'Terrible' :
@@ -177,18 +177,18 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   _stars == 3 ? 'Okay' :
                   _stars == 4 ? 'Good' : 'Excellent!',
                   style: TextStyle(
-                    color: _stars >= 4 ? AppTheme.success : _stars > 0 ? AppTheme.danger : AppTheme.textSecondary,
+                    color: _stars >= 4 ? AppTheme.success : _stars > 0 ? AppTheme.danger : context.appTextSecondary,
                     fontWeight: FontWeight.w700, fontSize: 15,
                   ),
                 ),
 
                 if (_stars > 0) ...[
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       _stars >= 4 ? 'What did you love?' : 'What went wrong?',
-                      style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -200,17 +200,17 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                         _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
                       }),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        duration: Duration(milliseconds: 150),
+                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: _tags.contains(tag)
                               ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger).withValues(alpha: 0.15)
-                              : AppTheme.surface,
+                              : context.appSurface,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: _tags.contains(tag)
                                 ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger)
-                                : AppTheme.surface,
+                                : context.appSurface,
                           ),
                         ),
                         child: Text(
@@ -218,38 +218,38 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                           style: TextStyle(
                             color: _tags.contains(tag)
                                 ? (_stars >= 4 ? AppTheme.accent : AppTheme.danger)
-                                : AppTheme.textSecondary,
+                                : context.appTextSecondary,
                             fontWeight: FontWeight.w500, fontSize: 13,
                           ),
                         ),
                       ),
                     )).toList(),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Comment
                   Container(
                     decoration: BoxDecoration(
-                        color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+                        color: context.appSurface, borderRadius: BorderRadius.circular(14)),
                     child: TextField(
                       controller: _commentController,
                       maxLines: 3,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: const InputDecoration(
+                      style: TextStyle(color: context.appTextPrimary),
+                      decoration: InputDecoration(
                         hintText: 'Add a comment (optional)...',
-                        hintStyle: TextStyle(color: AppTheme.textSecondary),
+                        hintStyle: TextStyle(color: context.appTextSecondary),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(14),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
                   // Tip section
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Text('Add a tip?',
-                        style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(height: 10),
                   Row(
@@ -258,21 +258,21 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                       final label    = amount == 0 ? 'No tip' : '${amount ~/ 1000}k ៛';
                       final selected = _selectedTip == amount;
                       return Expanded(child: Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: EdgeInsets.only(right: 8),
                         child: GestureDetector(
                           onTap: () => setState(() => _selectedTip = selected ? null : amount),
                           child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            duration: Duration(milliseconds: 150),
+                            padding: EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: selected ? AppTheme.accent : AppTheme.surface,
+                              color: selected ? AppTheme.accent : context.appSurface,
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: selected ? AppTheme.accent : AppTheme.cardBg),
+                              border: Border.all(color: selected ? AppTheme.accent : context.appCardBg),
                             ),
                             child: Text(label,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: selected ? AppTheme.primary : AppTheme.textSecondary,
+                                color: selected ? AppTheme.primary : context.appTextSecondary,
                                 fontWeight: FontWeight.w700, fontSize: 13,
                               ),
                             ),
@@ -381,19 +381,19 @@ class _ThankYouScreen extends StatelessWidget {
     return Scaffold(
       body: Center(
         child: Padding(
-          padding: const EdgeInsets.all(40),
+          padding: EdgeInsets.all(40),
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             Container(
               width: 100, height: 100,
               decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.15), shape: BoxShape.circle),
-              child: const Icon(Icons.check_rounded, color: AppTheme.accent, size: 56),
+              child: Icon(Icons.check_rounded, color: AppTheme.accent, size: 56),
             ),
-            const SizedBox(height: 24),
-            const Text('Thank you!', style: TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 8),
-            const Text('Your feedback helps us improve the experience for everyone.',
+            SizedBox(height: 24),
+            Text('Thank you!', style: TextStyle(color: context.appTextPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
+            SizedBox(height: 8),
+            Text('Your feedback helps us improve the experience for everyone.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.textSecondary, height: 1.5)),
+                style: TextStyle(color: context.appTextSecondary, height: 1.5)),
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: onDone,

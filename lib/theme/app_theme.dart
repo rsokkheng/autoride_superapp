@@ -150,6 +150,20 @@ class AppTheme {
       );
 }
 
+// ── Adaptive color extension ─────────────────────────────────────────────────
+// Use context.appTextPrimary instead of AppTheme.textPrimary so colors adapt
+// automatically when the user switches between light and dark mode.
+
+extension AppColorsX on BuildContext {
+  bool get _isDark => Theme.of(this).brightness == Brightness.dark;
+
+  Color get appTextPrimary    => _isDark ? AppTheme.darkTextPrimary   : AppTheme.textPrimary;
+  Color get appTextSecondary  => _isDark ? AppTheme.darkTextSecondary : AppTheme.textSecondary;
+  Color get appSurface        => _isDark ? AppTheme.darkSurface       : AppTheme.surface;
+  Color get appCardBg         => _isDark ? AppTheme.darkCardBg        : AppTheme.cardBg;
+  Color get appBackground     => _isDark ? AppTheme.darkPrimary       : AppTheme.primary;
+}
+
 // ── Vehicle type option ───────────────────────────────────────────────────────
 
 class VehicleTypeOption {

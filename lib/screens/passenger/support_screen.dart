@@ -43,17 +43,17 @@ class _SupportScreenState extends State<SupportScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         elevation: 0,
-        leading: const BackButton(color: AppTheme.textPrimary),
-        title: const Text('Help & Support',
+        leading: BackButton(color: context.appTextPrimary),
+        title: Text('Help & Support',
             style: TextStyle(
-                color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: _green),
+            icon: Icon(Icons.add, color: _green),
             onPressed: _showNewTicket,
           ),
         ],
@@ -61,7 +61,7 @@ class _SupportScreenState extends State<SupportScreen>
           controller: _tabs,
           indicatorColor: _green,
           labelColor: _green,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.appTextSecondary,
           tabs: const [Tab(text: 'My Tickets'), Tab(text: 'FAQ')],
         ),
       ),
@@ -116,9 +116,9 @@ class _TicketsTab extends StatelessWidget {
         child: CircularProgressIndicator(color: _green));
     if (error != null) return Center(child: Column(
         mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
-      const SizedBox(height: 12),
-      Text(error!, style: const TextStyle(color: AppTheme.textSecondary),
+      Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
+      SizedBox(height: 12),
+      Text(error!, style: TextStyle(color: context.appTextSecondary),
           textAlign: TextAlign.center),
       const SizedBox(height: 16),
       ElevatedButton(onPressed: onRefresh,
@@ -129,17 +129,17 @@ class _TicketsTab extends StatelessWidget {
     ]));
     if (tickets.isEmpty) return RefreshIndicator(
       onRefresh: onRefresh, color: _green,
-      child: ListView(padding: const EdgeInsets.all(32), children: const [
+      child: ListView(padding: EdgeInsets.all(32), children: [
         Icon(Icons.support_agent_outlined,
-            color: AppTheme.textSecondary, size: 60),
+            color: context.appTextSecondary, size: 60),
         SizedBox(height: 16),
         Text('No support tickets', textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textPrimary,
+            style: TextStyle(color: context.appTextPrimary,
                 fontSize: 16, fontWeight: FontWeight.w700)),
         SizedBox(height: 6),
         Text('Tap + to create a new support request.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       ]),
     );
 
@@ -169,9 +169,9 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(text, style: const TextStyle(
-        color: AppTheme.textSecondary, fontSize: 12,
+    padding: EdgeInsets.only(bottom: 8),
+    child: Text(text, style: TextStyle(
+        color: context.appTextSecondary, fontSize: 12,
         fontWeight: FontWeight.w700, letterSpacing: 0.5)),
   );
 }
@@ -195,17 +195,17 @@ class _TicketTile extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
         border: ticket.isOpen
             ? Border.all(color: _green.withValues(alpha: 0.3)) : null,
       ),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(9),
+          padding: EdgeInsets.all(9),
           decoration: BoxDecoration(
             color: _statusColor.withValues(alpha: 0.12),
             shape: BoxShape.circle,
@@ -213,24 +213,24 @@ class _TicketTile extends StatelessWidget {
           child: Icon(Icons.support_agent_outlined,
               color: _statusColor, size: 20),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(ticket.subject, style: const TextStyle(
-              color: AppTheme.textPrimary,
+          Text(ticket.subject, style: TextStyle(
+              color: context.appTextPrimary,
               fontWeight: FontWeight.w600, fontSize: 14),
               maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 3),
           Row(children: [
             Text('${ticket.replies.length} repl${ticket.replies.length == 1 ? 'y' : 'ies'}',
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12)),
+                style: TextStyle(
+                    color: context.appTextSecondary, fontSize: 12)),
             if (ticket.createdAt != null) ...[
-              const Text(' · ',
-                  style: TextStyle(color: AppTheme.textSecondary)),
+              Text(' · ',
+                  style: TextStyle(color: context.appTextSecondary)),
               Text(_fmt(ticket.createdAt!),
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12)),
+                  style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 12)),
             ],
           ]),
         ])),
@@ -319,28 +319,28 @@ class _FaqTileState extends State<_FaqTile> {
   Widget build(BuildContext context) => GestureDetector(
     onTap: () => setState(() => _open = !_open),
     child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(children: [
         Padding(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(14),
           child: Row(children: [
-            Expanded(child: Text(widget.q, style: const TextStyle(
-                color: AppTheme.textPrimary,
+            Expanded(child: Text(widget.q, style: TextStyle(
+                color: context.appTextPrimary,
                 fontWeight: FontWeight.w600, fontSize: 14))),
             Icon(_open ? Icons.keyboard_arrow_up_rounded
                 : Icons.keyboard_arrow_down_rounded,
-                color: AppTheme.textSecondary),
+                color: context.appTextSecondary),
           ]),
         ),
         if (_open)
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-            child: Text(widget.a, style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 13, height: 1.5)),
+            padding: EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: Text(widget.a, style: TextStyle(
+                color: context.appTextSecondary, fontSize: 13, height: 1.5)),
           ),
       ]),
     ),
@@ -391,7 +391,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
 
   @override
   Widget build(BuildContext context) => Container(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
@@ -404,60 +404,60 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
       Center(child: Container(width: 40, height: 4,
           decoration: BoxDecoration(color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2)))),
-      const SizedBox(height: 16),
-      const Text('New Support Ticket',
+      SizedBox(height: 16),
+      Text('New Support Ticket',
           style: TextStyle(fontSize: 17,
-              fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-      const SizedBox(height: 16),
+              fontWeight: FontWeight.w700, color: context.appTextPrimary)),
+      SizedBox(height: 16),
 
       // Priority
       Row(children: [
-        const Text('Priority: ',
-            style: TextStyle(color: AppTheme.textSecondary,
+        Text('Priority: ',
+            style: TextStyle(color: context.appTextSecondary,
                 fontWeight: FontWeight.w600, fontSize: 13)),
         ...[('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent')]
             .map((p) => Padding(
-          padding: const EdgeInsets.only(right: 8),
+          padding: EdgeInsets.only(right: 8),
           child: ChoiceChip(
             label: Text(p.$2),
             selected: _priority == p.$1,
             selectedColor: _green.withValues(alpha: 0.15),
             labelStyle: TextStyle(
-              color: _priority == p.$1 ? _green : AppTheme.textSecondary,
+              color: _priority == p.$1 ? _green : context.appTextSecondary,
               fontWeight: FontWeight.w600, fontSize: 12,
             ),
             onSelected: (_) => setState(() => _priority = p.$1),
           ),
         )),
       ]),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
 
       TextField(
         controller: _subCtrl,
-        style: const TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
           labelText: 'Subject',
-          labelStyle: const TextStyle(color: AppTheme.textSecondary),
-          filled: true, fillColor: AppTheme.cardBg,
+          labelStyle: TextStyle(color: context.appTextSecondary),
+          filled: true, fillColor: context.appCardBg,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: _green)),
+              borderSide: BorderSide(color: _green)),
         ),
       ),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
 
       TextField(
         controller: _msgCtrl,
         maxLines: 4,
-        style: const TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
           labelText: 'Describe your issue',
-          labelStyle: const TextStyle(color: AppTheme.textSecondary),
+          labelStyle: TextStyle(color: context.appTextSecondary),
           alignLabelWithHint: true,
-          filled: true, fillColor: AppTheme.cardBg,
+          filled: true, fillColor: context.appCardBg,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none),
@@ -558,52 +558,52 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: AppTheme.primary,
+    backgroundColor: context.appBackground,
     appBar: AppBar(
-      backgroundColor: AppTheme.surface, elevation: 0,
-      leading: const BackButton(color: AppTheme.textPrimary),
+      backgroundColor: context.appSurface, elevation: 0,
+      leading: BackButton(color: context.appTextPrimary),
       title: Text(_ticket.subject,
-          style: const TextStyle(
-              color: AppTheme.textPrimary, fontWeight: FontWeight.w700,
+          style: TextStyle(
+              color: context.appTextPrimary, fontWeight: FontWeight.w700,
               fontSize: 15),
           maxLines: 1, overflow: TextOverflow.ellipsis),
     ),
     body: Column(children: [
       Expanded(child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         children: [
           // Status badge
           Row(children: [
             Container(
-              padding: const EdgeInsets.symmetric(
+              padding: EdgeInsets.symmetric(
                   horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: _ticket.isOpen
                     ? _green.withValues(alpha: 0.1)
-                    : AppTheme.cardBg,
+                    : context.appCardBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(_ticket.status.toUpperCase(),
                   style: TextStyle(
                     color: _ticket.isOpen ? _green
-                        : AppTheme.textSecondary,
+                        : context.appTextSecondary,
                     fontSize: 11, fontWeight: FontWeight.w700,
                   )),
             ),
             const SizedBox(width: 8),
             Text('Priority: ${_ticket.priority}',
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12)),
+                style: TextStyle(
+                    color: context.appTextSecondary, fontSize: 12)),
           ]),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           if (_ticket.replies.isEmpty)
-            const Center(child: Padding(
+            Center(child: Padding(
               padding: EdgeInsets.all(24),
               child: Text('No replies yet. We\'ll respond within 24 hours.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 13)),
+                      color: context.appTextSecondary, fontSize: 13)),
             )),
 
           ..._ticket.replies.map((r) => _ReplyBubble(reply: r)),
@@ -617,22 +617,22 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
             left: 16, right: 8, top: 10,
             bottom: MediaQuery.of(context).viewInsets.bottom + 10,
           ),
-          decoration: const BoxDecoration(
-            color: AppTheme.surface,
-            border: Border(top: BorderSide(color: AppTheme.cardBg)),
+          decoration: BoxDecoration(
+            color: context.appSurface,
+            border: Border(top: BorderSide(color: context.appCardBg)),
           ),
           child: Row(children: [
             Expanded(
               child: TextField(
                 controller: _replyCtrl,
                 maxLines: 3, minLines: 1,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary, fontSize: 14),
+                style: TextStyle(
+                    color: context.appTextPrimary, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: 'Write a reply…',
-                  hintStyle: const TextStyle(
-                      color: AppTheme.textSecondary),
-                  filled: true, fillColor: AppTheme.cardBg,
+                  hintStyle: TextStyle(
+                      color: context.appTextSecondary),
+                  filled: true, fillColor: context.appCardBg,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none),
@@ -676,41 +676,41 @@ class _ReplyBubble extends StatelessWidget {
       alignment: isStaff
           ? Alignment.centerLeft : Alignment.centerRight,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(
+        margin: EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.symmetric(
             horizontal: 14, vertical: 10),
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.75),
         decoration: BoxDecoration(
-          color: isStaff ? AppTheme.surface : _green,
+          color: isStaff ? context.appSurface : _green,
           borderRadius: BorderRadius.only(
-            topLeft:     const Radius.circular(14),
-            topRight:    const Radius.circular(14),
+            topLeft:     Radius.circular(14),
+            topRight:    Radius.circular(14),
             bottomLeft:  Radius.circular(isStaff ? 0 : 14),
             bottomRight: Radius.circular(isStaff ? 14 : 0),
           ),
           boxShadow: [BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 4, offset: const Offset(0, 2),
+            blurRadius: 4, offset: Offset(0, 2),
           )],
         ),
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (isStaff)
-            const Text('Support Team',
+            Text('Support Team',
                 style: TextStyle(color: _green,
                     fontSize: 11, fontWeight: FontWeight.w700)),
           Text(reply.message,
               style: TextStyle(
                   color: isStaff
-                      ? AppTheme.textPrimary : Colors.white,
+                      ? context.appTextPrimary : Colors.white,
                   fontSize: 13, height: 1.4)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(reply.createdAt != null
               ? _fmt(reply.createdAt!) : '',
               style: TextStyle(
                   color: isStaff
-                      ? AppTheme.textSecondary
+                      ? context.appTextSecondary
                       : Colors.white.withValues(alpha: 0.7),
                   fontSize: 10)),
         ]),

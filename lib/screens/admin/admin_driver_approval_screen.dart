@@ -65,33 +65,33 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface, elevation: 0,
-        title: const Text('Driver Applications',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        backgroundColor: context.appSurface, elevation: 0,
+        title: Text('Driver Applications',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary),
+            icon: Icon(Icons.refresh_rounded, color: context.appTextSecondary),
             onPressed: _loading ? null : _load,
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _green))
+          ? Center(child: CircularProgressIndicator(color: _green))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary)),
-                  const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, child: const Text('Retry'),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary)),
+                  SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, child: Text('Retry'),
                       style: ElevatedButton.styleFrom(backgroundColor: _green)),
                 ]))
               : _drivers.isEmpty
-                  ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.check_circle_outline_rounded, color: _green, size: 56),
                       SizedBox(height: 12),
                       Text('No pending applications',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
                     ]))
                   : RefreshIndicator(
                       onRefresh: _load,
@@ -125,19 +125,19 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Text('Reject Driver', style: TextStyle(color: AppTheme.textPrimary)),
+        backgroundColor: context.appSurface,
+        title: Text('Reject Driver', style: TextStyle(color: context.appTextPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Provide a reason (optional):',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-          const SizedBox(height: 8),
+          Text('Provide a reason (optional):',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+          SizedBox(height: 8),
           TextField(
             controller: reasonCtrl,
             maxLines: 3,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: context.appTextPrimary),
+            decoration: InputDecoration(
               hintText: 'e.g. Documents unclear, ID expired…',
-              hintStyle: TextStyle(color: AppTheme.textSecondary),
+              hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true, fillColor: AppTheme.primary,
               border: OutlineInputBorder(borderSide: BorderSide.none),
             ),
@@ -195,9 +195,9 @@ class _DriverCard extends StatelessWidget {
     final phone = driver['phone'] as String? ?? '';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -206,13 +206,13 @@ class _DriverCard extends StatelessWidget {
             backgroundColor: _green.withValues(alpha: 0.15),
             radius: 22,
             child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 18)),
+                style: TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 18)),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(color: AppTheme.textPrimary,
+            Text(name, style: TextStyle(color: context.appTextPrimary,
                 fontWeight: FontWeight.w700, fontSize: 15)),
-            Text(email, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+            Text(email, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ])),
           GestureDetector(
             onTap: onReview,
@@ -231,9 +231,9 @@ class _DriverCard extends StatelessWidget {
         if (type.isNotEmpty || city.isNotEmpty || phone.isNotEmpty) ...[
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 6, children: [
-            if (type.isNotEmpty) _Chip(Icons.badge_outlined, type),
-            if (city.isNotEmpty) _Chip(Icons.location_city_outlined, city),
-            if (phone.isNotEmpty) _Chip(Icons.phone_outlined, phone),
+            if (type.isNotEmpty) _Chip(context, Icons.badge_outlined, type),
+            if (city.isNotEmpty) _Chip(context, Icons.location_city_outlined, city),
+            if (phone.isNotEmpty) _Chip(context, Icons.phone_outlined, phone),
           ]),
         ],
         const SizedBox(height: 14),
@@ -273,14 +273,14 @@ class _DriverCard extends StatelessWidget {
   }
 }
 
-Widget _Chip(IconData icon, String label) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+Widget _Chip(BuildContext context, IconData icon, String label) => Container(
+  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
   decoration: BoxDecoration(
-    color: AppTheme.cardBg, borderRadius: BorderRadius.circular(6)),
+    color: context.appCardBg, borderRadius: BorderRadius.circular(6)),
   child: Row(mainAxisSize: MainAxisSize.min, children: [
-    Icon(icon, color: AppTheme.textSecondary, size: 12),
-    const SizedBox(width: 4),
-    Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+    Icon(icon, color: context.appTextSecondary, size: 12),
+    SizedBox(width: 4),
+    Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
   ]),
 );
 
@@ -334,15 +334,15 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
       note = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
-          backgroundColor: AppTheme.surface,
-          title: const Text('Reject Document', style: TextStyle(color: AppTheme.textPrimary)),
+          backgroundColor: context.appSurface,
+          title: Text('Reject Document', style: TextStyle(color: context.appTextPrimary)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: const InputDecoration(
+            style: TextStyle(color: context.appTextPrimary),
+            decoration: InputDecoration(
               hintText: 'Reason (e.g. Image too blurry)',
-              hintStyle: TextStyle(color: AppTheme.textSecondary),
+              hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true, fillColor: AppTheme.primary,
               border: OutlineInputBorder(borderSide: BorderSide.none),
             ),
@@ -380,18 +380,18 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
       serviceZone = await showDialog<String>(
         context: context,
         builder: (_) => AlertDialog(
-          backgroundColor: AppTheme.surface,
-          title: const Text('Approve Driver', style: TextStyle(color: AppTheme.textPrimary)),
+          backgroundColor: context.appSurface,
+          title: Text('Approve Driver', style: TextStyle(color: context.appTextPrimary)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Service zone (optional):',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-            const SizedBox(height: 8),
+            Text('Service zone (optional):',
+                style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+            SizedBox(height: 8),
             TextField(
               controller: ctrl,
-              style: const TextStyle(color: AppTheme.textPrimary),
-              decoration: const InputDecoration(
+              style: TextStyle(color: context.appTextPrimary),
+              decoration: InputDecoration(
                 hintText: 'e.g. Phnom Penh Zone A',
-                hintStyle: TextStyle(color: AppTheme.textSecondary),
+                hintStyle: TextStyle(color: context.appTextSecondary),
                 filled: true, fillColor: AppTheme.primary,
                 border: OutlineInputBorder(borderSide: BorderSide.none),
               ),
@@ -438,38 +438,38 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface, elevation: 0,
+        backgroundColor: context.appSurface, elevation: 0,
         title: Text(widget.driverName,
-            style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary),
+          IconButton(icon: Icon(Icons.refresh_rounded, color: context.appTextSecondary),
               onPressed: _loading ? null : _load),
         ],
       ),
       body: _loading && _data == null
-          ? const Center(child: CircularProgressIndicator(color: _green))
+          ? Center(child: CircularProgressIndicator(color: _green))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary)),
-                  const SizedBox(height: 12),
-                  ElevatedButton(onPressed: _load, child: const Text('Retry'),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary)),
+                  SizedBox(height: 12),
+                  ElevatedButton(onPressed: _load, child: Text('Retry'),
                       style: ElevatedButton.styleFrom(backgroundColor: _green)),
                 ]))
               : Column(children: [
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
                         // Driver info card
                         _InfoSection(data: _data!),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20),
 
                         // Documents
-                        const Text('Documents',
-                            style: TextStyle(color: AppTheme.textPrimary,
+                        Text('Documents',
+                            style: TextStyle(color: context.appTextPrimary,
                                 fontSize: 15, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 12),
                         ...(() {
@@ -477,10 +477,10 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                               .whereType<Map<String, dynamic>>()
                               .toList();
                           if (docs.isEmpty) {
-                            return [const Center(child: Padding(
+                            return [Center(child: Padding(
                               padding: EdgeInsets.all(24),
                               child: Text('No documents uploaded yet.',
-                                  style: TextStyle(color: AppTheme.textSecondary)),
+                                  style: TextStyle(color: context.appTextSecondary)),
                             ))];
                           }
                           return docs.map((doc) {
@@ -492,23 +492,23 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                             final busy   = _processing.contains(docId);
 
                             return Container(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.all(14),
+                              margin: EdgeInsets.only(bottom: 10),
+                              padding: EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: AppTheme.surface,
+                                color: context.appSurface,
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                 Row(children: [
                                   Expanded(child: Text(_docLabels[type] ?? type,
-                                      style: const TextStyle(color: AppTheme.textPrimary,
+                                      style: TextStyle(color: context.appTextPrimary,
                                           fontWeight: FontWeight.w600, fontSize: 13))),
                                   _StatusBadge(status),
                                 ]),
                                 if (note != null && note.isNotEmpty) ...[
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: 4),
                                   Text('Note: $note',
-                                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                                      style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                                 ],
                                 if (url != null) ...[
                                   const SizedBox(height: 8),
@@ -518,15 +518,15 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                       height: 110,
                                       width: double.infinity,
                                       decoration: BoxDecoration(
-                                        color: AppTheme.cardBg,
+                                        color: context.appCardBg,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
-                                      child: const Center(child: Column(
+                                      child: Center(child: Column(
                                         mainAxisSize: MainAxisSize.min, children: [
-                                          Icon(Icons.image_outlined, color: AppTheme.textSecondary, size: 32),
+                                          Icon(Icons.image_outlined, color: context.appTextSecondary, size: 32),
                                           SizedBox(height: 4),
                                           Text('View Document', style: TextStyle(
-                                              color: AppTheme.textSecondary, fontSize: 12)),
+                                              color: context.appTextSecondary, fontSize: 12)),
                                         ],
                                       )),
                                     ),
@@ -570,16 +570,16 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                             );
                           }).toList();
                         })(),
-                        const SizedBox(height: 20),
+                        SizedBox(height: 20),
                       ]),
                     ),
                   ),
 
                   // Final approve / reject bar
                   Container(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 24),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: context.appSurface,
                       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 12)],
                     ),
                     child: _finalizing
@@ -634,17 +634,17 @@ class _InfoSection extends StatelessWidget {
     ].where((r) => r.$3 != null && r.$3!.isNotEmpty).toList();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+        color: context.appSurface, borderRadius: BorderRadius.circular(14)),
       child: Column(children: rows.map((r) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
+        padding: EdgeInsets.symmetric(vertical: 5),
         child: Row(children: [
-          Icon(r.$1, color: AppTheme.textSecondary, size: 16),
+          Icon(r.$1, color: context.appTextSecondary, size: 16),
           const SizedBox(width: 10),
-          Text('${r.$2}: ', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          Text('${r.$2}: ', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           Expanded(child: Text(r.$3!,
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 13))),
         ]),
       )).toList()),

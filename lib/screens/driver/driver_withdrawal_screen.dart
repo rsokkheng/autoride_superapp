@@ -28,14 +28,14 @@ class _DriverWithdrawalScreenState extends State<DriverWithdrawalScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Withdraw Earnings'),
+        title: Text('Withdraw Earnings'),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.appTextSecondary,
           tabs: const [
             Tab(icon: Icon(Icons.send_rounded), text: 'Withdraw'),
             Tab(icon: Icon(Icons.history_rounded), text: 'History'),
@@ -127,56 +127,56 @@ class _WithdrawFormState extends State<_WithdrawForm> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (_error != null) ...[
           Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 16),
+            padding: EdgeInsets.all(12),
+            margin: EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
               color: AppTheme.danger.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
             ),
-            child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+            child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
           ),
         ],
 
-        const Text('Amount (KHR)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        Text('Amount (KHR)', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        SizedBox(height: 8),
         _Field(controller: _amtCtrl, hint: '0', type: TextInputType.number, suffix: '៛'),
 
-        const SizedBox(height: 20),
-        const Text('Payment Method', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        SizedBox(height: 20),
+        Text('Payment Method', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: _methods.map((m) {
           final selected = _method == m.$1;
           return GestureDetector(
             onTap: () => setState(() => _method = m.$1),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: selected ? AppTheme.accent.withValues(alpha: 0.12) : AppTheme.surface,
+                color: selected ? AppTheme.accent.withValues(alpha: 0.12) : context.appSurface,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: selected ? AppTheme.accent : AppTheme.cardBg, width: selected ? 1.5 : 1),
+                border: Border.all(color: selected ? AppTheme.accent : context.appCardBg, width: selected ? 1.5 : 1),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(m.$3, color: selected ? AppTheme.accent : AppTheme.textSecondary, size: 18),
-                const SizedBox(width: 6),
-                Text(m.$2, style: TextStyle(color: selected ? AppTheme.accent : AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                Icon(m.$3, color: selected ? AppTheme.accent : context.appTextSecondary, size: 18),
+                SizedBox(width: 6),
+                Text(m.$2, style: TextStyle(color: selected ? AppTheme.accent : context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
               ]),
             ),
           );
         }).toList()),
 
-        const SizedBox(height: 20),
-        const Text('Account Number', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        SizedBox(height: 20),
+        Text('Account Number', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        SizedBox(height: 8),
         _Field(controller: _accNumCtrl, hint: 'e.g. 000123456789', type: TextInputType.number),
 
-        const SizedBox(height: 16),
-        const Text('Account Holder Name', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
+        SizedBox(height: 16),
+        Text('Account Holder Name', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        SizedBox(height: 8),
         _Field(controller: _accNameCtrl, hint: 'Full name as on account'),
 
-        const SizedBox(height: 16),
-        const Text('Bank Name (optional)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        SizedBox(height: 16),
+        Text('Bank Name (optional)', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         _Field(controller: _bankCtrl, hint: 'e.g. ABA, ACLEDA, Wing…'),
 
@@ -214,14 +214,14 @@ class _Field extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: type,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppTheme.textSecondary),
+        hintStyle: TextStyle(color: context.appTextSecondary),
         suffixText: suffix,
-        suffixStyle: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700),
+        suffixStyle: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700),
         filled: true,
-        fillColor: AppTheme.surface,
+        fillColor: context.appSurface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -269,18 +269,18 @@ class _WithdrawHistoryState extends State<_WithdrawHistory> {
     if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     if (_error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-        const SizedBox(height: 12),
-        Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        SizedBox(height: 12),
+        Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
       ]));
     }
     if (_items.isEmpty) {
-      return const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.receipt_long_outlined, color: AppTheme.textSecondary, size: 48),
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No withdrawal history', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+        Text('No withdrawal history', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       ]));
     }
     return RefreshIndicator(
@@ -315,25 +315,25 @@ class _WithdrawTile extends StatelessWidget {
             : AppTheme.danger;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10),
           decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
           child: Icon(Icons.send_rounded, color: statusColor, size: 20),
         ),
-        const SizedBox(width: 14),
+        SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(method.replaceAll('_', ' ').toUpperCase(),
-                style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
             if (short.isNotEmpty)
-              Text(short, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              Text(short, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ]),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('$amount ៛', style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+          Text('$amount ៛', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
           Container(
             margin: const EdgeInsets.only(top: 4),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

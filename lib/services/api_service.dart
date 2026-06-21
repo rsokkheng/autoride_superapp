@@ -983,6 +983,17 @@ class ApiService {
     String? passengerName,
     String? passengerPhone,
     String? promoCode,
+    // Airport trip extras
+    bool    isAirportTrip  = false,
+    String? flightNumber,
+    String? terminal,
+    int?    luggageCount,
+    // Business trip extras
+    bool    isBusinessTrip  = false,
+    String? expenseCategory,
+    String? expenseRef,
+    // Family member booking
+    int?    familyMemberId,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -998,12 +1009,20 @@ class ApiService {
       'vehicle_type':    vehicleType,
       'payment_method':  paymentMethod,
       'surge_accepted':  surgeAccepted,
-      if (vehicleId      != null) 'vehicle_id':      vehicleId,
-      if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
-      if (notes          != null) 'notes':           notes,
-      if (passengerName  != null) 'passenger_name':  passengerName,
-      if (passengerPhone != null) 'passenger_phone': passengerPhone,
-      if (promoCode      != null) 'promo_code':      promoCode,
+      if (vehicleId       != null)  'vehicle_id':       vehicleId,
+      if (scheduledAt     != null)  'scheduled_at':     scheduledAt,
+      if (notes           != null)  'notes':            notes,
+      if (passengerName   != null)  'passenger_name':   passengerName,
+      if (passengerPhone  != null)  'passenger_phone':  passengerPhone,
+      if (promoCode       != null)  'promo_code':       promoCode,
+      if (isAirportTrip)            'is_airport_trip':  true,
+      if (flightNumber    != null)  'flight_number':    flightNumber,
+      if (terminal        != null)  'terminal':         terminal,
+      if (luggageCount    != null)  'luggage_count':    luggageCount,
+      if (isBusinessTrip)           'is_business_trip': true,
+      if (expenseCategory != null)  'expense_category': expenseCategory,
+      if (expenseRef      != null)  'expense_ref':      expenseRef,
+      if (familyMemberId  != null)  'family_member_id': familyMemberId,
     };
 
     final raw = await _rawPost('/rides', body, token: token);
@@ -3406,17 +3425,21 @@ class ApiService {
     required DateTime startDate,
     required DateTime endDate,
     required String vehicleType,
+    String? deliveryLocation,
     String? paymentMethod,
+    String? couponCode,
     String? notes,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw  = await _rawPost('/rentals', {
-      'pickup_location': pickupLocation,
-      'start_date':      startDate.toIso8601String(),
-      'end_date':        endDate.toIso8601String(),
-      'vehicle_type':    vehicleType,
+      'pickup_location':   pickupLocation,
+      'start_date':        startDate.toIso8601String(),
+      'end_date':          endDate.toIso8601String(),
+      'vehicle_type':      vehicleType,
+      if (deliveryLocation != null && deliveryLocation.isNotEmpty) 'delivery_location': deliveryLocation,
       if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
     }, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
@@ -4449,6 +4472,318 @@ class ApiService {
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
+
+  // ── Airport ───────────────────────────────────────────────────────────────
+
+  static Future<List<AirportZone>> getAirportZones() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/airport/zones', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      final list = data is List ? data : (data as Map?)?['data'] as List? ?? [];
+      return list.whereType<Map<String, dynamic>>().map(AirportZone.fromJson).toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load airport zones.', raw.statusCode);
+  }
+
+  static Future<AirportEstimate> estimateAirportRide({
+    required double pickupLat,
+    required double pickupLng,
+    required double dropoffLat,
+    required double dropoffLng,
+    int     luggageCount = 0,
+    String  serviceType  = 'standard',
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/airport/estimate', {
+      'pickup_lat':   pickupLat,
+      'pickup_lng':   pickupLng,
+      'dropoff_lat':  dropoffLat,
+      'dropoff_lng':  dropoffLng,
+      'luggage_count': luggageCount,
+      'service_type':  serviceType,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return AirportEstimate.fromJson(data);
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to estimate airport fare.', raw.statusCode);
+  }
+
+  // ── Business ──────────────────────────────────────────────────────────────
+
+  static Future<Map<String, dynamic>?> getBusinessAccount() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/business', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?);
+    if (raw.statusCode == 404) return null;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<Map<String, dynamic>> registerBusiness(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/business/register', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to register business.', raw.statusCode);
+  }
+
+  static Future<void> joinBusiness(String code) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/business/join', {'code': code}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      throw ApiException(body['message'] as String? ?? 'Failed to join business.', raw.statusCode);
+    }
+  }
+
+  static Future<void> leaveBusiness() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/business/leave', {}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      throw ApiException(body['message'] as String? ?? 'Failed to leave business.', raw.statusCode);
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateBusinessAccount(Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/business/account', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed to update.', raw.statusCode);
+  }
+
+  static Future<List<Map<String, dynamic>>> getBusinessMembers() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/business/members', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<void> updateBusinessMember(int id, Map<String, dynamic> data) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/business/members/$id', data, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
+  }
+
+  static Future<void> removeBusinessMember(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/business/members/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200 && raw.statusCode != 204) {
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> getBusinessTrips({
+    String? from, String? to, String? department, int page = 1,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final q = [
+      'page=$page',
+      if (from       != null) 'from=$from',
+      if (to         != null) 'to=$to',
+      if (department != null) 'department=$department',
+    ].join('&');
+    final raw  = await _rawGet('/business/trips?$q', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'];
+      if (data is List) return data.whereType<Map<String, dynamic>>().toList();
+      if (data is Map) return ((data['data'] as List?) ?? []).whereType<Map<String, dynamic>>().toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Family ────────────────────────────────────────────────────────────────
+
+  static Future<FamilyGroup?> getFamilyGroup() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/family', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'] as Map<String, dynamic>?;
+      return data != null ? FamilyGroup.fromJson(data) : null;
+    }
+    if (raw.statusCode == 404) return null;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<FamilyGroup> setupFamilyGroup(String name) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/family/setup', {'name': name}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return FamilyGroup.fromJson((body['data'] as Map<String, dynamic>?) ?? body);
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to create family group.', raw.statusCode);
+  }
+
+  static Future<FamilyMember> addFamilyMember({
+    required String name, required String phone, required String relationship,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/family/members',
+        {'name': name, 'phone': phone, 'relationship': relationship}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return FamilyMember.fromJson((body['data'] as Map<String, dynamic>?) ?? body);
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to add member.', raw.statusCode);
+  }
+
+  static Future<void> updateFamilyMember(int id, {
+    required String name, required String phone, required String relationship,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/family/members/$id',
+        {'name': name, 'phone': phone, 'relationship': relationship}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
+  }
+
+  static Future<void> removeFamilyMember(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawDelete('/family/members/$id', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200 && raw.statusCode != 204) {
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
+  }
+
+  // ── Subscriptions ─────────────────────────────────────────────────────────
+
+  static Future<List<SubscriptionPlan>> getSubscriptionPlans() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/subscriptions/plans', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final list = (body['data'] as List? ?? []).whereType<Map<String, dynamic>>();
+      return list.map(SubscriptionPlan.fromJson).toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<MySubscription?> getMySubscription() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/subscriptions/my', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = body['data'] as Map<String, dynamic>?;
+      return data != null ? MySubscription.fromJson(data) : null;
+    }
+    if (raw.statusCode == 404) return null;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<String> subscribePlan({
+    required String planSlug,
+    required String paymentMethod,
+    bool autoRenew = true,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/subscriptions/subscribe', {
+      'plan_slug':      planSlug,
+      'payment_method': paymentMethod,
+      'auto_renew':     autoRenew,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return body['message'] as String? ?? 'Subscribed!';
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<String> upgradeSubscription({
+    required String planSlug,
+    required String paymentMethod,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/subscriptions/upgrade', {
+      'plan_slug':      planSlug,
+      'payment_method': paymentMethod,
+    }, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return body['message'] as String? ?? 'Plan upgraded!';
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<String> cancelSubscription() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/subscriptions/cancel', {}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return body['message'] as String? ?? 'Subscription cancelled.';
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<bool> toggleAutoRenew(bool autoRenew) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPut('/subscriptions/auto-renew',
+        {'auto_renew': autoRenew}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      return body['auto_renew'] as bool? ?? autoRenew;
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<List<SubscriptionBill>> getSubscriptionHistory({int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/subscriptions/history?page=$page', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final outer = body['data'];
+      final list  = outer is Map
+          ? (outer['data'] as List? ?? [])
+          : (outer as List? ?? []);
+      return list.whereType<Map<String, dynamic>>()
+          .map(SubscriptionBill.fromJson).toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
 }
 
 // ── Wallet transfer result ────────────────────────────────────────────────────
@@ -5152,4 +5487,262 @@ class DriverApprovalStatus {
   bool get isPending  => approvalStatus == 'pending';
   bool get isApproved => approvalStatus == 'approved';
   bool get isRejected => approvalStatus == 'rejected';
+}
+
+// ── Airport models ────────────────────────────────────────────────────────────
+
+class AirportZone {
+  final int    id;
+  final String name;
+  final String iataCode;
+  final double lat;
+  final double lng;
+
+  const AirportZone({
+    required this.id, required this.name,
+    required this.iataCode, required this.lat, required this.lng,
+  });
+
+  factory AirportZone.fromJson(Map<String, dynamic> j) => AirportZone(
+    id:       j['id'] as int,
+    name:     j['name'] as String? ?? '',
+    iataCode: j['iata_code'] as String? ?? '',
+    lat:      (j['lat'] as num? ?? j['latitude']  as num? ?? 0).toDouble(),
+    lng:      (j['lng'] as num? ?? j['longitude'] as num? ?? 0).toDouble(),
+  );
+}
+
+class AirportEstimate {
+  final AirportZone? zone;
+  final double  distanceKm;
+  final int     baseFareKhr;
+  final int     surchargKhr;
+  final int     luggageFeeKhr;
+  final int     luggageCount;
+  final int     totalKhr;
+
+  const AirportEstimate({
+    this.zone,
+    required this.distanceKm,
+    required this.baseFareKhr,
+    required this.surchargKhr,
+    required this.luggageFeeKhr,
+    required this.luggageCount,
+    required this.totalKhr,
+  });
+
+  factory AirportEstimate.fromJson(Map<String, dynamic> j) => AirportEstimate(
+    zone:         j['airport_zone'] != null
+                  ? AirportZone.fromJson(j['airport_zone'] as Map<String, dynamic>)
+                  : null,
+    distanceKm:   (j['distance_km']    as num? ?? 0).toDouble(),
+    baseFareKhr:  (j['base_fare_khr']  as num? ?? 0).toInt(),
+    surchargKhr:  (j['surcharge_khr']  as num? ?? 0).toInt(),
+    luggageFeeKhr:(j['luggage_fee_khr'] as num? ?? 0).toInt(),
+    luggageCount: (j['luggage_count']  as num? ?? 0).toInt(),
+    totalKhr:     (j['total_khr']      as num? ?? 0).toInt(),
+  );
+}
+
+// ── Family models ─────────────────────────────────────────────────────────────
+
+class FamilyMember {
+  final int     id;
+  final String  name;
+  final String  phone;
+  final String  relationship;
+  final String? avatarUrl;
+  final bool    hasAccount;
+
+  const FamilyMember({
+    required this.id, required this.name, required this.phone,
+    required this.relationship, this.avatarUrl, this.hasAccount = false,
+  });
+
+  factory FamilyMember.fromJson(Map<String, dynamic> j) => FamilyMember(
+    id:           j['id'] as int? ?? 0,
+    name:         j['name'] as String? ?? '',
+    phone:        j['phone'] as String? ?? '',
+    relationship: j['relationship'] as String? ?? '',
+    avatarUrl:    j['avatar_url'] as String?,
+    hasAccount:   j['has_account'] as bool? ?? false,
+  );
+}
+
+class FamilyGroup {
+  final int              id;
+  final String           name;
+  final List<FamilyMember> members;
+
+  const FamilyGroup({required this.id, required this.name, required this.members});
+
+  factory FamilyGroup.fromJson(Map<String, dynamic> j) => FamilyGroup(
+    id:      j['id'] as int? ?? 0,
+    name:    j['name'] as String? ?? '',
+    members: (j['members'] as List<dynamic>? ?? [])
+             .whereType<Map<String, dynamic>>()
+             .map(FamilyMember.fromJson)
+             .toList(),
+  );
+}
+
+// ── Subscription models ───────────────────────────────────────────────────────
+
+class SubscriptionPlan {
+  final int    id;
+  final String name;
+  final String slug;
+  final String? description;
+  final int    priceKhr;
+  final String billingCycle;
+  final int    rideCreditKhr;
+  final int    rideDiscountPct;
+  final int    deliveryDiscountPct;
+  final String freeCancellations; // may be "Unlimited"
+  final bool   surgeWaived;
+  final bool   priorityMatching;
+  final int    bonusPointsPct;
+  final List<String> features;
+  final String badgeColor;        // hex e.g. "#f59e0b"
+  final String icon;              // font-awesome class — mapped to IconData in UI
+
+  const SubscriptionPlan({
+    required this.id,
+    required this.name,
+    required this.slug,
+    this.description,
+    required this.priceKhr,
+    required this.billingCycle,
+    required this.rideCreditKhr,
+    required this.rideDiscountPct,
+    required this.deliveryDiscountPct,
+    required this.freeCancellations,
+    required this.surgeWaived,
+    required this.priorityMatching,
+    required this.bonusPointsPct,
+    required this.features,
+    required this.badgeColor,
+    required this.icon,
+  });
+
+  factory SubscriptionPlan.fromJson(Map<String, dynamic> j) => SubscriptionPlan(
+    id:                   j['id'] as int? ?? 0,
+    name:                 j['name'] as String? ?? '',
+    slug:                 j['slug'] as String? ?? '',
+    description:          j['description'] as String?,
+    priceKhr:             (j['price_khr'] as num? ?? 0).toInt(),
+    billingCycle:         j['billing_cycle'] as String? ?? 'monthly',
+    rideCreditKhr:        (j['ride_credit_khr'] as num? ?? 0).toInt(),
+    rideDiscountPct:      (j['ride_discount_pct'] as num? ?? 0).toInt(),
+    deliveryDiscountPct:  (j['delivery_discount_pct'] as num? ?? 0).toInt(),
+    freeCancellations:    j['free_cancellations']?.toString() ?? '0',
+    surgeWaived:          j['surge_waived'] as bool? ?? false,
+    priorityMatching:     j['priority_matching'] as bool? ?? false,
+    bonusPointsPct:       (j['bonus_points_pct'] as num? ?? 0).toInt(),
+    features:             (j['features'] as List<dynamic>? ?? []).cast<String>(),
+    badgeColor:           j['badge_color'] as String? ?? '#64748b',
+    icon:                 j['icon'] as String? ?? '',
+  );
+}
+
+class MySubscription {
+  final int    id;
+  final String planName;
+  final String planSlug;
+  final int    planPriceKhr;
+  final String status;
+  final bool   isActive;
+  final String paymentMethod;
+  final bool   autoRenew;
+  final DateTime? startedAt;
+  final DateTime? expiresAt;
+  final int    expiresInDays;
+  final int    usedRideCreditKhr;
+  final int    remainingCreditKhr;
+  final int    usedCancellations;
+  final String remainingCancellations;
+  final int    renewalCount;
+
+  const MySubscription({
+    required this.id,
+    required this.planName,
+    required this.planSlug,
+    required this.planPriceKhr,
+    required this.status,
+    required this.isActive,
+    required this.paymentMethod,
+    required this.autoRenew,
+    this.startedAt,
+    this.expiresAt,
+    required this.expiresInDays,
+    required this.usedRideCreditKhr,
+    required this.remainingCreditKhr,
+    required this.usedCancellations,
+    required this.remainingCancellations,
+    required this.renewalCount,
+  });
+
+  factory MySubscription.fromJson(Map<String, dynamic> j) {
+    final plan = j['plan'] as Map<String, dynamic>? ?? {};
+    return MySubscription(
+      id:                    j['id'] as int? ?? 0,
+      planName:              plan['name'] as String? ?? '',
+      planSlug:              plan['slug'] as String? ?? '',
+      planPriceKhr:          (plan['price_khr'] as num? ?? 0).toInt(),
+      status:                j['status'] as String? ?? 'inactive',
+      isActive:              j['is_active'] as bool? ?? false,
+      paymentMethod:         j['payment_method'] as String? ?? 'wallet',
+      autoRenew:             j['auto_renew'] as bool? ?? false,
+      startedAt:             j['started_at'] != null ? DateTime.tryParse(j['started_at'] as String) : null,
+      expiresAt:             j['expires_at'] != null ? DateTime.tryParse(j['expires_at'] as String) : null,
+      expiresInDays:         (j['expires_in_days'] as num? ?? 0).toInt(),
+      usedRideCreditKhr:     (j['used_ride_credit_khr'] as num? ?? 0).toInt(),
+      remainingCreditKhr:    (j['remaining_credit_khr'] as num? ?? 0).toInt(),
+      usedCancellations:     (j['used_cancellations'] as num? ?? 0).toInt(),
+      remainingCancellations: j['remaining_cancellations']?.toString() ?? '0',
+      renewalCount:          (j['renewal_count'] as num? ?? 0).toInt(),
+    );
+  }
+}
+
+class SubscriptionBill {
+  final int    id;
+  final int    amountKhr;
+  final String type;
+  final String status;
+  final String paymentMethod;
+  final String reference;
+  final DateTime? paidAt;
+  final String planName;
+  final String planSlug;
+  final String badgeColor;
+
+  const SubscriptionBill({
+    required this.id,
+    required this.amountKhr,
+    required this.type,
+    required this.status,
+    required this.paymentMethod,
+    required this.reference,
+    this.paidAt,
+    required this.planName,
+    required this.planSlug,
+    required this.badgeColor,
+  });
+
+  factory SubscriptionBill.fromJson(Map<String, dynamic> j) {
+    final plan = j['plan'] as Map<String, dynamic>? ?? {};
+    return SubscriptionBill(
+      id:            j['id'] as int? ?? 0,
+      amountKhr:     (j['amount_khr'] as num? ?? 0).toInt(),
+      type:          j['type'] as String? ?? '',
+      status:        j['status'] as String? ?? '',
+      paymentMethod: j['payment_method'] as String? ?? '',
+      reference:     j['reference'] as String? ?? '',
+      paidAt:        j['paid_at'] != null ? DateTime.tryParse(j['paid_at'] as String) : null,
+      planName:      plan['name'] as String? ?? '',
+      planSlug:      plan['slug'] as String? ?? '',
+      badgeColor:    plan['badge_color'] as String? ?? '#64748b',
+    );
+  }
 }

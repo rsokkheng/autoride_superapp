@@ -9,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
 import '../../models/delivery_model.dart';
+import '../shared/ride_chat_screen.dart';
 
 // Default Phnom Penh centre — used until GPS fix obtained
 const _kPhnomPenh = LatLng(11.5680, 104.9195);
@@ -196,6 +197,14 @@ class _DriverDeliveryActiveScreenState
   Future<void> _startTracking() async {
     final granted = await LocationService.instance.requestPermission();
     if (!granted || !mounted) return;
+
+    // Draw an initial route immediately using last known position so the
+    // line appears even if the driver hasn't moved 5 m yet.
+    final last = await Geolocator.getLastKnownPosition();
+    if (last != null && mounted && _inCambodia(last.latitude, last.longitude)) {
+      _onDriverPosition(last);
+    }
+
     LocationService.instance.startTracking(
       driverId:    widget.driverIdStr,
       onPosition:  _onDriverPosition,
@@ -270,6 +279,29 @@ class _DriverDeliveryActiveScreenState
           jointType:  JointType.round,
         ));
     });
+  }
+
+  // ── Chat ──────────────────────────────────────────────────────────────────
+
+  Future<void> _openChat() async {
+    final saved = await ApiService.getSavedUser();
+    if (!mounted) return;
+    final driverId    = int.tryParse(widget.driverIdStr) ?? (saved?.id ?? 0);
+    final passengerId = widget.delivery.senderId;
+    final senderName  = widget.delivery.sender?.name
+        ?? widget.delivery.senderName
+        ?? 'Sender #$passengerId';
+    Navigator.push(context, MaterialPageRoute(
+      builder: (_) => RideChatScreen(
+        rideId:      'delivery-${widget.delivery.id}',
+        driverId:    driverId,
+        passengerId: passengerId,
+        myId:        driverId,
+        myName:      saved?.name ?? 'Driver',
+        otherName:   senderName,
+        isDriver:    true,
+      ),
+    ));
   }
 
   // ── Backend location push ──────────────────────────────────────────────────
@@ -424,7 +456,7 @@ class _DriverDeliveryActiveScreenState
       context: context,
       isDismissible: false,
       enableDrag:    false,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -469,6 +501,7 @@ class _DriverDeliveryActiveScreenState
           onMapCreated: (c) {
             _mapController = c;
             _fitToDriver();
+            if (_driverLatLng != null) _fetchLiveRoute(_driverLatLng!);
           },
         ),
 
@@ -485,6 +518,11 @@ class _DriverDeliveryActiveScreenState
             if (_driverLatLng != null) _EtaChip(
               etaMin:     _etaMinutes,
               distanceKm: _distanceKm,
+            ),
+            const SizedBox(width: 8),
+            _MapButton(
+              icon: Icons.chat_bubble_outline,
+              onTap: _openChat,
             ),
             const SizedBox(width: 8),
             _MapButton(
@@ -522,24 +560,24 @@ class _EtaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
     decoration: BoxDecoration(
-      color: AppTheme.surface,
+      color: context.appSurface,
       borderRadius: BorderRadius.circular(20),
       boxShadow: const [BoxShadow(color: Color(0x18000000), blurRadius: 8)],
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.access_time, size: 14, color: AppTheme.accentOrange),
-      const SizedBox(width: 4),
+      Icon(Icons.access_time, size: 14, color: AppTheme.accentOrange),
+      SizedBox(width: 4),
       Text(
         etaMin > 0 ? '$etaMin min' : 'Arriving',
-        style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13),
+        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13),
       ),
       if (distanceKm > 0) ...[
         const SizedBox(width: 6),
         Text(
           '· ${distanceKm.toStringAsFixed(1)} km',
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 12),
         ),
       ],
     ]),
@@ -559,11 +597,11 @@ class _MapButton extends StatelessWidget {
     child: Container(
       width: 40, height: 40,
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         shape: BoxShape.circle,
         boxShadow: const [BoxShadow(color: Color(0x18000000), blurRadius: 8)],
       ),
-      child: Icon(icon, color: AppTheme.textPrimary, size: 20),
+      child: Icon(icon, color: context.appTextPrimary, size: 20),
     ),
   );
 }
@@ -643,25 +681,25 @@ class _BottomPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppTheme.surface,
+      decoration: BoxDecoration(
+        color: context.appSurface,
         boxShadow: [BoxShadow(color: Color(0x18000000), blurRadius: 16, offset: Offset(0, -4))],
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 28),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
 
         // Handle
         Center(child: Container(
           width: 36, height: 4,
           decoration: BoxDecoration(
-              color: AppTheme.cardBg, borderRadius: BorderRadius.circular(2)),
+              color: context.appCardBg, borderRadius: BorderRadius.circular(2)),
         )),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
 
         // Progress stepper
         _MiniStepper(steps: _steps, currentStep: _currentStep),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
 
         // Status label
         Row(children: [
@@ -672,40 +710,40 @@ class _BottomPanel extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Expanded(
             child: Text(_statusLabel,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                style: TextStyle(
+                    color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 15)),
           ),
           if (etaMinutes > 0 && !_isDone)
             Text('$etaMinutes min away',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         // Route info
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+              color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
           child: Column(children: [
             Row(children: [
-              const Icon(Icons.circle, color: AppTheme.success, size: 8),
-              const SizedBox(width: 8),
+              Icon(Icons.circle, color: AppTheme.success, size: 8),
+              SizedBox(width: 8),
               Expanded(child: Text(delivery.pickupAddress,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   maxLines: 1, overflow: TextOverflow.ellipsis)),
             ]),
-            Container(margin: const EdgeInsets.only(left: 3),
-                width: 2, height: 10, color: AppTheme.cardBg),
+            Container(margin: EdgeInsets.only(left: 3),
+                width: 2, height: 10, color: context.appCardBg),
             Row(children: [
-              const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
-              const SizedBox(width: 8),
+              Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
+              SizedBox(width: 8),
               Expanded(child: Text(delivery.dropoffAddress,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   maxLines: 1, overflow: TextOverflow.ellipsis)),
             ]),
           ]),
@@ -781,38 +819,38 @@ class _MiniStepper extends StatelessWidget {
         Row(children: [
           if (i > 0) Expanded(child: Container(
             height: 2,
-            color: done || active ? AppTheme.success : AppTheme.cardBg,
+            color: done || active ? AppTheme.success : context.appCardBg,
           )),
           Container(
             width: 16, height: 16,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: done ? AppTheme.success : active ? AppTheme.accentOrange : AppTheme.cardBg,
+              color: done ? AppTheme.success : active ? AppTheme.accentOrange : context.appCardBg,
               border: Border.all(
                 color: done ? AppTheme.success : active ? AppTheme.accentOrange
-                    : AppTheme.textSecondary.withValues(alpha: 0.3),
+                    : context.appTextSecondary.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: Center(
               child: done
-                  ? const Icon(Icons.check, size: 9, color: Colors.white)
+                  ? Icon(Icons.check, size: 9, color: Colors.white)
                   : active
-                      ? Container(width: 6, height: 6, decoration: const BoxDecoration(
+                      ? Container(width: 6, height: 6, decoration: BoxDecoration(
                           color: Colors.white, shape: BoxShape.circle))
                       : null,
             ),
           ),
           if (i < steps.length - 1) Expanded(child: Container(
             height: 2,
-            color: done ? AppTheme.success : AppTheme.cardBg,
+            color: done ? AppTheme.success : context.appCardBg,
           )),
         ]),
-        const SizedBox(height: 3),
+        SizedBox(height: 3),
         Text(steps[i],
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: done || active ? AppTheme.textPrimary : AppTheme.textSecondary,
+            color: done || active ? context.appTextPrimary : context.appTextSecondary,
             fontSize: 9,
             fontWeight: active ? FontWeight.w700 : FontWeight.w400,
           ),
@@ -831,23 +869,23 @@ class _RecipientRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+    padding: EdgeInsets.only(bottom: 12),
     child: Row(children: [
       Container(
-        padding: const EdgeInsets.all(7),
+        padding: EdgeInsets.all(7),
         decoration: BoxDecoration(
           color: AppTheme.accent.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
+        child: Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
       ),
-      const SizedBox(width: 10),
+      SizedBox(width: 10),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (name != null)
-          Text(name!, style: const TextStyle(
-              color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+          Text(name!, style: TextStyle(
+              color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
         if (phone != null)
-          Text(phone!, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          Text(phone!, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
       ])),
       if (phone != null)
         GestureDetector(
@@ -873,7 +911,7 @@ class _CompleteSummarySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+    padding: EdgeInsets.fromLTRB(24, 20, 24, 36),
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Container(
         width: 72, height: 72,
@@ -881,34 +919,34 @@ class _CompleteSummarySheet extends StatelessWidget {
           color: AppTheme.success.withValues(alpha: 0.12),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 44),
+        child: Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 44),
       ),
-      const SizedBox(height: 16),
+      SizedBox(height: 16),
       Text(
         delivery.isMoving ? 'Moving Complete!' : 'Delivery Complete!',
-        style: const TextStyle(
-            color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w800),
+        style: TextStyle(
+            color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800),
       ),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       Text(
         delivery.isMoving
             ? 'Great job — the moving job is done.'
             : 'Package delivered successfully.',
-        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+        style: TextStyle(color: context.appTextSecondary, fontSize: 13),
         textAlign: TextAlign.center,
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
       // Fee earned
       Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.cardBg,
+          color: context.appCardBg,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.payments_outlined, color: AppTheme.accentOrange, size: 20),
-          const SizedBox(width: 8),
-          Text('You earned ', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+          Icon(Icons.payments_outlined, color: AppTheme.accentOrange, size: 20),
+          SizedBox(width: 8),
+          Text('You earned ', style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
           Text(
             AppTheme.khr(delivery.fee),
             style: const TextStyle(

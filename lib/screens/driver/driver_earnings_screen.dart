@@ -74,17 +74,17 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Earnings'),
+        title: Text('My Earnings'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
+          preferredSize: Size.fromHeight(48),
           child: Container(
-            color: AppTheme.surface,
+            color: context.appSurface,
             child: TabBar(
               controller: _tabController,
               indicatorColor: AppTheme.accent,
               indicatorWeight: 3,
               labelColor: AppTheme.accent,
-              unselectedLabelColor: AppTheme.textSecondary,
+              unselectedLabelColor: context.appTextSecondary,
               labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               tabs: _periods.map((p) => Tab(text: p.$2)).toList(),
             ),
@@ -169,35 +169,35 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                         ),
                       ]),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Breakdown header
-                    const Text(
+                    Text(
                       'Breakdown',
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: context.appTextPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
 
                     if (tripList.isEmpty)
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(24),
+                        padding: EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: context.appSurface,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Column(children: [
+                        child: Column(children: [
                           Icon(Icons.receipt_long_outlined,
-                              color: AppTheme.textSecondary, size: 36),
+                              color: context.appTextSecondary, size: 36),
                           SizedBox(height: 10),
                           Text(
                             'No trips in this period',
                             style: TextStyle(
-                              color: AppTheme.textSecondary,
+                              color: context.appTextSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -211,36 +211,36 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                         final time    = _timeLabel(trip['created_at'] as String? ?? '');
 
                         return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
+                          margin: EdgeInsets.only(bottom: 10),
+                          padding: EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: AppTheme.surface,
+                            color: context.appSurface,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Row(children: [
                             Container(
-                              padding: const EdgeInsets.all(9),
+                              padding: EdgeInsets.all(9),
                               decoration: BoxDecoration(
                                 color: AppTheme.success.withValues(alpha: 0.12),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.directions_car,
+                              child: Icon(Icons.directions_car,
                                   color: AppTheme.success, size: 18),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(children: [
-                                    const Icon(Icons.circle,
+                                    Icon(Icons.circle,
                                         color: AppTheme.success, size: 7),
-                                    const SizedBox(width: 5),
+                                    SizedBox(width: 5),
                                     Expanded(
                                       child: Text(
                                         from,
-                                        style: const TextStyle(
-                                          color: AppTheme.textPrimary,
+                                        style: TextStyle(
+                                          color: context.appTextPrimary,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -249,16 +249,16 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                                       ),
                                     ),
                                   ]),
-                                  const SizedBox(height: 3),
+                                  SizedBox(height: 3),
                                   Row(children: [
-                                    const Icon(Icons.location_on,
+                                    Icon(Icons.location_on,
                                         color: AppTheme.accentOrange, size: 9),
-                                    const SizedBox(width: 5),
+                                    SizedBox(width: 5),
                                     Expanded(
                                       child: Text(
                                         to,
-                                        style: const TextStyle(
-                                          color: AppTheme.textSecondary,
+                                        style: TextStyle(
+                                          color: context.appTextSecondary,
                                           fontSize: 12,
                                         ),
                                         maxLines: 1,
@@ -267,11 +267,11 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                                     ),
                                   ]),
                                   if (time.isNotEmpty) ...[
-                                    const SizedBox(height: 3),
+                                    SizedBox(height: 3),
                                     Text(
                                       time,
-                                      style: const TextStyle(
-                                        color: AppTheme.textSecondary,
+                                      style: TextStyle(
+                                        color: context.appTextSecondary,
                                         fontSize: 11,
                                       ),
                                     ),

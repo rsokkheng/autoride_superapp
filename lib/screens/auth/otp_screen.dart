@@ -122,20 +122,20 @@ class _OtpScreenState extends State<OtpScreen> {
   Widget build(BuildContext context) {
     final maskedPhone = _maskPhone(widget.phone);
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         elevation: 0,
-        leading: const BackButton(color: AppTheme.textPrimary),
-        title: const Text('Verify Phone',
+        leading: BackButton(color: context.appTextPrimary),
+        title: Text('Verify Phone',
             style: TextStyle(
-                color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(28),
+          padding: EdgeInsets.all(28),
           child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Icon
             Container(
@@ -144,21 +144,21 @@ class _OtpScreenState extends State<OtpScreen> {
                 color: _green.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.sms_outlined, color: _green, size: 34),
+              child: Icon(Icons.sms_outlined, color: _green, size: 34),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
-            const Text('Enter verification code',
+            Text('Enter verification code',
                 style: TextStyle(fontSize: 20,
-                    fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-            const SizedBox(height: 8),
+                    fontWeight: FontWeight.w800, color: context.appTextPrimary)),
+            SizedBox(height: 8),
             Text(
               'A 6-digit code was sent to $maskedPhone',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 14),
+              style: TextStyle(
+                  color: context.appTextSecondary, fontSize: 14),
             ),
-            const SizedBox(height: 36),
+            SizedBox(height: 36),
 
             // OTP boxes
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children:
@@ -169,26 +169,26 @@ class _OtpScreenState extends State<OtpScreen> {
                 onChanged:  (v) => _onDigitChanged(i, v),
               )),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             if (_error != null)
               Container(
-                padding: const EdgeInsets.symmetric(
+                padding: EdgeInsets.symmetric(
                     horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppTheme.danger.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(children: [
-                  const Icon(Icons.error_outline,
+                  Icon(Icons.error_outline,
                       color: AppTheme.danger, size: 16),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Expanded(child: Text(_error!,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.danger, fontSize: 13))),
                 ]),
               ),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
 
             // Verify button
             SizedBox(
@@ -204,23 +204,23 @@ class _OtpScreenState extends State<OtpScreen> {
                       borderRadius: BorderRadius.circular(14)),
                 ),
                 child: _verifying
-                    ? const SizedBox(width: 22, height: 22,
+                    ? SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(
                             strokeWidth: 2.5, color: Colors.white))
-                    : const Text('Verify',
+                    : Text('Verify',
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Resend
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              const Text("Didn't receive the code? ",
-                  style: TextStyle(color: AppTheme.textSecondary)),
+              Text("Didn't receive the code? ",
+                  style: TextStyle(color: context.appTextSecondary)),
               _resendSecs > 0
                   ? Text('Resend in ${_resendSecs}s',
-                      style: const TextStyle(color: AppTheme.textSecondary))
+                      style: TextStyle(color: context.appTextSecondary))
                   : GestureDetector(
                       onTap: _resending ? null : _resend,
                       child: _resending
@@ -269,13 +269,13 @@ class _OtpBox extends StatelessWidget {
         maxLength:        6,
         onChanged:        onChanged,
         inputFormatters:  [FilteringTextInputFormatter.digitsOnly],
-        style: const TextStyle(
+        style: TextStyle(
             fontSize: 22, fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary),
+            color: context.appTextPrimary),
         decoration: InputDecoration(
           counterText:    '',
           filled:         true,
-          fillColor:      AppTheme.cardBg,
+          fillColor:      context.appCardBg,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none),

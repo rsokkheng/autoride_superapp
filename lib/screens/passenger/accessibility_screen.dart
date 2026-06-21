@@ -69,26 +69,26 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Accessibility'),
+        title: Text('Accessibility'),
         actions: [
           if (!_loading && _error == null)
             TextButton(
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
-                  : const Text('Save', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
+                  : Text('Save', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
             ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+                  SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
                 ]))
@@ -183,13 +183,13 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
-      const SizedBox(height: 10),
+      Text(title, style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+      SizedBox(height: 10),
       Container(
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
         child: Column(children: [
           for (int i = 0; i < children.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppTheme.cardBg, indent: 56),
+            if (i > 0) Divider(height: 1, color: context.appCardBg, indent: 56),
             children[i],
           ],
         ]),
@@ -216,21 +216,21 @@ class _Toggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: AppTheme.accent.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: AppTheme.accent, size: 20),
         ),
-        const SizedBox(width: 14),
+        SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-            Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.4)),
+            Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+            Text(subtitle, style: TextStyle(color: context.appTextSecondary, fontSize: 12, height: 1.4)),
           ]),
         ),
         Switch(

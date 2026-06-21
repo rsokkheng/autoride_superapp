@@ -65,13 +65,13 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel Ride',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-        content: const Text(
+        title: Text('Cancel Ride',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text(
           'Are you sure you want to cancel this scheduled ride?',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
@@ -104,29 +104,29 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Scheduled Rides'),
+        title: Text('Scheduled Rides'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.calendar_month_outlined),
+            icon: Icon(Icons.calendar_month_outlined),
             onPressed: _load,
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(24),
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
-                      const SizedBox(height: 12),
+                      Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
+                      SizedBox(height: 12),
                       Text(_error!, textAlign: TextAlign.center,
-                          style: const TextStyle(color: AppTheme.textSecondary)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                          style: TextStyle(color: context.appTextSecondary)),
+                      SizedBox(height: 16),
+                      ElevatedButton(onPressed: _load, child: Text('Retry')),
                     ]),
                   ),
                 )
@@ -138,21 +138,21 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
                           SizedBox(height: MediaQuery.of(context).size.height * 0.25),
                           Column(mainAxisSize: MainAxisSize.min, children: [
                             Container(
-                              padding: const EdgeInsets.all(24),
+                              padding: EdgeInsets.all(24),
                               decoration: BoxDecoration(
                                 color: AppTheme.accent.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.calendar_today_outlined,
+                              child: Icon(Icons.calendar_today_outlined,
                                   color: AppTheme.accent, size: 48),
                             ),
-                            const SizedBox(height: 16),
-                            const Text('No upcoming rides',
-                                style: TextStyle(color: AppTheme.textPrimary,
+                            SizedBox(height: 16),
+                            Text('No upcoming rides',
+                                style: TextStyle(color: context.appTextPrimary,
                                     fontSize: 18, fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 8),
-                            const Text('Schedule a ride to see it here.',
-                                style: TextStyle(color: AppTheme.textSecondary)),
+                            SizedBox(height: 8),
+                            Text('Schedule a ride to see it here.',
+                                style: TextStyle(color: context.appTextSecondary)),
                           ]),
                         ])
                       : ListView.separated(
@@ -193,11 +193,11 @@ class _RideCard extends StatelessWidget {
     final isRide   = service.toLowerCase() != 'delivery';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -205,33 +205,33 @@ class _RideCard extends StatelessWidget {
           Row(children: [
             Expanded(
               child: Text(formattedDate,
-                  style: const TextStyle(color: AppTheme.textPrimary,
+                  style: TextStyle(color: context.appTextPrimary,
                       fontSize: 16, fontWeight: FontWeight.w700)),
             ),
             if (countdown.isNotEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: countdown == 'Past'
-                      ? AppTheme.textSecondary.withValues(alpha: 0.15)
+                      ? context.appTextSecondary.withValues(alpha: 0.15)
                       : AppTheme.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(countdown,
                     style: TextStyle(
-                      color: countdown == 'Past' ? AppTheme.textSecondary : AppTheme.accent,
+                      color: countdown == 'Past' ? context.appTextSecondary : AppTheme.accent,
                       fontSize: 12, fontWeight: FontWeight.w600,
                     )),
               ),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _AddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: pickup),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           _AddressRow(icon: Icons.location_on, color: AppTheme.danger, label: dropoff),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: isRide
                     ? AppTheme.accent.withValues(alpha: 0.1)
@@ -242,7 +242,7 @@ class _RideCard extends StatelessWidget {
                 Icon(isRide ? Icons.directions_car_outlined : Icons.delivery_dining_outlined,
                     size: 14,
                     color: isRide ? AppTheme.accent : AppTheme.accentOrange),
-                const SizedBox(width: 4),
+                SizedBox(width: 4),
                 Text(isRide ? 'Ride' : 'Delivery',
                     style: TextStyle(
                       color: isRide ? AppTheme.accent : AppTheme.accentOrange,
@@ -250,9 +250,9 @@ class _RideCard extends StatelessWidget {
                     )),
               ]),
             ),
-            const Spacer(),
+            Spacer(),
             Text(AppTheme.khr(fareKhr is num ? fareKhr : int.tryParse(fareKhr.toString()) ?? 0),
-                style: const TextStyle(color: AppTheme.textPrimary,
+                style: TextStyle(color: context.appTextPrimary,
                     fontSize: 15, fontWeight: FontWeight.w700)),
           ]),
           const SizedBox(height: 12),
@@ -300,10 +300,10 @@ class _AddressRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(children: [
       Icon(icon, color: color, size: 16),
-      const SizedBox(width: 8),
+      SizedBox(width: 8),
       Expanded(child: Text(label,
           maxLines: 1, overflow: TextOverflow.ellipsis,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 13))),
     ]);
   }
 }

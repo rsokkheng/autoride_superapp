@@ -456,56 +456,56 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         colors: const [Color(0xFF00C48C), Color(0xFF00A37A)],
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Send anything,\nanywhere fast!',
+            Text('Send anything,\nanywhere fast!',
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text('Average delivery: 25 min',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
           ])),
-          const Icon(Icons.delivery_dining, color: Colors.white, size: 56),
+          Icon(Icons.delivery_dining, color: Colors.white, size: 56),
         ]),
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // Sender
-      const SectionHeader(title: 'Sender'),
-      const SizedBox(height: 14),
+      SectionHeader(title: 'Sender'),
+      SizedBox(height: 14),
       _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       _Field(hint: "Sender's phone", icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
           keyboardType: TextInputType.phone),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       _AddressWithMap(
         hint: 'Pickup address', icon: Icons.location_on_outlined, controller: _pickupCtrl,
         onMapTap: () => _openLocationPicker(_pickupCtrl, _pickupLatLng, (ll) => _pickupLatLng = ll),
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // Recipient
-      const SectionHeader(title: 'Recipient'),
-      const SizedBox(height: 14),
+      SectionHeader(title: 'Recipient'),
+      SizedBox(height: 14),
       _Field(hint: "Recipient's name",  icon: Icons.person_outline, controller: _recipientNameCtrl),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       _Field(hint: "Recipient's phone", icon: Icons.phone_outlined,  controller: _recipientPhoneCtrl,
           keyboardType: TextInputType.phone),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       _AddressWithMap(
         hint: 'Delivery address', icon: Icons.location_on, controller: _dropoffCtrl,
         onMapTap: () => _openLocationPicker(_dropoffCtrl, _dropoffLatLng, (ll) => _dropoffLatLng = ll),
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // Package
-      const SectionHeader(title: 'Package'),
-      const SizedBox(height: 14),
+      SectionHeader(title: 'Package'),
+      SizedBox(height: 14),
       _Field(hint: 'Package description (optional)', icon: Icons.inventory_2_outlined,
           controller: _packageDetailsCtrl),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
       _Field(hint: 'Fee in KHR (e.g. 18000)', icon: Icons.attach_money, controller: _feeCtrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-      const SizedBox(height: 10),
+          keyboardType: TextInputType.numberWithOptions(decimal: true)),
+      SizedBox(height: 10),
       _Field(hint: 'Notes (optional)', icon: Icons.notes_outlined, controller: _notesCtrl),
-      const SizedBox(height: 16),
+      SizedBox(height: 16),
 
       // Package size
       _AppDropdown<String>(
@@ -519,7 +519,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ],
         onChanged: (v) => setState(() => _packageSize = v),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
 
       // Service option
       _AppDropdown<String>(
@@ -532,7 +532,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ],
         onChanged: (v) => setState(() => _deliveryServiceOption = v),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
 
       // Delivery vehicle
       _AppDropdown<String>(
@@ -545,7 +545,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ],
         onChanged: (v) => setState(() => _deliveryVehicleType = v),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
 
       // Payment by
       _AppDropdown<String>(
@@ -558,7 +558,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ],
         onChanged: (v) => setState(() => _paymentBy = v),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
 
       // Payment method (always visible, no payment model needed)
       _AppDropdown<String>(
@@ -574,12 +574,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ],
         onChanged: (v) => setState(() => _paymentMethod = v),
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // Schedule toggle
       Row(children: [
-        const Text('Schedule delivery',
-            style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+        Text('Schedule delivery',
+            style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
         const Spacer(),
         Switch(
           value: _isScheduled,
@@ -767,7 +767,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           _fetchMovingEstimate();
         },
       ),
-      const SizedBox(height: 10),
+      SizedBox(height: 10),
 
       // Packing service
       _CheckOption(
@@ -777,11 +777,11 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         value: _packingService,
         onChanged: (v) => setState(() => _packingService = v),
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // ── Notes ─────────────────────────────────────────────────────────────
       _Field(hint: 'Notes (optional)', icon: Icons.notes_outlined, controller: _moveNotesCtrl),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // ── 💳 Payment Method ─────────────────────────────────────────────────
       _AppDropdown<String>(
@@ -797,14 +797,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ],
         onChanged: (v) => setState(() => _movePaymentMethod = v),
       ),
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // ── Moving date ───────────────────────────────────────────────────────
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Row(children: [
-        const Text('Schedule moving date',
-            style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
-        const Spacer(),
+        Text('Schedule moving date',
+            style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+        Spacer(),
         Switch(
           value: _isMoveScheduled,
           onChanged: (v) => setState(() => _isMoveScheduled = v),
@@ -813,42 +813,42 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         ),
       ]),
       if (_isMoveScheduled) ...[
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         _DateTimeTile(dateTime: _moveDate, color: AppTheme.accent, onTap: _pickMoveDate),
       ],
-      const SizedBox(height: 20),
+      SizedBox(height: 20),
 
       // ── 💰 Price Estimate (real API) ──────────────────────────────────────
       if (_moveFromLatLng == null || _moveToLatLng == null)
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppTheme.cardBg,
+            color: context.appCardBg,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppTheme.accent.withValues(alpha: 0.2)),
           ),
-          child: const Row(children: [
-            Icon(Icons.receipt_long_outlined, color: AppTheme.textSecondary, size: 18),
+          child: Row(children: [
+            Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 18),
             SizedBox(width: 10),
             Expanded(
               child: Text('Select pickup and dropoff locations to see fare estimate',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
             ),
           ]),
         )
       else if (_estimateLoading)
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.cardBg,
+            color: context.appCardBg,
             borderRadius: BorderRadius.circular(14),
           ),
-          child: const Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             SizedBox(width: 18, height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent)),
             SizedBox(width: 12),
             Text('Calculating fare…',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           ]),
         )
       else if (_movingEstimate != null)
@@ -869,33 +869,33 @@ class _FloorPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.cardBg),
+        border: Border.all(color: context.appCardBg),
       ),
       child: Row(children: [
-        const Icon(Icons.apartment_outlined, color: AppTheme.textSecondary, size: 20),
-        const SizedBox(width: 10),
+        Icon(Icons.apartment_outlined, color: context.appTextSecondary, size: 20),
+        SizedBox(width: 10),
         Expanded(child: Text(label,
-            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14))),
+            style: TextStyle(color: context.appTextPrimary, fontSize: 14))),
         GestureDetector(
           onTap: value > 1 ? () => onChanged(value - 1) : null,
           child: Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: value > 1 ? AppTheme.accent.withValues(alpha: 0.12) : AppTheme.cardBg,
+              color: value > 1 ? AppTheme.accent.withValues(alpha: 0.12) : context.appCardBg,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.remove, size: 16,
-                color: value > 1 ? AppTheme.accent : AppTheme.textSecondary),
+                color: value > 1 ? AppTheme.accent : context.appTextSecondary),
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: EdgeInsets.symmetric(horizontal: 14),
           child: Text('$value',
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w700, fontSize: 16)),
         ),
         GestureDetector(
@@ -903,11 +903,11 @@ class _FloorPicker extends StatelessWidget {
           child: Container(
             width: 32, height: 32,
             decoration: BoxDecoration(
-              color: value < 20 ? AppTheme.accent.withValues(alpha: 0.12) : AppTheme.cardBg,
+              color: value < 20 ? AppTheme.accent.withValues(alpha: 0.12) : context.appCardBg,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(Icons.add, size: 16,
-                color: value < 20 ? AppTheme.accent : AppTheme.textSecondary),
+                color: value < 20 ? AppTheme.accent : context.appTextSecondary),
           ),
         ),
       ]),
@@ -933,46 +933,46 @@ class _BoolToggleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-            color: value ? AppTheme.accent.withValues(alpha: 0.4) : AppTheme.cardBg),
+            color: value ? AppTheme.accent.withValues(alpha: 0.4) : context.appCardBg),
       ),
       child: Row(children: [
-        Icon(icon, color: value ? AppTheme.accent : AppTheme.textSecondary, size: 20),
-        const SizedBox(width: 10),
+        Icon(icon, color: value ? AppTheme.accent : context.appTextSecondary, size: 20),
+        SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: TextStyle(
-              color: value ? AppTheme.accent : AppTheme.textPrimary,
+              color: value ? AppTheme.accent : context.appTextPrimary,
               fontWeight: FontWeight.w600, fontSize: 14)),
-          Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          Text(subtitle, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
         ])),
         Row(children: [
           GestureDetector(
             onTap: value ? null : () => onChanged(true),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: value ? AppTheme.accent : AppTheme.cardBg,
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(8)),
+                color: value ? AppTheme.accent : context.appCardBg,
+                borderRadius: BorderRadius.horizontal(left: Radius.circular(8)),
               ),
               child: Text('Yes', style: TextStyle(
-                  color: value ? Colors.white : AppTheme.textSecondary,
+                  color: value ? Colors.white : context.appTextSecondary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
             ),
           ),
           GestureDetector(
             onTap: value ? () => onChanged(false) : null,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: !value ? AppTheme.danger.withValues(alpha: 0.15) : AppTheme.cardBg,
-                borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                color: !value ? AppTheme.danger.withValues(alpha: 0.15) : context.appCardBg,
+                borderRadius: BorderRadius.horizontal(right: Radius.circular(8)),
               ),
               child: Text('No', style: TextStyle(
-                  color: !value ? AppTheme.danger : AppTheme.textSecondary,
+                  color: !value ? AppTheme.danger : context.appTextSecondary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
             ),
           ),
@@ -992,18 +992,18 @@ class _HelperCountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.cardBg),
+        border: Border.all(color: context.appCardBg),
       ),
       child: Row(children: [
-        const Icon(Icons.people_outline, color: AppTheme.accent, size: 20),
-        const SizedBox(width: 10),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Helpers needed', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-          Text('1–4 persons for carrying', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+        Icon(Icons.people_outline, color: AppTheme.accent, size: 20),
+        SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Helpers needed', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+          Text('1–4 persons for carrying', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
         ])),
         Row(children: List.generate(4, (i) {
           final n = i + 1;
@@ -1011,15 +1011,15 @@ class _HelperCountRow extends StatelessWidget {
           return GestureDetector(
             onTap: () => onChanged(n),
             child: Container(
-              margin: const EdgeInsets.only(left: 6),
+              margin: EdgeInsets.only(left: 6),
               width: 36, height: 36,
               decoration: BoxDecoration(
-                color: selected ? AppTheme.accent : AppTheme.cardBg,
+                color: selected ? AppTheme.accent : context.appCardBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(child: Text('$n',
                   style: TextStyle(
-                      color: selected ? Colors.white : AppTheme.textSecondary,
+                      color: selected ? Colors.white : context.appTextSecondary,
                       fontWeight: FontWeight.w700))),
             ),
           );
@@ -1042,20 +1042,20 @@ class _MovingFareBreakdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.accent.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Row(children: [
+        Row(children: [
           Icon(Icons.receipt_long_outlined, color: AppTheme.accent, size: 18),
           SizedBox(width: 6),
           Text('Fare Estimate', style: TextStyle(
               color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _PriceRow(label: 'Base fee',     value: AppTheme.khr(estimate.baseFee)),
         if (estimate.distanceFee > 0)
           _PriceRow(label: 'Distance fee', value: AppTheme.khr(estimate.distanceFee)),
@@ -1063,17 +1063,17 @@ class _MovingFareBreakdown extends StatelessWidget {
           _PriceRow(label: 'Helper fee',   value: AppTheme.khr(estimate.helperFee)),
         if (estimate.floorFee > 0)
           _PriceRow(label: 'Floor fee',    value: AppTheme.khr(estimate.floorFee)),
-        const Divider(height: 16, color: AppTheme.cardBg),
+        Divider(height: 16, color: context.appCardBg),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Total estimate',
-              style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+          Text('Total estimate',
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
           Text(AppTheme.khr(estimate.total),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 18)),
         ]),
-        const SizedBox(height: 4),
-        const Text('Final price confirmed after booking',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+        SizedBox(height: 4),
+        Text('Final price confirmed after booking',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ]),
     );
   }
@@ -1086,10 +1086,10 @@ class _PriceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: EdgeInsets.only(bottom: 6),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-        Text(value, style: const TextStyle(color: AppTheme.textPrimary,
+        Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+        Text(value, style: TextStyle(color: context.appTextPrimary,
             fontWeight: FontWeight.w600, fontSize: 13)),
       ]),
     );
@@ -1137,8 +1137,8 @@ class _AppDropdown<T> extends StatelessWidget {
   void _open(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) => SafeArea(
@@ -1146,25 +1146,25 @@ class _AppDropdown<T> extends StatelessWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             // Handle
             Container(
-              margin: const EdgeInsets.symmetric(vertical: 12),
+              margin: EdgeInsets.symmetric(vertical: 12),
               width: 40, height: 4,
               decoration: BoxDecoration(
-                  color: AppTheme.cardBg,
+                  color: context.appCardBg,
                   borderRadius: BorderRadius.circular(2)),
             ),
             // Title
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(label,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
+                    style: TextStyle(
+                        color: context.appTextPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w700)),
               ),
             ),
-            const Divider(height: 1, color: AppTheme.cardBg),
+            Divider(height: 1, color: context.appCardBg),
             // Options
             ...items.map((item) {
               final selected = item.value == value;
@@ -1174,7 +1174,7 @@ class _AppDropdown<T> extends StatelessWidget {
                   Navigator.pop(ctx);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
+                  padding: EdgeInsets.symmetric(
                       horizontal: 20, vertical: 14),
                   child: Row(children: [
                     Container(
@@ -1182,16 +1182,16 @@ class _AppDropdown<T> extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: selected
                             ? AppTheme.accent.withValues(alpha: 0.12)
-                            : AppTheme.cardBg,
+                            : context.appCardBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(item.icon,
                           color: selected
                               ? AppTheme.accent
-                              : AppTheme.textSecondary,
+                              : context.appTextSecondary,
                           size: 20),
                     ),
-                    const SizedBox(width: 14),
+                    SizedBox(width: 14),
                     Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -1199,21 +1199,21 @@ class _AppDropdown<T> extends StatelessWidget {
                               style: TextStyle(
                                   color: selected
                                       ? AppTheme.accent
-                                      : AppTheme.textPrimary,
+                                      : context.appTextPrimary,
                                   fontWeight: FontWeight.w600,
                                   fontSize: 14)),
                           if (item.subtitle.isNotEmpty)
                             Text(item.subtitle,
-                                style: const TextStyle(
-                                    color: AppTheme.textSecondary,
+                                style: TextStyle(
+                                    color: context.appTextSecondary,
                                     fontSize: 12)),
                         ])),
                     if (selected)
-                      const Icon(Icons.check_circle,
+                      Icon(Icons.check_circle,
                           color: AppTheme.accent, size: 20)
                     else
-                      const Icon(Icons.radio_button_off,
-                          color: AppTheme.textSecondary, size: 20),
+                      Icon(Icons.radio_button_off,
+                          color: context.appTextSecondary, size: 20),
                   ]),
                 ),
               );
@@ -1230,31 +1230,31 @@ class _AppDropdown<T> extends StatelessWidget {
     return GestureDetector(
       onTap: () => _open(context),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.cardBg),
+          border: Border.all(color: context.appCardBg),
         ),
         child: Row(children: [
           Icon(_selectedIcon, color: AppTheme.accent, size: 20),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label,
-                style: const TextStyle(
-                    color: AppTheme.textSecondary,
+                style: TextStyle(
+                    color: context.appTextSecondary,
                     fontSize: 11,
                     fontWeight: FontWeight.w500)),
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(_selectedLabel,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                style: TextStyle(
+                    color: context.appTextPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),
           ])),
-          const Icon(Icons.keyboard_arrow_down,
-              color: AppTheme.textSecondary, size: 22),
+          Icon(Icons.keyboard_arrow_down,
+              color: context.appTextSecondary, size: 22),
         ]),
       ),
     );
@@ -1311,43 +1311,43 @@ class _ModeCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 14),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.accent.withValues(alpha: 0.10) : AppTheme.surface,
+          color: selected ? AppTheme.accent.withValues(alpha: 0.10) : context.appSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? AppTheme.accent : AppTheme.cardBg,
+            color: selected ? AppTheme.accent : context.appCardBg,
             width: 2,
           ),
           boxShadow: selected
-              ? [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.12), blurRadius: 8, offset: const Offset(0, 3))]
+              ? [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.12), blurRadius: 8, offset: Offset(0, 3))]
               : [],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: selected ? AppTheme.accent : AppTheme.cardBg,
+                color: selected ? AppTheme.accent : context.appCardBg,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: selected ? Colors.white : AppTheme.textSecondary, size: 22),
+              child: Icon(icon, color: selected ? Colors.white : context.appTextSecondary, size: 22),
             ),
-            const Spacer(),
+            Spacer(),
             if (selected)
-              const Icon(Icons.check_circle, color: AppTheme.accent, size: 18),
+              Icon(Icons.check_circle, color: AppTheme.accent, size: 18),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text(label,
               style: TextStyle(
-                color: selected ? AppTheme.accent : AppTheme.textPrimary,
+                color: selected ? AppTheme.accent : context.appTextPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 15,
               )),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(subtitle,
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
         ]),
       ),
     );
@@ -1374,22 +1374,22 @@ class _CheckOption extends StatelessWidget {
     return GestureDetector(
       onTap: () => onChanged(!value),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: value ? AppTheme.accent.withValues(alpha: 0.08) : AppTheme.surface,
+          color: value ? AppTheme.accent.withValues(alpha: 0.08) : context.appSurface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: value ? AppTheme.accent : AppTheme.cardBg, width: 1.5),
+          border: Border.all(color: value ? AppTheme.accent : context.appCardBg, width: 1.5),
         ),
         child: Row(children: [
-          Icon(icon, color: value ? AppTheme.accent : AppTheme.textSecondary, size: 20),
-          const SizedBox(width: 12),
+          Icon(icon, color: value ? AppTheme.accent : context.appTextSecondary, size: 20),
+          SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label, style: TextStyle(
-              color: value ? AppTheme.accent : AppTheme.textPrimary,
+              color: value ? AppTheme.accent : context.appTextPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 14,
             )),
-            Text(subtitle, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+            Text(subtitle, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ])),
           Checkbox(
             value: value,
@@ -1416,9 +1416,9 @@ class _DateTimeTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withValues(alpha: 0.4)),
         ),
@@ -1428,7 +1428,7 @@ class _DateTimeTile extends StatelessWidget {
           Text(
             '${dateTime.day}/${dateTime.month}/${dateTime.year}  '
             '${dateTime.hour.toString().padLeft(2,'0')}:${dateTime.minute.toString().padLeft(2,'0')}',
-            style: const TextStyle(color: AppTheme.textPrimary),
+            style: TextStyle(color: context.appTextPrimary),
           ),
           const Spacer(),
           Text('Change', style: TextStyle(color: color, fontSize: 13)),
@@ -1492,26 +1492,26 @@ class _AddressWithMap extends StatelessWidget {
     return GestureDetector(
       onTap: onMapTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: filled
-                ? const Color(0xFF00C853).withValues(alpha: 0.4)
-                : AppTheme.cardBg,
+                ? Color(0xFF00C853).withValues(alpha: 0.4)
+                : context.appCardBg,
           ),
         ),
         child: Row(children: [
           Icon(icon,
-              color: filled ? const Color(0xFF00C853) : AppTheme.textSecondary,
+              color: filled ? Color(0xFF00C853) : context.appTextSecondary,
               size: 20),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Text(
               filled ? controller.text.trim() : hint,
               style: TextStyle(
-                color: filled ? AppTheme.textPrimary : AppTheme.textSecondary,
+                color: filled ? context.appTextPrimary : context.appTextSecondary,
                 fontSize: 14,
                 fontWeight: filled ? FontWeight.w500 : FontWeight.normal,
               ),
@@ -1639,16 +1639,16 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
           myLocationButtonEnabled: false,
           zoomControlsEnabled:     false,
           cameraTargetBounds:      CameraTargetBounds(_kPickerBounds),
-          minMaxZoomPreference:    const MinMaxZoomPreference(10, 20),
+          minMaxZoomPreference:    MinMaxZoomPreference(10, 20),
         ),
 
         // ── Green crosshair pin ───────────────────────────────────────────
-        const Center(child: _DeliveryCrosshair()),
+        Center(child: _DeliveryCrosshair()),
 
         // ── Top bar: back + search ────────────────────────────────────────
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+            padding: EdgeInsets.fromLTRB(12, 12, 12, 0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1659,23 +1659,23 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                     child: Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(
-                        color: AppTheme.surface,
+                        color: context.appSurface,
                         shape: BoxShape.circle,
                         boxShadow: [BoxShadow(
                             color: Colors.black.withValues(alpha: 0.25),
                             blurRadius: 8)],
                       ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: AppTheme.textPrimary, size: 18),
+                      child: Icon(Icons.arrow_back_ios_new,
+                          color: context.appTextPrimary, size: 18),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   // Search field
                   Expanded(
                     child: Container(
                       height: 44,
                       decoration: BoxDecoration(
-                        color: AppTheme.surface,
+                        color: context.appSurface,
                         borderRadius: BorderRadius.circular(22),
                         boxShadow: [BoxShadow(
                             color: Colors.black.withValues(alpha: 0.2),
@@ -1684,15 +1684,15 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                       child: TextField(
                         controller: _searchCtrl,
                         onChanged: _onSearchChanged,
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary, fontSize: 14),
+                        style: TextStyle(
+                            color: context.appTextPrimary, fontSize: 14),
                         textAlignVertical: TextAlignVertical.center,
                         decoration: InputDecoration(
                           hintText: 'Search location…',
-                          hintStyle: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 14),
+                          hintStyle: TextStyle(
+                              color: context.appTextSecondary, fontSize: 14),
                           prefixIcon: _searching
-                              ? const Padding(
+                              ? Padding(
                                   padding: EdgeInsets.all(12),
                                   child: SizedBox(
                                     width: 16, height: 16,
@@ -1701,8 +1701,8 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                                         color: Color(0xFF00C853)),
                                   ),
                                 )
-                              : const Icon(Icons.search,
-                                  color: AppTheme.textSecondary, size: 20),
+                              : Icon(Icons.search,
+                                  color: context.appTextSecondary, size: 20),
                           suffixIcon: _searchCtrl.text.isNotEmpty
                               ? GestureDetector(
                                   onTap: () {
@@ -1714,12 +1714,12 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                                     });
                                     FocusScope.of(context).unfocus();
                                   },
-                                  child: const Icon(Icons.close,
-                                      color: AppTheme.textSecondary, size: 18),
+                                  child: Icon(Icons.close,
+                                      color: context.appTextSecondary, size: 18),
                                 )
                               : null,
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
+                          contentPadding: EdgeInsets.symmetric(
                               horizontal: 4, vertical: 0),
                           isDense: true,
                         ),
@@ -1730,11 +1730,11 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
 
                 // Search results dropdown
                 if (_showResults && _searchResults.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Container(
-                    constraints: const BoxConstraints(maxHeight: 260),
+                    constraints: BoxConstraints(maxHeight: 260),
                     decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: context.appSurface,
                       borderRadius: BorderRadius.circular(14),
                       boxShadow: [BoxShadow(
                           color: Colors.black.withValues(alpha: 0.25),
@@ -1742,29 +1742,29 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                     ),
                     child: ListView.separated(
                       shrinkWrap: true,
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: EdgeInsets.symmetric(vertical: 6),
                       itemCount: _searchResults.length > 6
                           ? 6
                           : _searchResults.length,
-                      separatorBuilder: (_, __) => const Divider(
+                      separatorBuilder: (_, __) => Divider(
                           height: 1,
                           indent: 50,
-                          color: AppTheme.cardBg),
+                          color: context.appCardBg),
                       itemBuilder: (_, i) {
                         final r = _searchResults[i];
                         return InkWell(
                           onTap: () => _selectResult(r),
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
+                            padding: EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             child: Row(children: [
-                              const Icon(Icons.location_on_outlined,
+                              Icon(Icons.location_on_outlined,
                                   color: Color(0xFF00C853), size: 18),
-                              const SizedBox(width: 12),
+                              SizedBox(width: 12),
                               Expanded(
                                 child: Text(r.address,
-                                    style: const TextStyle(
-                                        color: AppTheme.textPrimary,
+                                    style: TextStyle(
+                                        color: context.appTextPrimary,
                                         fontSize: 13),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis),
@@ -1785,27 +1785,27 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
         Positioned(
           bottom: 0, left: 0, right: 0,
           child: Container(
-            decoration: const BoxDecoration(
-              color: AppTheme.surface,
+            decoration: BoxDecoration(
+              color: context.appSurface,
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
             ),
             padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomPad),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               Row(children: [
-                const Icon(Icons.location_on,
+                Icon(Icons.location_on,
                     color: Color(0xFF00C853), size: 20),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 Expanded(
                   child: _geocoding
-                      ? const Row(children: [
+                      ? Row(children: [
                           SizedBox(width: 14, height: 14,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: AppTheme.accent)),
                           SizedBox(width: 8),
                           Text('Finding address…',
                               style: TextStyle(
-                                  color: AppTheme.textSecondary, fontSize: 13)),
+                                  color: context.appTextSecondary, fontSize: 13)),
                         ])
                       : Text(
                           _address.isEmpty
@@ -1813,8 +1813,8 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                               : _address,
                           style: TextStyle(
                             color: _address.isEmpty
-                                ? AppTheme.textSecondary
-                                : AppTheme.textPrimary,
+                                ? context.appTextSecondary
+                                : context.appTextPrimary,
                             fontSize: 14,
                             fontWeight: _address.isEmpty
                                 ? FontWeight.normal
@@ -1825,7 +1825,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                         ),
                 ),
               ]),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -1836,9 +1836,9 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                             _LocationResult(_address, _center),
                           ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00C853),
+                    backgroundColor: Color(0xFF00C853),
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.cardBg,
+                    disabledBackgroundColor: context.appCardBg,
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -1959,21 +1959,21 @@ class _DeliveryConfirmDialog extends StatelessWidget {
     }[packageSize] ?? packageSize;
 
     return Dialog(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Header ──────────────────────────────────────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
               color: Color(0xFF00C853),
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            child: const Column(children: [
+            child: Column(children: [
               Icon(Icons.delivery_dining_outlined, color: Colors.white, size: 32),
               SizedBox(height: 6),
               Text('Confirm Delivery Booking',
@@ -1987,17 +1987,17 @@ class _DeliveryConfirmDialog extends StatelessWidget {
           // ── Body ────────────────────────────────────────────────────────
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
                 // Addresses
                 _ConfirmRow(
                   icon: Icons.location_on_outlined,
-                  iconColor: const Color(0xFF00C853),
+                  iconColor: Color(0xFF00C853),
                   label: 'Pickup',
                   value: pickupAddress,
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 _ConfirmRow(
                   icon: Icons.location_on,
                   iconColor: AppTheme.danger,
@@ -2005,25 +2005,25 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                   value: dropoffAddress,
                 ),
 
-                const Divider(height: 20, color: AppTheme.cardBg),
+                Divider(height: 20, color: context.appCardBg),
 
                 // Sender / recipient
                 if (senderName != null)
                   _ConfirmRow(icon: Icons.person_outline, label: 'Sender', value: senderName!),
                 if (senderPhone != null) ...[
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   _ConfirmRow(icon: Icons.phone_outlined, label: 'Sender Ph.', value: senderPhone!),
                 ],
                 if (recipientName != null) ...[
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   _ConfirmRow(icon: Icons.person_outline, iconColor: AppTheme.accentOrange, label: 'Recipient', value: recipientName!),
                 ],
                 if (recipientPhone != null) ...[
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   _ConfirmRow(icon: Icons.phone_outlined, iconColor: AppTheme.accentOrange, label: 'Recip. Ph.', value: recipientPhone!),
                 ],
 
-                const Divider(height: 20, color: AppTheme.cardBg),
+                Divider(height: 20, color: context.appCardBg),
 
                 // Package
                 _ConfirmRow(
@@ -2167,21 +2167,21 @@ class _MovingConfirmDialog extends StatelessWidget {
     }[paymentMethod] ?? paymentMethod;
 
     return Dialog(
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+      insetPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 40),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Header ──────────────────────────────────────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            decoration: BoxDecoration(
               color: Color(0xFF00C853),
               borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            child: const Column(children: [
+            child: Column(children: [
               Icon(Icons.local_shipping_outlined, color: Colors.white, size: 32),
               SizedBox(height: 6),
               Text('Confirm Moving Booking',
@@ -2194,17 +2194,17 @@ class _MovingConfirmDialog extends StatelessWidget {
 
           // ── Body ────────────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
               // Addresses
               _ConfirmRow(
                 icon: Icons.location_on_outlined,
-                iconColor: const Color(0xFF00C853),
+                iconColor: Color(0xFF00C853),
                 label: 'From',
                 value: from,
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               _ConfirmRow(
                 icon: Icons.location_on,
                 iconColor: AppTheme.danger,
@@ -2212,7 +2212,7 @@ class _MovingConfirmDialog extends StatelessWidget {
                 value: to,
               ),
 
-              const Divider(height: 20, color: AppTheme.cardBg),
+              Divider(height: 20, color: context.appCardBg),
 
               // Building & helpers
               _ConfirmRow(
@@ -2259,7 +2259,7 @@ class _MovingConfirmDialog extends StatelessWidget {
                 ),
               ],
               if (notes != null && notes!.isNotEmpty) ...[
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 _ConfirmRow(
                   icon: Icons.notes_outlined,
                   label: 'Notes',
@@ -2269,13 +2269,13 @@ class _MovingConfirmDialog extends StatelessWidget {
 
               // Fare
               if (estimate != null) ...[
-                const Divider(height: 20, color: AppTheme.cardBg),
+                Divider(height: 20, color: context.appCardBg),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Estimated Fare',
+                    Text('Estimated Fare',
                         style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 13)),
+                            color: context.appTextSecondary, fontSize: 13)),
                     Text(AppTheme.khr(estimate!.total),
                         style: const TextStyle(
                             color: AppTheme.accent,
@@ -2349,17 +2349,17 @@ class _ConfirmRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Icon(icon, color: iconColor, size: 16),
-      const SizedBox(width: 8),
+      SizedBox(width: 8),
       SizedBox(
         width: 68,
         child: Text('$label:',
-            style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 12)),
+            style: TextStyle(
+                color: context.appTextSecondary, fontSize: 12)),
       ),
       Expanded(
         child: Text(value,
-            style: const TextStyle(
-                color: AppTheme.textPrimary,
+            style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 13,
                 fontWeight: FontWeight.w600)),
       ),
@@ -2387,13 +2387,13 @@ class _Field extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppTheme.textSecondary),
-        prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+        hintStyle: TextStyle(color: context.appTextSecondary),
+        prefixIcon: Icon(icon, color: context.appTextSecondary, size: 20),
         filled: true,
-        fillColor: AppTheme.surface,
+        fillColor: context.appSurface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

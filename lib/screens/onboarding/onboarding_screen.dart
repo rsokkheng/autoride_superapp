@@ -102,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -111,9 +111,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => _done(skip: true),
-                child: const Text('Skip',
+                child: Text('Skip',
                     style: TextStyle(
-                        color: AppTheme.textSecondary,
+                        color: context.appTextSecondary,
                         fontWeight: FontWeight.w600)),
               ),
             ),
@@ -138,12 +138,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   children: List.generate(_pages.length, (i) {
                     final active = i == _page;
                     return AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      duration: Duration(milliseconds: 250),
+                      margin: EdgeInsets.symmetric(horizontal: 4),
                       width: active ? 24 : 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: active ? AppTheme.accent : AppTheme.cardBg,
+                        color: active ? AppTheme.accent : context.appCardBg,
                         borderRadius: BorderRadius.circular(4),
                       ),
                     );
@@ -187,7 +187,7 @@ class _PageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: EdgeInsets.symmetric(horizontal: 32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -200,23 +200,23 @@ class _PageView extends StatelessWidget {
             ),
             child: Icon(page.icon, color: page.color, size: 72),
           ),
-          const SizedBox(height: 40),
+          SizedBox(height: 40),
           Text(
             page.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppTheme.textPrimary,
+            style: TextStyle(
+              color: context.appTextPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(
             page.subtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppTheme.textSecondary,
+            style: TextStyle(
+              color: context.appTextSecondary,
               fontSize: 15,
               height: 1.6,
             ),

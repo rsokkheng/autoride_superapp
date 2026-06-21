@@ -35,12 +35,12 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Banner', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-        content: const Text('Remove this banner?', style: TextStyle(color: AppTheme.textSecondary)),
+        title: Text('Delete Banner', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text('Remove this banner?', style: TextStyle(color: context.appTextSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Delete')),
         ],
       ),
@@ -59,7 +59,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _BannerForm(existing: existing, onSaved: _load),
     );
@@ -68,23 +68,23 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      appBar: AppBar(title: const Text('Banners')),
+      backgroundColor: context.appBackground,
+      appBar: AppBar(title: Text('Banners')),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.accent,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: Icon(Icons.add, color: Colors.white),
         onPressed: () => _showForm(),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40), const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center), const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _banners.isEmpty
-                  ? const Center(child: Text('No banners yet.', style: TextStyle(color: AppTheme.textSecondary)))
+                  ? Center(child: Text('No banners yet.', style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -99,18 +99,18 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                           final active = b['active'] == true || b['is_active'] == true;
 
                           return Container(
-                            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14), border: Border.all(color: active ? AppTheme.accent.withValues(alpha: 0.3) : AppTheme.cardBg)),
+                            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14), border: Border.all(color: active ? AppTheme.accent.withValues(alpha: 0.3) : context.appCardBg)),
                             child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               leading: img.isNotEmpty
-                                  ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(img, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.image_outlined, color: AppTheme.textSecondary, size: 28)))
-                                  : Container(width: 52, height: 52, decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.image_outlined, color: AppTheme.textSecondary, size: 24)),
-                              title: Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                                  ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(img, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.image_outlined, color: context.appTextSecondary, size: 28)))
+                                  : Container(width: 52, height: 52, decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.image_outlined, color: context.appTextSecondary, size: 24)),
+                              title: Text(title, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                               subtitle: active
-                                  ? const Text('Active', style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600))
-                                  : const Text('Inactive', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                                  ? Text('Active', style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600))
+                                  : Text('Inactive', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                                IconButton(icon: const Icon(Icons.edit_outlined, color: AppTheme.textSecondary, size: 20), onPressed: () => _showForm(b), tooltip: 'Edit'),
+                                IconButton(icon: Icon(Icons.edit_outlined, color: context.appTextSecondary, size: 20), onPressed: () => _showForm(b), tooltip: 'Edit'),
                                 IconButton(icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20), onPressed: () => _delete(b), tooltip: 'Delete'),
                               ]),
                             ),
@@ -186,22 +186,22 @@ class _BannerFormState extends State<_BannerForm> {
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text(widget.existing == null ? 'New Banner' : 'Edit Banner', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
-          IconButton(icon: const Icon(Icons.close, color: AppTheme.textSecondary), onPressed: () => Navigator.pop(context)),
+          Expanded(child: Text(widget.existing == null ? 'New Banner' : 'Edit Banner', style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
+          IconButton(icon: Icon(Icons.close, color: context.appTextSecondary), onPressed: () => Navigator.pop(context)),
         ]),
         if (_error != null) ...[
-          const SizedBox(height: 10),
-          Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+          SizedBox(height: 10),
+          Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
         ],
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         _FormField(controller: _titleCtrl,    hint: 'Title'),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         _FormField(controller: _subtitleCtrl, hint: 'Subtitle / Description'),
-        const SizedBox(height: 10),
+        SizedBox(height: 10),
         _FormField(controller: _imgCtrl,      hint: 'Image URL (optional)'),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Row(children: [
-          const Text('Active', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+          Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
           const Spacer(),
           Switch(value: _active, onChanged: (v) => setState(() => _active = v), activeColor: AppTheme.accent),
         ]),
@@ -225,8 +225,8 @@ class _FormField extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
-      style: const TextStyle(color: AppTheme.textPrimary),
-      decoration: InputDecoration(hintText: hint, hintStyle: const TextStyle(color: AppTheme.textSecondary), filled: true, fillColor: AppTheme.cardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.accent, width: 1.5))),
+      style: TextStyle(color: context.appTextPrimary),
+      decoration: InputDecoration(hintText: hint, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.accent, width: 1.5))),
     );
   }
 }

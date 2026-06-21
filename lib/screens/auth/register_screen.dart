@@ -85,17 +85,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         elevation: 0,
-        leading: const BackButton(color: AppTheme.textPrimary),
-        title: const Text('Create Account',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        leading: BackButton(color: context.appTextPrimary),
+        title: Text('Create Account',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Form(
             key: _formKey,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -107,22 +107,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: _green.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.directions_car_rounded, color: _green, size: 36),
+                    child: Icon(Icons.directions_car_rounded, color: _green, size: 36),
                   ),
-                  const SizedBox(height: 12),
-                  const Text('Join AutoRide',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 4),
-                  const Text('Fast, safe rides in Cambodia',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  SizedBox(height: 12),
+                  Text('Join ROTEH',
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
+                  SizedBox(height: 4),
+                  Text('Fast, safe rides in Cambodia',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ]),
               ),
-              const SizedBox(height: 28),
+              SizedBox(height: 28),
 
               // ── Role ──────────────────────────────────────────────────────
-              const Text('I want to',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+              Text('I want to',
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
               Row(children: [
                 _RoleChip(
                   label: 'Ride as Passenger',
@@ -130,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   selected: _role == 'passenger',
                   onTap: () => setState(() => _role = 'passenger'),
                 ),
-                const SizedBox(width: 10),
+                SizedBox(width: 10),
                 _RoleChip(
                   label: 'Drive & Earn',
                   icon:  Icons.local_taxi_outlined,
@@ -138,12 +138,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onTap: () => setState(() => _role = 'driver'),
                 ),
               ]),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               // ── Driver-only fields ────────────────────────────────────────
               if (_role == 'driver') ...[
-                const Text('Driver Type',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                Text('Driver Type',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Row(children: _driverTypes.map((t) {
                   final selected = _driverType == t.$1;
@@ -151,35 +151,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: GestureDetector(
                       onTap: () => setState(() => _driverType = t.$1),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
+                        duration: Duration(milliseconds: 150),
                         margin: EdgeInsets.only(right: t.$1 == 'rental' ? 0 : 8),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: 12),
                         decoration: BoxDecoration(
-                          color: selected ? _green.withValues(alpha: 0.1) : AppTheme.surface,
+                          color: selected ? _green.withValues(alpha: 0.1) : context.appSurface,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: selected ? _green : Colors.transparent, width: 1.5),
                         ),
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(t.$3, color: selected ? _green : AppTheme.textSecondary, size: 20),
-                          const SizedBox(height: 4),
+                          Icon(t.$3, color: selected ? _green : context.appTextSecondary, size: 20),
+                          SizedBox(height: 4),
                           Text(t.$2,
                               style: TextStyle(
-                                  color: selected ? _green : AppTheme.textSecondary,
+                                  color: selected ? _green : context.appTextSecondary,
                                   fontSize: 11, fontWeight: FontWeight.w600)),
                         ]),
                       ),
                     ),
                   );
                 }).toList()),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
 
                 // City
                 _Label('City'),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _cityCtrl.text.isEmpty ? null : _cityCtrl.text,
-                  dropdownColor: AppTheme.surface,
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+                  dropdownColor: context.appSurface,
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 14),
                   decoration: _inputDecoration('Select your city', Icons.location_city_outlined),
                   items: _cities.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                   onChanged: (v) => _cityCtrl.text = v ?? '',
@@ -207,14 +207,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Field(
                 controller: _phoneCtrl,
-                label: 'Phone (optional)', hint: '+855 12 345 678',
+                label: 'Phone (optional)', hint: '+855 963430534',
                 icon:  Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Field(
                 controller: _passCtrl,
                 label: 'Password', hint: '••••••••',
@@ -222,12 +222,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: _obscureP,
                 suffixIcon: IconButton(
                   icon: Icon(_obscureP ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      color: AppTheme.textSecondary, size: 20),
+                      color: context.appTextSecondary, size: 20),
                   onPressed: () => setState(() => _obscureP = !_obscureP),
                 ),
                 validator: (v) => (v?.length ?? 0) < 8 ? 'At least 8 characters' : null,
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Field(
                 controller: _confCtrl,
                 label: 'Confirm Password', hint: '••••••••',
@@ -235,35 +235,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 obscureText: _obscureC,
                 suffixIcon: IconButton(
                   icon: Icon(_obscureC ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                      color: AppTheme.textSecondary, size: 20),
+                      color: context.appTextSecondary, size: 20),
                   onPressed: () => setState(() => _obscureC = !_obscureC),
                 ),
                 validator: (v) => v != _passCtrl.text ? 'Passwords do not match' : null,
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
               _Field(
                 controller: _referCtrl,
-                label: 'Referral Code (optional)', hint: 'AUTORIDE2024',
+                label: 'Referral Code (optional)', hint: 'ROTEH2026',
                 icon:  Icons.card_giftcard_outlined,
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: AppTheme.danger.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
-                    const SizedBox(width: 8),
+                    Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
+                    SizedBox(width: 8),
                     Expanded(child: Text(_error!,
-                        style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                        style: TextStyle(color: AppTheme.danger, fontSize: 13))),
                   ]),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
               ],
 
               SizedBox(
@@ -277,17 +277,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: _loading
-                      ? const SizedBox(width: 22, height: 22,
+                      ? SizedBox(width: 22, height: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
                       : Text(_role == 'driver' ? 'Register & Upload Documents' : 'Create Account',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                const Text('Already have an account? ',
-                    style: TextStyle(color: AppTheme.textSecondary)),
+                Text('Already have an account? ',
+                    style: TextStyle(color: context.appTextSecondary)),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Text('Sign In',
@@ -302,14 +302,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _Label(String text) => Text(text,
-      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600));
+      style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600));
 
   InputDecoration _inputDecoration(String hint, IconData icon) => InputDecoration(
     hintText: hint,
-    hintStyle: const TextStyle(color: AppTheme.textSecondary),
-    prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+    hintStyle: TextStyle(color: context.appTextSecondary),
+    prefixIcon: Icon(icon, color: context.appTextSecondary, size: 20),
     filled: true,
-    fillColor: AppTheme.surface,
+    fillColor: context.appSurface,
     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
   );
@@ -342,21 +342,21 @@ class _Field extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label,
-          style: const TextStyle(color: AppTheme.textSecondary,
+          style: TextStyle(color: context.appTextSecondary,
               fontSize: 13, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       TextFormField(
         controller:   controller,
         obscureText:  obscureText,
         keyboardType: keyboardType,
-        style: const TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
           hintText:    hint,
-          hintStyle:   const TextStyle(color: AppTheme.textSecondary),
-          prefixIcon:  Icon(icon, color: AppTheme.textSecondary, size: 20),
+          hintStyle:   TextStyle(color: context.appTextSecondary),
+          prefixIcon:  Icon(icon, color: context.appTextSecondary, size: 20),
           suffixIcon:  suffixIcon,
           filled:      true,
-          fillColor:   AppTheme.surface,
+          fillColor:   context.appSurface,
           border:      OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none),
@@ -381,19 +381,19 @@ class _RoleChip extends StatelessWidget {
     child: GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        duration: Duration(milliseconds: 180),
+        padding: EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? _green.withValues(alpha: 0.1) : AppTheme.surface,
+          color: selected ? _green.withValues(alpha: 0.1) : context.appSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected ? _green : Colors.transparent, width: 1.5),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, color: selected ? _green : AppTheme.textSecondary, size: 18),
-          const SizedBox(width: 6),
+          Icon(icon, color: selected ? _green : context.appTextSecondary, size: 18),
+          SizedBox(width: 6),
           Text(label, style: TextStyle(
-              color: selected ? _green : AppTheme.textSecondary,
+              color: selected ? _green : context.appTextSecondary,
               fontWeight: FontWeight.w600, fontSize: 13)),
         ]),
       ),

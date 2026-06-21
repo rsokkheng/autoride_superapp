@@ -66,7 +66,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Row(children: [
@@ -95,12 +95,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+                  SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
                 ]))
@@ -172,7 +172,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Overview', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+      Text('Overview', style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       GridView.count(
         shrinkWrap: true,
@@ -197,11 +197,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (maxRevenue == 0) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Revenue (7 days)', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 12),
+      Text('Revenue (7 days)', style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+      SizedBox(height: 12),
       Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: chart.map((e) {
@@ -211,14 +211,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             final h    = (rev / maxRevenue) * 80;
             return Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
+                padding: EdgeInsets.symmetric(horizontal: 3),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Container(
                     height: h.clamp(4.0, 80.0),
                     decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(4)),
                   ),
-                  const SizedBox(height: 4),
-                  Text(date, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 9)),
+                  SizedBox(height: 4),
+                  Text(date, style: TextStyle(color: context.appTextSecondary, fontSize: 9)),
                 ]),
               ),
             );
@@ -262,7 +262,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ];
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Management', style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+      Text('Management', style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
       const SizedBox(height: 12),
       GridView.builder(
         shrinkWrap: true,
@@ -324,18 +324,18 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
-          padding: const EdgeInsets.all(6),
+          padding: EdgeInsets.all(6),
           decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 18),
         ),
-        const Spacer(),
-        Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 1),
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+        Spacer(),
+        Text(value, style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w900)),
+        SizedBox(height: 1),
+        Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ]),
     );
   }
@@ -353,15 +353,15 @@ class _ManageTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+          SizedBox(height: 8),
+          Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 11, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
         ]),
       ),
     );

@@ -16,8 +16,8 @@ class VehicleTypeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg     = isDark ? AppTheme.darkSurface : AppTheme.surface;
-    final border = isDark ? AppTheme.darkCardBg  : AppTheme.cardBg;
+    final bg     = isDark ? AppTheme.darkSurface : context.appSurface;
+    final border = isDark ? AppTheme.darkCardBg  : context.appCardBg;
 
     return SizedBox(
       height: 96,
@@ -34,9 +34,9 @@ class VehicleTypeSelector extends StatelessWidget {
           return GestureDetector(
             onTap: () => onChanged(v.type),
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+              duration: Duration(milliseconds: 180),
               width: 80,
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: EdgeInsets.symmetric(vertical: 10),
               decoration: BoxDecoration(
                 color: active ? AppTheme.accent : bg,
                 borderRadius: BorderRadius.circular(14),
@@ -47,19 +47,19 @@ class VehicleTypeSelector extends StatelessWidget {
                 boxShadow: active
                     ? [BoxShadow(
                         color: AppTheme.accent.withValues(alpha: 0.25),
-                        blurRadius: 8, offset: const Offset(0, 3))]
+                        blurRadius: 8, offset: Offset(0, 3))]
                     : null,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(v.icon,
-                      color: active ? Colors.white : AppTheme.textSecondary,
+                      color: active ? Colors.white : context.appTextSecondary,
                       size: 26),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(v.label,
                       style: TextStyle(
-                        color: active ? Colors.white : AppTheme.textPrimary,
+                        color: active ? Colors.white : context.appTextPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 11,
                       )),

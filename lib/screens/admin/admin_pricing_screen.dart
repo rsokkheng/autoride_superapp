@@ -78,48 +78,48 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Pricing Settings'),
+        title: Text('Pricing Settings'),
         actions: [
           if (!_loading && _error == null)
             TextButton(
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
-                  : const Text('Save', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+                  ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
+                  : Text('Save', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
             ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40), const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center), const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : ListView(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
                       child: Column(children: [
                         for (int i = 0; i < _editableKeys.length; i++) ...[
-                          if (i > 0) const Divider(height: 20, color: AppTheme.cardBg),
+                          if (i > 0) Divider(height: 20, color: context.appCardBg),
                           Row(children: [
-                            Expanded(child: Text(_editableKeys[i].$1, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
-                            const SizedBox(width: 12),
+                            Expanded(child: Text(_editableKeys[i].$1, style: TextStyle(color: context.appTextSecondary, fontSize: 13))),
+                            SizedBox(width: 12),
                             SizedBox(
                               width: 110,
                               child: TextField(
                                 controller: _ctrls[_editableKeys[i].$2],
                                 keyboardType: TextInputType.number,
                                 textAlign: TextAlign.right,
-                                style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600),
+                                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600),
                                 decoration: InputDecoration(
-                                  filled: true, fillColor: AppTheme.cardBg,
+                                  filled: true, fillColor: context.appCardBg,
                                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                                   contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                 ),

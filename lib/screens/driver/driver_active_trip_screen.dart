@@ -520,27 +520,27 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
-          backgroundColor: AppTheme.surface,
+          backgroundColor: context.appSurface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          contentPadding: EdgeInsets.fromLTRB(24, 20, 24, 0),
           title: Column(children: [
             CircleAvatar(
               radius: 30,
               backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
               child: Text(
                 _passengerName.isNotEmpty ? _passengerName[0] : 'P',
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppTheme.accent,
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            const Text(
+            SizedBox(height: 10),
+            Text(
               'Rate Your Passenger',
               style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: context.appTextPrimary,
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
@@ -548,8 +548,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             ),
             Text(
               _passengerName,
-              style: const TextStyle(
-                color: AppTheme.textSecondary,
+              style: TextStyle(
+                color: context.appTextSecondary,
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
               ),
@@ -568,10 +568,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     selectedTags.clear();
                   }),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: EdgeInsets.symmetric(horizontal: 4),
                     child: Icon(
                       i < stars ? Icons.star_rounded : Icons.star_outline_rounded,
-                      color: i < stars ? AppTheme.gold : AppTheme.textSecondary,
+                      color: i < stars ? AppTheme.gold : context.appTextSecondary,
                       size: 38,
                     ),
                   ),
@@ -604,12 +604,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                         selected ? selectedTags.remove(tag) : selectedTags.add(tag);
                       }),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        duration: Duration(milliseconds: 150),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
                           color: selected
                               ? tagColor.withValues(alpha: 0.12)
-                              : AppTheme.cardBg,
+                              : context.appCardBg,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: selected ? tagColor : Colors.transparent,
@@ -618,7 +618,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                         child: Text(
                           tag,
                           style: TextStyle(
-                            color: selected ? tagColor : AppTheme.textSecondary,
+                            color: selected ? tagColor : context.appTextSecondary,
                             fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                             fontSize: 13,
                           ),
@@ -627,20 +627,20 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 // Comment field
                 Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.cardBg,
+                    color: context.appCardBg,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: TextField(
                     controller: commentController,
                     maxLines: 2,
-                    style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
-                    decoration: const InputDecoration(
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 13),
+                    decoration: InputDecoration(
                       hintText: 'Add a comment (optional)...',
-                      hintStyle: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                      hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 13),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.all(12),
                     ),
@@ -656,7 +656,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                 commentController.dispose();
                 Navigator.pop(ctx);
               },
-              child: const Text('Skip', style: TextStyle(color: AppTheme.textSecondary)),
+              child: Text('Skip', style: TextStyle(color: context.appTextSecondary)),
             ),
             ElevatedButton(
               onPressed: (submitting || stars == 0) ? null : () async {
@@ -694,22 +694,22 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        title: const Row(children: [
+        backgroundColor: context.appSurface,
+        title: Row(children: [
           Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 28),
           SizedBox(width: 10),
           Text('Emergency SOS',
               style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w800)),
         ]),
-        content: const Text(
+        content: Text(
           'This will alert emergency services and notify AutoRide operations team with your location.',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel',
-                  style: TextStyle(color: AppTheme.textSecondary))),
+              child: Text('Cancel',
+                  style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () { Navigator.pop(context); _sendSOS(); },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -750,28 +750,28 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     final phone = widget.ride?.passenger?.phone ?? '+855 --';
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           CircleAvatar(
             radius: 36,
             backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
             child: Text(_passengerName[0],
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppTheme.accent,
                     fontSize: 28,
                     fontWeight: FontWeight.w800)),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text(_passengerName,
-              style: const TextStyle(
-                  color: AppTheme.textPrimary,
+              style: TextStyle(
+                  color: context.appTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700)),
-          Text(phone, style: const TextStyle(color: AppTheme.textSecondary)),
+          Text(phone, style: TextStyle(color: context.appTextSecondary)),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -839,26 +839,26 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         // ── Top bar ───────────────────────────────────────────────────────────
         SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             child: Row(children: [
               GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(
                       color: AppTheme.primary.withValues(alpha: 0.9),
                       shape: BoxShape.circle),
-                  child: const Icon(Icons.arrow_back,
-                      color: AppTheme.textPrimary, size: 20),
+                  child: Icon(Icons.arrow_back,
+                      color: context.appTextPrimary, size: 20),
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               // Pulsing phase pill
               AnimatedBuilder(
                 animation: _pulseAnim,
                 builder: (_, __) => Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: _phaseColor
                         .withValues(alpha: 0.1 + 0.1 * _pulseAnim.value),
@@ -872,7 +872,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                         height: 8,
                         decoration: BoxDecoration(
                             color: _phaseColor, shape: BoxShape.circle)),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text(_phaseLabel,
                         style: TextStyle(
                             color: _phaseColor,
@@ -881,17 +881,17 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                   ]),
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               // SOS
               GestureDetector(
                 onTap: _showSOS,
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                       color: AppTheme.danger,
                       borderRadius: BorderRadius.circular(20)),
-                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.warning_amber_rounded,
                         color: Colors.white, size: 16),
                     SizedBox(width: 4),
@@ -916,9 +916,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             bottom: 280,
             child: Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: context.appSurface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: const [
                   BoxShadow(color: Colors.black26, blurRadius: 8)
@@ -935,8 +935,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                         style: const TextStyle(color: AppTheme.accentOrange)),
                     TextSpan(
                         text: '\n${_distanceKm.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary,
+                        style: TextStyle(
+                            color: context.appTextSecondary,
                             fontSize: 11,
                             fontWeight: FontWeight.w400)),
                   ],
@@ -949,11 +949,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         Positioned(
           bottom: 0, left: 0, right: 0,
           child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 32),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: context.appSurface,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(24)),
+                  BorderRadius.vertical(top: Radius.circular(24)),
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withValues(alpha: 0.4),
@@ -966,9 +966,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: AppTheme.cardBg,
+                      color: context.appCardBg,
                       borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 14),
+              SizedBox(height: 14),
 
               if (!isCompleted) ...[
                 // Passenger info row
@@ -977,108 +977,108 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     radius: 22,
                     backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
                     child: Text(_passengerName[0],
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppTheme.accent,
                             fontWeight: FontWeight.w800,
                             fontSize: 16)),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(_passengerName,
-                            style: const TextStyle(
-                                color: AppTheme.textPrimary,
+                            style: TextStyle(
+                                color: context.appTextPrimary,
                                 fontWeight: FontWeight.w700)),
                         Row(children: [
-                          const Icon(Icons.star,
+                          Icon(Icons.star,
                               color: AppTheme.gold, size: 13),
-                          const SizedBox(width: 3),
+                          SizedBox(width: 3),
                           Text(widget.passengerRating,
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary,
+                              style: TextStyle(
+                                  color: context.appTextSecondary,
                                   fontSize: 12)),
                         ]),
                       ],
                     ),
                   ),
                   Text(_fare,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.accent,
                           fontSize: 20,
                           fontWeight: FontWeight.w800)),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   _ActionBtn(
                       icon: Icons.call_outlined,
                       color: AppTheme.success,
                       onTap: _callPassenger),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   _ActionBtn(
                       icon: Icons.chat_bubble_outline,
                       color: AppTheme.accent,
                       onTap: _openRideChat),
                 ]),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // Route card
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                      color: AppTheme.cardBg,
+                      color: context.appCardBg,
                       borderRadius: BorderRadius.circular(12)),
                   child: Column(children: [
                     Row(children: [
-                      const Icon(Icons.circle,
+                      Icon(Icons.circle,
                           color: AppTheme.success, size: 10),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                           child: Text(_pickupAddr,
-                              style: const TextStyle(
-                                  color: AppTheme.textPrimary,
+                              style: TextStyle(
+                                  color: context.appTextPrimary,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600))),
                     ]),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Row(children: [
                       Container(
                           width: 1,
                           height: 16,
-                          color: AppTheme.textSecondary,
-                          margin: const EdgeInsets.only(left: 4)),
+                          color: context.appTextSecondary,
+                          margin: EdgeInsets.only(left: 4)),
                     ]),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Row(children: [
-                      const Icon(Icons.location_on,
+                      Icon(Icons.location_on,
                           color: AppTheme.accentOrange, size: 12),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       Expanded(
                           child: Text(_destAddr,
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary,
+                              style: TextStyle(
+                                  color: context.appTextSecondary,
                                   fontSize: 13))),
                     ]),
                   ]),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
               ] else ...[
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
                       color: AppTheme.success.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16)),
                   child: Column(children: [
-                    const Icon(Icons.check_circle,
+                    Icon(Icons.check_circle,
                         color: AppTheme.success, size: 48),
-                    const SizedBox(height: 8),
-                    const Text('Trip Completed!',
+                    SizedBox(height: 8),
+                    Text('Trip Completed!',
                         style: TextStyle(
                             color: AppTheme.success,
                             fontWeight: FontWeight.w800,
                             fontSize: 18)),
                     Text('You earned $_fare',
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary)),
+                        style: TextStyle(
+                            color: context.appTextSecondary)),
                   ]),
                 ),
                 const SizedBox(height: 14),

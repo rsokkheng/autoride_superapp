@@ -36,7 +36,7 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => _FareEditSheet(
@@ -53,17 +53,17 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Fare Rule',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Delete Fare Rule',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text(
           'Delete fare rule for "${rule['vehicle_type'] ?? rule['name'] ?? 'this vehicle'}"?',
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -89,40 +89,40 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Fare Management'),
+        title: Text('Fare Management'),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load),
+          IconButton(icon: Icon(Icons.refresh), onPressed: _load),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showEditSheet(),
         backgroundColor: AppTheme.accent,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Rule',
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text('Add Rule',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+                  SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary),
                       textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   ElevatedButton(onPressed: _load,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                      child: const Text('Retry')),
+                      child: Text('Retry')),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
                   color: AppTheme.accent,
                   child: _rules.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text('No fare rules configured.',
-                              style: TextStyle(color: AppTheme.textSecondary)))
+                              style: TextStyle(color: context.appTextSecondary)))
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                           itemCount: _rules.length,
@@ -173,9 +173,9 @@ class _FareTile extends StatelessWidget {
     final isActive  = rule['is_active'] as bool? ?? true;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
         border: isActive
             ? Border.all(color: AppTheme.accent.withValues(alpha: 0.3))
@@ -184,47 +184,47 @@ class _FareTile extends StatelessWidget {
       child: Column(children: [
         Row(children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: AppTheme.accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(_vehicleIcon(), color: AppTheme.accent, size: 20),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(_vehicleLabel(),
-                  style: const TextStyle(color: AppTheme.textPrimary,
+                  style: TextStyle(color: context.appTextPrimary,
                       fontWeight: FontWeight.w700, fontSize: 15)),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: isActive
                       ? AppTheme.success.withValues(alpha: 0.12)
-                      : AppTheme.textSecondary.withValues(alpha: 0.12),
+                      : context.appTextSecondary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(isActive ? 'Active' : 'Inactive',
                     style: TextStyle(
-                      color: isActive ? AppTheme.success : AppTheme.textSecondary,
+                      color: isActive ? AppTheme.success : context.appTextSecondary,
                       fontSize: 11, fontWeight: FontWeight.w600,
                     )),
               ),
             ]),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppTheme.accent, size: 20),
+            icon: Icon(Icons.edit_outlined, color: AppTheme.accent, size: 20),
             onPressed: onEdit,
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20),
+            icon: Icon(Icons.delete_outline, color: AppTheme.danger, size: 20),
             onPressed: onDelete,
           ),
         ]),
-        const SizedBox(height: 12),
-        const Divider(height: 1, color: AppTheme.cardBg),
+        SizedBox(height: 12),
+        Divider(height: 1, color: context.appCardBg),
         const SizedBox(height: 12),
         Row(children: [
           _FareStat(label: 'Base Fare', value: AppTheme.khr(baseFare is int ? baseFare : (baseFare as num).toInt())),
@@ -246,11 +246,11 @@ class _FareStat extends StatelessWidget {
     return Expanded(
       child: Column(children: [
         Text(value,
-            style: const TextStyle(color: AppTheme.accent,
+            style: TextStyle(color: AppTheme.accent,
                 fontWeight: FontWeight.w700, fontSize: 14)),
-        const SizedBox(height: 2),
+        SizedBox(height: 2),
         Text(label,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ]),
     );
   }
@@ -355,20 +355,20 @@ class _FareEditSheetState extends State<_FareEditSheet> {
           20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Center(child: Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           Text(widget.rule != null ? 'Edit Fare Rule' : 'New Fare Rule',
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Vehicle type chips
-          const Text('Vehicle Type',
-              style: TextStyle(color: AppTheme.textSecondary,
+          Text('Vehicle Type',
+              style: TextStyle(color: context.appTextSecondary,
                   fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: _vehicleTypes.map((t) {
@@ -378,25 +378,25 @@ class _FareEditSheetState extends State<_FareEditSheet> {
               selected: selected,
               onSelected: (_) => setState(() => _vehicleType = t),
               selectedColor: AppTheme.accent,
-              backgroundColor: AppTheme.cardBg,
+              backgroundColor: context.appCardBg,
               labelStyle: TextStyle(
-                  color: selected ? Colors.white : AppTheme.textPrimary,
+                  color: selected ? Colors.white : context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               side: BorderSide.none,
             );
           }).toList()),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           _Input(controller: _baseCtrl, label: 'Base Fare (KHR)', hint: 'e.g. 2000'),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _Input(controller: _perKmCtrl, label: 'Per KM Rate (KHR)', hint: 'e.g. 1500'),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _Input(controller: _minCtrl, label: 'Minimum Fare (KHR)', hint: 'e.g. 3000'),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           Row(children: [
-            const Text('Active', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+            Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             const Spacer(),
             Switch(value: _active, onChanged: (v) => setState(() => _active = v),
                 activeColor: AppTheme.accent),
@@ -438,18 +438,18 @@ class _Input extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(color: AppTheme.textSecondary,
+      Text(label, style: TextStyle(color: context.appTextSecondary,
           fontSize: 12, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       TextField(
         controller: controller,
         keyboardType: TextInputType.number,
-        style: const TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppTheme.textSecondary),
+          hintStyle: TextStyle(color: context.appTextSecondary),
           filled: true,
-          fillColor: AppTheme.cardBg,
+          fillColor: context.appCardBg,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),

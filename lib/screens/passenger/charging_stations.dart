@@ -57,37 +57,37 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EV Charging Stations'),
+        title: Text('EV Charging Stations'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.refresh),
             onPressed: _load,
           ),
           IconButton(
             icon: Icon(_showList ? Icons.map_outlined : Icons.list_outlined,
-                color: AppTheme.textPrimary),
+                color: context.appTextPrimary),
             onPressed: () => setState(() => _showList = !_showList),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(24),
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.error_outline,
+                    Icon(Icons.error_outline,
                         color: AppTheme.danger, size: 40),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     Text(_error!,
-                        style: const TextStyle(color: AppTheme.danger),
+                        style: TextStyle(color: AppTheme.danger),
                         textAlign: TextAlign.center),
-                    const SizedBox(height: 16),
+                    SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: _load,
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.accent),
-                      child: const Text('Retry',
+                      child: Text('Retry',
                           style: TextStyle(color: AppTheme.primary)),
                     ),
                   ]),
@@ -98,7 +98,7 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                       // Map view placeholder
                       Container(
                         height: 280,
-                        color: AppTheme.surface,
+                        color: context.appSurface,
                         child: Stack(
                           children: [
                             Center(
@@ -109,8 +109,8 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                                       color: AppTheme.accent.withValues(alpha: 0.3),
                                       size: 64),
                                   Text('${_stations.length} stations nearby',
-                                      style: const TextStyle(
-                                          color: AppTheme.textSecondary)),
+                                      style: TextStyle(
+                                          color: context.appTextSecondary)),
                                 ],
                               ),
                             ),
@@ -139,24 +139,24 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
 
                     if (_position != null)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                        padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                         child: Row(children: [
-                          const Icon(Icons.location_on,
+                          Icon(Icons.location_on,
                               color: AppTheme.accent, size: 14),
-                          const SizedBox(width: 4),
+                          SizedBox(width: 4),
                           Text('Sorted by distance from your location',
-                              style: const TextStyle(
-                                  color: AppTheme.textSecondary, fontSize: 12)),
+                              style: TextStyle(
+                                  color: context.appTextSecondary, fontSize: 12)),
                         ]),
                       ),
 
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
 
                     Expanded(
                       child: _stations.isEmpty
-                          ? const Center(
+                          ? Center(
                               child: Text('No charging stations found.',
-                                  style: TextStyle(color: AppTheme.textSecondary)))
+                                  style: TextStyle(color: context.appTextSecondary)))
                           : ListView.builder(
                               padding: const EdgeInsets.symmetric(horizontal: 16),
                               itemCount: _stations.length,
@@ -208,10 +208,10 @@ class _StationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-          color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+          color: context.appSurface, borderRadius: BorderRadius.circular(16)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -219,34 +219,34 @@ class _StationCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
                     color: AppTheme.success.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.ev_station,
+                child: Icon(Icons.ev_station,
                     color: AppTheme.success, size: 22),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(station.name,
-                        style: const TextStyle(
-                            color: AppTheme.textPrimary,
+                        style: TextStyle(
+                            color: context.appTextPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14)),
-                    const SizedBox(height: 3),
+                    SizedBox(height: 3),
                     Text(station.address,
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12)),
+                        style: TextStyle(
+                            color: context.appTextSecondary, fontSize: 12)),
                   ],
                 ),
               ),
               if (station.distanceKm != null)
                 Text('${station.distanceKm!.toStringAsFixed(1)} km',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.appTextSecondary, fontSize: 12)),
             ],
           ),
 
@@ -281,10 +281,10 @@ class _StationCard extends StatelessWidget {
 
           // Details
           if (station.details.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(station.details,
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12),
+                style: TextStyle(
+                    color: context.appTextSecondary, fontSize: 12),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis),
           ],
@@ -300,8 +300,8 @@ class _StationCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   '${station.lat.toStringAsFixed(4)}, ${station.lng.toStringAsFixed(4)}',
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11),
+                  style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 11),
                 ),
               ),
               GestureDetector(

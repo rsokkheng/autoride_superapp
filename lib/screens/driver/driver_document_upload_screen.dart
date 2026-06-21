@@ -42,24 +42,24 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
   Future<void> _pickAndUpload(_DocDef doc) async {
     final action = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             width: 40, height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 16),
-            decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(2)),
+            margin: EdgeInsets.only(top: 12, bottom: 16),
+            decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(2)),
           ),
           ListTile(
-            leading: const Icon(Icons.camera_alt_outlined, color: _green),
-            title: const Text('Take Photo', style: TextStyle(color: AppTheme.textPrimary)),
+            leading: Icon(Icons.camera_alt_outlined, color: _green),
+            title: Text('Take Photo', style: TextStyle(color: context.appTextPrimary)),
             onTap: () => Navigator.pop(context, 'camera'),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library_outlined, color: _green),
-            title: const Text('Choose from Gallery', style: TextStyle(color: AppTheme.textPrimary)),
+            leading: Icon(Icons.photo_library_outlined, color: _green),
+            title: Text('Choose from Gallery', style: TextStyle(color: context.appTextPrimary)),
             onTap: () => Navigator.pop(context, 'gallery'),
           ),
           const SizedBox(height: 8),
@@ -110,24 +110,24 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text('Upload Documents',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Upload Documents',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: Column(children: [
         // Progress banner
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          color: AppTheme.surface,
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          color: context.appSurface,
           child: Column(children: [
             Row(children: [
               Expanded(child: Text(
                 '${_kDocTypes.where((d) => d.required && _states[d.type]!.uploaded).length} / 4 required documents uploaded',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 13),
               )),
               Text(
                 _requiredComplete ? 'Ready!' : 'Required',
@@ -137,12 +137,12 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
                 ),
               ),
             ]),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: _kDocTypes.where((d) => d.required && _states[d.type]!.uploaded).length / 4,
-                backgroundColor: AppTheme.cardBg,
+                backgroundColor: context.appCardBg,
                 valueColor: AlwaysStoppedAnimation<Color>(_requiredComplete ? _green : AppTheme.accent),
                 minHeight: 6,
               ),
@@ -152,12 +152,12 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
 
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             children: [
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text('Required Documents',
-                    style: TextStyle(color: AppTheme.textPrimary,
+                    style: TextStyle(color: context.appTextPrimary,
                         fontSize: 15, fontWeight: FontWeight.w700)),
               ),
               ..._kDocTypes.where((d) => d.required).map((d) => _DocTile(
@@ -166,10 +166,10 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
                     onTap: _anyUploading ? null : () => _pickAndUpload(d),
                   )),
 
-              const Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 20, bottom: 12),
                 child: Text('Optional Documents',
-                    style: TextStyle(color: AppTheme.textSecondary,
+                    style: TextStyle(color: context.appTextSecondary,
                         fontSize: 14, fontWeight: FontWeight.w600)),
               ),
               ..._kDocTypes.where((d) => !d.required).map((d) => _DocTile(
@@ -178,7 +178,7 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
                     onTap: _anyUploading ? null : () => _pickAndUpload(d),
                   )),
 
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               SizedBox(
                 width: double.infinity, height: 52,
                 child: ElevatedButton(
@@ -190,15 +190,15 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
                     elevation: 0,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  child: const Text('Submit for Review',
+                  child: Text('Submit for Review',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Center(
                 child: Text(
                   'Your documents will be reviewed within 1–2 business days.',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -227,17 +227,17 @@ class _DocTile extends StatelessWidget {
     final error    = state.error;
     final hasFile  = state.file != null;
 
-    Color borderColor = AppTheme.cardBg;
+    Color borderColor = context.appCardBg;
     if (uploaded) borderColor = _green;
     if (error != null) borderColor = AppTheme.danger;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
+        margin: EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: borderColor, width: uploaded ? 1.5 : 1),
         ),
@@ -252,53 +252,53 @@ class _DocTile extends StatelessWidget {
                   : Container(
                       color: uploaded
                           ? _green.withValues(alpha: 0.1)
-                          : AppTheme.cardBg,
+                          : context.appCardBg,
                       child: Icon(
                         uploaded ? Icons.check_circle_rounded : doc.icon,
-                        color: uploaded ? _green : AppTheme.textSecondary,
+                        color: uploaded ? _green : context.appTextSecondary,
                         size: 28,
                       ),
                     ),
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
 
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Text(doc.label,
-                  style: const TextStyle(color: AppTheme.textPrimary,
+                  style: TextStyle(color: context.appTextPrimary,
                       fontWeight: FontWeight.w600, fontSize: 13)),
               if (doc.required) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(
                     color: AppTheme.danger.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text('Required',
+                  child: Text('Required',
                       style: TextStyle(color: AppTheme.danger, fontSize: 9, fontWeight: FontWeight.w700)),
                 ),
               ],
             ]),
-            const SizedBox(height: 3),
+            SizedBox(height: 3),
             if (error != null)
-              Text(error, style: const TextStyle(color: AppTheme.danger, fontSize: 11))
+              Text(error, style: TextStyle(color: AppTheme.danger, fontSize: 11))
             else if (uploaded)
-              const Text('Uploaded', style: TextStyle(color: _green, fontSize: 11))
+              Text('Uploaded', style: TextStyle(color: _green, fontSize: 11))
             else
               Text(doc.required ? 'Tap to upload' : 'Optional — tap to upload',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ])),
 
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           if (loading)
-            const SizedBox(width: 22, height: 22,
+            SizedBox(width: 22, height: 22,
                 child: CircularProgressIndicator(color: _green, strokeWidth: 2.5))
           else if (uploaded)
-            const Icon(Icons.check_circle_rounded, color: _green, size: 24)
+            Icon(Icons.check_circle_rounded, color: _green, size: 24)
           else
-            const Icon(Icons.upload_rounded, color: AppTheme.textSecondary, size: 22),
+            Icon(Icons.upload_rounded, color: context.appTextSecondary, size: 22),
         ]),
       ),
     );

@@ -37,13 +37,13 @@ class _DriverVehicleScreenState extends State<DriverVehicleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface, elevation: 0,
-        leading: const BackButton(color: AppTheme.textPrimary),
-        title: const Text('My Vehicles',
+        backgroundColor: context.appSurface, elevation: 0,
+        leading: BackButton(color: context.appTextPrimary),
+        title: Text('My Vehicles',
             style: TextStyle(
-                color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: _green),
@@ -145,46 +145,46 @@ class _VehicleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: vehicle.isActive
             ? Border.all(color: _green.withValues(alpha: 0.35)) : null,
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         child: Column(children: [
           Row(children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(_typeIcon, color: _green, size: 28),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(vehicle.displayName,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary,
+                  style: TextStyle(
+                      color: context.appTextPrimary,
                       fontWeight: FontWeight.w700, fontSize: 15)),
-              const SizedBox(height: 2),
+              SizedBox(height: 2),
               Text(vehicle.licensePlate,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 13)),
-              const SizedBox(height: 4),
+                  style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 13)),
+              SizedBox(height: 4),
               Row(children: [
                 _Chip(
                   label: vehicle.type.isEmpty ? 'Vehicle' : vehicle.type,
                   color: AppTheme.accent,
                 ),
-                const SizedBox(width: 6),
+                SizedBox(width: 6),
                 _Chip(
                   label: vehicle.status.toUpperCase(),
-                  color: vehicle.isActive ? _green : AppTheme.textSecondary,
+                  color: vehicle.isActive ? _green : context.appTextSecondary,
                 ),
               ]),
             ])),
@@ -335,7 +335,7 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -349,27 +349,27 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
           Center(child: Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text(isEdit ? 'Edit Vehicle' : 'Register Vehicle',
-              style: const TextStyle(fontSize: 17,
-                  fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-          const SizedBox(height: 16),
+              style: TextStyle(fontSize: 17,
+                  fontWeight: FontWeight.w700, color: context.appTextPrimary)),
+          SizedBox(height: 16),
 
           // Vehicle type
-          const Text('Vehicle Type',
-              style: TextStyle(color: AppTheme.textSecondary,
+          Text('Vehicle Type',
+              style: TextStyle(color: context.appTextSecondary,
                   fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Row(children: _types.map((t) => Expanded(child: Padding(
-            padding: const EdgeInsets.only(right: 6),
+            padding: EdgeInsets.only(right: 6),
             child: GestureDetector(
               onTap: () => setState(() => _type = t.$1),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                duration: Duration(milliseconds: 160),
+                padding: EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: _type == t.$1
-                      ? _green.withValues(alpha: 0.1) : AppTheme.cardBg,
+                      ? _green.withValues(alpha: 0.1) : context.appCardBg,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: _type == t.$1 ? _green : Colors.transparent,
@@ -377,12 +377,12 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(t.$3,
-                    color: _type == t.$1 ? _green : AppTheme.textSecondary,
+                    color: _type == t.$1 ? _green : context.appTextSecondary,
                     size: 20),
-                  const SizedBox(height: 3),
+                  SizedBox(height: 3),
                   Text(t.$2, style: TextStyle(
                     fontSize: 10, fontWeight: FontWeight.w600,
-                    color: _type == t.$1 ? _green : AppTheme.textSecondary,
+                    color: _type == t.$1 ? _green : context.appTextSecondary,
                   )),
                 ]),
               ),
@@ -450,16 +450,16 @@ class _F extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(
-          color: AppTheme.textSecondary, fontSize: 12,
+      Text(label, style: TextStyle(
+          color: context.appTextSecondary, fontSize: 12,
           fontWeight: FontWeight.w600)),
-      const SizedBox(height: 4),
+      SizedBox(height: 4),
       TextField(
         controller: ctrl, keyboardType: keyboardType,
-        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14),
+        style: TextStyle(color: context.appTextPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          filled: true, fillColor: AppTheme.cardBg,
+          filled: true, fillColor: context.appCardBg,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none),
@@ -483,16 +483,16 @@ class _EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.directions_car_outlined,
-          color: AppTheme.textSecondary, size: 60),
-      const SizedBox(height: 16),
-      const Text('No vehicles registered',
-          style: TextStyle(color: AppTheme.textPrimary,
+      Icon(Icons.directions_car_outlined,
+          color: context.appTextSecondary, size: 60),
+      SizedBox(height: 16),
+      Text('No vehicles registered',
+          style: TextStyle(color: context.appTextPrimary,
               fontSize: 16, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      const Text('Register your vehicle to start accepting rides.',
+      SizedBox(height: 8),
+      Text('Register your vehicle to start accepting rides.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: onAdd,
@@ -517,10 +517,10 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
-      const SizedBox(height: 12),
+      Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
+      SizedBox(height: 12),
       Text(error, textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.textSecondary)),
+          style: TextStyle(color: context.appTextSecondary)),
       const SizedBox(height: 16),
       ElevatedButton(onPressed: onRetry,
           style: ElevatedButton.styleFrom(

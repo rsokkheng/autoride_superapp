@@ -10,7 +10,7 @@ class GradientCard extends StatelessWidget {
   const GradientCard({
     super.key,
     required this.child,
-    this.colors = const [AppTheme.surface, AppTheme.cardBg],
+    this.colors = const [],
     this.padding,
     this.radius = 16,
   });
@@ -21,7 +21,7 @@ class GradientCard extends StatelessWidget {
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: colors,
+          colors: colors.isEmpty ? [context.appSurface, context.appCardBg] : colors,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -53,9 +53,9 @@ class ServiceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
         ),
@@ -63,23 +63,23 @@ class ServiceCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Text(title,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                style: TextStyle(
+                    color: context.appTextPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 14)),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(subtitle,
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 12)),
+                style: TextStyle(
+                    color: context.appTextSecondary, fontSize: 12)),
           ],
         ),
       ),
@@ -127,10 +127,10 @@ class AppTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       obscureText: obscure,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: icon != null ? Icon(icon, color: AppTheme.textSecondary, size: 20) : null,
+        prefixIcon: icon != null ? Icon(icon, color: context.appTextSecondary, size: 20) : null,
       ),
     );
   }
@@ -179,8 +179,8 @@ class SectionHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(title,
-            style: const TextStyle(
-                color: AppTheme.textPrimary,
+            style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700)),
         if (action != null)

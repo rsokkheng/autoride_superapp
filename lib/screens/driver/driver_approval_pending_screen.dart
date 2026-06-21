@@ -63,16 +63,16 @@ class _DriverApprovalPendingScreenState extends State<DriverApprovalPendingScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text('Application Status',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Application Status',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppTheme.textSecondary),
+            icon: Icon(Icons.refresh_rounded, color: context.appTextSecondary),
             onPressed: _loading ? null : _load,
           ),
         ],
@@ -97,15 +97,15 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       child: Column(children: [
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _StatusHero(status: status),
-        const SizedBox(height: 28),
+        SizedBox(height: 28),
 
         if (status.serviceZone != null || status.city != null) ...[
           _InfoCard(status: status),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
         ],
 
         if (status.documents.isNotEmpty) ...[
@@ -113,51 +113,51 @@ class _Body extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Text(
               status.isRejected ? 'Document Review Results' : 'Document Status',
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           ...status.documents.map((d) => _DocumentStatusTile(doc: d)),
         ],
 
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
         if (status.isRejected) ...[
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.danger.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
+              Row(children: [
                 Icon(Icons.info_outline, color: AppTheme.danger, size: 18),
                 SizedBox(width: 8),
                 Text('What to do next',
                     style: TextStyle(color: AppTheme.danger,
                         fontWeight: FontWeight.w700, fontSize: 13)),
               ]),
-              const SizedBox(height: 8),
-              const Text(
+              SizedBox(height: 8),
+              Text(
                 'Please review the feedback on your documents above, then re-submit with corrected photos. Contact support if you need help.',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.5),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12, height: 1.5),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const DriverDocumentUploadScreen(userId: 0)),
+                    MaterialPageRoute(builder: (_) => DriverDocumentUploadScreen(userId: 0)),
                   ),
-                  icon: const Icon(Icons.upload_rounded, size: 18),
-                  label: const Text('Re-upload Documents'),
+                  icon: Icon(Icons.upload_rounded, size: 18),
+                  label: Text('Re-upload Documents'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
-                    side: const BorderSide(color: AppTheme.danger),
+                    side: BorderSide(color: AppTheme.danger),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
               ),
@@ -165,11 +165,11 @@ class _Body extends StatelessWidget {
           ),
         ],
 
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
         if (status.isPending)
-          const Text(
+          Text(
             'We\'ll notify you once your documents have been reviewed.\nTypically 1–2 business days.',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, height: 1.6),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 12, height: 1.6),
             textAlign: TextAlign.center,
           ),
         const SizedBox(height: 16),
@@ -203,7 +203,7 @@ class _StatusHero extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+      padding: EdgeInsets.symmetric(vertical: 32, horizontal: 20),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
@@ -211,12 +211,12 @@ class _StatusHero extends StatelessWidget {
       ),
       child: Column(children: [
         Icon(icon, color: color, size: 64),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
         Text(title,
             style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(subtitle,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.4),
             textAlign: TextAlign.center),
       ]),
     );
@@ -232,27 +232,27 @@ class _InfoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(children: [
         if (status.city != null)
-          _Row(Icons.location_city_outlined, 'City', status.city!),
+          _Row(context, Icons.location_city_outlined, 'City', status.city!),
         if (status.serviceZone != null)
-          _Row(Icons.map_outlined, 'Service Zone', status.serviceZone!),
+          _Row(context, Icons.map_outlined, 'Service Zone', status.serviceZone!),
       ]),
     );
   }
 
-  Widget _Row(IconData icon, String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
+  Widget _Row(BuildContext context, IconData icon, String label, String value) => Padding(
+    padding: EdgeInsets.symmetric(vertical: 6),
     child: Row(children: [
-      Icon(icon, color: AppTheme.textSecondary, size: 18),
-      const SizedBox(width: 10),
-      Text('$label: ', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-      Text(value, style: const TextStyle(color: AppTheme.textPrimary,
+      Icon(icon, color: context.appTextSecondary, size: 18),
+      SizedBox(width: 10),
+      Text('$label: ', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+      Text(value, style: TextStyle(color: context.appTextPrimary,
           fontWeight: FontWeight.w600, fontSize: 13)),
     ]),
   );
@@ -288,19 +288,19 @@ class _DocumentStatusTile extends StatelessWidget {
             : Icons.hourglass_top_rounded;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(children: [
         Icon(icon, color: color, size: 22),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(_labels[doc.type] ?? doc.type,
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
           if (doc.note != null && doc.note!.isNotEmpty) ...[
             const SizedBox(height: 3),
@@ -334,11 +334,11 @@ class _ErrorBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(32),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.wifi_off_rounded, color: AppTheme.textSecondary, size: 48),
-          const SizedBox(height: 16),
-          Text(error, style: const TextStyle(color: AppTheme.textSecondary),
+          Icon(Icons.wifi_off_rounded, color: context.appTextSecondary, size: 48),
+          SizedBox(height: 16),
+          Text(error, style: TextStyle(color: context.appTextSecondary),
               textAlign: TextAlign.center),
           const SizedBox(height: 20),
           ElevatedButton(

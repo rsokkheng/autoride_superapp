@@ -54,7 +54,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _PayMethod(key: 'aba',     label: 'ABA Pay',    subtitle: 'ABA Mobile / QR',       color: Color(0xFF004B87), icon: Icons.account_balance),
     _PayMethod(key: 'acleda',  label: 'ACLEDA',     subtitle: 'ACLEDA Mobile Banking', color: Color(0xFF006B3F), icon: Icons.account_balance),
     _PayMethod(key: 'wing',    label: 'Wing Money', subtitle: 'Wing Mobile Wallet',    color: Color(0xFFFF6B00), icon: Icons.flutter_dash),
-    _PayMethod(key: 'wallet',  label: 'AutoRide Pay',subtitle: 'Your wallet balance',  color: _kGreen,           icon: Icons.account_balance_wallet_outlined),
+    _PayMethod(key: 'wallet',  label: 'ROTEH Pay',subtitle: 'Your wallet balance',  color: _kGreen,           icon: Icons.account_balance_wallet_outlined),
   ];
 
   Future<void> _pay() async {

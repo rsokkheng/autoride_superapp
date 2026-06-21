@@ -165,7 +165,7 @@ class _SplashScreenState extends State<SplashScreen>
       animation: _exitOpacity,
       builder: (_, child) => Opacity(opacity: _exitOpacity.value, child: child),
       child: Scaffold(
-        backgroundColor: AppTheme.primary,
+        backgroundColor: context.appBackground,
         body: Stack(
           children: [
             // ── Layer 1: animated particle background ──────────
@@ -362,7 +362,7 @@ class _LogoCluster extends StatelessWidget {
               gradient: RadialGradient(
                 colors: [
                   AppTheme.accent.withValues(alpha: 0.25),
-                  AppTheme.cardBg.withValues(alpha: 0.9),
+                  context.appCardBg.withValues(alpha: 0.9),
                 ],
               ),
               boxShadow: [
@@ -540,12 +540,12 @@ class _ProgressBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
+        padding: EdgeInsets.symmetric(horizontal: 40),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: AppTheme.surface,
+            backgroundColor: context.appSurface,
             valueColor: AlwaysStoppedAnimation(
               Color.lerp(AppTheme.accent, AppTheme.accentOrange, progress)!,
             ),
@@ -553,11 +553,11 @@ class _ProgressBar extends StatelessWidget {
           ),
         ),
       ),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
       Text(
         progress < 0.5 ? 'Initializing services...' : 'Almost ready...',
-        style: const TextStyle(
-          color: AppTheme.textSecondary,
+        style: TextStyle(
+          color: context.appTextSecondary,
           fontSize: 12,
           letterSpacing: 0.5,
         ),

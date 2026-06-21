@@ -33,34 +33,34 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Support Tickets'),
+        title: Text('Support Tickets'),
         actions: [
           PopupMenuButton<String>(
-            color: AppTheme.surface,
-            icon: Icon(Icons.filter_list_rounded, color: _statusFilter != 'all' ? AppTheme.accent : AppTheme.textSecondary),
+            color: context.appSurface,
+            icon: Icon(Icons.filter_list_rounded, color: _statusFilter != 'all' ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'open',        child: Text('Open',        style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'in_progress', child: Text('In Progress', style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'resolved',    child: Text('Resolved',    style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'closed',      child: Text('Closed',      style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'all',         child: Text('All',         style: TextStyle(color: AppTheme.textPrimary))),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'open',        child: Text('Open',        style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'in_progress', child: Text('In Progress', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'resolved',    child: Text('Resolved',    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'closed',      child: Text('Closed',      style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'all',         child: Text('All',         style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40), const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center), const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _tickets.isEmpty
-                  ? const Center(child: Text('No tickets found.', style: TextStyle(color: AppTheme.textSecondary)))
+                  ? Center(child: Text('No tickets found.', style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -110,32 +110,32 @@ class _TicketTile extends StatelessWidget {
         builder: (_) => AdminTicketDetailScreen(ticketId: int.tryParse(id) ?? 0, onUpdated: onUpdated),
       )),
       child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+        padding: EdgeInsets.all(14),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
         child: Row(children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: EdgeInsets.all(8),
             decoration: BoxDecoration(color: _priorityColor(priority).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: Icon(Icons.support_agent_rounded, color: _priorityColor(priority), size: 20),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(subject, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 3),
-              Text('$user  •  #$id', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+              Text(subject, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+              SizedBox(height: 3),
+              Text('$user  •  #$id', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
             ]),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+            Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
               child: Text(status.replaceAll('_', ' ').toUpperCase(), style: TextStyle(color: _statusColor(status), fontSize: 9, fontWeight: FontWeight.w700))),
-            const SizedBox(height: 4),
-            Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: _priorityColor(priority).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+            SizedBox(height: 4),
+            Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: _priorityColor(priority).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
               child: Text(priority.toUpperCase(), style: TextStyle(color: _priorityColor(priority), fontSize: 9, fontWeight: FontWeight.w700))),
           ]),
-          const SizedBox(width: 4),
-          const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 18),
+          SizedBox(width: 4),
+          Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
         ]),
       ),
     );
@@ -212,29 +212,29 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
     final status   = _ticket['status'] as String? ?? 'open';
 
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
         title: Text(_ticket['subject'] as String? ?? 'Ticket #${widget.ticketId}'),
         actions: [
           PopupMenuButton<String>(
-            color: AppTheme.surface,
-            icon: const Icon(Icons.more_vert),
+            color: context.appSurface,
+            icon: Icon(Icons.more_vert),
             onSelected: _updateStatus,
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'open',        child: Text('Mark Open',        style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'in_progress', child: Text('Mark In Progress', style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'resolved',    child: Text('Mark Resolved',    style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'closed',      child: Text('Mark Closed',      style: TextStyle(color: AppTheme.textPrimary))),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'open',        child: Text('Mark Open',        style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'in_progress', child: Text('Mark In Progress', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'resolved',    child: Text('Mark Resolved',    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'closed',      child: Text('Mark Closed',      style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40), const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary)), const SizedBox(height: 16),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary)), const SizedBox(height: 16),
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
                 ]))
               : Column(children: [
@@ -254,22 +254,22 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
                           children: [
                             if (!isAdmin) ...[
                               CircleAvatar(radius: 14, backgroundColor: AppTheme.accent.withValues(alpha: 0.12),
-                                child: Text(name[0].toUpperCase(), style: const TextStyle(color: AppTheme.accent, fontSize: 11))),
-                              const SizedBox(width: 8),
+                                child: Text(name[0].toUpperCase(), style: TextStyle(color: AppTheme.accent, fontSize: 11))),
+                              SizedBox(width: 8),
                             ],
                             Flexible(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: isAdmin ? AppTheme.accent : AppTheme.surface,
+                                  color: isAdmin ? AppTheme.accent : context.appSurface,
                                   borderRadius: BorderRadius.only(
-                                    topLeft:     const Radius.circular(14),
-                                    topRight:    const Radius.circular(14),
+                                    topLeft:     Radius.circular(14),
+                                    topRight:    Radius.circular(14),
                                     bottomLeft:  Radius.circular(isAdmin ? 14 : 4),
                                     bottomRight: Radius.circular(isAdmin ? 4 : 14),
                                   ),
                                 ),
-                                child: Text(text, style: TextStyle(color: isAdmin ? Colors.white : AppTheme.textPrimary, fontSize: 13)),
+                                child: Text(text, style: TextStyle(color: isAdmin ? Colors.white : context.appTextPrimary, fontSize: 13)),
                               ),
                             ),
                           ],
@@ -280,16 +280,16 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
                   if (status != 'closed' && status != 'resolved')
                     Container(
                       padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
-                      color: AppTheme.surface,
+                      color: context.appSurface,
                       child: Row(children: [
                         Expanded(
                           child: TextField(
                             controller: _replyCtrl,
-                            style: const TextStyle(color: AppTheme.textPrimary),
+                            style: TextStyle(color: context.appTextPrimary),
                             decoration: InputDecoration(
                               hintText: 'Type a reply…',
-                              hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                              filled: true, fillColor: AppTheme.cardBg,
+                              hintStyle: TextStyle(color: context.appTextSecondary),
+                              filled: true, fillColor: context.appCardBg,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             ),

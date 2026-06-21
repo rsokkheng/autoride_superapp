@@ -107,7 +107,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _OtpSheet(phone: phone),
@@ -149,12 +149,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         showDialog(
                           context: context,
                           builder: (_) => AlertDialog(
-                            backgroundColor: AppTheme.surface,
+                            backgroundColor: context.appSurface,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            title: const Text('Change Photo',
-                                style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-                            content: const Text('Feature coming soon',
-                                style: TextStyle(color: AppTheme.textSecondary)),
+                            title: Text('Change Photo',
+                                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+                            content: Text('Feature coming soon',
+                                style: TextStyle(color: context.appTextSecondary)),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
@@ -168,27 +168,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         CircleAvatar(
                           radius: 52,
                           backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-                          child: const Icon(Icons.person, color: AppTheme.accent, size: 52),
+                          child: Icon(Icons.person, color: AppTheme.accent, size: 52),
                         ),
                         Positioned(
                           bottom: 0, right: 0,
                           child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
-                            child: const Icon(Icons.camera_alt, color: AppTheme.primary, size: 16),
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                            child: Icon(Icons.camera_alt, color: AppTheme.primary, size: 16),
                           ),
                         ),
                       ]),
                     ),
-                    const SizedBox(height: 8),
-                    const Text('Tap photo to change', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    const SizedBox(height: 28),
+                    SizedBox(height: 8),
+                    Text('Tap photo to change', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                    SizedBox(height: 28),
 
                     _Field(label: 'Full Name',    controller: _nameCtrl,  icon: Icons.person_outline),
-                    const SizedBox(height: 14),
+                    SizedBox(height: 14),
                     _Field(label: 'Email',        controller: _emailCtrl, icon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress),
-                    const SizedBox(height: 14),
+                    SizedBox(height: 14),
 
                     // Phone field with OTP badge
                     Stack(alignment: Alignment.centerRight, children: [
@@ -198,20 +198,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         Positioned(
                           right: 14,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                                 color: AppTheme.warning.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4))),
-                            child: const Text('OTP required', style: TextStyle(color: AppTheme.warning, fontSize: 10, fontWeight: FontWeight.w700)),
+                            child: Text('OTP required', style: TextStyle(color: AppTheme.warning, fontSize: 10, fontWeight: FontWeight.w700)),
                           ),
                         ),
                     ]),
-                    const SizedBox(height: 6),
-                    const Align(
+                    SizedBox(height: 6),
+                    Align(
                       alignment: Alignment.centerLeft,
                       child: Text('Changing your phone number requires OTP verification.',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                     ),
                     const SizedBox(height: 28),
 
@@ -340,47 +340,47 @@ class _OtpSheetState extends State<_OtpSheet> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         // Handle
         Container(width: 40, height: 4,
-            decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 20),
+            decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(2))),
+        SizedBox(height: 20),
 
         // Icon + title
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.12), shape: BoxShape.circle),
-          child: const Icon(Icons.phone_android, color: AppTheme.accent, size: 32),
+          child: Icon(Icons.phone_android, color: AppTheme.accent, size: 32),
         ),
-        const SizedBox(height: 14),
-        const Text('Verify Phone Number',
-            style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+        SizedBox(height: 14),
+        Text('Verify Phone Number',
+            style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
         Text('A 6-digit code was sent to\n${widget.phone}',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5)),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.5)),
 
         // Dev mode code hint
         if (_devCode != null) ...[
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
                 color: AppTheme.warning.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4))),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.developer_mode, color: AppTheme.warning, size: 16),
-              const SizedBox(width: 6),
+              Icon(Icons.developer_mode, color: AppTheme.warning, size: 16),
+              SizedBox(width: 6),
               Text('Dev code: $_devCode',
-                  style: const TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 13)),
+                  style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 13)),
             ]),
           ),
         ],
 
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         if (_sending) ...[
-          const CircularProgressIndicator(color: AppTheme.accent),
-          const SizedBox(height: 12),
-          const Text('Sending OTP...', style: TextStyle(color: AppTheme.textSecondary)),
+          CircularProgressIndicator(color: AppTheme.accent),
+          SizedBox(height: 12),
+          Text('Sending OTP...', style: TextStyle(color: context.appTextSecondary)),
         ] else if (_sent) ...[
           // 6-digit input
           TextField(
@@ -388,30 +388,30 @@ class _OtpSheetState extends State<_OtpSheet> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 10),
+            style: TextStyle(color: context.appTextPrimary, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: 10),
             decoration: InputDecoration(
               counterText: '',
               hintText: '000000',
-              hintStyle: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.4), letterSpacing: 10),
+              hintStyle: TextStyle(color: context.appTextSecondary.withValues(alpha: 0.4), letterSpacing: 10),
               filled: true,
-              fillColor: AppTheme.cardBg,
+              fillColor: context.appCardBg,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: const BorderSide(color: AppTheme.accent, width: 1.5)),
+                  borderSide: BorderSide(color: AppTheme.accent, width: 1.5)),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // Countdown
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(Icons.timer_outlined,
-                color: _secondsLeft <= 60 ? AppTheme.danger : AppTheme.textSecondary, size: 15),
-            const SizedBox(width: 5),
+                color: _secondsLeft <= 60 ? AppTheme.danger : context.appTextSecondary, size: 15),
+            SizedBox(width: 5),
             Text(
               _secondsLeft > 0 ? 'Expires in $_countdownLabel' : 'Code expired',
               style: TextStyle(
-                  color: _secondsLeft <= 60 ? AppTheme.danger : AppTheme.textSecondary,
+                  color: _secondsLeft <= 60 ? AppTheme.danger : context.appTextSecondary,
                   fontSize: 13),
             ),
           ]),
@@ -419,22 +419,22 @@ class _OtpSheetState extends State<_OtpSheet> {
 
         // Error
         if (_error != null) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
                 color: AppTheme.danger.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4))),
             child: Row(children: [
-              const Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
-              const SizedBox(width: 8),
-              Expanded(child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+              Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
+              SizedBox(width: 8),
+              Expanded(child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13))),
             ]),
           ),
         ],
 
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
 
         // Actions
         if (_sent) ...[
@@ -445,22 +445,22 @@ class _OtpSheetState extends State<_OtpSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accent,
                 foregroundColor: AppTheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                padding: EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: _verifying
-                  ? const SizedBox(width: 20, height: 20,
+                  ? SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-                  : const Text('Verify', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  : Text('Verify', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           TextButton(
             onPressed: (_sending || _secondsLeft > 0) ? null : _sendOtp,
             child: Text(
               _secondsLeft > 0 ? 'Resend in $_countdownLabel' : 'Resend OTP',
               style: TextStyle(
-                color: _secondsLeft > 0 ? AppTheme.textSecondary : AppTheme.accent,
+                color: _secondsLeft > 0 ? context.appTextSecondary : AppTheme.accent,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -500,13 +500,13 @@ class _Field extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: AppTheme.textSecondary),
-        prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+        labelStyle: TextStyle(color: context.appTextSecondary),
+        prefixIcon: Icon(icon, color: context.appTextSecondary, size: 20),
         filled: true,
-        fillColor: AppTheme.surface,
+        fillColor: context.appSurface,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

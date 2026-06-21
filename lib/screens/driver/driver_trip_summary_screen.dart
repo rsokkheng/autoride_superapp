@@ -14,11 +14,8 @@ class DriverTripSummaryScreen extends StatelessWidget {
     this.durationMinFallback,
   });
 
-  static const _kGreen    = Color(0xFF00B14F);
-  static const _kTextMain = Color(0xFF1A1A1A);
-  static const _kTextSub  = Color(0xFF6B7280);
-  static const _kDivider  = Color(0xFFE5E7EB);
-  static const _kBg       = Color(0xFFF7F7F7);
+  static const _kGreen = Color(0xFF00B14F);
+  static const _kBg    = Color(0xFFF7F7F7);
 
   String get _passengerName =>
       ride.passenger?.name ?? 'Passenger #${ride.passengerId}';
@@ -48,11 +45,11 @@ class DriverTripSummaryScreen extends StatelessWidget {
         child: Column(children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.all(20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 // ── Success header ──────────────────────────────────────────
                 Container(
-                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  padding: EdgeInsets.symmetric(vertical: 28),
                   decoration: BoxDecoration(
                     color: _kGreen.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(20),
@@ -60,18 +57,18 @@ class DriverTripSummaryScreen extends StatelessWidget {
                   child: Column(children: [
                     Container(
                       width: 68, height: 68,
-                      decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
-                      child: const Icon(Icons.check, color: Colors.white, size: 36),
+                      decoration: BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+                      child: Icon(Icons.check, color: Colors.white, size: 36),
                     ),
-                    const SizedBox(height: 14),
-                    const Text('Trip Completed!',
-                        style: TextStyle(color: _kTextMain, fontSize: 22, fontWeight: FontWeight.w800)),
+                    SizedBox(height: 14),
+                    Text('Trip Completed!',
+                        style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
                     Text('Ride #${ride.id}',
-                        style: const TextStyle(color: _kTextSub, fontSize: 13)),
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                   ]),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
 
                 // ── Passenger card ──────────────────────────────────────────
                 _Card(child: Row(children: [
@@ -80,56 +77,56 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     backgroundColor: _kGreen.withValues(alpha: 0.15),
                     child: Text(
                       _passengerName.isNotEmpty ? _passengerName[0].toUpperCase() : 'P',
-                      style: const TextStyle(color: _kGreen, fontWeight: FontWeight.w800, fontSize: 18),
+                      style: TextStyle(color: _kGreen, fontWeight: FontWeight.w800, fontSize: 18),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(_passengerName,
-                        style: const TextStyle(color: _kTextMain, fontWeight: FontWeight.w700, fontSize: 15)),
+                        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
                     Row(children: [
-                      const Icon(Icons.star_rounded, color: Color(0xFFFACC15), size: 15),
-                      const SizedBox(width: 3),
-                      Text(_passengerRating, style: const TextStyle(color: _kTextSub, fontSize: 12)),
+                      Icon(Icons.star_rounded, color: Color(0xFFFACC15), size: 15),
+                      SizedBox(width: 3),
+                      Text(_passengerRating, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     ]),
                   ])),
                   // Service badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: _kGreen.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(_serviceLabel,
-                        style: const TextStyle(color: _kGreen, fontSize: 11, fontWeight: FontWeight.w700)),
+                        style: TextStyle(color: _kGreen, fontSize: 11, fontWeight: FontWeight.w700)),
                   ),
                 ])),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // ── Route card ──────────────────────────────────────────────
                 _Card(child: Column(children: [
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Column(children: [
-                      const SizedBox(height: 2),
+                      SizedBox(height: 2),
                       Container(
                         width: 10, height: 10,
-                        decoration: const BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: _kGreen, shape: BoxShape.circle),
                       ),
-                      Container(width: 1.5, height: 36, color: _kDivider),
-                      const Icon(Icons.location_on, color: Colors.red, size: 14),
+                      Container(width: 1.5, height: 36, color: Theme.of(context).dividerColor),
+                      Icon(Icons.location_on, color: Colors.red, size: 14),
                     ]),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Pickup', style: TextStyle(color: _kTextSub, fontSize: 11)),
-                      const SizedBox(height: 2),
+                      Text('Pickup', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                      SizedBox(height: 2),
                       Text(ride.pickupAddress,
-                          style: const TextStyle(color: _kTextMain, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 16),
-                      const Text('Destination', style: TextStyle(color: _kTextSub, fontSize: 11)),
-                      const SizedBox(height: 2),
+                      SizedBox(height: 16),
+                      Text('Destination', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                      SizedBox(height: 2),
                       Text(ride.dropoffAddress,
-                          style: const TextStyle(color: _kTextMain, fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     ])),
                   ]),
@@ -158,12 +155,12 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     value: _serviceLabel,
                   ),
                 ])),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // ── Fare summary ────────────────────────────────────────────
                 _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('FARE SUMMARY',
-                      style: TextStyle(color: _kTextSub, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                  Text('FARE SUMMARY',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                   const SizedBox(height: 14),
                   if (_distKm != null) ...[
                     _FareRow(
@@ -175,27 +172,27 @@ class DriverTripSummaryScreen extends StatelessWidget {
                       label: 'Distance (${_distKm!.toStringAsFixed(1)} km)',
                       value: AppTheme.khr((fareKhr - 3000).clamp(0, fareKhr)),
                     ),
-                    const SizedBox(height: 8),
-                    Divider(color: _kDivider, height: 16),
+                    SizedBox(height: 8),
+                    Divider(color: Theme.of(context).dividerColor, height: 16),
                   ],
                   Row(children: [
-                    const Text('Total Fare',
-                        style: TextStyle(color: _kTextMain, fontWeight: FontWeight.w700, fontSize: 15)),
-                    const Spacer(),
+                    Text('Total Fare',
+                        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+                    Spacer(),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                       Text(AppTheme.khr(fareKhr),
-                          style: const TextStyle(color: _kGreen, fontWeight: FontWeight.w800, fontSize: 18)),
+                          style: TextStyle(color: _kGreen, fontWeight: FontWeight.w800, fontSize: 18)),
                       Text(AppTheme.usd(fareKhr / 4000),
-                          style: const TextStyle(color: _kTextSub, fontSize: 11)),
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                     ]),
                   ]),
                 ])),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // ── Payment method ──────────────────────────────────────────
                 _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('PAYMENT METHOD',
-                      style: TextStyle(color: _kTextSub, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
+                  Text('PAYMENT METHOD',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                   const SizedBox(height: 14),
                   _PaymentMethodDisplay(method: ride.paymentMethod ?? 'cash'),
                 ])),
@@ -257,9 +254,9 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
     child: Column(children: [
       Icon(icon, color: DriverTripSummaryScreen._kGreen, size: 20),
-      const SizedBox(height: 4),
-      Text(value, style: const TextStyle(color: DriverTripSummaryScreen._kTextMain, fontWeight: FontWeight.w700, fontSize: 13)),
-      Text(label, style: const TextStyle(color: DriverTripSummaryScreen._kTextSub, fontSize: 11)),
+      SizedBox(height: 4),
+      Text(value, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+      Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
     ]),
   );
 }
@@ -268,7 +265,7 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: 1, height: 36,
-    color: DriverTripSummaryScreen._kDivider,
+    color: Theme.of(context).dividerColor,
     margin: const EdgeInsets.symmetric(horizontal: 4),
   );
 }
@@ -280,9 +277,9 @@ class _FareRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(children: [
-    Text(label, style: const TextStyle(color: DriverTripSummaryScreen._kTextSub, fontSize: 13)),
-    const Spacer(),
-    Text(value, style: const TextStyle(color: DriverTripSummaryScreen._kTextMain, fontSize: 13, fontWeight: FontWeight.w600)),
+    Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+    Spacer(),
+    Text(value, style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
   ]);
 }
 
@@ -315,11 +312,11 @@ class _PaymentMethodDisplay extends StatelessWidget {
         ),
         child: Icon(matched.icon, color: matched.color, size: 22),
       ),
-      const SizedBox(width: 12),
+      SizedBox(width: 12),
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(matched.label,
-            style: const TextStyle(color: DriverTripSummaryScreen._kTextMain, fontWeight: FontWeight.w700, fontSize: 15)),
-        const Text('Payment received', style: TextStyle(color: DriverTripSummaryScreen._kTextSub, fontSize: 12)),
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+        Text('Payment received', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
       ]),
       const Spacer(),
       Container(

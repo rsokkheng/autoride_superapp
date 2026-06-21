@@ -157,13 +157,13 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Remove Account', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Unlink $name from your account?', style: const TextStyle(color: AppTheme.textSecondary)),
+        title: Text('Remove Account', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text('Unlink $name from your account?', style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -190,7 +190,7 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _LinkAccountSheet(onLinked: _load),
@@ -200,7 +200,7 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(title: const Text('Switch Account')),
       body: Column(children: [
         Expanded(child: _buildBody()),
@@ -229,21 +229,21 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
     if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     if (_error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-        const SizedBox(height: 12),
-        Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        SizedBox(height: 12),
+        Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
       ]));
     }
     if (_linked.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.manage_accounts_outlined, color: AppTheme.textSecondary, size: 56),
-        const SizedBox(height: 16),
-        const Text('No linked accounts', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
-        const SizedBox(height: 8),
-        const Text('Link another account to switch between them.',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+        Icon(Icons.manage_accounts_outlined, color: context.appTextSecondary, size: 56),
+        SizedBox(height: 16),
+        Text('No linked accounts', style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
+        SizedBox(height: 8),
+        Text('Link another account to switch between them.',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13), textAlign: TextAlign.center),
       ]));
     }
     return RefreshIndicator(
@@ -326,33 +326,33 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
       padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Expanded(child: Text('Link Account', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
+          Expanded(child: Text('Link Account', style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
           IconButton(
-            icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+            icon: Icon(Icons.close, color: context.appTextSecondary),
             onPressed: () => Navigator.pop(context),
           ),
         ]),
-        const SizedBox(height: 20),
+        SizedBox(height: 20),
 
         if (_error != null) ...[
           Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 16),
+            padding: EdgeInsets.all(12),
+            margin: EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(
               color: AppTheme.danger.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
             ),
-            child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
+            child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
           ),
         ],
 
         _SheetField(controller: _emailCtrl, hint: 'Email', icon: Icons.email_outlined, type: TextInputType.emailAddress),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _SheetField(controller: _passCtrl, hint: 'Password', icon: Icons.lock_outline, obscure: _obscure,
           suffix: GestureDetector(
             onTap: () => setState(() => _obscure = !_obscure),
-            child: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: AppTheme.textSecondary, size: 20),
+            child: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: context.appTextSecondary, size: 20),
           ),
         ),
         const SizedBox(height: 12),
@@ -402,14 +402,14 @@ class _SheetField extends StatelessWidget {
       controller: controller,
       keyboardType: type,
       obscureText: obscure,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppTheme.textSecondary),
-        prefixIcon: Icon(icon, color: AppTheme.textSecondary, size: 20),
+        hintStyle: TextStyle(color: context.appTextSecondary),
+        prefixIcon: Icon(icon, color: context.appTextSecondary, size: 20),
         suffixIcon: suffix,
         filled: true,
-        fillColor: AppTheme.cardBg,
+        fillColor: context.appCardBg,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -445,29 +445,29 @@ class _AccountTile extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: switching ? AppTheme.accent : AppTheme.cardBg, width: switching ? 1.5 : 1),
+        border: Border.all(color: switching ? AppTheme.accent : context.appCardBg, width: switching ? 1.5 : 1),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
           backgroundColor: AppTheme.accent.withValues(alpha: 0.12),
           radius: 24,
           child: Text(
             name.isNotEmpty ? name[0].toUpperCase() : '?',
-            style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 18),
+            style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 18),
           ),
         ),
         title: Row(children: [
-          Expanded(child: Text(label ?? name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14))),
+          Expanded(child: Text(label ?? name, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14))),
         ]),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if (label != null) Text(name, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-          Text(email, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-          const SizedBox(height: 4),
+          if (label != null) Text(name, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          Text(email, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          SizedBox(height: 4),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
               color: isDriver ? AppTheme.accentOrange.withValues(alpha: 0.12) : AppTheme.accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
@@ -479,10 +479,10 @@ class _AccountTile extends StatelessWidget {
           ),
         ]),
         trailing: switching
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
+            ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppTheme.textSecondary, size: 20),
+                  icon: Icon(Icons.delete_outline, color: context.appTextSecondary, size: 20),
                   onPressed: onRemove,
                   tooltip: 'Remove',
                 ),

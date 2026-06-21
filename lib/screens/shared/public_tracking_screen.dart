@@ -132,7 +132,7 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
       case 'accepted':
       case 'picking_up': return AppTheme.accent;
       case 'in_progress': return _green;
-      case 'completed':   return AppTheme.textSecondary;
+      case 'completed':   return context.appTextSecondary;
       default:            return AppTheme.warning;
     }
   }
@@ -152,22 +152,22 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F6FA),
+      backgroundColor: Color(0xFFF5F6FA),
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         automaticallyImplyLeading: false,
         title: Row(children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: EdgeInsets.all(6),
             decoration: BoxDecoration(
                 color: _green.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: const Icon(Icons.directions_car_rounded,
+            child: Icon(Icons.directions_car_rounded,
                 color: _green, size: 18),
           ),
-          const SizedBox(width: 10),
-          const Text('AutoRide — Live Trip',
-              style: TextStyle(color: Color(0xFF1A1A1A),
+          SizedBox(width: 10),
+          Text('ROTEH — Live Trip',
+              style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w700, fontSize: 15)),
         ]),
       ),
@@ -255,59 +255,59 @@ class _InfoPanel extends StatelessWidget {
           ],
         ]),
       ),
-      const SizedBox(height: 14),
+      SizedBox(height: 14),
 
       // Route
       Container(
-        padding: const EdgeInsets.all(12),
+        padding: EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
+          color: Color(0xFFF5F5F5),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(children: [
           Row(children: [
-            const Icon(Icons.circle, color: _green, size: 8),
-            const SizedBox(width: 10),
+            Icon(Icons.circle, color: _green, size: 8),
+            SizedBox(width: 10),
             Expanded(child: Text(trip.pickupAddress,
-                style: const TextStyle(fontSize: 13,
-                    color: Color(0xFF1A1A1A)),
+                style: TextStyle(fontSize: 13,
+                    color: context.appTextPrimary),
                 maxLines: 1, overflow: TextOverflow.ellipsis)),
           ]),
           Padding(
-            padding: const EdgeInsets.only(left: 3),
+            padding: EdgeInsets.only(left: 3),
             child: Column(children: List.generate(3, (_) => Container(
               width: 2, height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 1),
+              margin: EdgeInsets.symmetric(vertical: 1),
               color: Colors.grey[400],
             ))),
           ),
           Row(children: [
-            const Icon(Icons.location_on, color: Colors.red, size: 10),
-            const SizedBox(width: 10),
+            Icon(Icons.location_on, color: Colors.red, size: 10),
+            SizedBox(width: 10),
             Expanded(child: Text(trip.dropoffAddress,
-                style: const TextStyle(fontSize: 13,
-                    color: Color(0xFF1A1A1A)),
+                style: TextStyle(fontSize: 13,
+                    color: context.appTextPrimary),
                 maxLines: 1, overflow: TextOverflow.ellipsis)),
           ]),
         ]),
       ),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
 
       // Driver info
       if (trip.driverName.isNotEmpty)
         Row(children: [
-          const Icon(Icons.person_outline,
-              color: Color(0xFF757575), size: 16),
-          const SizedBox(width: 6),
+          Icon(Icons.person_outline,
+              color: context.appTextSecondary, size: 16),
+          SizedBox(width: 6),
           Text(trip.driverName,
-              style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
+              style: TextStyle(
+                  color: context.appTextPrimary,
                   fontWeight: FontWeight.w600)),
           if (trip.vehicleType.isNotEmpty || trip.plate.isNotEmpty) ...[
-            const Text(' · ',
-                style: TextStyle(color: Color(0xFF757575))),
+            Text(' · ',
+                style: TextStyle(color: context.appTextSecondary)),
             Text('${trip.vehicleType} ${trip.plate}'.trim(),
-                style: const TextStyle(color: Color(0xFF757575),
+                style: TextStyle(color: context.appTextSecondary,
                     fontSize: 13)),
           ],
         ]),
@@ -339,18 +339,18 @@ class _ErrorBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Padding(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.link_off_rounded,
+        Icon(Icons.link_off_rounded,
             color: AppTheme.danger, size: 56),
-        const SizedBox(height: 16),
-        const Text('Trip not found',
+        SizedBox(height: 16),
+        Text('Trip not found',
             style: TextStyle(fontSize: 18,
-                fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-        const SizedBox(height: 8),
+                fontWeight: FontWeight.w700, color: context.appTextPrimary)),
+        SizedBox(height: 8),
         Text(error, textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 13)),
+            style: TextStyle(
+                color: context.appTextSecondary, fontSize: 13)),
         const SizedBox(height: 24),
         ElevatedButton(
           onPressed: onRetry,

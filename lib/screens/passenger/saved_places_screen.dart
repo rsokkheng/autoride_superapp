@@ -72,23 +72,23 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         elevation: 0,
-        leading: const BackButton(color: AppTheme.textPrimary),
-        title: const Text('Saved Places',
+        leading: BackButton(color: context.appTextPrimary),
+        title: Text('Saved Places',
             style: TextStyle(
-                color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+                color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: _green),
+            icon: Icon(Icons.add, color: _green),
             onPressed: () => _showAddEdit(null),
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: _green))
+          ? Center(child: CircularProgressIndicator(color: _green))
           : _error != null
               ? _ErrorView(error: _error!, onRetry: _load)
               : RefreshIndicator(
@@ -96,7 +96,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                   child: _places.isEmpty
                       ? _EmptyView(onAdd: () => _showAddEdit(null))
                       : ListView(
-                          padding: const EdgeInsets.all(16),
+                          padding: EdgeInsets.all(16),
                           children: [
                             // Quick-add Home / Work if not present
                             if (!_places.any((p) =>
@@ -107,7 +107,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                                 onTap: () => _showAddEdit(null,
                                     presetLabel: 'Home'),
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8),
                             ],
                             if (!_places.any((p) =>
                                 p.label.toLowerCase() == 'work')) ...[
@@ -117,13 +117,13 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                                 onTap: () => _showAddEdit(null,
                                     presetLabel: 'Work'),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: 16),
                             ],
-                            const Padding(
+                            Padding(
                               padding: EdgeInsets.only(bottom: 10),
                               child: Text('Your Places',
                                   style: TextStyle(
-                                      color: AppTheme.textSecondary,
+                                      color: context.appTextSecondary,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.5)),
@@ -191,13 +191,13 @@ class _PlaceTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
+        contentPadding: EdgeInsets.symmetric(
             horizontal: 16, vertical: 4),
         leading: Container(
           width: 44, height: 44,
@@ -208,31 +208,31 @@ class _PlaceTile extends StatelessWidget {
           child: Icon(_icon, color: _iconColor, size: 22),
         ),
         title: Text(place.label,
-            style: const TextStyle(
-                color: AppTheme.textPrimary,
+            style: TextStyle(
+                color: context.appTextPrimary,
                 fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text(place.address,
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-                color: AppTheme.textSecondary, fontSize: 12)),
+            style: TextStyle(
+                color: context.appTextSecondary, fontSize: 12)),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           if (place.isDefault)
             Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(
+              margin: EdgeInsets.only(right: 8),
+              padding: EdgeInsets.symmetric(
                   horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
                 color: _green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: const Text('Default',
+              child: Text('Default',
                   style: TextStyle(
                       color: _green, fontSize: 10,
                       fontWeight: FontWeight.w600)),
             ),
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert,
-                color: AppTheme.textSecondary, size: 20),
+            icon: Icon(Icons.more_vert,
+                color: context.appTextSecondary, size: 20),
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
             itemBuilder: (_) => [
@@ -273,9 +273,9 @@ class _QuickAddTile extends StatelessWidget {
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
             color: _green.withValues(alpha: 0.3), style: BorderStyle.solid),
@@ -306,16 +306,16 @@ class _EmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.bookmark_border_rounded,
-          color: AppTheme.textSecondary, size: 60),
-      const SizedBox(height: 16),
-      const Text('No saved places yet',
-          style: TextStyle(color: AppTheme.textPrimary,
+      Icon(Icons.bookmark_border_rounded,
+          color: context.appTextSecondary, size: 60),
+      SizedBox(height: 16),
+      Text('No saved places yet',
+          style: TextStyle(color: context.appTextPrimary,
               fontSize: 16, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 6),
-      const Text('Save home, work, or favourite spots\nfor faster booking.',
+      SizedBox(height: 6),
+      Text('Save home, work, or favourite spots\nfor faster booking.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: onAdd,
@@ -340,11 +340,11 @@ class _ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.error_outline,
+      Icon(Icons.error_outline,
           color: AppTheme.danger, size: 48),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       Text(error, textAlign: TextAlign.center,
-          style: const TextStyle(color: AppTheme.textSecondary)),
+          style: TextStyle(color: context.appTextSecondary)),
       const SizedBox(height: 16),
       ElevatedButton(onPressed: onRetry,
           style: ElevatedButton.styleFrom(
@@ -434,7 +434,7 @@ class _AddEditSheetState extends State<_AddEditSheet> {
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -450,34 +450,34 @@ class _AddEditSheetState extends State<_AddEditSheet> {
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2)),
         )),
-        const SizedBox(height: 18),
+        SizedBox(height: 18),
         Text(isEdit ? 'Edit Place' : 'Add Place',
-            style: const TextStyle(fontSize: 17,
-                fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
-        const SizedBox(height: 18),
+            style: TextStyle(fontSize: 17,
+                fontWeight: FontWeight.w700, color: context.appTextPrimary)),
+        SizedBox(height: 18),
 
         _SheetField(ctrl: _labelCtrl, label: 'Label',
             hint: 'Home, Work, Gym…',
             icon: Icons.bookmark_outline),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         _SheetField(ctrl: _addressCtrl, label: 'Address',
             hint: 'Full address',
             icon: Icons.location_on_outlined),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Row(children: [
           Expanded(child: _SheetField(ctrl: _latCtrl, label: 'Latitude',
               hint: '11.5564',
               icon: Icons.my_location,
-              keyboardType: const TextInputType.numberWithOptions(
+              keyboardType: TextInputType.numberWithOptions(
                   signed: true, decimal: true))),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(child: _SheetField(ctrl: _lngCtrl, label: 'Longitude',
               hint: '104.9282',
               icon: Icons.my_location,
-              keyboardType: const TextInputType.numberWithOptions(
+              keyboardType: TextInputType.numberWithOptions(
                   signed: true, decimal: true))),
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         Row(children: [
           Checkbox(
@@ -485,8 +485,8 @@ class _AddEditSheetState extends State<_AddEditSheet> {
             onChanged: (v) => setState(() => _isDefault = v ?? false),
             activeColor: _green,
           ),
-          const Text('Set as default',
-              style: TextStyle(color: AppTheme.textPrimary)),
+          Text('Set as default',
+              style: TextStyle(color: context.appTextPrimary)),
         ]),
 
         if (_error != null) ...[
@@ -533,21 +533,21 @@ class _SheetField extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(label, style: const TextStyle(
-          color: AppTheme.textSecondary, fontSize: 12,
+      Text(label, style: TextStyle(
+          color: context.appTextSecondary, fontSize: 12,
           fontWeight: FontWeight.w600)),
-      const SizedBox(height: 4),
+      SizedBox(height: 4),
       TextField(
         controller:   ctrl,
         keyboardType: keyboardType,
-        style: const TextStyle(
-            color: AppTheme.textPrimary, fontSize: 14),
+        style: TextStyle(
+            color: context.appTextPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText:   hint,
           prefixIcon: Icon(icon,
-              color: AppTheme.textSecondary, size: 18),
+              color: context.appTextSecondary, size: 18),
           filled:     true,
-          fillColor:  AppTheme.cardBg,
+          fillColor:  context.appCardBg,
           border:     OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
               borderSide: BorderSide.none),

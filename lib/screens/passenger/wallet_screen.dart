@@ -126,7 +126,7 @@ class _WalletScreenState extends State<WalletScreen> {
       case 'send':
         return (icon: Icons.send, color: AppTheme.accentOrange);
       default:
-        return (icon: Icons.swap_horiz, color: AppTheme.textSecondary);
+        return (icon: Icons.swap_horiz, color: context.appTextSecondary);
     }
   }
 
@@ -134,7 +134,7 @@ class _WalletScreenState extends State<WalletScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -161,7 +161,7 @@ class _WalletScreenState extends State<WalletScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -187,7 +187,7 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
         title: const Text('ROTEH Pay'),
         actions: [
@@ -331,10 +331,10 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Widget _buildQuickActions() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: EdgeInsets.symmetric(vertical: 20, horizontal: 8),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -365,20 +365,20 @@ class _WalletScreenState extends State<WalletScreen> {
 
   Widget _buildTransactionsSection() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+      padding: EdgeInsets.fromLTRB(16, 20, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Recent Transactions',
             style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: context.appTextPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           if (_txLoading && _transactions.isEmpty)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: CircularProgressIndicator(color: AppTheme.accent),
@@ -392,18 +392,18 @@ class _WalletScreenState extends State<WalletScreen> {
           else if (_transactions.isEmpty)
             Center(
               child: Padding(
-                padding: const EdgeInsets.all(32),
+                padding: EdgeInsets.all(32),
                 child: Column(
                   children: [
                     Icon(
                       Icons.receipt_long_outlined,
-                      color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                      color: context.appTextSecondary.withValues(alpha: 0.5),
                       size: 48,
                     ),
-                    const SizedBox(height: 12),
-                    const Text(
+                    SizedBox(height: 12),
+                    Text(
                       'No transactions yet',
-                      style: TextStyle(color: AppTheme.textSecondary),
+                      style: TextStyle(color: context.appTextSecondary),
                     ),
                   ],
                 ),
@@ -485,11 +485,11 @@ class _QuickActionButton extends StatelessWidget {
             ),
             child: Icon(icon, color: color, size: 26),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
-                color: AppTheme.textPrimary,
+            style: TextStyle(
+                color: context.appTextPrimary,
                 fontSize: 12,
                 fontWeight: FontWeight.w600),
           ),
@@ -523,10 +523,10 @@ class _TxnTile extends StatelessWidget {
         : '-${AppTheme.khr(txn.amount)}';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -540,25 +540,25 @@ class _TxnTile extends StatelessWidget {
             ),
             child: Icon(iconData, color: iconColor, size: 20),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   txn.displayLabel,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary,
+                  style: TextStyle(
+                      color: context.appTextPrimary,
                       fontWeight: FontWeight.w600,
                       fontSize: 13),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Text(
                   relativeTime.isNotEmpty ? relativeTime : txn.formattedDate,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 11),
+                  style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 11),
                 ),
               ],
             ),
@@ -588,9 +588,9 @@ class _TxErrorBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -599,7 +599,7 @@ class _TxErrorBanner extends StatelessWidget {
             message,
             textAlign: TextAlign.center,
             style:
-                const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                TextStyle(color: context.appTextSecondary, fontSize: 13),
           ),
           const SizedBox(height: 12),
           TextButton(
@@ -696,7 +696,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Center(
               child: Container(
                 width: 40,
@@ -707,11 +707,11 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-            const Text(
+            SizedBox(height: 20),
+            Text(
               'Top Up ROTEH Pay',
               style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: context.appTextPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w800),
             ),
@@ -733,9 +733,9 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                     _useCustom = false;
                   }),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
+                    duration: Duration(milliseconds: 150),
                     decoration: BoxDecoration(
-                      color: selected ? AppTheme.accent : AppTheme.cardBg,
+                      color: selected ? AppTheme.accent : context.appCardBg,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color:
@@ -748,7 +748,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                       AppTheme.khr(a),
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: selected ? Colors.white : AppTheme.textPrimary,
+                        color: selected ? Colors.white : context.appTextPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
@@ -757,22 +757,22 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
 
             // Custom amount field
             TextField(
               controller: _customCtrl,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: context.appTextPrimary),
               onChanged: (_) => setState(() => _useCustom = true),
               onTap: () => setState(() => _useCustom = true),
               decoration: InputDecoration(
                 hintText: 'Custom amount (KHR)',
-                hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                hintStyle: TextStyle(color: context.appTextSecondary),
                 filled: true,
                 fillColor: _useCustom
                     ? AppTheme.accent.withValues(alpha: 0.08)
-                    : AppTheme.cardBg,
+                    : context.appCardBg,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -780,19 +780,19 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide:
-                      const BorderSide(color: AppTheme.accent, width: 1.5),
+                      BorderSide(color: AppTheme.accent, width: 1.5),
                 ),
-                prefixIcon: const Icon(Icons.edit_outlined,
-                    color: AppTheme.textSecondary, size: 18),
+                prefixIcon: Icon(Icons.edit_outlined,
+                    color: context.appTextSecondary, size: 18),
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Payment method chips
-            const Text(
+            Text(
               'Payment Method',
               style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: context.appTextSecondary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600),
             ),
@@ -809,9 +809,9 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                   onSelected: (_) =>
                       setState(() => _selectedMethod = key),
                   selectedColor: AppTheme.accent,
-                  backgroundColor: AppTheme.cardBg,
+                  backgroundColor: context.appCardBg,
                   labelStyle: TextStyle(
-                    color: selected ? Colors.white : AppTheme.textPrimary,
+                    color: selected ? Colors.white : context.appTextPrimary,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -935,7 +935,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Center(
             child: Container(
               width: 40,
@@ -946,25 +946,25 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
+          SizedBox(height: 20),
+          Text(
             'Send Money',
             style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: context.appTextPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           TextField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
-            style: const TextStyle(color: AppTheme.textPrimary),
+            style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
               hintText: "Recipient's phone number",
-              hintStyle: const TextStyle(color: AppTheme.textSecondary),
+              hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true,
-              fillColor: AppTheme.cardBg,
+              fillColor: context.appCardBg,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -972,23 +972,23 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide:
-                    const BorderSide(color: AppTheme.accent, width: 1.5),
+                    BorderSide(color: AppTheme.accent, width: 1.5),
               ),
-              prefixIcon: const Icon(Icons.phone_outlined,
-                  color: AppTheme.textSecondary),
+              prefixIcon: Icon(Icons.phone_outlined,
+                  color: context.appTextSecondary),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           TextField(
             controller: _amountCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: AppTheme.textPrimary),
+            style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
               hintText: 'Amount (KHR, min 1,000)',
-              hintStyle: const TextStyle(color: AppTheme.textSecondary),
+              hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true,
-              fillColor: AppTheme.cardBg,
+              fillColor: context.appCardBg,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -996,10 +996,10 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide:
-                    const BorderSide(color: AppTheme.accent, width: 1.5),
+                    BorderSide(color: AppTheme.accent, width: 1.5),
               ),
-              prefixIcon: const Icon(Icons.account_balance_wallet_outlined,
-                  color: AppTheme.textSecondary),
+              prefixIcon: Icon(Icons.account_balance_wallet_outlined,
+                  color: context.appTextSecondary),
             ),
           ),
           const SizedBox(height: 24),

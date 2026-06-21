@@ -17,11 +17,16 @@ import '../../services/marker_icon_service.dart';
 import '../../models/driver_marker_model.dart';
 import 'rate_driver_screen.dart';
 import '../shared/ride_chat_screen.dart';
+import '../../theme/app_theme.dart';
 
-const _kGreen      = Color(0xFF00B14F);
-const _kTextMain   = Color(0xFF1A1A1A);
-const _kTextSub    = Color(0xFF757575);
-const _kDivider    = Color(0xFFEEEEEE);
+const _kGreen = Color(0xFF00B14F);
+
+/// A single intermediate stop passed to [TripTrackingScreen].
+class TripStop {
+  final String address;
+  final LatLng latLng;
+  const TripStop({required this.address, required this.latLng});
+}
 
 class TripTrackingScreen extends StatefulWidget {
   final int?    rideId;
@@ -42,6 +47,8 @@ class TripTrackingScreen extends StatefulWidget {
   // have geocoded coordinates yet).
   final LatLng? pickupLatLng;
   final LatLng? destLatLng;
+  /// Intermediate stops between pickup and destination (in order).
+  final List<TripStop> wayStops;
 
   const TripTrackingScreen({
     super.key,
@@ -60,6 +67,7 @@ class TripTrackingScreen extends StatefulWidget {
     this.isScheduled   = false,
     this.pickupLatLng,
     this.destLatLng,
+    this.wayStops      = const [],
   });
 
   @override
@@ -126,6 +134,25 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   BitmapDescriptor? _driverIcon;
   double _driverHeading = 0.0;
 
+  // Multi-stop: index into wayStops + destination.
+  // 0..wayStops.length-1 = intermediate stops; wayStops.length = final destination.
+  int _nextStopIndex = 0;
+  // ETA in minutes to each remaining stop (index matches _nextStopIndex offset).
+  List<int> _stopEtas = [];
+
+  bool get _hasWayStops => widget.wayStops.isNotEmpty;
+
+  /// The LatLng of the stop we are currently heading to during the trip.
+  LatLng get _currentTarget {
+    if (!_hasWayStops || _nextStopIndex >= widget.wayStops.length) return _destPoint;
+    return widget.wayStops[_nextStopIndex].latLng;
+  }
+
+  String get _currentTargetLabel {
+    if (!_hasWayStops || _nextStopIndex >= widget.wayStops.length) return widget.to;
+    return 'Stop ${_nextStopIndex + 1}: ${widget.wayStops[_nextStopIndex].address}';
+  }
+
   LatLng get _pickupPoint => widget.pickupLatLng ?? WebSocketService.pickupPoint;
   LatLng get _destPoint   => widget.destLatLng   ?? WebSocketService.destinationPoint;
 
@@ -174,6 +201,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         infoWindow: InfoWindow(title: widget.from),
       ),
+      // Intermediate stop markers
+      for (int i = 0; i < widget.wayStops.length; i++)
+        Marker(
+          markerId: MarkerId('stop_$i'),
+          position: widget.wayStops[i].latLng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          infoWindow: InfoWindow(title: 'Stop ${i + 1}: ${widget.wayStops[i].address}'),
+        ),
       Marker(
         markerId: const MarkerId('destination'),
         position: _destPoint,
@@ -302,22 +337,45 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // ── Routes API — live route + ETA ────────────────────────────────────────────
 
   Future<void> _fetchRoute(LatLng driverPos) async {
-    // Before pickup: driver → pickup.  During trip: driver → destination.
-    final destination =
-        _driverAssigned && _lastUpdate?.status == TripStatus.inProgress
-            ? _destPoint
-            : _pickupPoint;
+    final inProgress =
+        _driverAssigned && _lastUpdate?.status == TripStatus.inProgress;
+
+    // Before pickup: driver → pickup.
+    // During trip: driver → current stop (or destination if no more stops).
+    final destination = inProgress ? _currentTarget : _pickupPoint;
 
     final result = await MapsService.getRoute(
       origin:      driverPos,
       destination: destination,
     );
     if (!mounted || result == null) return;
+
+    // Build per-stop ETAs for remaining stops during trip.
+    List<int> stopEtas = [];
+    if (inProgress && _hasWayStops) {
+      stopEtas = [result.etaMinutes]; // ETA to next stop
+      // Estimate subsequent stops by fetching routes in sequence.
+      LatLng prev = destination;
+      final remaining = widget.wayStops.sublist(_nextStopIndex + 1);
+      int accumulated = result.etaMinutes;
+      for (final stop in remaining) {
+        final r = await MapsService.getRoute(origin: prev, destination: stop.latLng);
+        accumulated += r?.etaMinutes ?? 5;
+        stopEtas.add(accumulated);
+        prev = stop.latLng;
+      }
+      // Final destination ETA
+      final finalR = await MapsService.getRoute(origin: prev, destination: _destPoint);
+      accumulated += finalR?.etaMinutes ?? 5;
+      stopEtas.add(accumulated);
+    }
+
+    if (!mounted) return;
     setState(() {
       _etaMinutes = result.etaMinutes;
       _distanceKm = result.distanceKm;
+      _stopEtas   = stopEtas;
       _resetEtaCountdown(_etaMinutes);
-      // Replace only the live-route polyline; keep the full static route
       _polylines
         ..removeWhere((p) => p.polylineId.value == 'live_route')
         ..add(Polyline(
@@ -330,6 +388,23 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           jointType:  JointType.round,
         ));
     });
+  }
+
+  /// Called by websocket/poll when driver position is close to the current
+  /// intermediate stop — advances to the next stop.
+  void _checkStopProximity(LatLng driverPos) {
+    if (!_hasWayStops || _nextStopIndex >= widget.wayStops.length) return;
+    final stop = widget.wayStops[_nextStopIndex];
+    final dist = Geolocator.distanceBetween(
+      driverPos.latitude, driverPos.longitude,
+      stop.latLng.latitude, stop.latLng.longitude,
+    );
+    if (dist < 80) { // within 80 m → arrived at stop
+      setState(() {
+        _nextStopIndex++;
+        if (_stopEtas.isNotEmpty) _stopEtas.removeAt(0);
+      });
+    }
   }
 
   // ── Cancel ride ────────────────────────────────────────────────────────────
@@ -429,6 +504,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           heading:     update.heading,
           vehicleType: update.vehicleType,
         ));
+      }
+
+      // Advance to next wayStop when driver arrives within 80 m during trip
+      if (update.status == TripStatus.inProgress) {
+        _checkStopProximity(update.driverPosition);
       }
 
       if (update.status == TripStatus.pickingUp &&
@@ -617,7 +697,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final dist = _distanceKm.toStringAsFixed(1);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.appBackground,
       body: Stack(
         children: [
           // ── Map ────────────────────────────────────────────────────────
@@ -652,59 +732,111 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           // ── Route card (top) ───────────────────────────────────────────
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.appSurface,
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
                         color: Colors.black.withValues(alpha: 0.12),
                         blurRadius: 10,
-                        offset: const Offset(0, 4))
+                        offset: Offset(0, 4))
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
                       child: Row(children: [
                         Container(
                             width: 12, height: 12,
-                            decoration: const BoxDecoration(
+                            decoration: BoxDecoration(
                                 color: _kGreen, shape: BoxShape.circle)),
-                        const SizedBox(width: 12),
-                        const Expanded(
+                        SizedBox(width: 12),
+                        Expanded(
                             child: Text('My location',
                                 style: TextStyle(
-                                    color: _kTextMain,
+                                    color: context.appTextPrimary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w500))),
                         Container(
                           width: 28, height: 28,
                           decoration: BoxDecoration(
-                              color: Colors.grey[100], shape: BoxShape.circle),
-                          child: const Icon(Icons.add, color: _kTextSub, size: 18),
+                              color: context.appCardBg, shape: BoxShape.circle),
+                          child: Icon(Icons.add, color: context.appTextSecondary, size: 18),
                         ),
                       ]),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(left: 21, top: 4, bottom: 4),
                       child: Row(children: [
-                        Container(width: 2, height: 14, color: Colors.grey[300]),
+                        Container(width: 2, height: 14, color: context.appCardBg),
                       ]),
                     ),
+                    // Intermediate stops
+                    for (int i = 0; i < widget.wayStops.length; i++) ...[
+                      Padding(
+                        padding: EdgeInsets.only(left: 21, top: 4, bottom: 4),
+                        child: Row(children: [
+                          Container(width: 2, height: 14,
+                              color: i < _nextStopIndex
+                                  ? _kGreen
+                                  : Colors.grey[300]),
+                        ]),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.fromLTRB(16, 0, 16, 0),
+                        child: Row(children: [
+                          Icon(Icons.place,
+                              color: i < _nextStopIndex
+                                  ? _kGreen
+                                  : i == _nextStopIndex
+                                      ? Colors.orange
+                                      : Colors.grey,
+                              size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(widget.wayStops[i].address,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                    color: i < _nextStopIndex
+                                        ? context.appTextSecondary
+                                        : context.appTextPrimary,
+                                    fontSize: 13,
+                                    decoration: i < _nextStopIndex
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                                    fontWeight: FontWeight.w500)),
+                          ),
+                          Text('Stop ${i + 1}',
+                              style: TextStyle(
+                                  color: i == _nextStopIndex
+                                      ? Colors.orange
+                                      : context.appTextSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600)),
+                        ]),
+                      ),
+                    ],
+                    if (widget.wayStops.isNotEmpty)
+                      Padding(
+                        padding: EdgeInsets.only(left: 21, top: 4, bottom: 4),
+                        child: Row(children: [
+                          Container(width: 2, height: 14, color: context.appCardBg),
+                        ]),
+                      ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
                       child: Row(children: [
-                        const Icon(Icons.location_on, color: Colors.red, size: 18),
-                        const SizedBox(width: 8),
+                        Icon(Icons.location_on, color: Colors.red, size: 18),
+                        SizedBox(width: 8),
                         Expanded(
                           child: Text(widget.to,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: _kTextMain,
+                              style: TextStyle(
+                                  color: context.appTextPrimary,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500)),
                         ),
@@ -721,9 +853,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
             left: 24,
             bottom: 310,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.appSurface,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -733,15 +865,15 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
               child: RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                   children: [
                     TextSpan(
                         text: '$eta min',
-                        style: const TextStyle(color: _kGreen)),
-                    const TextSpan(
+                        style: TextStyle(color: _kGreen)),
+                    TextSpan(
                         text: '\naway',
                         style: TextStyle(
-                            color: _kTextSub,
+                            color: context.appTextSecondary,
                             fontSize: 11,
                             fontWeight: FontWeight.w400)),
                   ],
@@ -765,8 +897,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           Positioned(
             bottom: 0, left: 0, right: 0,
             child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
+              decoration: BoxDecoration(
+                color: context.appSurface,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
                 boxShadow: [
                   BoxShadow(
@@ -776,7 +908,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -784,48 +916,63 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                       // Handle
                       Center(
                         child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 10),
+                          margin: EdgeInsets.symmetric(vertical: 10),
                           width: 40, height: 4,
                           decoration: BoxDecoration(
-                              color: Colors.grey[300],
+                              color: context.appCardBg,
                               borderRadius: BorderRadius.circular(2)),
                         ),
                       ),
 
                       // Status
                       Text(_statusTitle,
-                          style: const TextStyle(
-                              color: _kTextMain,
+                          style: TextStyle(
+                              color: context.appTextPrimary,
                               fontSize: 17,
                               fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 4),
-                      if (_driverAssigned)
+                      SizedBox(height: 4),
+                      if (_driverAssigned) ...[
                         RichText(
                           text: TextSpan(
-                            style: const TextStyle(
-                                fontSize: 13, color: _kTextSub),
+                            style: TextStyle(fontSize: 13, color: context.appTextSecondary),
                             children: [
-                              const TextSpan(text: 'Arriving in '),
                               TextSpan(
-                                  text: _isArrived ? 'Now' : _etaCountdownText,
-                                  style: const TextStyle(
-                                      color: _kGreen,
-                                      fontWeight: FontWeight.w700)),
-                              if (!_isArrived)
-                                TextSpan(text: ' · $dist km'),
+                                text: _hasWayStops &&
+                                        _rideStatus == 'in_progress' &&
+                                        _nextStopIndex < widget.wayStops.length
+                                    ? 'Stop ${_nextStopIndex + 1} in '
+                                    : 'Arriving in ',
+                              ),
+                              TextSpan(
+                                text: _isArrived ? 'Now' : _etaCountdownText,
+                                style: TextStyle(
+                                    color: _kGreen, fontWeight: FontWeight.w700),
+                              ),
+                              if (!_isArrived) TextSpan(text: ' · $dist km'),
                             ],
                           ),
-                        )
-                      else
-                        const Text('Looking for a nearby driver…',
-                            style: TextStyle(fontSize: 13, color: _kTextSub)),
-                      const SizedBox(height: 18),
+                        ),
+                        // Per-stop ETA list (shown only during in_progress with stops)
+                        if (_hasWayStops && _rideStatus == 'in_progress' &&
+                            _stopEtas.isNotEmpty) ...[
+                          SizedBox(height: 10),
+                          _StopEtaList(
+                            wayStops:       widget.wayStops,
+                            destination:    widget.to,
+                            nextStopIndex:  _nextStopIndex,
+                            stopEtas:       _stopEtas,
+                          ),
+                        ],
+                      ] else
+                        Text('Looking for a nearby driver…',
+                            style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
+                      SizedBox(height: 18),
 
                       // Driver + Car
                       Row(children: [
                         CircleAvatar(
                           radius: 28,
-                          backgroundColor: Colors.grey[200],
+                          backgroundColor: context.appCardBg,
                           foregroundImage: _driverAvatarUrl != null
                               ? CachedNetworkImageProvider(_driverAvatarUrl!)
                               : null,
@@ -833,35 +980,35 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                             _driverName.isNotEmpty
                                 ? _driverName[0].toUpperCase()
                                 : 'D',
-                            style: const TextStyle(
-                                color: _kTextMain,
+                            style: TextStyle(
+                                color: context.appTextPrimary,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(_driverName,
-                                  style: const TextStyle(
-                                      color: _kTextMain,
+                                  style: TextStyle(
+                                      color: context.appTextPrimary,
                                       fontWeight: FontWeight.w700,
                                       fontSize: 15)),
-                              const SizedBox(height: 4),
+                              SizedBox(height: 4),
                               Row(children: [
-                                const Icon(Icons.star,
+                                Icon(Icons.star,
                                     color: Color(0xFFFFA000), size: 15),
-                                const SizedBox(width: 3),
+                                SizedBox(width: 3),
                                 Text(_driverRating,
-                                    style: const TextStyle(
-                                        color: _kTextSub, fontSize: 13)),
+                                    style: TextStyle(
+                                        color: context.appTextSecondary, fontSize: 13)),
                                 if (_driverTrips != '--') ...[
-                                  const SizedBox(width: 8),
+                                  SizedBox(width: 8),
                                   Text('$_driverTrips trips',
-                                      style: const TextStyle(
-                                          color: _kTextSub, fontSize: 13)),
+                                      style: TextStyle(
+                                          color: context.appTextSecondary, fontSize: 13)),
                                 ],
                               ]),
                             ],
@@ -872,25 +1019,25 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Icon(_vehicleTypeIcon(_vehicleType),
-                                size: 42, color: _kTextSub),
+                                size: 42, color: context.appTextSecondary),
                             Text(_plate,
-                                style: const TextStyle(
-                                    color: _kTextMain,
+                                style: TextStyle(
+                                    color: context.appTextPrimary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 13)),
                             Text(
                               _vehicleColor.isNotEmpty
                                   ? '$_vehicle · $_vehicleColor'
                                   : _vehicle,
-                              style: const TextStyle(
-                                  color: _kTextSub, fontSize: 11),
+                              style: TextStyle(
+                                  color: context.appTextSecondary, fontSize: 11),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
                       ]),
                       const SizedBox(height: 18),
-                      const Divider(color: _kDivider, height: 1),
+                      Divider(color: Theme.of(context).dividerColor, height: 1),
                       const SizedBox(height: 14),
 
                       // Action buttons
@@ -942,12 +1089,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                         ],
                       ),
                       const SizedBox(height: 14),
-                      const Divider(color: _kDivider, height: 1),
+                      Divider(color: Theme.of(context).dividerColor, height: 1),
 
                       // Promo code
                       InkWell(
                         onTap: () {},
-                        child: const Padding(
+                        child: Padding(
                           padding: EdgeInsets.symmetric(vertical: 12),
                           child: Row(children: [
                             Icon(Icons.local_offer_outlined,
@@ -959,7 +1106,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                 children: [
                                   Text('Save on future rides',
                                       style: TextStyle(
-                                          color: _kTextMain,
+                                          color: context.appTextPrimary,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w500)),
                                   Text('Add a promo code',
@@ -968,11 +1115,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                 ],
                               ),
                             ),
-                            Icon(Icons.chevron_right, color: _kTextSub),
+                            Icon(Icons.chevron_right, color: context.appTextSecondary),
                           ]),
                         ),
                       ),
-                      const Divider(color: _kDivider, height: 1),
+                      Divider(color: Theme.of(context).dividerColor, height: 1),
                       const SizedBox(height: 16),
 
                       // Buttons row
@@ -1262,7 +1409,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         'Track pickup: https://maps.google.com/?q=${pickup.latitude},${pickup.longitude}';
     final box = context.findRenderObject() as RenderBox?;
     Share.share(text,
-        subject: 'My AutoRide Trip',
+        subject: 'My ROTEH Trip',
         sharePositionOrigin:
             box != null ? box.localToGlobal(Offset.zero) & box.size : null);
   }
@@ -1296,6 +1443,105 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
 }
 
+// ── Stop ETA list ─────────────────────────────────────────────────────────────
+
+class _StopEtaList extends StatelessWidget {
+  final List<TripStop> wayStops;
+  final String destination;
+  final int nextStopIndex;
+  final List<int> stopEtas; // ETA in minutes per remaining stop + destination
+
+  const _StopEtaList({
+    required this.wayStops,
+    required this.destination,
+    required this.nextStopIndex,
+    required this.stopEtas,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Build rows: remaining stops + destination
+    final rows = <_EtaRow>[];
+    int etaIdx = 0;
+    for (int i = nextStopIndex; i < wayStops.length; i++) {
+      rows.add(_EtaRow(
+        label: 'Stop ${i + 1}',
+        address: wayStops[i].address,
+        etaMinutes: etaIdx < stopEtas.length ? stopEtas[etaIdx] : null,
+        isCurrent: i == nextStopIndex,
+        color: Colors.orange,
+      ));
+      etaIdx++;
+    }
+    // Destination
+    rows.add(_EtaRow(
+      label: 'Destination',
+      address: destination,
+      etaMinutes: etaIdx < stopEtas.length ? stopEtas[etaIdx] : null,
+      isCurrent: false,
+      color: Colors.red,
+    ));
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: rows.map((r) => Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            Icon(r.isCurrent ? Icons.navigation_rounded : Icons.circle,
+                color: r.color,
+                size: r.isCurrent ? 16 : 8),
+            SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(r.label,
+                    style: TextStyle(
+                        color: r.isCurrent ? r.color : context.appTextSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700)),
+                Text(r.address,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 12)),
+              ]),
+            ),
+            if (r.etaMinutes != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                    color: r.isCurrent
+                        ? _kGreen.withValues(alpha: 0.1)
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20)),
+                child: Text('${r.etaMinutes} min',
+                    style: TextStyle(
+                        color: r.isCurrent ? _kGreen : context.appTextSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ),
+          ]),
+        )).toList(),
+      ),
+    );
+  }
+}
+
+class _EtaRow {
+  final String label;
+  final String address;
+  final int?   etaMinutes;
+  final bool   isCurrent;
+  final Color  color;
+  const _EtaRow({
+    required this.label, required this.address,
+    required this.etaMinutes, required this.isCurrent, required this.color,
+  });
+}
+
 // ── Small widgets ─────────────────────────────────────────────────────────────
 
 class _MapBtn extends StatelessWidget {
@@ -1311,14 +1557,14 @@ class _MapBtn extends StatelessWidget {
       child: Container(
         width: 44, height: 44,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.appSurface,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
                 color: Colors.black.withValues(alpha: 0.15), blurRadius: 6)
           ],
         ),
-        child: Icon(icon, color: _kTextMain, size: 20),
+        child: Icon(icon, color: context.appTextPrimary, size: 20),
       ),
     );
   }
@@ -1347,7 +1593,7 @@ class _ActionBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color activeColor = danger ? Colors.red : _kGreen;
     final Color iconColor   = disabled
-        ? _kTextSub.withValues(alpha: 0.4)
+        ? context.appTextSecondary.withValues(alpha: 0.4)
         : highlight || danger ? activeColor : activeColor;
 
     return GestureDetector(
@@ -1370,21 +1616,21 @@ class _ActionBtn extends StatelessWidget {
           ),
           child: loading
               ? Padding(
-                  padding: const EdgeInsets.all(14),
+                  padding: EdgeInsets.all(14),
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: activeColor))
               : Icon(icon, color: iconColor, size: 22),
         ),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(label,
             style: TextStyle(
               color: disabled
-                  ? _kTextSub.withValues(alpha: 0.4)
+                  ? context.appTextSecondary.withValues(alpha: 0.4)
                   : highlight
                       ? activeColor
                       : danger
                           ? Colors.red
-                          : _kTextSub,
+                          : context.appTextSecondary,
               fontSize: 12,
               fontWeight:
                   highlight || danger ? FontWeight.w600 : FontWeight.normal,
@@ -1425,7 +1671,7 @@ class _TripShareSheet extends StatelessWidget {
   void _shareNative(BuildContext context) {
     final box = context.findRenderObject() as RenderBox?;
     Share.share(
-      'Track my AutoRide trip live 🚗\n'
+      'Track my ROTEH trip live 🚗\n'
       'Driver: $driverName · ETA: $etaMinutes min\n'
       'From: $from\nTo: $to\n\n$url',
       subject: 'Track my ride live',
@@ -1437,8 +1683,8 @@ class _TripShareSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: context.appSurface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: EdgeInsets.only(
@@ -1454,73 +1700,73 @@ class _TripShareSheet extends StatelessWidget {
             child: Container(
               width: 40, height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: context.appCardBg,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Header
           Row(children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: _kGreen.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.share_location, color: _kGreen, size: 22),
+              child: Icon(Icons.share_location, color: _kGreen, size: 22),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Share Trip', style: TextStyle(
-                fontSize: 17, fontWeight: FontWeight.w700, color: _kTextMain)),
+              Text('Share Trip', style: TextStyle(
+                fontSize: 17, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
               Text('Friends & family can track your ride live',
-                  style: const TextStyle(fontSize: 12, color: _kTextSub)),
+                  style: TextStyle(fontSize: 12, color: context.appTextSecondary)),
             ])),
           ]),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           // Trip summary card
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
+              color: context.appCardBg,
               borderRadius: BorderRadius.circular(14),
             ),
             child: Column(children: [
               Row(children: [
-                const Icon(Icons.circle, color: _kGreen, size: 8),
-                const SizedBox(width: 10),
+                Icon(Icons.circle, color: _kGreen, size: 8),
+                SizedBox(width: 10),
                 Expanded(child: Text(from,
-                    style: const TextStyle(color: _kTextMain, fontSize: 13),
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 13),
                     maxLines: 1, overflow: TextOverflow.ellipsis)),
               ]),
               Padding(
-                padding: const EdgeInsets.only(left: 3),
+                padding: EdgeInsets.only(left: 3),
                 child: Column(children: List.generate(3, (_) => Container(
-                  width: 2, height: 4, margin: const EdgeInsets.symmetric(vertical: 1),
+                  width: 2, height: 4, margin: EdgeInsets.symmetric(vertical: 1),
                   color: Colors.grey[400],
                 ))),
               ),
               Row(children: [
-                const Icon(Icons.location_on, color: Colors.red, size: 10),
-                const SizedBox(width: 10),
+                Icon(Icons.location_on, color: Colors.red, size: 10),
+                SizedBox(width: 10),
                 Expanded(child: Text(to,
-                    style: const TextStyle(color: _kTextMain, fontSize: 13),
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 13),
                     maxLines: 1, overflow: TextOverflow.ellipsis)),
               ]),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Row(children: [
-                const Icon(Icons.person_outline, color: _kTextSub, size: 14),
-                const SizedBox(width: 6),
+                Icon(Icons.person_outline, color: context.appTextSecondary, size: 14),
+                SizedBox(width: 6),
                 Text('Driver: $driverName',
-                    style: const TextStyle(color: _kTextSub, fontSize: 12)),
-                const Spacer(),
-                const Icon(Icons.timer_outlined, color: _kTextSub, size: 14),
-                const SizedBox(width: 4),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                Spacer(),
+                Icon(Icons.timer_outlined, color: context.appTextSecondary, size: 14),
+                SizedBox(width: 4),
                 Text('ETA $etaMinutes min',
-                    style: const TextStyle(color: _kTextSub, fontSize: 12)),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ]),
             ]),
           ),
@@ -1629,24 +1875,24 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       titlePadding: EdgeInsets.zero,
       title: Container(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-        decoration: const BoxDecoration(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 14),
+        decoration: BoxDecoration(
           color: _kGreen,
           borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Cancel Ride',
+          Text('Cancel Ride',
               style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
             widget.hasFee
                 ? 'Driver has arrived — a 2,000 ៛ fee applies.'
                 : 'Please tell us why you\'re cancelling.',
-            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ]),
       ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      contentPadding: EdgeInsets.symmetric(vertical: 8),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: _reasons.map((r) => RadioListTile<String>(
@@ -1654,15 +1900,15 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
           groupValue: _selected,
           onChanged: (v) => setState(() => _selected = v),
           activeColor: _kGreen,
-          title: Text(r, style: const TextStyle(fontSize: 14)),
+          title: Text(r, style: TextStyle(fontSize: 14)),
           dense: true,
         )).toList(),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Keep Ride',
-              style: TextStyle(color: _kTextSub, fontWeight: FontWeight.w600)),
+          child: Text('Keep Ride',
+              style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600)),
         ),
         ElevatedButton(
           onPressed: _selected == null

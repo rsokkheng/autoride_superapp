@@ -51,12 +51,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messages & Support'),
+        title: Text('Messages & Support'),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.appTextSecondary,
           tabs: const [Tab(text: 'Chats'), Tab(text: 'Support')],
         ),
       ),
@@ -102,9 +102,9 @@ class _ConversationsTab extends StatelessWidget {
     if (error != null) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.wifi_off, color: AppTheme.textSecondary, size: 48),
-          const SizedBox(height: 12),
-          Text(error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+          Icon(Icons.wifi_off, color: context.appTextSecondary, size: 48),
+          SizedBox(height: 12),
+          Text(error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
           const SizedBox(height: 16),
           ElevatedButton(onPressed: onRefresh, child: const Text('Retry')),
         ]),
@@ -114,12 +114,12 @@ class _ConversationsTab extends StatelessWidget {
     if (conversations.isEmpty) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.chat_bubble_outline, color: AppTheme.textSecondary.withValues(alpha: 0.4), size: 64),
-          const SizedBox(height: 16),
-          const Text('No conversations yet', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
-          const SizedBox(height: 8),
-          const Text('Messages with your driver will appear here',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), textAlign: TextAlign.center),
+          Icon(Icons.chat_bubble_outline, color: context.appTextSecondary.withValues(alpha: 0.4), size: 64),
+          SizedBox(height: 16),
+          Text('No conversations yet', style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
+          SizedBox(height: 8),
+          Text('Messages with your driver will appear here',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13), textAlign: TextAlign.center),
         ]),
       );
     }
@@ -128,9 +128,9 @@ class _ConversationsTab extends StatelessWidget {
       onRefresh: () async => onRefresh(),
       color: AppTheme.accent,
       child: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: EdgeInsets.symmetric(vertical: 8),
         itemCount: conversations.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.cardBg, indent: 72),
+        separatorBuilder: (_, __) => Divider(height: 1, color: context.appCardBg, indent: 72),
         itemBuilder: (context, i) {
           final conv = conversations[i];
           final other = isDriver ? conv.passenger : conv.driver;
@@ -139,29 +139,29 @@ class _ConversationsTab extends StatelessWidget {
           final color = isDriver ? AppTheme.accent : AppTheme.accentOrange;
 
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             leading: CircleAvatar(
               radius: 24,
               backgroundColor: color.withValues(alpha: 0.2),
               child: Text(initial, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 18)),
             ),
             title: Text(otherName,
-                style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 15)),
             subtitle: Text(conv.topic,
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
                   conv.updatedAt.length >= 16 ? conv.updatedAt.substring(11, 16) : '',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Container(
                   width: 8, height: 8,
                   decoration: BoxDecoration(
-                    color: conv.status == 'active' ? AppTheme.success : AppTheme.textSecondary,
+                    color: conv.status == 'active' ? AppTheme.success : context.appTextSecondary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -290,14 +290,14 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
               style: TextStyle(color: color, fontWeight: FontWeight.w800),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
-            Text(widget.conversation.topic, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+            Text(title, style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
+            Text(widget.conversation.topic, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ]),
         ]),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh, color: AppTheme.textSecondary),
+          IconButton(icon: Icon(Icons.refresh, color: context.appTextSecondary),
               onPressed: () => _loadMessages()),
         ],
       ),
@@ -305,10 +305,10 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
         children: [
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+                ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
                 : _messages.isEmpty
-                    ? const Center(child: Text('No messages yet. Say hello!',
-                          style: TextStyle(color: AppTheme.textSecondary)))
+                    ? Center(child: Text('No messages yet. Say hello!',
+                          style: TextStyle(color: context.appTextSecondary)))
                     : ListView.builder(
                         controller: _scrollCtrl,
                         padding: const EdgeInsets.all(16),
@@ -321,23 +321,23 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                       ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            color: AppTheme.surface,
+            padding: EdgeInsets.fromLTRB(12, 8, 12, 12),
+            color: context.appSurface,
             child: SafeArea(
               top: false,
               child: Row(children: [
                 Expanded(
                   child: TextField(
                     controller: _msgCtrl,
-                    style: const TextStyle(color: AppTheme.textPrimary),
+                    style: TextStyle(color: context.appTextPrimary),
                     maxLines: 3,
                     minLines: 1,
                     textInputAction: TextInputAction.newline,
                     decoration: InputDecoration(
                       hintText: 'Type a message...',
-                      hintStyle: const TextStyle(color: AppTheme.textSecondary),
+                      hintStyle: TextStyle(color: context.appTextSecondary),
                       filled: true,
-                      fillColor: AppTheme.cardBg,
+                      fillColor: context.appCardBg,
                       border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none),
@@ -378,14 +378,14 @@ class _MessageBubble extends StatelessWidget {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: 10),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isMe ? AppTheme.accent : AppTheme.surface,
+          color: isMe ? AppTheme.accent : context.appSurface,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
             bottomLeft: Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
@@ -395,17 +395,17 @@ class _MessageBubble extends StatelessWidget {
           children: [
             if (!isMe && msg.sender != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: EdgeInsets.only(bottom: 4),
                 child: Text(msg.sender!.name,
-                    style: const TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.w700)),
+                    style: TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.w700)),
               ),
             Text(msg.message,
-                style: TextStyle(color: isMe ? AppTheme.primary : AppTheme.textPrimary, fontSize: 14)),
-            const SizedBox(height: 4),
+                style: TextStyle(color: isMe ? AppTheme.primary : context.appTextPrimary, fontSize: 14)),
+            SizedBox(height: 4),
             Row(mainAxisSize: MainAxisSize.min, children: [
               Text(msg.timeLabel,
                   style: TextStyle(
-                      color: isMe ? AppTheme.primary.withValues(alpha: 0.6) : AppTheme.textSecondary,
+                      color: isMe ? AppTheme.primary.withValues(alpha: 0.6) : context.appTextSecondary,
                       fontSize: 11)),
               if (isMe) ...[
                 const SizedBox(width: 4),
@@ -430,63 +430,63 @@ class _SupportTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('How can we help?',
-              style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
+          Text('How can we help?',
+              style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+          SizedBox(height: 16),
           TextField(
-            style: const TextStyle(color: AppTheme.textPrimary),
+            style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
               hintText: 'Search for help...',
-              hintStyle: const TextStyle(color: AppTheme.textSecondary),
-              prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+              hintStyle: TextStyle(color: context.appTextSecondary),
+              prefixIcon: Icon(Icons.search, color: context.appTextSecondary),
               filled: true,
-              fillColor: AppTheme.surface,
+              fillColor: context.appSurface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             ),
           ),
-          const SizedBox(height: 24),
-          const Text('Quick Help',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
+          SizedBox(height: 24),
+          Text('Quick Help',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          SizedBox(height: 12),
           ...[
             ('My driver is late',      Icons.schedule_outlined,    AppTheme.warning),
             ('I was overcharged',      Icons.receipt_outlined,     AppTheme.danger),
             ('Lost item in vehicle',   Icons.inventory_2_outlined, AppTheme.accent),
             ('Report a safety issue',  Icons.shield_outlined,      AppTheme.danger),
-            ('Cancel my trip',         Icons.cancel_outlined,      AppTheme.textSecondary),
+            ('Cancel my trip',         Icons.cancel_outlined,      context.appTextSecondary),
           ].map((item) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+            margin: EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
             child: ListTile(
               leading: Icon(item.$2, color: item.$3, size: 20),
-              title: Text(item.$1, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
-              trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 18),
+              title: Text(item.$1, style: TextStyle(color: context.appTextPrimary, fontSize: 14)),
+              trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
               onTap: () {},
             ),
           )),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
             child: Row(children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: EdgeInsets.all(10),
                 decoration: BoxDecoration(
                     color: AppTheme.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.headset_mic_outlined, color: AppTheme.accent, size: 24),
+                child: Icon(Icons.headset_mic_outlined, color: AppTheme.accent, size: 24),
               ),
-              const SizedBox(width: 12),
-              const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('24/7 Live Support',
-                    style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+                    style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                 SizedBox(height: 4),
                 Text('Average response: 2 minutes',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ])),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

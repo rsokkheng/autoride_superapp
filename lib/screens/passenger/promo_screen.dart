@@ -17,7 +17,7 @@ class _PromoScreenState extends State<PromoScreen> {
 
   static const _promos = [
     _Promo(code: 'NEWUSER50', title: '50% Off First Ride', desc: 'Valid for new users only. Max discount \$5.', expiry: 'Expires Jun 30, 2026', discount: '50%', type: 'ride', color: Color(0xFF00D4AA), icon: Icons.directions_car),
-    _Promo(code: 'AUTORIDE15', title: '15% Off Any Ride', desc: 'Use any time. Min fare \$3.00.', expiry: 'Expires May 31, 2026', discount: '15%', type: 'ride', color: Color(0xFF2196F3), icon: Icons.percent),
+    _Promo(code: 'ROTEH15', title: '15% Off Any Ride', desc: 'Use any time. Min fare \$3.00.', expiry: 'Expires May 31, 2026', discount: '15%', type: 'ride', color: Color(0xFF2196F3), icon: Icons.percent),
     _Promo(code: 'DELIVER10', title: '\$1 Off Delivery', desc: 'Valid on standard and same-day deliveries.', expiry: 'Expires Jun 15, 2026', discount: '\$1', type: 'delivery', color: Color(0xFFFF6B35), icon: Icons.delivery_dining),
     _Promo(code: 'EVCHARGE', title: 'Free EV Station Map', desc: 'Get premium station directions for free.', expiry: 'No expiry', discount: 'Free', type: 'ev', color: Color(0xFFFFB300), icon: Icons.ev_station),
     _Promo(code: 'WEEKEND20', title: '20% Off Weekends', desc: 'Valid Sat–Sun. Max discount \$8.', expiry: 'Expires Jun 30, 2026', discount: '20%', type: 'ride', color: Color(0xFF9C27B0), icon: Icons.weekend),
@@ -50,28 +50,28 @@ class _PromoScreenState extends State<PromoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Promos & Vouchers')),
+      appBar: AppBar(title: Text('Promos & Vouchers')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16),
         children: [
           // Enter code
           Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Enter Promo Code', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
-              const SizedBox(height: 12),
+              Text('Enter Promo Code', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+              SizedBox(height: 12),
               Row(children: [
                 Expanded(
                   child: TextField(
                     controller: _codeController,
-                    style: const TextStyle(color: AppTheme.textPrimary, letterSpacing: 1.5, fontWeight: FontWeight.w700),
+                    style: TextStyle(color: context.appTextPrimary, letterSpacing: 1.5, fontWeight: FontWeight.w700),
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       hintText: 'e.g. ROTEH15',
-                      hintStyle: const TextStyle(color: AppTheme.textSecondary, letterSpacing: 0, fontWeight: FontWeight.normal),
+                      hintStyle: TextStyle(color: context.appTextSecondary, letterSpacing: 0, fontWeight: FontWeight.normal),
                       filled: true,
-                      fillColor: AppTheme.cardBg,
+                      fillColor: context.appCardBg,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
@@ -131,31 +131,31 @@ class _PromoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: promo.color.withValues(alpha: 0.25)),
       ),
       child: Column(children: [
         // Top band
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16),
           child: Row(children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: promo.color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(promo.icon, color: promo.color, size: 26),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(promo.title,
-                  style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w800, fontSize: 15)),
-              const SizedBox(height: 4),
-              Text(promo.desc, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 15)),
+              SizedBox(height: 4),
+              Text(promo.desc, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               const SizedBox(height: 4),
               Text(promo.expiry, style: TextStyle(color: promo.color, fontSize: 11, fontWeight: FontWeight.w600)),
             ])),

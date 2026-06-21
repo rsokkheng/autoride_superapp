@@ -74,14 +74,14 @@ class _ReferralScreenState extends State<ReferralScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      appBar: AppBar(title: const Text('Referral')),
+      backgroundColor: context.appBackground,
+      appBar: AppBar(title: Text('Referral')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Text(_error!, style: const TextStyle(color: AppTheme.textSecondary)),
+                    Text(_error!, style: TextStyle(color: context.appTextSecondary)),
                     const SizedBox(height: 16),
                     ElevatedButton(onPressed: _load, child: const Text('Retry')),
                   ]),
@@ -110,40 +110,40 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget _buildHeroSection() {
     return Column(children: [
       Container(
-        padding: const EdgeInsets.all(28),
+        padding: EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: AppTheme.accent.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.card_giftcard,
+        child: Icon(Icons.card_giftcard,
             color: AppTheme.accent, size: 56),
       ),
-      const SizedBox(height: 20),
-      const Text('Share & Earn',
-          style: TextStyle(color: AppTheme.textPrimary,
+      SizedBox(height: 20),
+      Text('Share & Earn',
+          style: TextStyle(color: context.appTextPrimary,
               fontSize: 26, fontWeight: FontWeight.w900)),
-      const SizedBox(height: 10),
-      const Text(
+      SizedBox(height: 10),
+      Text(
         'Give friends 10,000 ៛ off their first ride.\nYou earn 500 points per referral.',
         textAlign: TextAlign.center,
-        style: TextStyle(color: AppTheme.textSecondary, fontSize: 15, height: 1.5),
+        style: TextStyle(color: context.appTextSecondary, fontSize: 15, height: 1.5),
       ),
     ]);
   }
 
   Widget _buildCodeCard() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.1),
-            blurRadius: 12, offset: const Offset(0, 4))],
+            blurRadius: 12, offset: Offset(0, 4))],
       ),
       child: Column(children: [
-        const Text('Your Referral Code',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+        Text('Your Referral Code',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text(_code,
@@ -197,9 +197,9 @@ class _ReferralScreenState extends State<ReferralScreen> {
 
   Widget _buildStats() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(children: [
@@ -208,7 +208,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
           value: '$_referredCount',
           icon: Icons.people_outline,
         )),
-        Container(width: 1, height: 48, color: AppTheme.cardBg),
+        Container(width: 1, height: 48, color: context.appCardBg),
         Expanded(child: _StatItem(
           label: 'Points Earned',
           value: '$_pointsEarned pts',
@@ -220,18 +220,18 @@ class _ReferralScreenState extends State<ReferralScreen> {
 
   Widget _buildReferralList() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Friends Who Joined',
-          style: TextStyle(color: AppTheme.textPrimary,
+      Text('Friends Who Joined',
+          style: TextStyle(color: context.appTextPrimary,
               fontSize: 17, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 12),
+      SizedBox(height: 12),
       Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(children: [
           for (int i = 0; i < _referrals.length; i++) ...[
-            if (i > 0) const Divider(height: 1, color: AppTheme.cardBg, indent: 60),
+            if (i > 0) Divider(height: 1, color: context.appCardBg, indent: 60),
             _ReferralRow(item: _referrals[i] as Map<String, dynamic>),
           ],
         ]),
@@ -250,13 +250,13 @@ class _StatItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       Icon(icon, color: AppTheme.accent, size: 24),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       Text(value,
-          style: const TextStyle(color: AppTheme.textPrimary,
+          style: TextStyle(color: context.appTextPrimary,
               fontSize: 18, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 2),
+      SizedBox(height: 2),
       Text(label,
-          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
     ]);
   }
 }
@@ -273,23 +273,23 @@ class _ReferralRow extends StatelessWidget {
     final pts    = item['points_awarded'] as int? ?? 500;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(children: [
         CircleAvatar(
           backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
           radius: 20,
           child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+              style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name,
-                style: const TextStyle(color: AppTheme.textPrimary,
+                style: TextStyle(color: context.appTextPrimary,
                     fontWeight: FontWeight.w600)),
             if (short.isNotEmpty)
               Text('Joined $short',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ]),
         ),
         Text('+$pts pts',

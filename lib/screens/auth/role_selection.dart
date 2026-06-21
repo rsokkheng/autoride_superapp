@@ -15,11 +15,11 @@ class RoleSelectionScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Row(
                 children: [
                   Container(
@@ -29,41 +29,41 @@ class RoleSelectionScreen extends StatelessWidget {
                       color: AppTheme.accent,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.electric_car,
+                    child: Icon(Icons.electric_car,
                         color: AppTheme.primary, size: 24),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(l.appName,
-                          style: const TextStyle(
-                              color: AppTheme.textPrimary,
+                          style: TextStyle(
+                              color: context.appTextPrimary,
                               fontSize: 26,
                               fontWeight: FontWeight.w800)),
                       Text(l.tagline,
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppTheme.accent,
                               fontSize: 12,
                               letterSpacing: 2,
                               fontWeight: FontWeight.w500)),
                     ],
                   ),
-                  const Spacer(),
-                  const LanguagePickerButton(),
+                  Spacer(),
+                  LanguagePickerButton(),
                 ],
               ),
-              const SizedBox(height: 48),
+              SizedBox(height: 48),
               Text(l.whoAreYou,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary,
+                  style: TextStyle(
+                      color: context.appTextPrimary,
                       fontSize: 28,
                       fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(l.selectRole,
-                  style: const TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 15)),
-              const SizedBox(height: 40),
+                  style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 15)),
+              SizedBox(height: 40),
               _RoleCard(
                 icon: Icons.person_outline,
                 title: l.passenger,
@@ -71,9 +71,9 @@ class RoleSelectionScreen extends StatelessWidget {
                 color: AppTheme.accent,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
-                        builder: (_) => const PassengerHomeScreen())),
+                        builder: (_) => PassengerHomeScreen())),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _RoleCard(
                 icon: Icons.drive_eta_outlined,
                 title: l.driver,
@@ -81,13 +81,13 @@ class RoleSelectionScreen extends StatelessWidget {
                 color: AppTheme.accentOrange,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(
-                        builder: (_) => const DriverHomeScreen())),
+                        builder: (_) => DriverHomeScreen())),
               ),
-              const Spacer(),
+              Spacer(),
               Center(
                 child: Text(l.copyright,
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.appTextSecondary, fontSize: 12)),
               ),
             ],
           ),
@@ -102,9 +102,9 @@ class LanguagePickerButton extends StatelessWidget {
   const LanguagePickerButton({super.key});
 
   static const _langs = [
-    {'code': 'en', 'flag': '🇺🇸', 'name': 'English'},
     {'code': 'km', 'flag': '🇰🇭', 'name': 'ភាសាខ្មែរ'},
     {'code': 'zh', 'flag': '🇨🇳', 'name': '中文'},
+    {'code': 'en', 'flag': '🇺🇸', 'name': 'English'},
   ];
 
   String _flagFor(String code) =>
@@ -115,19 +115,19 @@ class LanguagePickerButton extends StatelessWidget {
     final l = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 36),
+          padding: EdgeInsets.fromLTRB(24, 20, 24, 36),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(l.selectLanguage,
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary,
+                  style: TextStyle(
+                      color: context.appTextPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 16),
@@ -140,12 +140,12 @@ class LanguagePickerButton extends StatelessWidget {
                     Navigator.pop(ctx);
                   },
                   child: Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(16),
+                    margin: EdgeInsets.only(bottom: 10),
+                    padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: selected
                           ? AppTheme.accent.withValues(alpha: 0.1)
-                          : AppTheme.cardBg,
+                          : context.appCardBg,
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(
                           color: selected
@@ -155,13 +155,13 @@ class LanguagePickerButton extends StatelessWidget {
                     ),
                     child: Row(children: [
                       Text(lang['flag'] as String,
-                          style: const TextStyle(fontSize: 24)),
-                      const SizedBox(width: 14),
+                          style: TextStyle(fontSize: 24)),
+                      SizedBox(width: 14),
                       Text(lang['name'] as String,
                           style: TextStyle(
                               color: selected
                                   ? AppTheme.accent
-                                  : AppTheme.textPrimary,
+                                  : context.appTextPrimary,
                               fontSize: 15,
                               fontWeight: selected
                                   ? FontWeight.w700
@@ -189,19 +189,19 @@ class LanguagePickerButton extends StatelessWidget {
       builder: (context, locale, _) => GestureDetector(
         onTap: () => _show(context),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: AppTheme.surface,
+            color: context.appSurface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
                 color: AppTheme.accent.withValues(alpha: 0.3), width: 1),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text(_flagFor(locale.languageCode),
-                style: const TextStyle(fontSize: 18)),
-            const SizedBox(width: 4),
-            const Icon(Icons.keyboard_arrow_down,
-                color: AppTheme.textSecondary, size: 16),
+                style: TextStyle(fontSize: 18)),
+            SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down,
+                color: context.appTextSecondary, size: 16),
           ]),
         ),
       ),
@@ -228,9 +228,9 @@ class _RoleCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: color.withValues(alpha: 0.4), width: 1.5),
         ),
@@ -245,20 +245,20 @@ class _RoleCard extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 30),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                      style: const TextStyle(
-                          color: AppTheme.textPrimary,
+                      style: TextStyle(
+                          color: context.appTextPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(subtitle,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary,
+                      style: TextStyle(
+                          color: context.appTextSecondary,
                           fontSize: 13,
                           height: 1.4)),
                 ],

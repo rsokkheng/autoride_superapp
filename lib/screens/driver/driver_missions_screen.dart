@@ -71,23 +71,23 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     final totalActive = _activeDeliveries.length + _activeMovings.length;
 
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Missions'),
+            Text('Missions'),
             if (totalActive > 0) ...[
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.accentOrange,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   '$totalActive',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -98,7 +98,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
           controller: _tabController,
           indicatorColor: AppTheme.accentOrange,
           labelColor: AppTheme.accentOrange,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.appTextSecondary,
           tabs: [
             Tab(
               child: _TabLabel(
@@ -205,10 +205,10 @@ class _MissionList extends StatelessWidget {
 
     if (error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-        const SizedBox(height: 12),
+        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        SizedBox(height: 12),
         Text(error!,
-            style: const TextStyle(color: AppTheme.textSecondary),
+            style: TextStyle(color: context.appTextSecondary),
             textAlign: TextAlign.center),
         const SizedBox(height: 16),
         ElevatedButton(
@@ -227,22 +227,22 @@ class _MissionList extends StatelessWidget {
       return RefreshIndicator(
         onRefresh: onRefresh,
         color: AppTheme.accentOrange,
-        child: ListView(padding: const EdgeInsets.all(32), children: [
+        child: ListView(padding: EdgeInsets.all(32), children: [
           Icon(
             type == _MissionType.delivery
                 ? Icons.delivery_dining_outlined
                 : Icons.local_shipping_outlined,
-            color: AppTheme.textSecondary,
+            color: context.appTextSecondary,
             size: 56,
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Text('No $label tasks right now',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
-          const SizedBox(height: 8),
-          const Text('Accept a job from the home screen\nto see it here.',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+          SizedBox(height: 8),
+          Text('Accept a job from the home screen\nto see it here.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
       );
     }
@@ -316,10 +316,10 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 8, top: 4),
+    padding: EdgeInsets.only(bottom: 8, top: 4),
     child: Text(text,
-        style: const TextStyle(
-            color: AppTheme.textSecondary,
+        style: TextStyle(
+            color: context.appTextSecondary,
             fontSize: 11,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6)),
@@ -349,7 +349,7 @@ class _ProgressStepper extends StatelessWidget {
                 Expanded(
                   child: Container(
                     height: 2,
-                    color: done || active ? AppTheme.success : AppTheme.cardBg,
+                    color: done || active ? AppTheme.success : context.appCardBg,
                   ),
                 ),
               // Step dot
@@ -361,23 +361,23 @@ class _ProgressStepper extends StatelessWidget {
                       ? AppTheme.success
                       : active
                           ? AppTheme.accentOrange
-                          : AppTheme.cardBg,
+                          : context.appCardBg,
                   border: Border.all(
                     color: done
                         ? AppTheme.success
                         : active
                             ? AppTheme.accentOrange
-                            : AppTheme.textSecondary.withValues(alpha: 0.3),
+                            : context.appTextSecondary.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
                 child: Center(
                   child: done
-                      ? const Icon(Icons.check, size: 10, color: Colors.white)
+                      ? Icon(Icons.check, size: 10, color: Colors.white)
                       : active
                           ? Container(
                               width: 7, height: 7,
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                   color: Colors.white, shape: BoxShape.circle),
                             )
                           : null,
@@ -388,18 +388,18 @@ class _ProgressStepper extends StatelessWidget {
                 Expanded(
                   child: Container(
                     height: 2,
-                    color: done ? AppTheme.success : AppTheme.cardBg,
+                    color: done ? AppTheme.success : context.appCardBg,
                   ),
                 ),
             ]),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(
               steps[i],
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: done || active
-                    ? AppTheme.textPrimary
-                    : AppTheme.textSecondary,
+                    ? context.appTextPrimary
+                    : context.appTextSecondary,
                 fontSize: 9,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w400,
               ),
@@ -453,13 +453,16 @@ class _MissionCard extends StatelessWidget {
     final user = await ApiService.getSavedUser();
     final driverIdStr = user?.id.toString() ?? 'unknown';
     if (!context.mounted) return;
+    // Active jobs open fully interactive so the driver can continue/complete.
+    // Only completed/cancelled jobs are shown read-only.
+    final ro = d.isCompleted || d.isCancelled;
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => DriverDeliveryActiveScreen(
           delivery:    d,
           driverIdStr: driverIdStr,
-          readOnly:    true,
+          readOnly:    ro,
         ),
       ),
     );
@@ -473,20 +476,20 @@ class _MissionCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => _openDetail(context),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _borderColor, width: 1.5),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
           // ── Header: icon + title + status badge ───────────────────────
           Row(children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: AppTheme.accentOrange.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
@@ -499,12 +502,12 @@ class _MissionCard extends StatelessWidget {
                 size: 20,
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
                 _title(),
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                style: TextStyle(
+                    color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 14),
               ),
@@ -519,7 +522,7 @@ class _MissionCard extends StatelessWidget {
             _StatusBadge(status: d.status),
           ]),
 
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // ── Progress stepper ───────────────────────────────────────────
           if (!d.isCancelled)
@@ -527,12 +530,12 @@ class _MissionCard extends StatelessWidget {
 
           if (d.isCancelled)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: AppTheme.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.cancel_outlined, color: AppTheme.danger, size: 14),
                 SizedBox(width: 6),
                 Text('This order was cancelled',
@@ -540,60 +543,60 @@ class _MissionCard extends StatelessWidget {
               ]),
             ),
 
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
 
           // ── Route ─────────────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
-                color: AppTheme.cardBg, borderRadius: BorderRadius.circular(10)),
+                color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
             child: Column(children: [
               Row(children: [
-                const Icon(Icons.circle, color: AppTheme.success, size: 8),
-                const SizedBox(width: 8),
+                Icon(Icons.circle, color: AppTheme.success, size: 8),
+                SizedBox(width: 8),
                 Expanded(child: Text(
                   d.pickupAddress,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 )),
               ]),
               Container(
-                margin: const EdgeInsets.only(left: 3),
+                margin: EdgeInsets.only(left: 3),
                 width: 2, height: 12,
-                color: AppTheme.cardBg,
+                color: context.appCardBg,
               ),
               Row(children: [
-                const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
-                const SizedBox(width: 8),
+                Icon(Icons.location_on, color: AppTheme.accentOrange, size: 10),
+                SizedBox(width: 8),
                 Expanded(child: Text(
                   d.dropoffAddress,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   maxLines: 1, overflow: TextOverflow.ellipsis,
                 )),
               ]),
             ]),
           ),
 
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
 
           // ── Footer: fee + recipient ────────────────────────────────────
           Row(children: [
             if (d.fee > 0) ...[
-              const Icon(Icons.payments_outlined, color: AppTheme.textSecondary, size: 14),
-              const SizedBox(width: 4),
+              Icon(Icons.payments_outlined, color: context.appTextSecondary, size: 14),
+              SizedBox(width: 4),
               Text(AppTheme.khr(d.fee),
-                  style: const TextStyle(
-                      color: AppTheme.textPrimary,
+                  style: TextStyle(
+                      color: context.appTextPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w700)),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
             ],
             if (d.recipientName != null) ...[
-              const Icon(Icons.person_outline, color: AppTheme.textSecondary, size: 14),
-              const SizedBox(width: 4),
+              Icon(Icons.person_outline, color: context.appTextSecondary, size: 14),
+              SizedBox(width: 4),
               Expanded(child: Text(
                 d.recipientName!,
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               )),
             ] else
@@ -670,16 +673,16 @@ class _RentalPlaceholder extends StatelessWidget {
   const _RentalPlaceholder();
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.car_rental_outlined, color: AppTheme.textSecondary, size: 56),
+      Icon(Icons.car_rental_outlined, color: context.appTextSecondary, size: 56),
       SizedBox(height: 16),
       Text('Car Rental missions',
           style: TextStyle(
-              color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+              color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
       SizedBox(height: 8),
       Text('Coming soon',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
     ]),
   );
 }

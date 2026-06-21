@@ -53,16 +53,16 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Credit $name', style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Credit $name', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _DialogField(controller: amtCtrl, hint: 'Amount (KHR)', type: TextInputType.number),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _DialogField(controller: noteCtrl, hint: 'Note (optional)'),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
@@ -95,12 +95,12 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete User', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Permanently delete $name?', style: const TextStyle(color: AppTheme.textSecondary)),
+        title: Text('Delete User', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text('Permanently delete $name?', style: TextStyle(color: context.appTextSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Delete')),
         ],
       ),
@@ -120,38 +120,38 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      appBar: AppBar(title: const Text('Users')),
+      backgroundColor: context.appBackground,
+      appBar: AppBar(title: Text('Users')),
       body: Column(children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(children: [
             Expanded(
               child: TextField(
                 controller: _searchCtrl,
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: TextStyle(color: context.appTextPrimary),
                 decoration: InputDecoration(
                   hintText: 'Search by name / email…',
-                  hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                  prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary, size: 20),
+                  hintStyle: TextStyle(color: context.appTextSecondary),
+                  prefixIcon: Icon(Icons.search, color: context.appTextSecondary, size: 20),
                   filled: true,
-                  fillColor: AppTheme.surface,
+                  fillColor: context.appSurface,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
                 onSubmitted: (_) => _load(),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: 8),
             PopupMenuButton<String?>(
-              color: AppTheme.surface,
-              icon: Icon(Icons.filter_list_rounded, color: _roleFilter != null ? AppTheme.accent : AppTheme.textSecondary),
+              color: context.appSurface,
+              icon: Icon(Icons.filter_list_rounded, color: _roleFilter != null ? AppTheme.accent : context.appTextSecondary),
               onSelected: (v) { setState(() => _roleFilter = v); _load(); },
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: null,        child: Text('All Roles',  style: TextStyle(color: AppTheme.textPrimary))),
-                PopupMenuItem(value: 'passenger', child: Text('Passenger',  style: TextStyle(color: AppTheme.textPrimary))),
-                PopupMenuItem(value: 'driver',    child: Text('Driver',     style: TextStyle(color: AppTheme.textPrimary))),
-                PopupMenuItem(value: 'admin',     child: Text('Admin',      style: TextStyle(color: AppTheme.textPrimary))),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: null,        child: Text('All Roles',  style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: 'passenger', child: Text('Passenger',  style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: 'driver',    child: Text('Driver',     style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: 'admin',     child: Text('Admin',      style: TextStyle(color: context.appTextPrimary))),
               ],
             ),
           ]),
@@ -165,13 +165,13 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Widget _buildBody() {
     if (_loading) return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     if (_error != null) return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-      const SizedBox(height: 12),
-      Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
+      Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+      SizedBox(height: 12),
+      Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
       const SizedBox(height: 16),
       ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
     ]));
-    if (_users.isEmpty) return const Center(child: Text('No users found.', style: TextStyle(color: AppTheme.textSecondary)));
+    if (_users.isEmpty) return Center(child: Text('No users found.', style: TextStyle(color: context.appTextSecondary)));
     return RefreshIndicator(
       onRefresh: _load,
       color: AppTheme.accent,
@@ -186,33 +186,33 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           final role = u['role']  as String? ?? '';
           final roleColor = role == 'admin' ? AppTheme.danger : role == 'driver' ? AppTheme.accentOrange : AppTheme.accent;
           return Container(
-            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
             child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               leading: CircleAvatar(
                 backgroundColor: roleColor.withValues(alpha: 0.12),
                 child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
                     style: TextStyle(color: roleColor, fontWeight: FontWeight.w800)),
               ),
-              title: Text(name, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+              title: Text(name, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
               subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(email, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                const SizedBox(height: 2),
+                Text(email, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                SizedBox(height: 2),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                   decoration: BoxDecoration(color: roleColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
                   child: Text(role.toUpperCase(), style: TextStyle(color: roleColor, fontSize: 9, fontWeight: FontWeight.w700)),
                 ),
               ]),
               trailing: PopupMenuButton<String>(
-                color: AppTheme.surface,
-                icon: const Icon(Icons.more_vert, color: AppTheme.textSecondary, size: 20),
+                color: context.appSurface,
+                icon: Icon(Icons.more_vert, color: context.appTextSecondary, size: 20),
                 onSelected: (v) {
                   if (v == 'credit') _creditUser(u);
                   if (v == 'delete') _deleteUser(u);
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'credit', child: Text('Credit Wallet', style: TextStyle(color: AppTheme.textPrimary))),
+                itemBuilder: (_) => [
+                  PopupMenuItem(value: 'credit', child: Text('Credit Wallet', style: TextStyle(color: context.appTextPrimary))),
                   PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppTheme.danger))),
                 ],
               ),
@@ -235,12 +235,12 @@ class _DialogField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: type,
-      style: const TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: AppTheme.textSecondary),
+        hintStyle: TextStyle(color: context.appTextSecondary),
         filled: true,
-        fillColor: AppTheme.cardBg,
+        fillColor: context.appCardBg,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
       ),
     );

@@ -110,31 +110,31 @@ class _RideChatScreenState extends State<RideChatScreen> {
             child: Text(initial,
                 style: TextStyle(color: color, fontWeight: FontWeight.w800)),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(widget.otherName,
-                style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                style: TextStyle(
+                    color: context.appTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w700)),
             Text('Ride #${widget.rideId}',
-                style: const TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 11)),
+                style: TextStyle(
+                    color: context.appTextSecondary, fontSize: 11)),
           ]),
         ]),
       ),
       body: _loadingChat
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(color: AppTheme.accent))
           : _chatError != null
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    const Icon(Icons.wifi_off,
-                        color: AppTheme.textSecondary, size: 48),
-                    const SizedBox(height: 12),
+                    Icon(Icons.wifi_off,
+                        color: context.appTextSecondary, size: 48),
+                    SizedBox(height: 12),
                     Text(_chatError!,
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary),
+                        style: TextStyle(
+                            color: context.appTextSecondary),
                         textAlign: TextAlign.center),
                     const SizedBox(height: 16),
                     ElevatedButton(
@@ -169,14 +169,14 @@ class _RideChatScreenState extends State<RideChatScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.chat_bubble_outline,
-                                      color: AppTheme.textSecondary
+                                      color: context.appTextSecondary
                                           .withValues(alpha: 0.4),
                                       size: 56),
-                                  const SizedBox(height: 12),
-                                  const Text('No messages yet. Say hello!',
+                                  SizedBox(height: 12),
+                                  Text('No messages yet. Say hello!',
                                       style: TextStyle(
                                           color:
-                                              AppTheme.textSecondary)),
+                                              context.appTextSecondary)),
                                 ]),
                           );
                         }
@@ -194,26 +194,26 @@ class _RideChatScreenState extends State<RideChatScreen> {
                   ),
                   Container(
                     padding:
-                        const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                    color: AppTheme.surface,
+                        EdgeInsets.fromLTRB(12, 8, 12, 12),
+                    color: context.appSurface,
                     child: SafeArea(
                       top: false,
                       child: Row(children: [
                         Expanded(
                           child: TextField(
                             controller: _msgCtrl,
-                            style: const TextStyle(
-                                color: AppTheme.textPrimary),
+                            style: TextStyle(
+                                color: context.appTextPrimary),
                             maxLines: 3,
                             minLines: 1,
                             textInputAction: TextInputAction.newline,
                             onSubmitted: (_) => _send(),
                             decoration: InputDecoration(
                               hintText: 'Type a message...',
-                              hintStyle: const TextStyle(
-                                  color: AppTheme.textSecondary),
+                              hintStyle: TextStyle(
+                                  color: context.appTextSecondary),
                               filled: true,
-                              fillColor: AppTheme.cardBg,
+                              fillColor: context.appCardBg,
                               border: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(24),
@@ -261,16 +261,16 @@ class _Bubble extends StatelessWidget {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: EdgeInsets.only(bottom: 10),
         constraints: BoxConstraints(
             maxWidth: MediaQuery.of(context).size.width * 0.72),
         padding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isMe ? AppTheme.accent : AppTheme.surface,
+          color: isMe ? AppTheme.accent : context.appSurface,
           borderRadius: BorderRadius.only(
-            topLeft:     const Radius.circular(16),
-            topRight:    const Radius.circular(16),
+            topLeft:     Radius.circular(16),
+            topRight:    Radius.circular(16),
             bottomLeft:  Radius.circular(isMe ? 16 : 4),
             bottomRight: Radius.circular(isMe ? 4 : 16),
           ),
@@ -281,9 +281,9 @@ class _Bubble extends StatelessWidget {
           children: [
             if (!isMe)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+                padding: EdgeInsets.only(bottom: 4),
                 child: Text(msg.senderName,
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppTheme.accent,
                         fontSize: 11,
                         fontWeight: FontWeight.w700)),
@@ -292,14 +292,14 @@ class _Bubble extends StatelessWidget {
                 style: TextStyle(
                     color: isMe
                         ? AppTheme.primary
-                        : AppTheme.textPrimary,
+                        : context.appTextPrimary,
                     fontSize: 14)),
-            const SizedBox(height: 4),
+            SizedBox(height: 4),
             Text(msg.timeLabel,
                 style: TextStyle(
                     color: isMe
                         ? AppTheme.primary.withValues(alpha: 0.6)
-                        : AppTheme.textSecondary,
+                        : context.appTextSecondary,
                     fontSize: 11)),
           ],
         ),

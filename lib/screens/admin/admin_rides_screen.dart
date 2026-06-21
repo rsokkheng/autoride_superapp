@@ -37,20 +37,20 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel Ride', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Cancel Ride', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Reason for cancellation:', style: TextStyle(color: AppTheme.textSecondary)),
-          const SizedBox(height: 10),
+          Text('Reason for cancellation:', style: TextStyle(color: context.appTextSecondary)),
+          SizedBox(height: 10),
           TextField(
             controller: ctrl,
-            style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(hintText: 'e.g. Policy violation', hintStyle: const TextStyle(color: AppTheme.textSecondary), filled: true, fillColor: AppTheme.cardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
+            style: TextStyle(color: context.appTextPrimary),
+            decoration: InputDecoration(hintText: 'e.g. Policy violation', hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Back', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Back', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Cancel Ride')),
         ],
       ),
@@ -68,36 +68,36 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Rides'),
+        title: Text('Rides'),
         actions: [
           PopupMenuButton<String?>(
-            color: AppTheme.surface,
-            icon: Icon(Icons.filter_list_rounded, color: _statusFilter != null ? AppTheme.accent : AppTheme.textSecondary),
+            color: context.appSurface,
+            icon: Icon(Icons.filter_list_rounded, color: _statusFilter != null ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: null,         child: Text('All',       style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'pending',    child: Text('Pending',   style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'active',     child: Text('Active',    style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'completed',  child: Text('Completed', style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'cancelled',  child: Text('Cancelled', style: TextStyle(color: AppTheme.textPrimary))),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: null,         child: Text('All',       style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'pending',    child: Text('Pending',   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'active',     child: Text('Active',    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'completed',  child: Text('Completed', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'cancelled',  child: Text('Cancelled', style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+                  SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
+                  SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _rides.isEmpty
-                  ? const Center(child: Text('No rides found.', style: TextStyle(color: AppTheme.textSecondary)))
+                  ? Center(child: Text('No rides found.', style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -132,29 +132,29 @@ class _RideTile extends StatelessWidget {
         : AppTheme.warning;
 
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(8),
           decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(Icons.directions_car_rounded, color: statusColor, size: 20),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('#$id', style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
-              const SizedBox(width: 8),
+              Text('#$id', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+              SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                 decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
                 child: Text(status.toUpperCase(), style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.w700)),
               ),
             ]),
-            const SizedBox(height: 4),
-            Text('From: $pickup', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-            Text('To: $dropoff',   style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+            SizedBox(height: 4),
+            Text('From: $pickup', style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text('To: $dropoff',   style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
             Text('Fare: $fare ៛',  style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w600, fontSize: 12)),
           ]),
         ),

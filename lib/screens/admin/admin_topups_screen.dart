@@ -51,16 +51,16 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Reject Top-up', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Reject Top-up', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Reason:', style: TextStyle(color: AppTheme.textSecondary)), const SizedBox(height: 10),
-          TextField(controller: ctrl, style: const TextStyle(color: AppTheme.textPrimary),
-            decoration: InputDecoration(hintText: 'Enter reason', hintStyle: const TextStyle(color: AppTheme.textSecondary), filled: true, fillColor: AppTheme.cardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
+          Text('Reason:', style: TextStyle(color: context.appTextSecondary)), SizedBox(height: 10),
+          TextField(controller: ctrl, style: TextStyle(color: context.appTextPrimary),
+            decoration: InputDecoration(hintText: 'Enter reason', hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Reject')),
         ],
       ),
@@ -80,33 +80,33 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Top-up Requests'),
+        title: Text('Top-up Requests'),
         actions: [
           PopupMenuButton<String>(
-            color: AppTheme.surface,
+            color: context.appSurface,
             icon: const Icon(Icons.filter_list_rounded),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'pending',  child: Text('Pending',  style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'approved', child: Text('Approved', style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'rejected', child: Text('Rejected', style: TextStyle(color: AppTheme.textPrimary))),
-              PopupMenuItem(value: 'all',      child: Text('All',      style: TextStyle(color: AppTheme.textPrimary))),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'pending',  child: Text('Pending',  style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'approved', child: Text('Approved', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'rejected', child: Text('Rejected', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'all',      child: Text('All',      style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40), const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary), textAlign: TextAlign.center), const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _items.isEmpty
-                  ? const Center(child: Text('No top-up requests.', style: TextStyle(color: AppTheme.textSecondary)))
+                  ? Center(child: Text('No top-up requests.', style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -123,16 +123,16 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
                           final isPending = status == 'pending';
                           final sc = status == 'approved' ? AppTheme.success : status == 'rejected' ? AppTheme.danger : AppTheme.warning;
                           return Container(
-                            padding: const EdgeInsets.all(14),
-                            decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(12)),
+                            padding: EdgeInsets.all(14),
+                            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                               Row(children: [
-                                Expanded(child: Text(user, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14))),
+                                Expanded(child: Text(user, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14))),
                                 Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: sc.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
                                   child: Text(status.toUpperCase(), style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700))),
                               ]),
                               const SizedBox(height: 6),
-                              Text('$amt ៛${method.isNotEmpty ? '  •  $method' : ''}', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                              Text('$amt ៛${method.isNotEmpty ? '  •  $method' : ''}', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                               if (isPending) ...[
                                 const SizedBox(height: 10),
                                 Row(children: [

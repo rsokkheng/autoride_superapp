@@ -28,14 +28,14 @@ class _SurgePromoScreenState extends State<SurgePromoScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Surge & Promo Control'),
+        title: Text('Surge & Promo Control'),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: context.appTextSecondary,
           tabs: const [
             Tab(icon: Icon(Icons.bolt_outlined), text: 'Surge'),
             Tab(icon: Icon(Icons.local_offer_outlined), text: 'Promos'),
@@ -112,15 +112,15 @@ class _SurgeTabState extends State<_SurgeTab> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Surge Zone',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Delete Surge Zone',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text('Delete "$name"?',
-            style: const TextStyle(color: AppTheme.textSecondary)),
+            style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
               child: const Text('Delete')),
@@ -145,7 +145,7 @@ class _SurgeTabState extends State<_SurgeTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _SurgeZoneSheet(zone: zone, onSaved: () { Navigator.pop(context); _load(); }),
@@ -159,32 +159,32 @@ class _SurgeTabState extends State<_SurgeTab> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showForm(),
         backgroundColor: AppTheme.warning,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Zone',
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text('New Zone',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+                  SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary),
                       textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   ElevatedButton(onPressed: _load,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                      child: const Text('Retry')),
+                      child: Text('Retry')),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
                   color: AppTheme.accent,
                   child: _zones.isEmpty
-                      ? const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.bolt_outlined, color: AppTheme.textSecondary, size: 48),
+                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.bolt_outlined, color: context.appTextSecondary, size: 48),
                           SizedBox(height: 12),
                           Text('No surge zones configured.',
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+                              style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
                         ]))
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -198,9 +198,9 @@ class _SurgeTabState extends State<_SurgeTab> {
                             final desc = z['description'] as String? ?? '';
 
                             return Container(
-                              padding: const EdgeInsets.all(14),
+                              padding: EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: AppTheme.surface,
+                                color: context.appSurface,
                                 borderRadius: BorderRadius.circular(14),
                                 border: active
                                     ? Border.all(color: AppTheme.warning.withValues(alpha: 0.35))
@@ -208,18 +208,18 @@ class _SurgeTabState extends State<_SurgeTab> {
                               ),
                               child: Row(children: [
                                 Container(
-                                  padding: const EdgeInsets.all(10),
+                                  padding: EdgeInsets.all(10),
                                   decoration: BoxDecoration(
                                     color: AppTheme.warning.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.bolt_rounded, color: AppTheme.warning, size: 20),
+                                  child: Icon(Icons.bolt_rounded, color: AppTheme.warning, size: 20),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Expanded(
                                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                     Text(name,
-                                        style: const TextStyle(color: AppTheme.textPrimary,
+                                        style: TextStyle(color: context.appTextPrimary,
                                             fontWeight: FontWeight.w700, fontSize: 14)),
                                     const SizedBox(height: 2),
                                     Row(children: [
@@ -230,13 +230,13 @@ class _SurgeTabState extends State<_SurgeTab> {
                                           borderRadius: BorderRadius.circular(20),
                                         ),
                                         child: Text('×${mult.toStringAsFixed(1)}',
-                                            style: const TextStyle(color: AppTheme.warning,
+                                            style: TextStyle(color: AppTheme.warning,
                                                 fontSize: 11, fontWeight: FontWeight.w700)),
                                       ),
                                       if (desc.isNotEmpty) ...[
-                                        const SizedBox(width: 8),
+                                        SizedBox(width: 8),
                                         Expanded(child: Text(desc,
-                                            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11),
+                                            style: TextStyle(color: context.appTextSecondary, fontSize: 11),
                                             maxLines: 1, overflow: TextOverflow.ellipsis)),
                                       ],
                                     ]),
@@ -248,7 +248,7 @@ class _SurgeTabState extends State<_SurgeTab> {
                                   activeColor: AppTheme.warning,
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined, color: AppTheme.textSecondary, size: 20),
+                                  icon: Icon(Icons.edit_outlined, color: context.appTextSecondary, size: 20),
                                   onPressed: () => _showForm(z),
                                 ),
                                 IconButton(
@@ -330,16 +330,16 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
       padding: EdgeInsets.fromLTRB(20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Center(child: Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Row(children: [
             Expanded(child: Text(widget.zone == null ? 'New Surge Zone' : 'Edit Surge Zone',
-                style: const TextStyle(color: AppTheme.textPrimary,
+                style: TextStyle(color: context.appTextPrimary,
                     fontSize: 18, fontWeight: FontWeight.w800))),
-            IconButton(icon: const Icon(Icons.close, color: AppTheme.textSecondary),
+            IconButton(icon: Icon(Icons.close, color: context.appTextSecondary),
                 onPressed: () => Navigator.pop(context)),
           ]),
           if (_error != null) ...[
@@ -352,7 +352,7 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
           _SurgeInput(controller: _descCtrl, label: 'Description (optional)', hint: 'e.g. High demand area'),
           const SizedBox(height: 16),
           Text('Multiplier: ×${_multiplier.toStringAsFixed(1)}',
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 14)),
           Slider(
             value: _multiplier,
@@ -363,13 +363,13 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
             activeColor: AppTheme.warning,
             onChanged: (v) => setState(() => _multiplier = v),
           ),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [
-            Text('×1.0', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
-            Text('×5.0', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('×1.0', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+            Text('×5.0', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Row(children: [
-            const Text('Active', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+            Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             const Spacer(),
             Switch(value: _active, onChanged: (v) => setState(() => _active = v),
                 activeColor: AppTheme.warning),
@@ -410,18 +410,18 @@ class _SurgeInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(color: AppTheme.textSecondary,
+      Text(label, style: TextStyle(color: context.appTextSecondary,
           fontSize: 12, fontWeight: FontWeight.w600)),
-      const SizedBox(height: 6),
+      SizedBox(height: 6),
       TextField(
         controller: controller,
         keyboardType: TextInputType.number,
-        style: const TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(color: AppTheme.textSecondary),
+          hintStyle: TextStyle(color: context.appTextSecondary),
           filled: true,
-          fillColor: AppTheme.cardBg,
+          fillColor: context.appCardBg,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
@@ -469,7 +469,7 @@ class _PromoTabState extends State<_PromoTab> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => _PromoEditSheet(
@@ -483,15 +483,15 @@ class _PromoTabState extends State<_PromoTab> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Promo',
-            style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
+        title: Text('Delete Promo',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text('Delete promo code "${promo['code']}"?',
-            style: const TextStyle(color: AppTheme.textSecondary)),
+            style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -521,29 +521,29 @@ class _PromoTabState extends State<_PromoTab> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showCreateSheet,
         backgroundColor: AppTheme.accent,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Promo',
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text('New Promo',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
-                  const SizedBox(height: 12),
-                  Text(_error!, style: const TextStyle(color: AppTheme.textSecondary),
+                  Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+                  SizedBox(height: 12),
+                  Text(_error!, style: TextStyle(color: context.appTextSecondary),
                       textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
                   ElevatedButton(onPressed: _load,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                      child: const Text('Retry')),
+                      child: Text('Retry')),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
                   color: AppTheme.accent,
                   child: _promos.isEmpty
-                      ? const Center(child: Text('No promo codes.',
-                          style: TextStyle(color: AppTheme.textSecondary)))
+                      ? Center(child: Text('No promo codes.',
+                          style: TextStyle(color: context.appTextSecondary)))
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                           itemCount: _promos.length,
@@ -576,9 +576,9 @@ class _PromoTile extends StatelessWidget {
     final short     = expiresAt.length >= 10 ? expiresAt.substring(0, 10) : expiresAt;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
         border: isActive
             ? Border.all(color: AppTheme.accent.withValues(alpha: 0.3))
@@ -604,14 +604,14 @@ class _PromoTile extends StatelessWidget {
             const SizedBox(height: 4),
             Row(children: [
               Text('${AppTheme.khr(discount is int ? discount : (discount as num).toInt())} off',
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12)),
-              const Text(' · ', style: TextStyle(color: AppTheme.textSecondary)),
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 12)),
+              Text(' · ', style: TextStyle(color: context.appTextSecondary)),
               Text('$usesLeft uses left',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               if (short.isNotEmpty) ...[
-                const Text(' · ', style: TextStyle(color: AppTheme.textSecondary)),
+                Text(' · ', style: TextStyle(color: context.appTextSecondary)),
                 Text('Exp $short',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ],
             ]),
           ]),
@@ -726,28 +726,28 @@ class _PromoEditSheetState extends State<_PromoEditSheet> {
           20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Center(child: Container(width: 40, height: 4,
               decoration: BoxDecoration(color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           Text(widget.promo != null ? 'Edit Promo Code' : 'New Promo Code',
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
 
           _SurgeInput(controller: _codeCtrl, label: 'Promo Code', hint: 'e.g. ROTEH2026'),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _SurgeInput(controller: _discountCtrl, label: 'Discount (KHR)', hint: 'e.g. 10000'),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _SurgeInput(controller: _usesCtrl, label: 'Max Uses (leave blank = unlimited)', hint: 'e.g. 100'),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _SurgeInput(controller: _expiresCtrl, label: 'Expires At (YYYY-MM-DD)', hint: 'e.g. 2026-12-31'),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           Row(children: [
-            const Text('Active', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
+            Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             const Spacer(),
             Switch(value: _active, onChanged: (v) => setState(() => _active = v),
                 activeColor: AppTheme.accent),

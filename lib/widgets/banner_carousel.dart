@@ -42,8 +42,8 @@ class _BannerCarouselState extends State<BannerCarousel> {
     if (_loading) {
       return Container(
         height: 140,
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+        margin: EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
       );
     }
     if (_banners.isEmpty) return const SizedBox.shrink();
@@ -59,16 +59,16 @@ class _BannerCarouselState extends State<BannerCarousel> {
         ),
       ),
       if (_banners.length > 1) ...[
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(_banners.length, (i) => AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: Duration(milliseconds: 200),
             width: _page == i ? 18 : 6,
             height: 6,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
+            margin: EdgeInsets.symmetric(horizontal: 3),
             decoration: BoxDecoration(
-              color: _page == i ? AppTheme.accent : AppTheme.cardBg,
+              color: _page == i ? AppTheme.accent : context.appCardBg,
               borderRadius: BorderRadius.circular(3),
             ),
           )),

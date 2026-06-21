@@ -36,6 +36,10 @@ import 'qr_payment_screen.dart';
 import 'voucher_screen.dart';
 import 'accessibility_screen.dart';
 import '../auth/account_switcher_screen.dart';
+import 'airport_trip_screen.dart';
+import 'business_screen.dart';
+import 'family_screen.dart';
+import 'subscription_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -61,7 +65,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
       body: _pages[_tab],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20)],
         ),
         child: SafeArea(
@@ -105,8 +109,8 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? AppTheme.accent.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -114,11 +118,11 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: selected ? AppTheme.accent : AppTheme.textSecondary, size: 22),
-            const SizedBox(height: 4),
+            Icon(icon, color: selected ? AppTheme.accent : context.appTextSecondary, size: 22),
+            SizedBox(height: 4),
             Text(label,
                 style: TextStyle(
-                    color: selected ? AppTheme.accent : AppTheme.textSecondary,
+                    color: selected ? AppTheme.accent : context.appTextSecondary,
                     fontSize: 11,
                     fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
           ],
@@ -224,7 +228,7 @@ class _HomeTabState extends State<_HomeTab> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -234,30 +238,29 @@ class _HomeTabState extends State<_HomeTab> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(AppLocalizations.of(context).goodMorning, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
                     Text(_firstName.isEmpty ? AppLocalizations.of(context).welcome : '${AppLocalizations.of(context).hello} $_firstName 👋',
-                        style: const TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
+                        style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
                   ],
                 ),
                 Stack(
                   children: [
-                    CircleAvatar(backgroundColor: AppTheme.accent.withValues(alpha: 0.2), radius: 22, child: const Icon(Icons.person, color: AppTheme.accent)),
+                    CircleAvatar(backgroundColor: AppTheme.accent.withValues(alpha: 0.2), radius: 22, child: Icon(Icons.person, color: AppTheme.accent)),
                     Positioned(top: 0, right: 0,
-                      child: Container(width: 10, height: 10, decoration: const BoxDecoration(color: AppTheme.success, shape: BoxShape.circle))),
+                      child: Container(width: 10, height: 10, decoration: BoxDecoration(color: AppTheme.success, shape: BoxShape.circle))),
                   ],
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             // Search bar
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
               child: Row(
                 children: [
-                  const Icon(Icons.search, color: AppTheme.textSecondary),
-                  const SizedBox(width: 10),
-                  Text(AppLocalizations.of(context).explore, style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+                  Icon(Icons.search, color: context.appTextSecondary),
+                  SizedBox(width: 10),
+                  Text(AppLocalizations.of(context).explore, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
                 ],
               ),
             ),
@@ -288,8 +291,8 @@ class _HomeTabState extends State<_HomeTab> {
                               fontWeight: FontWeight.w700, fontSize: 13)),
                       Text(
                           '${_activeRide!.pickupAddress} → ${_activeRide!.dropoffAddress}',
-                          style: const TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12),
+                          style: TextStyle(
+                              color: context.appTextSecondary, fontSize: 12),
                           maxLines: 1, overflow: TextOverflow.ellipsis),
                     ])),
                     const Icon(Icons.arrow_forward_ios_rounded,
@@ -364,6 +367,11 @@ class _HomeTabState extends State<_HomeTab> {
             ),
             const SizedBox(height: 16),
             const BannerCarousel(),
+            const SizedBox(height: 16),
+            _AirportBanner(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AirportTripScreen())),
+            ),
             const SizedBox(height: 24),
             SectionHeader(title: AppLocalizations.of(context).services),
             const SizedBox(height: 14),
@@ -405,6 +413,20 @@ class _HomeTabState extends State<_HomeTab> {
                     color: AppTheme.warning,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
+                  ServiceCard(
+                    icon: Icons.business_rounded,
+                    title: 'Business',
+                    subtitle: 'Expense & team rides',
+                    color: const Color(0xFF1565C0),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessScreen())),
+                  ),
+                  ServiceCard(
+                    icon: Icons.family_restroom_rounded,
+                    title: 'Family',
+                    subtitle: 'Book for loved ones',
+                    color: AppTheme.accentOrange,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
+                  ),
                 ],
               );
             }),
@@ -435,12 +457,12 @@ class _HomeTabState extends State<_HomeTab> {
               return SectionHeader(title: l.recentTrips, action: l.seeAll,
                   onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen())));
             }),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             if (_recentRides.isEmpty)
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
-                child: const Center(child: Text('No recent trips', style: TextStyle(color: AppTheme.textSecondary))),
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
+                child: Center(child: Text('No recent trips', style: TextStyle(color: context.appTextSecondary))),
               )
             else
               ..._recentRides.map((r) => Padding(
@@ -460,6 +482,52 @@ class _HomeTabState extends State<_HomeTab> {
   }
 }
 
+class _AirportBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AirportBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF004D40), Color(0xFF00B14F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(children: [
+        const Icon(Icons.flight_rounded, color: Colors.white, size: 36),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Airport Transfer',
+                style: TextStyle(color: Colors.white, fontSize: 16,
+                    fontWeight: FontWeight.w800)),
+            const SizedBox(height: 4),
+            Text('Fixed fare · 60-min free wait · PNH, SAI, KOS',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12)),
+          ]),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Text('Book', style: TextStyle(color: Colors.white,
+              fontWeight: FontWeight.w700, fontSize: 13)),
+        ),
+      ]),
+    ),
+  );
+}
+
 class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -473,13 +541,13 @@ class _QuickAction extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+        padding: EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
         child: Column(
           children: [
             Icon(icon, color: color, size: 22),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+            SizedBox(height: 6),
+            Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ],
         ),
       ),
@@ -494,20 +562,20 @@ class _TripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
       child: Row(
         children: [
-          Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.route, color: AppTheme.accent, size: 20)),
-          const SizedBox(width: 12),
+          Container(padding: EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(Icons.route, color: AppTheme.accent, size: 20)),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$from → $to', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(date, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                Text('$from → $to', style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                SizedBox(height: 4),
+                Text(date, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ],
             ),
           ),
@@ -568,30 +636,30 @@ class _ProfileTabState extends State<_ProfileTab> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Column(
           children: [
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             CircleAvatar(
               radius: 48,
               backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-              child: const Icon(Icons.person, color: AppTheme.accent, size: 48),
+              child: Icon(Icons.person, color: AppTheme.accent, size: 48),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             _loadingProfile
-                ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
-                : Text(_name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(_phone, style: const TextStyle(color: AppTheme.textSecondary)),
-            const SizedBox(height: 8),
+                ? SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
+                : Text(_name, style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+            SizedBox(height: 4),
+            Text(_phone, style: TextStyle(color: context.appTextSecondary)),
+            SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.star, color: AppTheme.gold, size: 18),
-                const SizedBox(width: 4),
-                const Text('4.9', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                const SizedBox(width: 4),
-                Text('(128 trips)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                Icon(Icons.star, color: AppTheme.gold, size: 18),
+                SizedBox(width: 4),
+                Text('4.9', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+                SizedBox(width: 4),
+                Text('(128 trips)', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
               ],
             ),
             const SizedBox(height: 24),
@@ -612,6 +680,8 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VoucherScreen()))),
                 _ProfileMenuItem(icon: Icons.calendar_month_outlined, label: 'Scheduled Rides',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledRidesScreen()))),
+                _ProfileMenuItem(icon: Icons.workspace_premium_rounded, label: 'Subscription Plans',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionScreen()))),
                 _ProfileMenuItem(icon: Icons.star_outline, label: 'ROTEH Rewards',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen()))),
                 _ProfileMenuItem(icon: Icons.card_giftcard_outlined, label: 'Refer & Earn',
@@ -637,17 +707,17 @@ class _ProfileTabState extends State<_ProfileTab> {
                   builder: (context, bio, _) {
                     if (!bio.available) return const SizedBox.shrink();
                     return Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      margin: EdgeInsets.only(bottom: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: context.appSurface,
                           borderRadius: BorderRadius.circular(14)),
                       child: Row(children: [
-                        const Icon(Icons.fingerprint,
-                            color: AppTheme.textSecondary, size: 20),
-                        const SizedBox(width: 14),
-                        const Text('Biometric Login',
-                            style: TextStyle(color: AppTheme.textPrimary,
+                        Icon(Icons.fingerprint,
+                            color: context.appTextSecondary, size: 20),
+                        SizedBox(width: 14),
+                        Text('Biometric Login',
+                            style: TextStyle(color: context.appTextPrimary,
                                 fontSize: 14, fontWeight: FontWeight.w500)),
                         const Spacer(),
                         Switch(
@@ -679,19 +749,19 @@ class _ProfileTabState extends State<_ProfileTab> {
                 // Dark mode toggle
                 Consumer<ThemeProvider>(
                   builder: (context, tp, _) => Container(
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    margin: EdgeInsets.only(bottom: 10),
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                     decoration: BoxDecoration(
-                        color: AppTheme.surface,
+                        color: context.appSurface,
                         borderRadius: BorderRadius.circular(14)),
                     child: Row(children: [
-                      const Icon(Icons.dark_mode_outlined,
-                          color: AppTheme.textSecondary, size: 20),
-                      const SizedBox(width: 14),
-                      const Text('Dark Mode',
-                          style: TextStyle(color: AppTheme.textPrimary,
+                      Icon(Icons.dark_mode_outlined,
+                          color: context.appTextSecondary, size: 20),
+                      SizedBox(width: 14),
+                      Text('Dark Mode',
+                          style: TextStyle(color: context.appTextPrimary,
                               fontSize: 14, fontWeight: FontWeight.w500)),
-                      const Spacer(),
+                      Spacer(),
                       Switch(
                         value: tp.isDark,
                         activeColor: AppTheme.accent,
@@ -702,13 +772,13 @@ class _ProfileTabState extends State<_ProfileTab> {
                 ),
                 // Language switcher row
                 Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+                  margin: EdgeInsets.only(bottom: 10),
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
                   child: Row(children: [
-                    const Icon(Icons.language, color: AppTheme.textSecondary, size: 20),
-                    const SizedBox(width: 14),
-                    Text(l.language, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+                    Icon(Icons.language, color: context.appTextSecondary, size: 20),
+                    SizedBox(width: 14),
+                    Text(l.language, style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
                     const Spacer(),
                     const LanguagePickerButton(),
                   ]),
@@ -757,16 +827,16 @@ class _ProfileMenuItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+        margin: EdgeInsets.only(bottom: 10),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
         child: Row(
           children: [
-            Icon(icon, color: color ?? AppTheme.textSecondary, size: 20),
-            const SizedBox(width: 14),
-            Text(label, style: TextStyle(color: color ?? AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
-            const Spacer(),
-            const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 18),
+            Icon(icon, color: color ?? context.appTextSecondary, size: 20),
+            SizedBox(width: 14),
+            Text(label, style: TextStyle(color: color ?? context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+            Spacer(),
+            Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
           ],
         ),
       ),

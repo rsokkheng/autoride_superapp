@@ -23,6 +23,11 @@ class DirectionsResult {
 class MapsService {
   static const _apiKey = 'AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc';
 
+  /// Updated by main.dart whenever the user changes the in-app language.
+  /// Drives the `language` / `languageCode` parameter for all API calls so
+  /// addresses, search results, and directions labels match the app locale.
+  static String language = 'km';
+
   static bool _isInCambodia(LatLng p) =>
       p.latitude  >= 9.0   && p.latitude  <= 15.5 &&
       p.longitude >= 102.0 && p.longitude <= 108.0;
@@ -56,7 +61,7 @@ class MapsService {
       'travelMode':            'DRIVE',
       'routingPreference':     'TRAFFIC_AWARE',
       'computeAlternativeRoutes': false,
-      'languageCode':          'km',
+      'languageCode':          language,
       'units':                 'METRIC',
     };
 
@@ -114,7 +119,7 @@ class MapsService {
   static Future<String?> reverseGeocode(LatLng pos) async {
     final url = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
       'latlng':   '${pos.latitude},${pos.longitude}',
-      'language': 'km',
+      'language': language,
       'key':      _apiKey,
     });
     try {
@@ -145,7 +150,7 @@ class MapsService {
     if (!_isInCambodia(pos)) return null;
     final url = Uri.https('maps.googleapis.com', '/maps/api/geocode/json', {
       'latlng':   '${pos.latitude},${pos.longitude}',
-      'language': 'km',
+      'language': language,
       'key':      _apiKey,
     });
     try {
@@ -227,7 +232,7 @@ class MapsService {
           'input': query,
           'key': _apiKey,
           'components': 'country:kh',
-          'language': 'en',
+          'language': language,
         },
       );
 
@@ -259,7 +264,7 @@ class MapsService {
               'place_id': placeId,
               'fields': 'formatted_address,geometry',
               'key': _apiKey,
-              'language': 'en',
+              'language': language,
             },
           );
 

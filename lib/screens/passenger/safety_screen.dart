@@ -8,10 +8,7 @@ import '../../services/api_service.dart';
 // ── Tokens ──────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
 const _red    = AppTheme.danger;
-const _dark   = AppTheme.textPrimary;
-const _gray   = AppTheme.textSecondary;
 const _white  = Colors.white;
-const _surf   = AppTheme.surface;
 const _bg     = AppTheme.primary;
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -132,7 +129,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
   void _showFakeCallPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: _surf,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => _FakeCallPicker(
@@ -146,22 +143,22 @@ class _SafetyScreenState extends State<SafetyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _surf,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Trip Link Shared', style: TextStyle(color: _dark, fontWeight: FontWeight.w700)),
+        title: Text('Trip Link Shared', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(color: _bg, borderRadius: BorderRadius.circular(10)),
-            child: Text(url, style: const TextStyle(color: _dark, fontSize: 12)),
+            child: Text(url, style: TextStyle(color: context.appTextPrimary, fontSize: 12)),
           ),
-          const SizedBox(height: 12),
-          const Text('Share this link so others can track your trip in real time.',
-              style: TextStyle(color: _gray, fontSize: 12)),
+          SizedBox(height: 12),
+          Text('Share this link so others can track your trip in real time.',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Close', style: TextStyle(color: _gray))),
+              child: Text('Close', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton.icon(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: url));
@@ -183,17 +180,17 @@ class _SafetyScreenState extends State<SafetyScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: _surf,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('🆘 Send SOS?', style: TextStyle(color: _red, fontWeight: FontWeight.w800)),
         content: Text(
           _contacts.isEmpty
               ? 'An SOS alert will be sent immediately. No emergency contacts added yet.'
               : 'SOS will be sent to ${_contacts.length} emergency contact(s) immediately.',
-          style: const TextStyle(color: _gray, fontSize: 13)),
+          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel', style: TextStyle(color: _gray))),
+              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () { Navigator.pop(ctx); _sendSos(); },
             style: ElevatedButton.styleFrom(backgroundColor: _red,
@@ -211,17 +208,17 @@ class _SafetyScreenState extends State<SafetyScreen> {
     String type = 'harassment';
     showModalBottomSheet(
       context: context, isScrollControlled: true,
-      backgroundColor: _surf,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
         padding: EdgeInsets.fromLTRB(20, 20, 20,
             MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Report Incident',
-              style: TextStyle(color: _dark, fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 16),
+          Text('Report Incident',
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+          SizedBox(height: 16),
           Wrap(spacing: 8, children: [
             for (final t in [
               ('harassment', 'Harassment'),
@@ -232,26 +229,26 @@ class _SafetyScreenState extends State<SafetyScreen> {
               GestureDetector(
                 onTap: () => setLocal(() => type = t.$1),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  duration: Duration(milliseconds: 150),
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: type == t.$1 ? _red : AppTheme.cardBg,
+                    color: type == t.$1 ? _red : context.appCardBg,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(t.$2, style: TextStyle(
-                      color: type == t.$1 ? _white : _gray,
+                      color: type == t.$1 ? _white : context.appTextSecondary,
                       fontWeight: FontWeight.w600, fontSize: 12)),
                 ),
               ),
           ]),
-          const SizedBox(height: 14),
+          SizedBox(height: 14),
           TextField(
             controller: descCtrl, maxLines: 3,
-            style: const TextStyle(color: _dark, fontSize: 13),
+            style: TextStyle(color: context.appTextPrimary, fontSize: 13),
             decoration: InputDecoration(
               hintText: 'Describe what happened…',
-              hintStyle: const TextStyle(color: _gray),
-              filled: true, fillColor: AppTheme.cardBg,
+              hintStyle: TextStyle(color: context.appTextSecondary),
+              filled: true, fillColor: context.appCardBg,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none),
               contentPadding: const EdgeInsets.all(14),
@@ -295,16 +292,16 @@ class _SafetyScreenState extends State<SafetyScreen> {
     bool sos = true, share = true;
     showModalBottomSheet(
       context: context, isScrollControlled: true,
-      backgroundColor: _surf,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
         padding: EdgeInsets.fromLTRB(20, 20, 20,
             MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Add Emergency Contact',
-              style: TextStyle(color: _dark, fontWeight: FontWeight.w800, fontSize: 16)),
+          Text('Add Emergency Contact',
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 16),
           _ModalField(ctrl: nameCtrl, hint: 'Full name', icon: Icons.person_outline),
           const SizedBox(height: 10),
@@ -356,16 +353,16 @@ class _SafetyScreenState extends State<SafetyScreen> {
     bool sos = c.notifyOnSos, share = c.notifyOnTripShare;
     showModalBottomSheet(
       context: context, isScrollControlled: true,
-      backgroundColor: _surf,
-      shape: const RoundedRectangleBorder(
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
         padding: EdgeInsets.fromLTRB(20, 20, 20,
             MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Edit Contact',
-              style: TextStyle(color: _dark, fontWeight: FontWeight.w800, fontSize: 16)),
+          Text('Edit Contact',
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 16),
           _ModalField(ctrl: nameCtrl, hint: 'Full name', icon: Icons.person_outline),
           const SizedBox(height: 10),
@@ -406,15 +403,15 @@ class _SafetyScreenState extends State<SafetyScreen> {
   Future<void> _deleteContact(EmergencyContactModel c) async {
     final ok = await showDialog<bool>(context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: _surf,
+        backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Remove contact?',
-            style: TextStyle(color: _dark, fontWeight: FontWeight.w700)),
+        title: Text('Remove contact?',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text('${c.name} will be removed from your emergency contacts.',
-            style: const TextStyle(color: _gray, fontSize: 13)),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: _gray))),
+              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
               child: const Text('Remove', style: TextStyle(color: _red, fontWeight: FontWeight.w700))),
         ],
@@ -435,12 +432,12 @@ class _SafetyScreenState extends State<SafetyScreen> {
     return Scaffold(
       backgroundColor: _bg,
       appBar: AppBar(
-        backgroundColor: _surf,
+        backgroundColor: context.appSurface,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: const Text('Safety Center',
-            style: TextStyle(color: _dark, fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text('Safety Center',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
       ),
       body: RefreshIndicator(
         onRefresh: _loadContacts, color: _green,
@@ -458,28 +455,28 @@ class _SafetyScreenState extends State<SafetyScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [BoxShadow(
                       color: _red.withValues(alpha: 0.4),
-                      blurRadius: 18, offset: const Offset(0, 6))],
+                      blurRadius: 18, offset: Offset(0, 6))],
                 ),
                 child: Column(children: [
                   _sosLoading
-                      ? const SizedBox(width: 56, height: 56,
+                      ? SizedBox(width: 56, height: 56,
                           child: CircularProgressIndicator(color: _white, strokeWidth: 3))
                       : Container(
                           width: 72, height: 72,
                           decoration: BoxDecoration(
                               color: _white.withValues(alpha: 0.2),
                               shape: BoxShape.circle),
-                          child: const Icon(Icons.sos_rounded, color: _white, size: 40)),
-                  const SizedBox(height: 12),
-                  const Text('Emergency SOS',
+                          child: Icon(Icons.sos_rounded, color: _white, size: 40)),
+                  SizedBox(height: 12),
+                  Text('Emergency SOS',
                       style: TextStyle(color: _white, fontSize: 20, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text('Hold for 1 second to activate',
                       style: TextStyle(color: _white.withValues(alpha: 0.8), fontSize: 13)),
                 ]),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
 
             // ── Quick actions ───────────────────────────────────────────────
             Row(children: [
@@ -490,7 +487,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                 loading: _fakeCallLoading,
                 onTap: _showFakeCallPicker,
               )),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(child: _ActionCard(
                 icon: _shareUrl != null
                     ? Icons.link_off_rounded : Icons.share_location_rounded,
@@ -499,7 +496,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                 loading: _sharing,
                 onTap: _shareUrl != null ? _stopSharing : _shareTrip,
               )),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(child: _ActionCard(
                 icon: Icons.report_outlined,
                 label: 'Report',
@@ -507,33 +504,33 @@ class _SafetyScreenState extends State<SafetyScreen> {
                 onTap: _showReportIncident,
               )),
             ]),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Emergency contacts ─────────────────────────────────────────
             Row(children: [
-              const Expanded(child: SectionHeader(title: 'Emergency Contacts')),
+              Expanded(child: SectionHeader(title: 'Emergency Contacts')),
               TextButton.icon(
                 onPressed: _showAddContact,
-                icon: const Icon(Icons.person_add_outlined, size: 16, color: _green),
-                label: const Text('Add', style: TextStyle(color: _green, fontWeight: FontWeight.w700)),
+                icon: Icon(Icons.person_add_outlined, size: 16, color: _green),
+                label: Text('Add', style: TextStyle(color: _green, fontWeight: FontWeight.w700)),
               ),
             ]),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             if (_contactsLoading)
-              const Center(child: Padding(
+              Center(child: Padding(
                 padding: EdgeInsets.all(20),
                 child: CircularProgressIndicator(color: _green, strokeWidth: 2),
               ))
             else if (_contacts.isEmpty)
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: _surf, borderRadius: BorderRadius.circular(16)),
-                child: const Center(
+                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
+                child: Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.people_outline, color: _gray, size: 36),
+                    Icon(Icons.people_outline, color: context.appTextSecondary, size: 36),
                     SizedBox(height: 8),
                     Text('No emergency contacts yet',
-                        style: TextStyle(color: _gray, fontSize: 13)),
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                   ]),
                 ),
               )
@@ -543,11 +540,11 @@ class _SafetyScreenState extends State<SafetyScreen> {
                 onEdit: () => _showEditContact(c),
                 onDelete: () => _deleteContact(c),
               ))),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Safety resources ───────────────────────────────────────────
-            const SectionHeader(title: 'Safety Resources'),
-            const SizedBox(height: 12),
+            SectionHeader(title: 'Safety Resources'),
+            SizedBox(height: 12),
             ...[
               ('Emergency: 117 / 119', Icons.phone_in_talk_outlined, _red),
               ('Report Incident',       Icons.report_outlined,         AppTheme.warning),
@@ -555,18 +552,18 @@ class _SafetyScreenState extends State<SafetyScreen> {
             ].map((item) => Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: _surf, borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
               child: Row(children: [
                 Container(padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                         color: item.$3.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10)),
                     child: Icon(item.$2, color: item.$3, size: 18)),
-                const SizedBox(width: 12),
-                Text(item.$1, style: const TextStyle(
-                    color: _dark, fontSize: 14, fontWeight: FontWeight.w500)),
-                const Spacer(),
-                const Icon(Icons.chevron_right, color: _gray, size: 18),
+                SizedBox(width: 12),
+                Text(item.$1, style: TextStyle(
+                    color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
+                Spacer(),
+                Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
               ]),
             )),
             const SizedBox(height: 20),
@@ -594,7 +591,7 @@ class _ActionCard extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: _surf,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8, offset: const Offset(0, 2))],
@@ -631,25 +628,25 @@ class _ContactTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: _surf, borderRadius: BorderRadius.circular(16),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6, offset: const Offset(0, 2))]),
+              blurRadius: 6, offset: Offset(0, 2))]),
       child: Row(children: [
         CircleAvatar(
           backgroundColor: _green.withValues(alpha: 0.12), radius: 22,
           child: Text(c.name.isNotEmpty ? c.name[0].toUpperCase() : '?',
-              style: const TextStyle(color: _green, fontWeight: FontWeight.w800, fontSize: 16)),
+              style: TextStyle(color: _green, fontWeight: FontWeight.w800, fontSize: 16)),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(c.name, style: const TextStyle(
-              color: _dark, fontWeight: FontWeight.w700, fontSize: 14)),
-          const SizedBox(height: 2),
-          Text(c.phone, style: const TextStyle(color: _gray, fontSize: 12)),
+          Text(c.name, style: TextStyle(
+              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+          SizedBox(height: 2),
+          Text(c.phone, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           if (c.relationship != null) ...[
-            const SizedBox(height: 2),
+            SizedBox(height: 2),
             Text(c.relationship!,
-                style: const TextStyle(color: _gray, fontSize: 11)),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ],
           const SizedBox(height: 6),
           Wrap(spacing: 6, children: [
@@ -699,36 +696,36 @@ class _FakeCallPicker extends StatelessWidget {
       (60, 'In 1 min'),
     ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 30),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Fake Call — Choose Delay',
-            style: TextStyle(color: _dark, fontWeight: FontWeight.w800, fontSize: 16)),
-        const SizedBox(height: 6),
-        const Text('Your phone will ring after the selected delay.',
-            style: TextStyle(color: _gray, fontSize: 12)),
-        const SizedBox(height: 16),
+        Text('Fake Call — Choose Delay',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+        SizedBox(height: 6),
+        Text('Your phone will ring after the selected delay.',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+        SizedBox(height: 16),
         if (loading)
-          const Center(child: CircularProgressIndicator(color: _green))
+          Center(child: CircularProgressIndicator(color: _green))
         else
           ...options.map((o) => GestureDetector(
             onTap: () => onPick(o.$1),
             child: Container(
               width: double.infinity,
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
+              margin: EdgeInsets.only(bottom: 10),
+              padding: EdgeInsets.all(14),
               decoration: BoxDecoration(
-                  color: AppTheme.cardBg, borderRadius: BorderRadius.circular(12)),
+                  color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
               child: Row(children: [
                 Container(padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                         color: _green.withValues(alpha: 0.12), shape: BoxShape.circle),
-                    child: const Icon(Icons.phone_callback_rounded, color: _green, size: 18)),
-                const SizedBox(width: 12),
-                Text(o.$2, style: const TextStyle(
-                    color: _dark, fontWeight: FontWeight.w600, fontSize: 14)),
-                const Spacer(),
-                const Icon(Icons.chevron_right, color: _gray, size: 18),
+                    child: Icon(Icons.phone_callback_rounded, color: _green, size: 18)),
+                SizedBox(width: 12),
+                Text(o.$2, style: TextStyle(
+                    color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                Spacer(),
+                Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
               ]),
             ),
           )),
@@ -775,7 +772,7 @@ class _FakeCallOverlayState extends State<_FakeCallOverlay> {
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: _ringing ? _green : _dark,
+          color: _ringing ? _green : context.appTextPrimary,
           borderRadius: BorderRadius.circular(24),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -832,11 +829,11 @@ class _ModalField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => TextField(
     controller: ctrl, keyboardType: type,
-    style: const TextStyle(color: _dark, fontSize: 14),
+    style: TextStyle(color: context.appTextPrimary, fontSize: 14),
     decoration: InputDecoration(
-      hintText: hint, hintStyle: const TextStyle(color: _gray),
-      prefixIcon: Icon(icon, color: _gray, size: 18),
-      filled: true, fillColor: AppTheme.cardBg,
+      hintText: hint, hintStyle: TextStyle(color: context.appTextSecondary),
+      prefixIcon: Icon(icon, color: context.appTextSecondary, size: 18),
+      filled: true, fillColor: context.appCardBg,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -851,7 +848,7 @@ class _NotifyRow extends StatelessWidget {
   const _NotifyRow(this.label, this.value, this.onChanged);
   @override
   Widget build(BuildContext context) => Row(children: [
-    Expanded(child: Text(label, style: const TextStyle(color: _dark, fontSize: 13))),
+    Expanded(child: Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 13))),
     Switch(value: value, onChanged: onChanged,
         activeColor: _green, activeTrackColor: _green.withValues(alpha: 0.4)),
   ]);

@@ -44,15 +44,15 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
     final confident = (_result?['confidence'] as num?)?.toDouble() ?? 0.0;
 
     return Scaffold(
-      backgroundColor: AppTheme.primary,
-      appBar: AppBar(title: const Text('Helmet Check')),
+      backgroundColor: context.appBackground,
+      appBar: AppBar(title: Text('Helmet Check')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Upload a photo to verify that a helmet is being worn correctly.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14, height: 1.5)),
+          Text('Upload a photo to verify that a helmet is being worn correctly.',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 14, height: 1.5)),
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Image preview / placeholder
           GestureDetector(
@@ -61,15 +61,15 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
               height: 240,
               width: double.infinity,
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: context.appSurface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.cardBg, width: 2),
+                border: Border.all(color: context.appCardBg, width: 2),
               ),
               child: _image == null
                   ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(Icons.add_a_photo_outlined, size: 52, color: AppTheme.accent.withValues(alpha: 0.6)),
-                      const SizedBox(height: 12),
-                      const Text('Tap to upload photo', style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+                      SizedBox(height: 12),
+                      Text('Tap to upload photo', style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
                     ])
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(18),
@@ -79,8 +79,8 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                         errorBuilder: (_, __, ___) => Center(
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
                             Icon(Icons.image_rounded, size: 52, color: AppTheme.accent.withValues(alpha: 0.5)),
-                            const SizedBox(height: 8),
-                            Text(_image!.name, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                            SizedBox(height: 8),
+                            Text(_image!.name, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                           ]),
                         ),
                       ),
@@ -182,14 +182,14 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Confidence: ${(confident * 100).toStringAsFixed(1)}%',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 14),
                   ),
                 ],
                 if (!detected) ...[
-                  const SizedBox(height: 12),
-                  const Text(
+                  SizedBox(height: 12),
+                  Text(
                     'Please wear a helmet before starting your trip.',
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.5),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -204,18 +204,18 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
   void _showPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTheme.surface,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      backgroundColor: context.appSurface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (_) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
-            leading: const Icon(Icons.camera_alt_rounded, color: AppTheme.accent),
-            title: const Text('Take Photo', style: TextStyle(color: AppTheme.textPrimary)),
+            leading: Icon(Icons.camera_alt_rounded, color: AppTheme.accent),
+            title: Text('Take Photo', style: TextStyle(color: context.appTextPrimary)),
             onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); },
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library_rounded, color: AppTheme.accent),
-            title: const Text('Choose from Gallery', style: TextStyle(color: AppTheme.textPrimary)),
+            leading: Icon(Icons.photo_library_rounded, color: AppTheme.accent),
+            title: Text('Choose from Gallery', style: TextStyle(color: context.appTextPrimary)),
             onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); },
           ),
           const SizedBox(height: 8),

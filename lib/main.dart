@@ -1,3 +1,4 @@
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,17 +9,43 @@ import 'firebase_options.dart';
 import 'utils/app_log.dart';
 
 import 'l10n/app_localizations.dart';
+import 'services/locale_service.dart';
+import 'services/maps_service.dart';
 import 'providers/theme_provider.dart';
 import 'providers/biometric_provider.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 
-final ValueNotifier<Locale> appLocale =
-    ValueNotifier(const Locale('km'));
+// Resolved after WidgetsFlutterBinding.ensureInitialized() in main()
+final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
+
+/// Returns the locale matching the device system language.
+/// Falls back to English if the device language is not supported.
+Locale _resolveDeviceLocale() {
+  const supported = ['km', 'en', 'zh'];
+  final device = PlatformDispatcher.instance.locale;
+  final code   = supported.contains(device.languageCode)
+      ? device.languageCode
+      : 'en';
+  return Locale(code);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set app locale to match device language (Khmer / English / Chinese)
+  appLocale.value = _resolveDeviceLocale();
+
+  // Sync language to all locale-aware services whenever the user changes it.
+  void _applyLocale(String lang) {
+    MapsService.language = lang;          // geocoding & directions API responses
+    LocaleService.setLocale(lang);        // native Maps SDK tile language
+  }
+  _applyLocale(appLocale.value.languageCode);
+  appLocale.addListener(
+    () => _applyLocale(appLocale.value.languageCode),
+  );
 
   FlutterError.onError = (details) {
     AppLog.e('Flutter', details.exceptionAsString(), details.exception, details.stack);
@@ -53,8 +80,25 @@ void main() async {
   );
 }
 
-class AutoRideApp extends StatelessWidget {
+class AutoRideApp extends StatefulWidget {
   const AutoRideApp({super.key});
+
+  @override
+  State<AutoRideApp> createState() => _AutoRideAppState();
+}
+
+class _AutoRideAppState extends State<AutoRideApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Seed native SharedPreferences and MapsService with the current locale so
+    // Google Maps tiles and geocoding responses use the right language.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final lang = appLocale.value.languageCode;
+      MapsService.language = lang;
+      LocaleService.setLocale(lang);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

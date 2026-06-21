@@ -5,6 +5,6 @@ void main() {
   testWidgets('App smoke test — role selection screen renders', (WidgetTester tester) async {
     await tester.pumpWidget(const AutoRideApp());
     await tester.pumpAndSettle();
-    expect(find.text('AutoRide'), findsWidgets);
+    expect(find.text('ROTEH'), findsWidgets);
   });
 }

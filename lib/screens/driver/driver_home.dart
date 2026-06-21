@@ -169,7 +169,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       body: pages[_tab],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20)],
         ),
         child: SafeArea(
@@ -207,17 +207,17 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: () => onTap(index),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: selected ? AppTheme.accentOrange.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: selected ? AppTheme.accentOrange : AppTheme.textSecondary, size: 22),
-          const SizedBox(height: 3),
+          Icon(icon, color: selected ? AppTheme.accentOrange : context.appTextSecondary, size: 22),
+          SizedBox(height: 3),
           Text(label, style: TextStyle(
-            color: selected ? AppTheme.accentOrange : AppTheme.textSecondary,
+            color: selected ? AppTheme.accentOrange : context.appTextSecondary,
             fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
           )),
         ]),
@@ -411,7 +411,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
       await Navigator.push(context, MaterialPageRoute(
         builder: (_) => DriverActiveTripScreen(ride: _activeRide!),
       ));
-      if (mounted) {
+      if (!mounted) return;
+      final stillActive = await ApiService.getActiveRide();
+      if (!mounted) return;
+      if (stillActive != null && !stillActive.isCompleted && !stillActive.isCancelled) {
+        setState(() => _activeRide = stillActive);
+      } else {
         setState(() => _activeRide = null);
         widget.onTripCompleted();
       }
@@ -425,7 +430,14 @@ class _DriverDashboardState extends State<_DriverDashboard>
           driverIdStr: driverIdStr,
         ),
       ));
-      if (mounted) {
+      if (!mounted) return;
+      // Re-check backend: driver may have backed out without completing.
+      final stillActive = await ApiService.getActiveDelivery();
+      if (!mounted) return;
+      if (stillActive != null) {
+        // Trip still in-progress — restore it on the dashboard.
+        setState(() => _activeDelivery = stillActive);
+      } else {
         setState(() => _activeDelivery = null);
         widget.onTripCompleted();
       }
@@ -458,22 +470,22 @@ class _DriverDashboardState extends State<_DriverDashboard>
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
             Row(children: [
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Driver Dashboard', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+                Text('Driver Dashboard', style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
                 Row(children: [
-                  const Icon(Icons.star, color: AppTheme.gold, size: 16),
-                  const SizedBox(width: 4),
-                  const Text('4.87', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                  Text(' · 1,204 trips', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  Icon(Icons.star, color: AppTheme.gold, size: 16),
+                  SizedBox(width: 4),
+                  Text('4.87', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+                  Text(' · 1,204 trips', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ]),
               ]),
-              const Spacer(),
+              Spacer(),
               Column(children: [
                 Switch(
                   value: widget.isOnline,
@@ -484,7 +496,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 Text(
                   widget.isBusy ? 'Busy' : widget.isOnline ? 'Online' : 'Offline',
                   style: TextStyle(
-                    color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : AppTheme.textSecondary,
+                    color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : context.appTextSecondary,
                     fontSize: 11,
                   ),
                 ),
@@ -502,8 +514,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     ? '🔥 ${_surgeInfo!.multiplier.toStringAsFixed(1)}× Surge Zone — You\'re Inside!'
                     : '📍 ${_surgeInfo!.multiplier.toStringAsFixed(1)}× Surge Nearby — ${_surgeInfo!.zone ?? 'Zone'}';
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 14),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  margin: EdgeInsets.only(bottom: 14),
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.10),
                     borderRadius: BorderRadius.circular(12),
@@ -511,13 +523,13 @@ class _DriverDashboardState extends State<_DriverDashboard>
                   ),
                   child: Row(children: [
                     Icon(icon, color: color, size: 20),
-                    const SizedBox(width: 10),
+                    SizedBox(width: 10),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(title,
                           style: TextStyle(color: color,
                               fontWeight: FontWeight.w700, fontSize: 13)),
                       Text(_surgeSubtitle(_surgeInfo!),
-                          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                     ])),
                     Icon(Icons.chevron_right, color: color.withValues(alpha: 0.6), size: 18),
                   ]),
@@ -527,39 +539,39 @@ class _DriverDashboardState extends State<_DriverDashboard>
             // Status card
             GradientCard(
               colors: widget.isBusy
-                  ? [const Color(0xFFE65100), const Color(0xFFBF360C)]
+                  ? [Color(0xFFE65100), Color(0xFFBF360C)]
                   : widget.isOnline
-                      ? [const Color(0xFF00C48C), const Color(0xFF00A37A)]
-                      : [AppTheme.surface, AppTheme.cardBg],
+                      ? [Color(0xFF00C48C), Color(0xFF00A37A)]
+                      : [context.appSurface, context.appCardBg],
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   StatusBadge(
                     label: widget.isBusy ? '🟡 Busy — On a Trip' : widget.isOnline ? '🟢 Online — Ready' : '⭕ Offline',
-                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : AppTheme.textSecondary,
+                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : context.appTextSecondary,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     widget.isBusy ? 'Complete your trip to receive new requests' : widget.isOnline ? 'Waiting for requests...' : 'Toggle online to accept rides',
                     style: TextStyle(
-                      color: (widget.isBusy || widget.isOnline) ? Colors.white : AppTheme.textPrimary,
+                      color: (widget.isBusy || widget.isOnline) ? Colors.white : context.appTextPrimary,
                       fontSize: 14, fontWeight: FontWeight.w600,
                     ),
                   ),
                   if (_locationZone != null) ...[
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Row(children: [
                       Icon(Icons.location_on_outlined,
                           color: (widget.isBusy || widget.isOnline)
                               ? Colors.white70
-                              : AppTheme.textSecondary,
+                              : context.appTextSecondary,
                           size: 13),
-                      const SizedBox(width: 3),
+                      SizedBox(width: 3),
                       Flexible(child: Text(
                         _locationZone!,
                         style: TextStyle(
                           color: (widget.isBusy || widget.isOnline)
                               ? Colors.white70
-                              : AppTheme.textSecondary,
+                              : context.appTextSecondary,
                           fontSize: 12,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -568,7 +580,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                   ],
                 ])),
                 Icon(Icons.directions_car,
-                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : AppTheme.textSecondary,
+                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : context.appTextSecondary,
                     size: 50),
               ]),
             ),
@@ -603,83 +615,83 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 _StatCard(label: 'Acceptance Rate',value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', icon: Icons.thumb_up_outlined, color: AppTheme.success),
               ],
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Peak hour bonus tracker
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: context.appSurface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.bolt, color: AppTheme.warning, size: 20),
-                  const SizedBox(width: 8),
-                  const Text('Peak Hour Bonus', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-                  const Spacer(),
+                  Icon(Icons.bolt, color: AppTheme.warning, size: 20),
+                  SizedBox(width: 8),
+                  Text('Peak Hour Bonus', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                  Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(color: AppTheme.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                    child: const Text('Active 6–9 PM', style: TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
+                    child: Text('Active 6–9 PM', style: TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
                   ),
                 ]),
-                const SizedBox(height: 10),
+                SizedBox(height: 10),
                 Row(children: [
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Text('Extra \$0.50 per trip during peak hours', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-                    const SizedBox(height: 6),
+                    Text('Extra \$0.50 per trip during peak hours', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                    SizedBox(height: 6),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: 0.6,
-                        backgroundColor: AppTheme.cardBg,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.warning),
+                        backgroundColor: context.appCardBg,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warning),
                         minHeight: 6,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const Text('3 of 5 peak-hour trips completed today', style: TextStyle(color: AppTheme.textSecondary, fontSize: 11)),
+                    SizedBox(height: 4),
+                    Text('3 of 5 peak-hour trips completed today', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                   ])),
-                  const SizedBox(width: 14),
-                  const Column(children: [
+                  SizedBox(width: 14),
+                  Column(children: [
                     Text('+\$1.50', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w900, fontSize: 20)),
-                    Text('earned today', style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+                    Text('earned today', style: TextStyle(color: context.appTextSecondary, fontSize: 10)),
                   ]),
                 ]),
               ]),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
 
             // 5-star streak rewards
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: context.appSurface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
               ),
               child: Row(children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(color: AppTheme.gold.withValues(alpha: 0.15), shape: BoxShape.circle),
-                  child: const Icon(Icons.emoji_events, color: AppTheme.gold, size: 26),
+                  child: Icon(Icons.emoji_events, color: AppTheme.gold, size: 26),
                 ),
-                const SizedBox(width: 12),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('5-Star Streak 🔥', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w700)),
-                  Text('4 consecutive 5-star ratings!', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('5-Star Streak 🔥', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+                  Text('4 consecutive 5-star ratings!', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                   SizedBox(height: 4),
                   Text('1 more 5-star = Earn \$5 bonus', style: TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600)),
                 ])),
                 Row(children: List.generate(5, (i) => Icon(
                   i < 4 ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: i < 4 ? AppTheme.gold : AppTheme.textSecondary, size: 18,
+                  color: i < 4 ? AppTheme.gold : context.appTextSecondary, size: 18,
                 ))),
               ]),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Active mode cards (one per active mode)
             if (widget.isOnline) ...[
@@ -688,7 +700,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 GestureDetector(
                   onTap: _openActiveTrip,
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: AppTheme.warning.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
@@ -696,7 +708,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     ),
                     child: Row(children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
                           color: AppTheme.warning.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
@@ -707,16 +719,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
                               : Icons.directions_car,
                           color: AppTheme.warning, size: 24),
                       ),
-                      const SizedBox(width: 14),
+                      SizedBox(width: 14),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(
                           _activeDelivery != null
                               ? (_activeDelivery!.isMoving ? 'Moving In Progress' : 'Delivery In Progress')
                               : 'Ride In Progress',
-                          style: const TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
-                        const SizedBox(height: 2),
-                        const Text('Tap to open the map and see where to go.',
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                          style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
+                        SizedBox(height: 2),
+                        Text('Tap to open the map and see where to go.',
+                            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                       ])),
                       const SizedBox(width: 10),
                       Container(
@@ -844,7 +856,7 @@ class _DriverShareLocationCardState extends State<_DriverShareLocationCard> {
       final lat = pos.latitude;
       final lng = pos.longitude;
       final mapsUrl = 'https://maps.google.com/?q=$lat,$lng';
-      final text    = 'My current location as an AutoRide driver:\n$mapsUrl';
+      final text    = 'My current location as an ROTEH driver:\n$mapsUrl';
 
       final box = context.findRenderObject() as RenderBox?;
       await Share.share(text,
@@ -866,28 +878,28 @@ class _DriverShareLocationCardState extends State<_DriverShareLocationCard> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.success.withValues(alpha: 0.35)),
       ),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: AppTheme.success.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.share_location, color: AppTheme.success, size: 22),
+          child: Icon(Icons.share_location, color: AppTheme.success, size: 22),
         ),
-        const SizedBox(width: 12),
-        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Share My Location', style: TextStyle(
-              color: AppTheme.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
           SizedBox(height: 2),
-          Text('Send your live GPS link to friends or family via WhatsApp, SMS, etc.',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          Text('Send your live GPS link to friends or family via Telegram, SMS, etc.',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ])),
         const SizedBox(width: 10),
         SizedBox(
@@ -929,17 +941,17 @@ class _ModeChip extends StatelessWidget {
     child: GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        duration: Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.15) : AppTheme.surface,
+          color: active ? color.withValues(alpha: 0.15) : context.appSurface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: active ? color : AppTheme.surface),
+          border: Border.all(color: active ? color : context.appSurface),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: active ? color : AppTheme.textSecondary, size: 20),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: active ? color : AppTheme.textSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
+          Icon(icon, color: active ? color : context.appTextSecondary, size: 20),
+          SizedBox(height: 4),
+          Text(label, style: TextStyle(color: active ? color : context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
         ]),
       ),
     ),
@@ -964,27 +976,27 @@ class _ModeEmptyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(children: [
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 28),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         Text(title,
             style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 15)),
-        const SizedBox(height: 6),
+        SizedBox(height: 6),
         Text(subtitle,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            style: TextStyle(color: context.appTextSecondary, fontSize: 12),
             textAlign: TextAlign.center),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -1012,13 +1024,13 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, color: color, size: 20),
-        const Spacer(),
+        Spacer(),
         Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
       ]),
     );
   }
@@ -1109,20 +1121,20 @@ class _RideRequestCardState extends State<_RideRequestCard> {
     final passengerLabel = widget.ride.passenger?.name ?? 'Passenger #${widget.ride.passengerId}';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: accentColor.withValues(alpha: 0.5), width: 1.5),
         boxShadow: [BoxShadow(
             color: accentColor.withValues(alpha: 0.15),
-            blurRadius: 16, offset: const Offset(0, 4))],
+            blurRadius: 16, offset: Offset(0, 4))],
       ),
       child: Column(children: [
         // Header row: badge + countdown
         Row(children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
@@ -1130,21 +1142,21 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                 style: TextStyle(color: accentColor,
                     fontWeight: FontWeight.w800, fontSize: 11)),
           ),
-          const Spacer(),
+          Spacer(),
           Text('$_seconds s', style: TextStyle(
               color: accentColor, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: AppTheme.cardBg,
+            backgroundColor: context.appCardBg,
             valueColor: AlwaysStoppedAnimation<Color>(accentColor),
             minHeight: 5,
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         // Passenger + fare
         Row(children: [
@@ -1154,52 +1166,52 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             child: Text(passengerLabel[0],
                 style: TextStyle(color: accentColor, fontWeight: FontWeight.w700)),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Expanded(child: Text(passengerLabel,
-              style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600))),
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600))),
           Text(AppTheme.khr(widget.ride.fareKhr),
-              style: const TextStyle(color: AppTheme.textPrimary,
+              style: TextStyle(color: context.appTextPrimary,
                   fontSize: 20, fontWeight: FontWeight.w800)),
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         // Addresses
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: AppTheme.cardBg,
+              color: context.appCardBg,
               borderRadius: BorderRadius.circular(10)),
           child: Column(children: [
             Row(children: [
               Icon(Icons.circle, color: accentColor, size: 8),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(child: Text(widget.ride.pickupAddress,
-                  style: const TextStyle(color: AppTheme.textPrimary, fontSize: 13),
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Row(children: [
-              const Icon(Icons.location_on, color: AppTheme.danger, size: 10),
-              const SizedBox(width: 8),
+              Icon(Icons.location_on, color: AppTheme.danger, size: 10),
+              SizedBox(width: 8),
               Expanded(child: Text(widget.ride.dropoffAddress,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
           ]),
         ),
-        const SizedBox(height: 14),
+        SizedBox(height: 14),
 
         // Buttons
         Row(children: [
           Expanded(child: GestureDetector(
             onTap: _acting ? null : _decline,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 13),
+              padding: EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.textSecondary.withValues(alpha: 0.4)),
+                  border: Border.all(color: context.appTextSecondary.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(10)),
-              child: const Center(child: Text('Decline',
-                  style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600))),
+              child: Center(child: Text('Decline',
+                  style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600))),
             ),
           )),
           const SizedBox(width: 12),
@@ -1492,20 +1504,20 @@ class _DriverTripCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
         CircleAvatar(backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2), radius: 18,
-          child: Text(passenger[0], style: const TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w700))),
-        const SizedBox(width: 12),
+          child: Text(passenger[0], style: TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w700))),
+        SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(passenger, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-          Text('$from → $to', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          Text(passenger, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+          Text('$from → $to', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(earned, style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.w700)),
-          Text(time,   style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+          Text(earned, style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w700)),
+          Text(time,   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
       ]),
     );
@@ -1551,9 +1563,9 @@ class _RecentRidesSectionState extends State<_RecentRidesSection> {
     }
     if (_rides.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
-        child: const Center(child: Text('No recent trips', style: TextStyle(color: AppTheme.textSecondary))),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
+        child: Center(child: Text('No recent trips', style: TextStyle(color: context.appTextSecondary))),
       );
     }
     return Column(
@@ -1732,19 +1744,19 @@ class _DriverEarningsState extends State<_DriverEarnings> {
         onRefresh: _loadAll,
         color: AppTheme.accentOrange,
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
+          physics: AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.all(20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              const Text('Earnings',
+              Text('Earnings',
                   style: TextStyle(
-                      color: AppTheme.textPrimary,
+                      color: context.appTextPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.w800)),
-              const Spacer(),
+              Spacer(),
               IconButton(
-                icon: const Icon(Icons.refresh,
-                    color: AppTheme.textSecondary, size: 20),
+                icon: Icon(Icons.refresh,
+                    color: context.appTextSecondary, size: 20),
                 onPressed: _loadAll,
                 tooltip: 'Refresh',
               ),
@@ -1806,20 +1818,20 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                           ),
                         ]),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // ── Transaction history ───────────────────────────────────────
             Row(children: [
-              const Expanded(child: SectionHeader(title: 'Transaction History')),
+              Expanded(child: SectionHeader(title: 'Transaction History')),
               if (_total > 0)
                 Text('$_total total',
-                    style: const TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
+                    style: TextStyle(
+                        color: context.appTextSecondary, fontSize: 12)),
             ]),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
 
             if (_txLoading)
-              const Center(
+              Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: CircularProgressIndicator(
@@ -1828,49 +1840,49 @@ class _DriverEarningsState extends State<_DriverEarnings> {
               )
             else if (_txError != null)
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: context.appSurface,
                     borderRadius: BorderRadius.circular(14)),
                 child: Column(children: [
                   Text(_txError!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 13)),
-                  const SizedBox(height: 8),
+                      style: TextStyle(
+                          color: context.appTextSecondary, fontSize: 13)),
+                  SizedBox(height: 8),
                   TextButton(
                     onPressed: () => _loadTransactions(reset: true),
-                    child: const Text('Retry',
+                    child: Text('Retry',
                         style: TextStyle(color: AppTheme.accentOrange)),
                   ),
                 ]),
               )
             else if (_transactions.isEmpty)
               Container(
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                    color: AppTheme.surface,
+                    color: context.appSurface,
                     borderRadius: BorderRadius.circular(14)),
-                child: const Center(
+                child: Center(
                   child: Text('No transactions yet',
-                      style: TextStyle(color: AppTheme.textSecondary)),
+                      style: TextStyle(color: context.appTextSecondary)),
                 ),
               )
             else ...[
               ..._transactions.map((t) => _TxnTile(txn: t)),
               if (_currentPage < _lastPage)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: EdgeInsets.symmetric(vertical: 8),
                   child: Center(
                     child: _txLoadingMore
-                        ? const CircularProgressIndicator(
+                        ? CircularProgressIndicator(
                             color: AppTheme.accentOrange)
                         : TextButton.icon(
                             onPressed: () =>
                                 _loadTransactions(reset: false),
-                            icon: const Icon(Icons.expand_more,
+                            icon: Icon(Icons.expand_more,
                                 color: AppTheme.accentOrange),
-                            label: const Text('Load more',
+                            label: Text('Load more',
                                 style: TextStyle(
                                     color: AppTheme.accentOrange)),
                           ),
@@ -1878,18 +1890,18 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                 ),
             ],
 
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // ── Instant withdrawal ────────────────────────────────────────
-            const SectionHeader(title: 'Instant Withdrawal'),
-            const SizedBox(height: 12),
+            SectionHeader(title: 'Instant Withdrawal'),
+            SizedBox(height: 12),
             ..._banks.map((b) => GestureDetector(
               onTap: () => setState(() => _bank = b['name'] as String),
               child: Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
+                margin: EdgeInsets.only(bottom: 10),
+                padding: EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
+                  color: context.appSurface,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
                       color: _bank == b['name']
@@ -1899,19 +1911,19 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                 child: Row(children: [
                   Icon(b['icon'] as IconData,
                       color: b['color'] as Color, size: 22),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Text(b['name'] as String,
-                      style: const TextStyle(
-                          color: AppTheme.textPrimary,
+                      style: TextStyle(
+                          color: context.appTextPrimary,
                           fontWeight: FontWeight.w600)),
-                  const Spacer(),
+                  Spacer(),
                   Icon(
                     _bank == b['name']
                         ? Icons.radio_button_checked
                         : Icons.radio_button_off,
                     color: _bank == b['name']
                         ? AppTheme.accent
-                        : AppTheme.textSecondary,
+                        : context.appTextSecondary,
                     size: 20,
                   ),
                 ]),
@@ -1941,15 +1953,15 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                         balance == 0
                             ? 'No balance to withdraw'
                             : '💸  Withdraw ${AppTheme.khr(balance)} to $_bank',
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ),
-            const SizedBox(height: 8),
-            const Center(
+            SizedBox(height: 8),
+            Center(
               child: Text('Funds arrive within 5 minutes',
                   style: TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12)),
+                      color: context.appTextSecondary, fontSize: 12)),
             ),
           ]),
         ),
@@ -1971,12 +1983,12 @@ class _EarningItem extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
         Text(value,
             style: TextStyle(
-                color: valueColor ?? AppTheme.textPrimary,
+                color: valueColor ?? context.appTextPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 12)),
         Text(label,
             style: TextStyle(
-                color: labelColor ?? AppTheme.textSecondary, fontSize: 10)),
+                color: labelColor ?? context.appTextSecondary, fontSize: 10)),
       ]);
 }
 
@@ -2005,47 +2017,47 @@ class _TxnTile extends StatelessWidget {
         : '-${AppTheme.khr(txn.amount)}';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      margin: EdgeInsets.only(bottom: 10),
+      padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
         Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(10),
           decoration: BoxDecoration(
               color: itemColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12)),
           child: Icon(_icon, color: itemColor, size: 18),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Expanded(
           child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(txn.displayLabel,
-                    style: const TextStyle(
-                        color: AppTheme.textPrimary,
+                    style: TextStyle(
+                        color: context.appTextPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 13),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 3),
+                SizedBox(height: 3),
                 Row(children: [
                   Text(txn.formattedDate,
-                      style: const TextStyle(
-                          color: AppTheme.textSecondary,
+                      style: TextStyle(
+                          color: context.appTextSecondary,
                           fontSize: 11)),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
+                    padding: EdgeInsets.symmetric(
                         horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                        color: AppTheme.cardBg,
+                        color: context.appCardBg,
                         borderRadius: BorderRadius.circular(4)),
                     child: Text(txn.status,
-                        style: const TextStyle(
-                            color: AppTheme.textSecondary,
+                        style: TextStyle(
+                            color: context.appTextSecondary,
                             fontSize: 10)),
                   ),
                 ]),
@@ -2059,8 +2071,8 @@ class _TxnTile extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   fontSize: 13)),
           Text('Bal: ${AppTheme.khr(txn.balanceAfter)}',
-              style: const TextStyle(
-                  color: AppTheme.textSecondary, fontSize: 10)),
+              style: TextStyle(
+                  color: context.appTextSecondary, fontSize: 10)),
         ]),
       ]),
     );
@@ -2122,40 +2134,40 @@ class _DriverProfileState extends State<_DriverProfile> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20),
         child: Column(children: [
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Stack(children: [
             CircleAvatar(radius: 48, backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2),
-              child: const Icon(Icons.person, color: AppTheme.accentOrange, size: 48)),
+              child: Icon(Icons.person, color: AppTheme.accentOrange, size: 48)),
             Positioned(bottom: 0, right: 0,
-              child: Container(padding: const EdgeInsets.all(4), decoration: const BoxDecoration(color: AppTheme.success, shape: BoxShape.circle),
-                child: const Icon(Icons.check, color: Colors.white, size: 14))),
+              child: Container(padding: EdgeInsets.all(4), decoration: BoxDecoration(color: AppTheme.success, shape: BoxShape.circle),
+                child: Icon(Icons.check, color: Colors.white, size: 14))),
           ]),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           _loading
-              ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: AppTheme.accentOrange, strokeWidth: 2))
-              : Text(_name, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 4),
-          Text(_phone, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-          const SizedBox(height: 8),
+              ? SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: AppTheme.accentOrange, strokeWidth: 2))
+              : Text(_name, style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
+          SizedBox(height: 4),
+          Text(_phone, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+          SizedBox(height: 8),
           Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.star, color: AppTheme.gold, size: 18),
-            const SizedBox(width: 4),
-            const Text('4.87', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-            const SizedBox(width: 4),
-            Text('(1,204 trips)', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            Icon(Icons.star, color: AppTheme.gold, size: 18),
+            SizedBox(width: 4),
+            Text('4.87', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+            SizedBox(width: 4),
+            Text('(1,204 trips)', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           ]),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           if (_vehicleName.isNotEmpty)
-            Container(padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16)),
+            Container(padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
               child: Row(children: [
-                const Icon(Icons.directions_car, color: AppTheme.accentOrange, size: 36),
-                const SizedBox(width: 12),
+                Icon(Icons.directions_car, color: AppTheme.accentOrange, size: 36),
+                SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(_vehicleName,  style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600)),
-                  Text(_vehiclePlate, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                  Text(_vehicleName,  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+                  Text(_vehiclePlate, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ])),
                 StatusBadge(label: 'Verified', color: AppTheme.success),
               ]),
@@ -2181,24 +2193,24 @@ class _DriverProfileState extends State<_DriverProfile> {
                   );
                 }, true),
               ].map((item) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+                margin: EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
                 child: ListTile(
-                  leading: Icon(item.$2, color: item.$4 ? AppTheme.danger : AppTheme.textSecondary, size: 20),
-                  title: Text(item.$1, style: TextStyle(color: item.$4 ? AppTheme.danger : AppTheme.textPrimary, fontSize: 14)),
-                  trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary, size: 18),
+                  leading: Icon(item.$2, color: item.$4 ? AppTheme.danger : context.appTextSecondary, size: 20),
+                  title: Text(item.$1, style: TextStyle(color: item.$4 ? AppTheme.danger : context.appTextPrimary, fontSize: 14)),
+                  trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
                   onTap: item.$3,
                 ),
               ))),
               // ── Switch to Passenger Mode ────────────────────────────────
               GestureDetector(
                 onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const PassengerHomeScreen()),
+                  MaterialPageRoute(builder: (_) => PassengerHomeScreen()),
                   (_) => false,
                 ),
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(16),
+                  margin: EdgeInsets.only(bottom: 10),
+                  padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: AppTheme.accent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(14),
@@ -2206,36 +2218,36 @@ class _DriverProfileState extends State<_DriverProfile> {
                   ),
                   child: Row(children: [
                     Container(
-                      padding: const EdgeInsets.all(7),
+                      padding: EdgeInsets.all(7),
                       decoration: BoxDecoration(
                         color: AppTheme.accent.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
+                      child: Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(child: Text('Switch to Passenger Mode',
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Switch to Passenger Mode',
                         style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14))),
-                    const Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
+                    Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
                   ]),
                 ),
               ),
               // ── Dark mode ───────────────────────────────────────────────
               Consumer<ThemeProvider>(
                 builder: (context, tp, _) => Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  margin: EdgeInsets.only(bottom: 10),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                      color: AppTheme.surface,
+                      color: context.appSurface,
                       borderRadius: BorderRadius.circular(14)),
                   child: Row(children: [
-                    const Icon(Icons.dark_mode_outlined,
-                        color: AppTheme.textSecondary, size: 20),
-                    const SizedBox(width: 14),
-                    const Text('Dark Mode',
-                        style: TextStyle(color: AppTheme.textPrimary,
+                    Icon(Icons.dark_mode_outlined,
+                        color: context.appTextSecondary, size: 20),
+                    SizedBox(width: 14),
+                    Text('Dark Mode',
+                        style: TextStyle(color: context.appTextPrimary,
                             fontSize: 14, fontWeight: FontWeight.w500)),
-                    const Spacer(),
+                    Spacer(),
                     Switch(
                       value: tp.isDark,
                       activeColor: AppTheme.accent,
@@ -2246,13 +2258,13 @@ class _DriverProfileState extends State<_DriverProfile> {
               ),
               // ── Language ────────────────────────────────────────────────
               Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(14)),
+                margin: EdgeInsets.only(bottom: 10),
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
                 child: Row(children: [
-                  const Icon(Icons.language, color: AppTheme.textSecondary, size: 20),
-                  const SizedBox(width: 14),
-                  Text(l.language, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+                  Icon(Icons.language, color: context.appTextSecondary, size: 20),
+                  SizedBox(width: 14),
+                  Text(l.language, style: TextStyle(color: context.appTextPrimary, fontSize: 14)),
                   const Spacer(),
                   const LanguagePickerButton(),
                 ]),

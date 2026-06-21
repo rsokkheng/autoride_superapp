@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => _PhoneOtpSheet(onLoggedIn: _saveAndNavigate),
@@ -182,11 +182,11 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+          padding: EdgeInsets.symmetric(horizontal: 28, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
 
               // ── Logo ────────────────────────────────────────────────────
               Row(children: [
@@ -197,99 +197,99 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: AppTheme.accent,
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.electric_car, color: AppTheme.primary, size: 26),
+                  child: Icon(Icons.electric_car, color: AppTheme.primary, size: 26),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: 12),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('ROTEH', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  Text('ROTEH', style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                   Text('ROTEH App', style: TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 3)),
                 ]),
-                const Spacer(),
-                const LanguagePickerButton(),
+                Spacer(),
+                LanguagePickerButton(),
               ]),
 
-              const SizedBox(height: 52),
+              SizedBox(height: 52),
 
               // ── Heading ─────────────────────────────────────────────────
-              const Text('Welcome back', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
-              const SizedBox(height: 4),
-              const Text('Sign in to continue', style: TextStyle(color: AppTheme.textPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
+              Text('Welcome back', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+              SizedBox(height: 4),
+              Text('Sign in to continue', style: TextStyle(color: context.appTextPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
 
-              const SizedBox(height: 36),
+              SizedBox(height: 36),
 
               // ── Error banner ────────────────────────────────────────────
               if (_error != null) ...[
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
                     color: AppTheme.danger.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                    Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
+                    SizedBox(width: 10),
+                    Expanded(child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13))),
                   ]),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
               ],
 
               // ── Email ───────────────────────────────────────────────────
-              const Text('Email', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+              Text('Email', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
               TextField(
                 controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress,
                 textInputAction: TextInputAction.next,
                 autocorrect: false,
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: TextStyle(color: context.appTextPrimary),
                 decoration: InputDecoration(
                   hintText: 'Enter your email',
-                  prefixIcon: const Icon(Icons.email_outlined, color: AppTheme.textSecondary, size: 20),
+                  prefixIcon: Icon(Icons.email_outlined, color: context.appTextSecondary, size: 20),
                   filled: true,
-                  fillColor: AppTheme.surface,
+                  fillColor: context.appSurface,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppTheme.accent, width: 1.5),
+                    borderSide: BorderSide(color: AppTheme.accent, width: 1.5),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 18),
+              SizedBox(height: 18),
 
               // ── Password ────────────────────────────────────────────────
-              const Text('Password', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
+              Text('Password', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+              SizedBox(height: 8),
               TextField(
                 controller: _passwordCtrl,
                 obscureText: _obscurePass,
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _login(),
-                style: const TextStyle(color: AppTheme.textPrimary),
+                style: TextStyle(color: context.appTextPrimary),
                 decoration: InputDecoration(
                   hintText: 'Enter your password',
-                  prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.textSecondary, size: 20),
+                  prefixIcon: Icon(Icons.lock_outline, color: context.appTextSecondary, size: 20),
                   suffixIcon: GestureDetector(
                     onTap: () => setState(() => _obscurePass = !_obscurePass),
                     child: Icon(
                       _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                      color: AppTheme.textSecondary,
+                      color: context.appTextSecondary,
                       size: 20,
                     ),
                   ),
                   filled: true,
-                  fillColor: AppTheme.surface,
+                  fillColor: context.appSurface,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppTheme.accent, width: 1.5),
+                    borderSide: BorderSide(color: AppTheme.accent, width: 1.5),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 32),
+              SizedBox(height: 32),
 
               // ── Login button ────────────────────────────────────────────
               SizedBox(
@@ -299,25 +299,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accent,
                     disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.5),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
                   child: _loading
-                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-                      : const Text('Sign In', style: TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w800)),
+                      ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
+                      : Text('Sign In', style: TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w800)),
                 ),
               ),
 
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               // ── Divider ─────────────────────────────────────────────────
               Row(children: [
-                const Expanded(child: Divider(color: AppTheme.cardBg)),
+                Expanded(child: Divider(color: context.appCardBg)),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('or continue with', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('or continue with', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                 ),
-                const Expanded(child: Divider(color: AppTheme.cardBg)),
+                Expanded(child: Divider(color: context.appCardBg)),
               ]),
 
               const SizedBox(height: 16),
@@ -351,12 +351,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (!bio.enabled || !bio.available) return const SizedBox.shrink();
                   return Column(children: [
                     Row(children: [
-                      const Expanded(child: Divider(color: AppTheme.cardBg)),
+                      Expanded(child: Divider(color: context.appCardBg)),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('or', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('or', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                       ),
-                      const Expanded(child: Divider(color: AppTheme.cardBg)),
+                      Expanded(child: Divider(color: context.appCardBg)),
                     ]),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -383,24 +383,24 @@ class _LoginScreenState extends State<LoginScreen> {
                 },
               ),
 
-              const SizedBox(height: 4),
+              SizedBox(height: 4),
 
               // ── Create account link ──────────────────────────────────────
               Center(
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Text("Don't have an account?",
+                  Text("Don't have an account?",
                       style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 14)),
+                          color: context.appTextSecondary, fontSize: 14)),
                   TextButton(
                     onPressed: () => Navigator.push(context,
                         MaterialPageRoute(
-                            builder: (_) => const RegisterScreen())),
+                            builder: (_) => RegisterScreen())),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      padding: EdgeInsets.symmetric(horizontal: 6),
                       minimumSize: Size.zero, tapTargetSize:
                           MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('Create Account',
+                    child: Text('Create Account',
                         style: TextStyle(
                             color: AppTheme.accent,
                             fontWeight: FontWeight.w700,
@@ -409,15 +409,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 ]),
               ),
 
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
 
               // ── Demo credentials hint ────────────────────────────────────
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.surface,
+                  color: context.appSurface,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.cardBg),
+                  border: Border.all(color: context.appCardBg),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
@@ -475,16 +475,16 @@ class _SocialButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
+        padding: EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: context.appSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.cardBg),
+          border: Border.all(color: context.appCardBg),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(icon, color: iconColor, size: 22),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+          SizedBox(width: 8),
+          Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
         ]),
       ),
     );
@@ -595,17 +595,17 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Center(child: Container(width: 40, height: 4,
-              decoration: BoxDecoration(color: AppTheme.cardBg,
+              decoration: BoxDecoration(color: context.appCardBg,
                   borderRadius: BorderRadius.circular(2)))),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           Row(children: [
             if (_codeSent)
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: AppTheme.textSecondary, size: 18),
+                icon: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: context.appTextSecondary, size: 18),
                 onPressed: _loading ? null : () => setState(() {
                   _codeSent = false; _error = null;
                   for (final c in _otpCtrls) c.clear();
@@ -615,58 +615,58 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(_codeSent ? 'Enter OTP' : 'Phone Login',
-                    style: const TextStyle(color: AppTheme.textPrimary,
+                    style: TextStyle(color: context.appTextPrimary,
                         fontSize: 20, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(
                   _codeSent
                       ? 'Code sent to ${_sentPhone ?? ''}'
                       : 'We\'ll send a one-time code via SMS',
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                 ),
               ]),
             ),
           ]),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Error
           if (_error != null) ...[
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: AppTheme.danger.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
               ),
               child: Row(children: [
-                const Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
-                const SizedBox(width: 8),
+                Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
+                SizedBox(width: 8),
                 Expanded(child: Text(_error!,
-                    style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                    style: TextStyle(color: AppTheme.danger, fontSize: 13))),
               ]),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
           ],
 
           if (!_codeSent) ...[
             // Phone number input
-            const Text('Phone Number',
-                style: TextStyle(color: AppTheme.textSecondary,
+            Text('Phone Number',
+                style: TextStyle(color: context.appTextSecondary,
                     fontSize: 13, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _sendOtp(),
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+              style: TextStyle(color: context.appTextPrimary, fontSize: 16),
               decoration: InputDecoration(
                 hintText: '+855 xx xxx xxx',
-                hintStyle: const TextStyle(color: AppTheme.textSecondary),
-                prefixIcon: const Icon(Icons.phone_outlined,
-                    color: AppTheme.textSecondary, size: 20),
+                hintStyle: TextStyle(color: context.appTextSecondary),
+                prefixIcon: Icon(Icons.phone_outlined,
+                    color: context.appTextSecondary, size: 20),
                 filled: true,
-                fillColor: AppTheme.cardBg,
+                fillColor: context.appCardBg,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide.none),
@@ -736,7 +736,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
             Center(
               child: _countdown > 0
                   ? Text('Resend code in ${_countdown}s',
-                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13))
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 13))
                   : TextButton(
                       onPressed: _loading ? null : _sendOtp,
                       child: const Text('Resend OTP',
@@ -774,12 +774,12 @@ class _OtpBox extends StatelessWidget {
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        style: const TextStyle(color: AppTheme.textPrimary,
+        style: TextStyle(color: context.appTextPrimary,
             fontSize: 22, fontWeight: FontWeight.w700),
         decoration: InputDecoration(
           counterText: '',
           filled: true,
-          fillColor: AppTheme.cardBg,
+          fillColor: context.appCardBg,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none),
@@ -808,19 +808,19 @@ class _DemoTile extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: AppTheme.cardBg, borderRadius: BorderRadius.circular(10)),
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
         child: Row(children: [
           Icon(
             label == 'Driver' ? Icons.drive_eta_outlined : Icons.person_outline,
             color: label == 'Driver' ? AppTheme.accentOrange : AppTheme.accent,
             size: 16,
           ),
-          const SizedBox(width: 8),
-          Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-          const SizedBox(width: 8),
-          Expanded(child: Text(email, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12))),
-          const Icon(Icons.touch_app_outlined, color: AppTheme.textSecondary, size: 14),
+          SizedBox(width: 8),
+          Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+          SizedBox(width: 8),
+          Expanded(child: Text(email, style: TextStyle(color: context.appTextSecondary, fontSize: 12))),
+          Icon(Icons.touch_app_outlined, color: context.appTextSecondary, size: 14),
         ]),
       ),
     );
