@@ -2140,15 +2140,20 @@ class ApiService {
     int     quantity        = 1,
     int?    rentPricePerDay,
     List<File> images       = const [],  // max 10 files, 5 MB each
+    String? guestName,
+    String? guestPhone,
   }) async {
-    final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final token   = await getToken();
+    final isGuest = token == null;
 
     final uri     = Uri.parse('$_baseUrl/marketplace');
     final request = http.MultipartRequest('POST', uri)
-      ..headers['Authorization'] = 'Bearer $token'
-      ..headers['Accept']        = 'application/json';
+      ..headers['Accept'] = 'application/json';
+    if (token != null) request.headers['Authorization'] = 'Bearer $token';
 
+    request.fields['entry_type']   = isGuest ? 'guest' : 'user';
+    if (isGuest && guestName  != null) request.fields['guest_name']  = guestName;
+    if (isGuest && guestPhone != null) request.fields['guest_phone'] = guestPhone;
     request.fields['title']        = title;
     request.fields['price']        = '$price';
     request.fields['condition']    = condition;
@@ -2259,10 +2264,15 @@ class ApiService {
     String? notes,
     String? rentStartDate,
     String? rentEndDate,
+    String? guestName,
+    String? guestPhone,
   }) async {
-    final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final token   = await getToken();
+    final isGuest = token == null;
     final body = <String, dynamic>{
+      'entry_type':      isGuest ? 'guest' : 'user',
+      if (isGuest && guestName  != null) 'guest_name':  guestName,
+      if (isGuest && guestPhone != null) 'guest_phone': guestPhone,
       'order_type':      orderType,
       'quantity':        quantity,
       'payment_method':  paymentMethod,
@@ -3429,10 +3439,15 @@ class ApiService {
     String? paymentMethod,
     String? couponCode,
     String? notes,
+    String? guestName,
+    String? guestPhone,
   }) async {
-    final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final token    = await getToken();
+    final isGuest  = token == null;
     final raw  = await _rawPost('/rentals', {
+      'entry_type':        isGuest ? 'guest' : 'user',
+      if (isGuest && guestName  != null) 'guest_name':  guestName,
+      if (isGuest && guestPhone != null) 'guest_phone': guestPhone,
       'pickup_location':   pickupLocation,
       'start_date':        startDate.toIso8601String(),
       'end_date':          endDate.toIso8601String(),

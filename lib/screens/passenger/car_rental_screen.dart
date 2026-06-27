@@ -5,6 +5,8 @@ import 'package:geolocator/geolocator.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/maps_service.dart';
+import '../../widgets/roteh_location_map.dart';
+import '../../widgets/guest_fields.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Duration options  (1M · 2M · 3M · 6M · 1Y · 2Y)
@@ -123,9 +125,14 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   int    _discountKhr   = 0;
   String? _appliedCode;
 
-  final _notesCtrl = TextEditingController();
+  final _notesCtrl  = TextEditingController();
   bool _booking = false;
   String? _bookError;
+
+  // Guest mode
+  bool _isGuest = false;
+  final _guestNameCtrl  = TextEditingController();
+  final _guestPhoneCtrl = TextEditingController();
 
   // ── Static data ──────────────────────────────────────────────────────────
 
@@ -172,9 +179,19 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    ApiService.isLoggedIn().then((v) {
+      if (mounted) setState(() => _isGuest = !v);
+    });
+  }
+
+  @override
   void dispose() {
     _notesCtrl.dispose();
     _couponCtrl.dispose();
+    _guestNameCtrl.dispose();
+    _guestPhoneCtrl.dispose();
     super.dispose();
   }
 
@@ -300,14 +317,20 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   });
 
   Future<void> _bookNow() async {
-    if (_locAddress.isEmpty) {
-      setState(() => _bookError = 'Please set a ${_locType.label.toLowerCase()} location.');
+    if (_locType == _LocType.delivery && _locAddress.isEmpty) {
+      setState(() => _bookError = 'Please set a delivery location.');
       return;
+    }
+    if (_isGuest) {
+      if (_guestNameCtrl.text.trim().isEmpty || _guestPhoneCtrl.text.trim().isEmpty) {
+        setState(() => _bookError = 'Please enter your name and phone number.');
+        return;
+      }
     }
     setState(() { _booking = true; _bookError = null; });
     try {
       await ApiService.createCarRental(
-        pickupLocation:   _locType == _LocType.pickup ? _locAddress : 'Depot',
+        pickupLocation:   _locType == _LocType.pickup ? 'ROTEH CAMBODIA' : 'Depot',
         deliveryLocation: _locType == _LocType.delivery ? _locAddress : null,
         startDate:        _startDate,
         endDate:          _endDate,
@@ -315,6 +338,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         paymentMethod:    _paymentId,
         couponCode:       _appliedCode,
         notes:            _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        guestName:        _isGuest ? _guestNameCtrl.text.trim() : null,
+        guestPhone:       _isGuest ? _guestPhoneCtrl.text.trim() : null,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -366,13 +391,16 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 onTap: _openLocTypeSheet,
               ),
               const SizedBox(height: 10),
-              _Tile(
-                icon: Icons.location_on_rounded,
-                iconColor: _locType.pinColor,
-                text: _locAddress.isEmpty ? _locType.hint : _locAddress,
-                placeholder: _locAddress.isEmpty,
-                onTap: _pickLocation,
-              ),
+              if (_locType == _LocType.pickup)
+                const RotehLocationMap()
+              else
+                _Tile(
+                  icon: Icons.location_on_rounded,
+                  iconColor: _locType.pinColor,
+                  text: _locAddress.isEmpty ? _locType.hint : _locAddress,
+                  placeholder: _locAddress.isEmpty,
+                  onTap: _pickLocation,
+                ),
               const SizedBox(height: 16),
 
               // ── Vehicle type ──────────────────────────────────────────────
@@ -441,6 +469,15 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 onTap: _openPaymentSheet,
               ),
               const SizedBox(height: 16),
+
+              // ── Guest info ────────────────────────────────────────────────
+              if (_isGuest) ...[
+                _label('Your Information'),
+                const SizedBox(height: 8),
+                GuestFields(
+                    nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
+                const SizedBox(height: 20),
+              ],
 
               // ── Notes ─────────────────────────────────────────────────────
               _label('Notes (optional)'),
@@ -1118,3 +1155,6 @@ class _CarLocationPickerScreenState extends State<_CarLocationPickerScreen> {
     );
   }
 }
+
+// ── Shared guest name + phone fields ─────────────────────────────────────────
+

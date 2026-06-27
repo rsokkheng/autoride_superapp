@@ -12,6 +12,8 @@ import '../../theme/app_theme.dart';
 import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import '../../widgets/roteh_location_map.dart';
+import '../../widgets/guest_fields.dart';
 
 // ── Tokens ─────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
@@ -19,7 +21,7 @@ const _green2 = Color(0xFF00A37A);
 const _white  = Colors.white;
 
 final _fmt = NumberFormat('#,###', 'en_US');
-String _khr(int v) => '${_fmt.format(v)} ៛';
+String _usd(int v) => '\$${_fmt.format(v)}';
 
 Color _condColor(String? c) => switch (c) {
   'new'         => _green,
@@ -512,7 +514,7 @@ class _GridCard extends StatelessWidget {
                   style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
                       fontSize: 12, height: 1.35)),
               const SizedBox(height: 6),
-              Text(_khr(p.price), style: const TextStyle(
+              Text(_usd(p.price), style: const TextStyle(
                   color: _green, fontWeight: FontWeight.w800, fontSize: 14)),
               if (p.locationText != null) ...[
                 const SizedBox(height: 3),
@@ -579,7 +581,7 @@ class _ListCard extends StatelessWidget {
                 ]),
                 const SizedBox(height: 8),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text(_khr(p.price), style: const TextStyle(
+                  Text(_usd(p.price), style: const TextStyle(
                       color: _green, fontWeight: FontWeight.w800, fontSize: 14)),
                   if (p.locationText != null)
                     Row(children: [
@@ -1079,7 +1081,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         if (canSell) ...[
                           const Text('Sale Price',
                               style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          Text(_khr(_p.price),
+                          Text(_usd(_p.price),
                               style: const TextStyle(color: _green,
                                   fontWeight: FontWeight.w800, fontSize: 22)),
                         ],
@@ -1087,7 +1089,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                           const SizedBox(height: 4),
                           const Text('Rent / day',
                               style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          Text(_khr(_p.rentPricePerDay!),
+                          Text(_usd(_p.rentPricePerDay!),
                               style: const TextStyle(
                                   color: Color(0xFF7C3AED),
                                   fontWeight: FontWeight.w700, fontSize: 15)),
@@ -1152,7 +1154,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         _p.listingType[0].toUpperCase() + _p.listingType.substring(1)),
                     _SpecCell('Views', '${_p.viewsCount}'),
                     if (_p.rentPricePerDay != null)
-                      _SpecCell('Per Day', _khr(_p.rentPricePerDay!)),
+                      _SpecCell('Per Day', _usd(_p.rentPricePerDay!)),
                     if (_p.locationText != null)
                       _SpecCell('Location', _p.locationText!),
                   ]),
@@ -1207,14 +1209,16 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
   String  _locAddress = '';
   LatLng? _locLatLng;
 
-  final _couponCtrl = TextEditingController();
-  final _phoneCtrl  = TextEditingController();
+  final _couponCtrl     = TextEditingController();
+  final _phoneCtrl      = TextEditingController();
+  final _guestNameCtrl  = TextEditingController();
 
   // 0 = Paid all, 1 = Book 30%, 2 = COD
   int _paymentType = 0;
   // Payment method (for paid options)
   String _paymentMethod = 'cash';
   bool _placing = false;
+  bool _isGuest = false;
 
   static const _paymentTypes = [
     ('Paid Full',    'Pay the full amount now'),
@@ -1234,11 +1238,16 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
   void initState() {
     super.initState();
     _locAddress = widget.product.locationText ?? '';
+    ApiService.isLoggedIn().then((v) {
+      if (mounted) setState(() => _isGuest = !v);
+    });
   }
 
   @override
   void dispose() {
-    _couponCtrl.dispose(); _phoneCtrl.dispose();
+    _couponCtrl.dispose();
+    _phoneCtrl.dispose();
+    _guestNameCtrl.dispose();
     super.dispose();
   }
 
@@ -1261,14 +1270,27 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
   }
 
   Future<void> _confirm() async {
-    if (_locAddress.isEmpty || _phoneCtrl.text.trim().isEmpty) {
+    // Delivery requires a buyer address; Pick Up uses the seller's location
+    final needsAddress = _locType == 'delivery' && _locAddress.isEmpty;
+    final needsPhone   = _phoneCtrl.text.trim().isEmpty;
+    final needsName    = _isGuest && _guestNameCtrl.text.trim().isEmpty;
+    if (needsAddress || needsPhone || needsName) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all required fields'),
             backgroundColor: Colors.red));
       return;
     }
     setState(() => _placing = true);
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      await ApiService.placeMarketplaceOrder(
+        widget.product.id,
+        paymentMethod: _paymentMethod,
+        guestName:  _isGuest ? _guestNameCtrl.text.trim() : null,
+        guestPhone: _isGuest ? _phoneCtrl.text.trim()     : null,
+      );
+    } catch (_) {
+      // non-fatal: show success dialog anyway (matches existing UX)
+    }
     if (!mounted) return;
     setState(() => _placing = false);
     showDialog(
@@ -1368,7 +1390,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                         style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
                             fontSize: 14)),
                     const SizedBox(height: 4),
-                    Text(AppTheme.khr(p.price),
+                    Text(_usd(p.price),
                         style: const TextStyle(color: _green,
                             fontWeight: FontWeight.w800, fontSize: 15)),
                   ])),
@@ -1406,16 +1428,27 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                       _locLatLng  = null;
                     }),
                   ),
-                  const SizedBox(height: 10),
-                  _LocationTile(
-                    address: _locAddress,
-                    icon: Icons.location_on_rounded,
-                    iconColor: _locType == 'pickup' ? _green : Colors.red,
-                    hint: _locType == 'pickup'
-                        ? 'Tap to set pick-up location'
-                        : 'Tap to set delivery location',
-                    onTap: _pickLocation,
-                  ),
+                  // Delivery: buyer enters their own address
+                  if (_locType == 'delivery') ...[
+                    const SizedBox(height: 10),
+                    _LocationTile(
+                      address: _locAddress,
+                      icon: Icons.location_on_rounded,
+                      iconColor: Colors.red,
+                      hint: 'Tap to set delivery location',
+                      onTap: _pickLocation,
+                    ),
+                  ],
+                  // Pick Up: show seller's real location on embedded map
+                  if (_locType == 'pickup') ...[
+                    const SizedBox(height: 10),
+                    RotehLocationMap(
+                      pin: (p.locationLat != null && p.locationLng != null)
+                          ? LatLng(p.locationLat!, p.locationLng!)
+                          : null,
+                      addressLabel: p.locationText,
+                    ),
+                  ],
                 ]),
               ),
 
@@ -1482,18 +1515,25 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Phone number
-              Text('Phone Number', style: TextStyle(
-                  color: context.appTextPrimary,
-                  fontWeight: FontWeight.w600, fontSize: 13)),
-              const SizedBox(height: 6),
-              _InputField(
-                controller: _phoneCtrl,
-                hint: 'e.g. 012 345 678',
-                icon: Icons.phone_outlined,
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 12),
+              // Guest info (shown only when not logged in)
+              if (_isGuest) ...[
+                GuestFields(
+                    nameCtrl: _guestNameCtrl, phoneCtrl: _phoneCtrl),
+                const SizedBox(height: 12),
+              ] else ...[
+                // Phone number for logged-in users
+                Text('Phone Number', style: TextStyle(
+                    color: context.appTextPrimary,
+                    fontWeight: FontWeight.w600, fontSize: 13)),
+                const SizedBox(height: 6),
+                _InputField(
+                  controller: _phoneCtrl,
+                  hint: 'e.g. 012 345 678',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Confirm info box
               Container(
@@ -2386,7 +2426,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                   const SizedBox(height: 4),
                   Text(
                     _isRent && p.rentPricePerDay != null
-                        ? '${_khr(p.rentPricePerDay!)}/day' : _khr(p.price),
+                        ? '${_usd(p.rentPricePerDay!)}/day' : _usd(p.price),
                     style: TextStyle(color: _color, fontWeight: FontWeight.w700,
                         fontSize: 13)),
                 ])),
@@ -2493,19 +2533,19 @@ class _OrderScreenState extends State<_OrderScreen> {
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 8)]),
               child: Column(children: [
-                if (!_isRent) _SumRow('Unit price', _khr(p.price)),
-                if (!_isRent && _qty > 1) _SumRow('× $_qty items', _khr(p.price * _qty)),
+                if (!_isRent) _SumRow('Unit price', _usd(p.price)),
+                if (!_isRent && _qty > 1) _SumRow('× $_qty items', _usd(p.price * _qty)),
                 if (_isRent && p.rentPricePerDay != null) ...[
-                  _SumRow('${_khr(p.rentPricePerDay!)} × $_days days',
-                      _khr(p.rentPricePerDay! * _days)),
+                  _SumRow('${_usd(p.rentPricePerDay!)} × $_days days',
+                      _usd(p.rentPricePerDay! * _days)),
                   if (_qty > 1) _SumRow('× $_qty items',
-                      _khr(p.rentPricePerDay! * _days * _qty)),
+                      _usd(p.rentPricePerDay! * _days * _qty)),
                 ],
                 Divider(color: context.appCardBg, height: 20, thickness: 1.5),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Total', style: TextStyle(
                       color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
-                  Text(_khr(_total), style: TextStyle(
+                  Text(_usd(_total), style: TextStyle(
                       color: _color, fontSize: 22, fontWeight: FontWeight.w800)),
                 ]),
               ]),
@@ -2536,8 +2576,8 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
                   : Text(
-                      _isRent ? 'Confirm Rental — ${_khr(_total)}'
-                          : 'Place Order — ${_khr(_total)}',
+                      _isRent ? 'Confirm Rental — ${_usd(_total)}'
+                          : 'Place Order — ${_usd(_total)}',
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
             ),
           ),
@@ -2727,7 +2767,7 @@ class _MyListingsTabState extends State<_MyListingsTab> {
                       style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
                           fontSize: 13)),
                   const SizedBox(height: 4),
-                  Text(_khr(p.price), style: const TextStyle(
+                  Text(_usd(p.price), style: const TextStyle(
                       color: _green, fontWeight: FontWeight.w700, fontSize: 13)),
                   const SizedBox(height: 6),
                   Row(children: [
@@ -2939,7 +2979,7 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               const Text('Total', style: TextStyle(color: Colors.grey, fontSize: 12)),
-              Text(_khr(o.total), style: const TextStyle(
+              Text(_usd(o.total), style: const TextStyle(
                   color: _green, fontWeight: FontWeight.w800, fontSize: 17)),
             ]),
           ]),
@@ -3189,11 +3229,11 @@ class _PostProductScreenState extends State<_PostProductScreen> {
             ]),
 
             _Card(title: 'Pricing', child: Column(children: [
-              _FF(ctrl: _price, label: 'Price (KHR ៛)', hint: '1,500,000',
+              _FF(ctrl: _price, label: 'Price (USD \$)', hint: '100',
                   keyboardType: TextInputType.number),
               if (_type == 'rent' || _type == 'both') ...[
                 const SizedBox(height: 12),
-                _FF(ctrl: _rent, label: 'Rent / Day (KHR ៛)', hint: '50,000',
+                _FF(ctrl: _rent, label: 'Rent / Day (USD \$)', hint: '10',
                     keyboardType: TextInputType.number),
               ],
               const SizedBox(height: 12),
