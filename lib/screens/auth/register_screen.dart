@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../driver/driver_document_upload_screen.dart';
@@ -213,6 +214,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 label: 'Phone (optional)', hint: '+855 963430534',
                 icon:  Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               ),
               SizedBox(height: 14),
               _Field(
@@ -326,6 +328,7 @@ class _Field extends StatelessWidget {
   final Widget?       suffixIcon;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _Field({
     required this.controller,
@@ -336,6 +339,7 @@ class _Field extends StatelessWidget {
     this.suffixIcon,
     this.keyboardType = TextInputType.text,
     this.validator,
+    this.inputFormatters,
   });
 
   @override
@@ -349,6 +353,7 @@ class _Field extends StatelessWidget {
         controller:   controller,
         obscureText:  obscureText,
         keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
           hintText:    hint,

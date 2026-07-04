@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 
 class GuestFields extends StatelessWidget {
@@ -37,6 +38,7 @@ class GuestFields extends StatelessWidget {
           hint: 'Phone number (e.g. 012 345 678)',
           icon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         ),
       ]),
     );
@@ -48,11 +50,13 @@ class _GuestInput extends StatelessWidget {
   final String hint;
   final IconData icon;
   final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   const _GuestInput({
     required this.ctrl,
     required this.hint,
     required this.icon,
     this.keyboardType = TextInputType.text,
+    this.inputFormatters,
   });
 
   @override
@@ -60,6 +64,7 @@ class _GuestInput extends StatelessWidget {
     return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: TextStyle(color: context.appTextPrimary, fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,

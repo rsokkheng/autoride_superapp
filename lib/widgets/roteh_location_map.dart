@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/maps_service.dart';
 
 // ROTEH CAMBODIA office — geocoded once per session and cached
@@ -57,18 +58,15 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
     super.dispose();
   }
 
-  void _openFullScreen() {
+  Future<void> _openGoogleMaps() async {
     final pin = _resolved;
     if (pin == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _RotehMapFullScreen(
-          pin: pin,
-          address: widget.addressLabel ?? _kRotehAddress,
-        ),
-      ),
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${pin.latitude},${pin.longitude}',
     );
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   @override
@@ -105,11 +103,10 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
                     ]),
                   ),
                 )
-              : GestureDetector(
-                  onTap: _openFullScreen,
-                  child: Stack(children: [
+              : Stack(children: [
                     GoogleMap(
                       onMapCreated: (c) => _ctrl = c,
+                      onTap: (_) => _openGoogleMaps(),
                       initialCameraPosition:
                           CameraPosition(target: _resolved!, zoom: 16),
                       markers: {
@@ -118,6 +115,12 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
                           position: _resolved!,
                           icon: BitmapDescriptor.defaultMarkerWithHue(
                               BitmapDescriptor.hueGreen),
+                          infoWindow: InfoWindow(
+                            title: widget.addressLabel ?? 'Pick-up Location',
+                            snippet: 'Tap to open Google Maps',
+                            onTap: _openGoogleMaps,
+                          ),
+                          onTap: _openGoogleMaps,
                         ),
                       },
                       myLocationEnabled: false,
@@ -131,90 +134,32 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
                     Positioned(
                       right: 8,
                       bottom: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(6),
+                      child: GestureDetector(
+                        onTap: _openGoogleMaps,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                            Icon(Icons.open_in_new_rounded,
+                                color: Colors.white, size: 14),
+                            SizedBox(width: 4),
+                            Text('Open in Maps',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 11)),
+                          ]),
                         ),
-                        child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                          Icon(Icons.fullscreen_rounded,
-                              color: Colors.white, size: 14),
-                          SizedBox(width: 4),
-                          Text('Tap to expand',
-                              style: TextStyle(
-                                  color: Colors.white, fontSize: 11)),
-                        ]),
                       ),
                     ),
                   ]),
-                ),
         ),
       ),
     ]);
   }
 }
 
-class _RotehMapFullScreen extends StatelessWidget {
-  final LatLng pin;
-  final String address;
-  const _RotehMapFullScreen({required this.pin, required this.address});
-
-  static const _green = Color(0xFF00C48C);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pick-up Location'),
-        backgroundColor: _green,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Stack(children: [
-        GoogleMap(
-          initialCameraPosition: CameraPosition(target: pin, zoom: 17),
-          markers: {
-            Marker(
-              markerId: const MarkerId('roteh'),
-              position: pin,
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueGreen),
-              infoWindow: InfoWindow(
-                title: 'Pick-up Here',
-                snippet: address,
-              ),
-            ),
-          },
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: true,
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
-            ),
-            child: Row(children: [
-              const Icon(Icons.location_on_rounded, color: _green, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(address,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w500)),
-              ),
-            ]),
-          ),
-        ),
-      ]),
-    );
-  }
-}

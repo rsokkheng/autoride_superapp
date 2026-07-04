@@ -1317,37 +1317,38 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardColor.withValues(alpha: 0.5), width: 1.5),
         boxShadow: [BoxShadow(
-            color: cardColor.withValues(alpha: 0.4),
-            blurRadius: 14, offset: const Offset(0, 5))],
+            color: cardColor.withValues(alpha: 0.15),
+            blurRadius: 16, offset: const Offset(0, 4))],
       ),
       child: Column(children: [
         Row(children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
+                color: cardColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
             child: Text(
               urgent ? '⚡ URGENT'
                   : widget.delivery.isMoving ? '🚚 NEW MOVING' : '📦 NEW DELIVERY',
-              style: const TextStyle(color: Colors.white,
+              style: TextStyle(color: cardColor,
                   fontWeight: FontWeight.w800, fontSize: 11),
             ),
           ),
           const Spacer(),
-          Text('$_seconds s', style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+          Text('$_seconds s', style: TextStyle(
+              color: cardColor, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 8),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
           child: LinearProgressIndicator(
             value: progress,
-            backgroundColor: Colors.white.withValues(alpha: 0.25),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            backgroundColor: context.appCardBg,
+            valueColor: AlwaysStoppedAnimation<Color>(cardColor),
             minHeight: 5,
           ),
         ),
@@ -1355,43 +1356,43 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
 
         Row(children: [
           CircleAvatar(
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
+            backgroundColor: cardColor.withValues(alpha: 0.15),
             radius: 18,
             child: Text(senderLabel[0],
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                style: TextStyle(color: cardColor, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: 10),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(senderLabel,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             if (widget.delivery.packageSize != null)
               Text(widget.delivery.packageSize!,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ])),
           Text(AppTheme.khr(widget.delivery.fee),
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+              style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
         ]),
         const SizedBox(height: 12),
 
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: context.appCardBg,
               borderRadius: BorderRadius.circular(10)),
           child: Column(children: [
             Row(children: [
-              const Icon(Icons.circle, color: Colors.white, size: 10),
+              Icon(Icons.circle, color: cardColor, size: 8),
               const SizedBox(width: 8),
               Expanded(child: Text(widget.delivery.pickupAddress,
-                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
             const SizedBox(height: 6),
             Row(children: [
-              const Icon(Icons.location_on, color: Colors.white70, size: 10),
+              const Icon(Icons.location_on, color: AppTheme.danger, size: 10),
               const SizedBox(width: 8),
               Expanded(child: Text(widget.delivery.dropoffAddress,
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                   overflow: TextOverflow.ellipsis)),
             ]),
           ]),
@@ -1403,59 +1404,59 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: context.appCardBg,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
+              border: Border.all(color: cardColor.withValues(alpha: 0.3)),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Row(children: [
-                Icon(Icons.local_shipping, color: Colors.white, size: 14),
-                SizedBox(width: 6),
+              Row(children: [
+                Icon(Icons.local_shipping, color: cardColor, size: 14),
+                const SizedBox(width: 6),
                 Text('Moving Details', style: TextStyle(
-                    color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
+                    color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 12)),
               ]),
               const SizedBox(height: 8),
               Row(children: [
-                const Icon(Icons.apartment_outlined, color: Colors.white70, size: 14),
+                Icon(Icons.apartment_outlined, color: context.appTextSecondary, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   'Floor: pickup ${widget.delivery.floorPickup ?? '?'} → '
                   'dropoff ${widget.delivery.floorDropoff ?? '?'}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                 ),
               ]),
               const SizedBox(height: 4),
               Row(children: [
-                Icon(Icons.elevator_outlined, color: Colors.white, size: 14),
+                Icon(Icons.elevator_outlined, color: context.appTextPrimary, size: 14),
                 const SizedBox(width: 6),
                 Text(
                   'Elevator: ${(widget.delivery.hasElevator ?? true) ? "Yes" : "No"}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 if (widget.delivery.needsStairsCarry == true) ...[
                   const SizedBox(width: 8),
-                  const Icon(Icons.stairs_outlined, color: Colors.white70, size: 14),
-                  const Text(' Stairs carry',
-                      style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  Icon(Icons.stairs_outlined, color: context.appTextSecondary, size: 14),
+                  Text(' Stairs carry',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                 ],
               ]),
               const SizedBox(height: 4),
               if (widget.delivery.requiresHelpers != null)
                 Row(children: [
-                  const Icon(Icons.people_outline, color: Colors.white70, size: 14),
+                  Icon(Icons.people_outline, color: context.appTextSecondary, size: 14),
                   const SizedBox(width: 6),
                   Text(
                     '${widget.delivery.requiresHelpers} helper(s) — '
                     '${widget.delivery.helperType == 'heavy_carry' ? 'Heavy carry' : 'Normal carry'}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   ),
                 ]),
               const SizedBox(height: 6),
               Wrap(spacing: 6, children: [
                 if (widget.delivery.heavyItems == true)
-                  _MovingFlag(label: '⚠ Heavy items', color: Colors.white),
+                  _MovingFlag(label: '⚠ Heavy items', color: cardColor),
                 if (widget.delivery.packingService == true)
-                  _MovingFlag(label: '📦 Packing', color: Colors.white),
+                  _MovingFlag(label: '📦 Packing', color: cardColor),
               ]),
             ]),
           ),
@@ -1469,10 +1470,10 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
+                  border: Border.all(color: context.appTextSecondary.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(10)),
-              child: const Center(child: Text('Decline',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600))),
+              child: Center(child: Text('Decline',
+                  style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600))),
             ),
           )),
           const SizedBox(width: 12),
@@ -1481,12 +1482,12 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 13),
               decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(10)),
+                  color: cardColor, borderRadius: BorderRadius.circular(10)),
               child: Center(child: _acting
-                  ? SizedBox(width: 18, height: 18,
-                      child: CircularProgressIndicator(color: cardColor, strokeWidth: 2))
-                  : Text('Accept Delivery',
-                      style: TextStyle(color: cardColor, fontWeight: FontWeight.w800))),
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Accept Delivery',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             ),
           )),
         ]),

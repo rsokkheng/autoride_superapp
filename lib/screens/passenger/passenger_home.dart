@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
@@ -40,6 +41,7 @@ import 'airport_trip_screen.dart';
 import 'business_screen.dart';
 import 'family_screen.dart';
 import 'subscription_screen.dart';
+import 'my_rentals_screen.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -140,15 +142,33 @@ class _HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<_HomeTab> {
+  static const _gridColumnsPrefKey = 'home_services_grid_columns';
+
   String     _firstName  = '';
   List<RideModel> _recentRides = [];
   RideModel? _activeRide;
   SurgeInfo? _surgeInfo;
+  int _gridColumns = 3;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadGridColumns();
+  }
+
+  Future<void> _loadGridColumns() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getInt(_gridColumnsPrefKey);
+    if (saved == 2 || saved == 3) {
+      if (mounted) setState(() => _gridColumns = saved!);
+    }
+  }
+
+  Future<void> _setGridColumns(int columns) async {
+    setState(() => _gridColumns = columns);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_gridColumnsPrefKey, columns);
   }
 
   Future<void> _load() async {
@@ -198,6 +218,13 @@ class _HomeTabState extends State<_HomeTab> {
     } catch (_) {}
   }
 
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   void _resumeActiveRide() {
     final ride = _activeRide;
     if (ride == null) return;
@@ -234,37 +261,52 @@ class _HomeTabState extends State<_HomeTab> {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(_greeting(),
+                        style: TextStyle(
+                            color: context.appTextSecondary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 2),
                     Text(_firstName.isEmpty ? AppLocalizations.of(context).welcome : '${AppLocalizations.of(context).hello} $_firstName 👋',
-                        style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
+                        style: TextStyle(color: context.appTextPrimary, fontSize: 21, fontWeight: FontWeight.w800)),
                   ],
                 ),
                 Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    CircleAvatar(backgroundColor: AppTheme.accent.withValues(alpha: 0.2), radius: 22, child: Icon(Icons.person, color: AppTheme.accent)),
-                    Positioned(top: 0, right: 0,
-                      child: Container(width: 10, height: 10, decoration: BoxDecoration(color: AppTheme.success, shape: BoxShape.circle))),
+                    Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [AppTheme.accent, AppTheme.accent.withValues(alpha: 0.35)],
+                        ),
+                      ),
+                      child: CircleAvatar(
+                          backgroundColor: context.appSurface,
+                          radius: 21,
+                          child: Icon(Icons.person, color: AppTheme.accent)),
+                    ),
+                    Positioned(bottom: 0, right: 0,
+                      child: Container(
+                        width: 12, height: 12,
+                        decoration: BoxDecoration(
+                          color: AppTheme.success,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: context.appBackground, width: 2),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
-            SizedBox(height: 20),
-            // Search bar
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-              child: Row(
-                children: [
-                  Icon(Icons.search, color: context.appTextSecondary),
-                  SizedBox(width: 10),
-                  Text(AppLocalizations.of(context).explore, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
             // Active ride restore banner
             if (_activeRide != null)
@@ -329,40 +371,63 @@ class _HomeTabState extends State<_HomeTab> {
 
             const SizedBox(height: 8),
             // Hero banner
-            GradientCard(
-              colors: [const Color(0xFF2E7D32), const Color(0xFF00E676)],
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF2E7D32), Color(0xFF00E676)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                        color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6)),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(children: [
+                  Positioned(right: -20, top: -30,
+                    child: Container(width: 110, height: 110,
+                        decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle))),
+                  Positioned(right: 40, bottom: -40,
+                    child: Container(width: 70, height: 70,
+                        decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle))),
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
                       children: [
-                        const SizedBox(height: 8),
-                        const SizedBox(height: 8),
-                        Text(AppLocalizations.of(context).evCarsSubtitle, style: const TextStyle(color: AppTheme.primary, fontSize: 15 , fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 12),
-                        GestureDetector(
-                          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(8)),
-                            child: Text(AppLocalizations.of(context).explore, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(AppLocalizations.of(context).evCarsSubtitle, style: const TextStyle(color: AppTheme.primary, fontSize: 15, fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 12),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(8)),
+                                child: Text(AppLocalizations.of(context).explore, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: Image.asset(
+                            'assets/library/icon_fa.png',
+                            fit: BoxFit.contain,
                           ),
                         ),
                       ],
                     ),
                   ),
-                 Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.transparent,
-                    child: Image.asset(
-                      'assets/library/icon_fa.png',
-                       fit: BoxFit.contain,
-                    ),
-                  )
-                ],
+                ]),
               ),
             ),
             const SizedBox(height: 16),
@@ -373,57 +438,64 @@ class _HomeTabState extends State<_HomeTab> {
                   MaterialPageRoute(builder: (_) => const AirportTripScreen())),
             ),
             const SizedBox(height: 24),
-            SectionHeader(title: AppLocalizations.of(context).services),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(AppLocalizations.of(context).services,
+                    style: TextStyle(
+                        color: context.appTextPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
+                _GridColumnToggle(
+                  columns: _gridColumns,
+                  onChanged: _setGridColumns,
+                ),
+              ],
+            ),
             const SizedBox(height: 14),
             Builder(builder: (context) {
               final l = AppLocalizations.of(context);
               return GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
+                crossAxisCount: _gridColumns,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 1.1,
+                childAspectRatio: _gridColumns == 2 ? 1.35 : 0.95,
                 children: [
                   ServiceCard(
                     icon: Icons.directions_car_outlined,
                     title: l.bookRide,
-                    subtitle: l.bookRideSub,
                     color: AppTheme.accent,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RideBookingScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.delivery_dining_outlined,
                     title: l.delivery,
-                    subtitle: l.deliverySub,
                     color: AppTheme.accentOrange,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeliveryScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.store_outlined,
                     title: l.marketplace,
-                    subtitle: l.marketplaceSub,
                     color: const Color(0xFF9C27B0),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.ev_station_outlined,
                     title: l.evStations,
-                    subtitle: l.evStationsSub,
                     color: AppTheme.warning,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.business_rounded,
                     title: 'Business',
-                    subtitle: 'Expense & team rides',
                     color: const Color(0xFF1565C0),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.family_restroom_rounded,
                     title: 'Family',
-                    subtitle: 'Book for loved ones',
                     color: AppTheme.accentOrange,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
                   ),
@@ -480,6 +552,55 @@ class _HomeTabState extends State<_HomeTab> {
       ),
     );
   }
+}
+
+class _GridColumnToggle extends StatelessWidget {
+  final int columns;
+  final ValueChanged<int> onChanged;
+  const _GridColumnToggle({required this.columns, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: context.appCardBg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        _ColumnOption(
+            icon: Icons.grid_view_rounded,
+            active: columns == 3,
+            onTap: () => onChanged(3)),
+        _ColumnOption(
+            icon: Icons.view_module_outlined,
+            active: columns == 2,
+            onTap: () => onChanged(2)),
+      ]),
+    );
+  }
+}
+
+class _ColumnOption extends StatelessWidget {
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+  const _ColumnOption({required this.icon, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: active ? AppTheme.accent : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icon, size: 16,
+          color: active ? AppTheme.primary : context.appTextSecondary),
+    ),
+  );
 }
 
 class _AirportBanner extends StatelessWidget {
@@ -541,13 +662,34 @@ class _QuickAction extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 3)),
+          ],
+        ),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 22),
-            SizedBox(height: 6),
-            Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 19),
+            ),
+            const SizedBox(height: 8),
+            Text(label, style: TextStyle(
+                color: context.appTextSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -563,7 +705,16 @@ class _TripCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 3)),
+        ],
+      ),
       child: Row(
         children: [
           Container(padding: EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
@@ -694,6 +845,8 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen()))),
                 _ProfileMenuItem(icon: Icons.history_outlined, label: l.tripHistory,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()))),
+                _ProfileMenuItem(icon: Icons.directions_car_outlined, label: 'My Rentals',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRentalsScreen()))),
                 _ProfileMenuItem(icon: Icons.notifications_outlined, label: l.notifications,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
                 _ProfileMenuItem(icon: Icons.bookmark_outline, label: 'Saved Places',

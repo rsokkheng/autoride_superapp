@@ -1070,6 +1070,7 @@ class ApiService {
     ].join('&');
 
     final raw = await _rawGet('/movings?$query', token: token);
+    AppLog.d('Moving', 'GET /movings?$query → ${raw.statusCode}: ${raw.body}');
     return _parseDeliveryList(raw);
   }
 
@@ -1379,10 +1380,19 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final data       = (body['data'] as Map<String, dynamic>?) ?? body;
-      // Support both /deliveries (key: "deliveries") and /movings (key: "movings")
-      final pagination = (data['deliveries'] ?? data['movings'] ?? data) as Map<String, dynamic>?;
-      final list       = (pagination?['data'] as List<dynamic>?) ?? [];
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      // Support both /deliveries (key: "deliveries") and /movings (key: "movings"),
+      // and both a flat list ("deliveries": [...]) or a Laravel paginator
+      // ("deliveries": { "data": [...] }) shape.
+      final candidate = data['deliveries'] ?? data['movings'] ?? data;
+      final List<dynamic> list;
+      if (candidate is List) {
+        list = candidate;
+      } else if (candidate is Map<String, dynamic>) {
+        list = (candidate['data'] as List<dynamic>?) ?? [];
+      } else {
+        list = [];
+      }
       return list
           .map((e) => DeliveryModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -2008,8 +2018,9 @@ class ApiService {
           final pData = products['data'];
           if (pData is List) return pData;
         }
-        // data.orders.data[] etc.
+        // data.orders[] / data.rentals[] / data.<key>[] or data.<key>.data[]
         for (final v in data.values) {
+          if (v is List) return v;
           if (v is Map<String, dynamic>) {
             final vData = v['data'];
             if (vData is List) return vData;
@@ -2065,7 +2076,6 @@ class ApiService {
 
   static Future<List<MarketplaceCategoryModel>> getMarketplaceCategories() async {
     final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw = await _rawGet('/marketplace/categories', token: token);
     final Map<String, dynamic> body;
     try {
@@ -2082,18 +2092,17 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed to load categories.', raw.statusCode);
   }
 
-  static Future<List<MarketplaceProductModel>> getMarketplaceProducts({
+  static Future<MarketplaceProductsPage> getMarketplaceProducts({
     String? search,
     int?    categoryId,
     int?    sellerId,
     String? listingType,  // sale | rent | both
     String? condition,    // new | used | refurbished
-    int?    minPrice,
-    int?    maxPrice,
+    double? minPrice,
+    double? maxPrice,
     int     page = 1,
   }) async {
     final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
     final params = <String, String>{'page': '$page'};
     if (search      != null) params['search']      = search;
     if (categoryId  != null) params['category_id'] = '$categoryId';
@@ -2102,16 +2111,43 @@ class ApiService {
     if (condition   != null) params['condition']   = condition;
     if (minPrice    != null) params['min_price']   = '$minPrice';
     if (maxPrice    != null) params['max_price']   = '$maxPrice';
-    final query = params.isEmpty ? '' : '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
+    final query = '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
     final raw = await _rawGet('/marketplace$query', token: token);
-    if (raw.statusCode == 200) return _parseProductList(raw.body);
-    final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
-    throw ApiException(body['message'] as String? ?? 'Failed to load products.', raw.statusCode);
+    if (raw.statusCode != 200) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Failed to load products.', raw.statusCode);
+    }
+    return _parseProductsPage(raw.body);
+  }
+
+  static MarketplaceProductsPage _parseProductsPage(String body) {
+    dynamic decoded;
+    try { decoded = jsonDecode(body); } catch (_) {
+      return const MarketplaceProductsPage(products: [], currentPage: 1, lastPage: 1, total: 0);
+    }
+    Map<String, dynamic>? pagination;
+    if (decoded is Map<String, dynamic>) {
+      final data = decoded['data'];
+      if (data is Map<String, dynamic>) {
+        final products = data['products'];
+        if (products is Map<String, dynamic>) pagination = products;
+        else if (data['data'] is List) pagination = data;
+      }
+    }
+    final items = _extractList(decoded)
+        .whereType<Map<String, dynamic>>()
+        .map(MarketplaceProductModel.fromJson)
+        .toList();
+    return MarketplaceProductsPage(
+      products:    items,
+      currentPage: (pagination?['current_page'] as num?)?.toInt() ?? 1,
+      lastPage:    (pagination?['last_page']    as num?)?.toInt() ?? 1,
+      total:       (pagination?['total']        as num?)?.toInt() ?? items.length,
+    );
   }
 
   static Future<MarketplaceProductModel> getMarketplaceProduct(int id) async {
     final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw = await _rawGet('/marketplace/$id', token: token);
     return _parseProduct(raw);
   }
@@ -2127,7 +2163,7 @@ class ApiService {
 
   static Future<MarketplaceProductModel> createMarketplaceProduct({
     required String title,
-    required int    price,
+    required double price,
     required String condition,    // new | used | refurbished
     required String listingType,  // sale | rent | both
     required String status,       // draft | active
@@ -2137,8 +2173,9 @@ class ApiService {
     double? locationLng,
     String? expiresAt,
     int?    categoryId,
+    int?    vehicleId,
     int     quantity        = 1,
-    int?    rentPricePerDay,
+    double? rentPricePerDay,
     List<File> images       = const [],  // max 10 files, 5 MB each
     String? guestName,
     String? guestPhone,
@@ -2166,6 +2203,7 @@ class ApiService {
     if (locationLng     != null) request.fields['location_lng']       = '$locationLng';
     if (expiresAt       != null) request.fields['expires_at']         = expiresAt;
     if (categoryId      != null) request.fields['category_id']        = '$categoryId';
+    if (vehicleId       != null) request.fields['vehicle_id']         = '$vehicleId';
     if (rentPricePerDay != null) request.fields['rent_price_per_day'] = '$rentPricePerDay';
 
     for (final file in images) {
@@ -2184,10 +2222,11 @@ class ApiService {
     String? title,
     String? description,
     int?    categoryId,
+    int?    vehicleId,
     String? condition,
     String? listingType,
-    int?    price,
-    int?    rentPricePerDay,
+    double? price,
+    double? rentPricePerDay,
     int?    quantity,
     String? status,   // draft | active | paused | sold
     String? locationText,
@@ -2201,6 +2240,7 @@ class ApiService {
       if (title           != null) 'title':              title,
       if (description     != null) 'description':        description,
       if (categoryId      != null) 'category_id':        categoryId,
+      if (vehicleId       != null) 'vehicle_id':         vehicleId,
       if (condition       != null) 'condition':          condition,
       if (listingType     != null) 'listing_type':       listingType,
       if (price           != null) 'price':              price,
@@ -2258,27 +2298,21 @@ class ApiService {
 
   static Future<MarketplaceOrderModel> placeMarketplaceOrder(
     int productId, {
-    String  orderType     = 'purchase', // purchase | rent
-    int     quantity      = 1,
-    String  paymentMethod = 'cash',
+    String  orderType      = 'purchase', // purchase | rent
+    int     quantity       = 1,
+    String  paymentMethod  = 'cash',     // cash | wallet | aba | wing | other_online
     String? notes,
     String? rentStartDate,
     String? rentEndDate,
-    String? guestName,
-    String? guestPhone,
   }) async {
-    final token   = await getToken();
-    final isGuest = token == null;
+    final token = await getToken();
     final body = <String, dynamic>{
-      'entry_type':      isGuest ? 'guest' : 'user',
-      if (isGuest && guestName  != null) 'guest_name':  guestName,
-      if (isGuest && guestPhone != null) 'guest_phone': guestPhone,
-      'order_type':      orderType,
-      'quantity':        quantity,
-      'payment_method':  paymentMethod,
-      if (notes          != null) 'notes':           notes,
-      if (rentStartDate  != null) 'rent_start_date': rentStartDate,
-      if (rentEndDate    != null) 'rent_end_date':   rentEndDate,
+      'order_type':     orderType,
+      'quantity':       quantity,
+      'payment_method': paymentMethod,
+      if (notes         != null) 'notes':           notes,
+      if (rentStartDate != null) 'rent_start_date': rentStartDate,
+      if (rentEndDate   != null) 'rent_end_date':   rentEndDate,
     };
     final raw = await _rawPost('/marketplace/$productId/order', body, token: token);
     final Map<String, dynamic> decoded;
@@ -2288,14 +2322,16 @@ class ApiService {
       throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
     }
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      final data = decoded['data'] ?? decoded;
-      return MarketplaceOrderModel.fromJson(data as Map<String, dynamic>);
+      // Response: { success: true, data: { order: { ... } } }
+      final data  = decoded['data'] as Map<String, dynamic>? ?? decoded;
+      final order = data['order']  as Map<String, dynamic>? ?? data;
+      return MarketplaceOrderModel.fromJson(order);
     }
     throw ApiException(decoded['message'] as String? ?? 'Failed to place order.', raw.statusCode);
   }
 
   static Future<List<MarketplaceOrderModel>> getMyMarketplaceOrders({
-    String type = 'buying', // buying | selling
+    String type = 'buying', // buying | selling | rental
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -3430,47 +3466,104 @@ class ApiService {
 
   // ── Car Rental ───────────────────────────────────────────────────────────────
 
-  static Future<void> createCarRental({
+  static String _fmtDate(DateTime dt) =>
+      '${dt.year}-${dt.month.toString().padLeft(2,'0')}-${dt.day.toString().padLeft(2,'0')}';
+
+  static Future<List<Map<String, dynamic>>> getCarRentalCatalog({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final params = <String, String>{};
+    if (startDate != null) params['start_date'] = _fmtDate(startDate);
+    if (endDate   != null) params['end_date']   = _fmtDate(endDate);
+    final query = params.isEmpty ? '' : '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    final token = await getToken();
+    final raw   = await _rawGet('/rentals/catalog$query', token: token);
+    if (raw.statusCode != 200) return [];
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    final catalog = body['catalog'];
+    return catalog is List ? List<Map<String, dynamic>>.from(catalog) : [];
+  }
+
+  static Future<Map<String, dynamic>> createCarRental({
     required String pickupLocation,
     required DateTime startDate,
     required DateTime endDate,
-    required String vehicleType,
-    String? deliveryLocation,
-    String? paymentMethod,
-    String? couponCode,
+    int?    marketplaceProductId,
+    String? vehicleType,   // required only when no marketplaceProductId
+    double? pickupLat,
+    double? pickupLng,
+    String? paymentMethod, // cash | wallet | aba | wing | other_online
     String? notes,
-    String? guestName,
-    String? guestPhone,
   }) async {
-    final token    = await getToken();
-    final isGuest  = token == null;
-    final raw  = await _rawPost('/rentals', {
-      'entry_type':        isGuest ? 'guest' : 'user',
-      if (isGuest && guestName  != null) 'guest_name':  guestName,
-      if (isGuest && guestPhone != null) 'guest_phone': guestPhone,
-      'pickup_location':   pickupLocation,
-      'start_date':        startDate.toIso8601String(),
-      'end_date':          endDate.toIso8601String(),
-      'vehicle_type':      vehicleType,
-      if (deliveryLocation != null && deliveryLocation.isNotEmpty) 'delivery_location': deliveryLocation,
+    final token = await getToken();
+    final raw = await _rawPost('/rentals', {
+      if (marketplaceProductId != null) 'marketplace_product_id': marketplaceProductId,
+      if (vehicleType != null) 'vehicle_type': vehicleType,
+      'pickup_location':  pickupLocation,
+      if (pickupLat != null) 'pickup_lat': pickupLat,
+      if (pickupLng != null) 'pickup_lng': pickupLng,
+      'start_date':       _fmtDate(startDate),
+      'end_date':         _fmtDate(endDate),
       if (paymentMethod != null) 'payment_method': paymentMethod,
-      if (couponCode != null && couponCode.isNotEmpty) 'coupon_code': couponCode,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
     }, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode != 200 && raw.statusCode != 201) {
-      throw ApiException(body['message'] as String? ?? 'Booking failed', raw.statusCode);
+      throw ApiException(body['message'] as String? ?? 'Booking failed.', raw.statusCode);
     }
+    // Try every common nesting: data.rental, rental, data, root
+    final data = body['data'];
+    if (data is Map<String, dynamic>) {
+      final inner = data['rental'] as Map<String, dynamic>?;
+      if (inner != null) return inner;
+      return data;
+    }
+    final rental = body['rental'];
+    if (rental is Map<String, dynamic>) return rental;
+    return body;
   }
 
-  static Future<List<Map<String, dynamic>>> getRentalHistory() async {
+  // Unified endpoint: car rentals + marketplace rent orders combined
+  static Future<List<Map<String, dynamic>>> getRentalHistory({
+    String? status, // pending | confirmed | completed | cancelled
+  }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw  = await _rawGet('/rentals', token: token);
-    if (raw.statusCode != 200) return [];
-    final body = jsonDecode(raw.body) as Map<String, dynamic>;
-    final list = body['data'] ?? body['rentals'] ?? body ?? [];
-    return List<Map<String, dynamic>>.from(list is List ? list : []);
+    final q = <String>[];
+    if (status != null) q.add('status=$status');
+    final query = q.isEmpty ? '' : '?${q.join('&')}';
+    final raw   = await _rawGet('/rentals/my-rentals$query', token: token);
+    final body  = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed to load rentals.', raw.statusCode);
+    }
+    // { "data": { "total": N, "rentals": [...] } }
+    final data = body['data'];
+    if (data is Map<String, dynamic>) {
+      final list = data['rentals'];
+      if (list is List) return List<Map<String, dynamic>>.from(list);
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>?> getRentalById(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw   = await _rawGet('/rentals/$id', token: token);
+    if (raw.statusCode != 200) return null;
+    final body  = jsonDecode(raw.body) as Map<String, dynamic>;
+    return (body['rental'] as Map<String, dynamic>?) ?? body;
+  }
+
+  static Future<void> cancelCarRental(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawPost('/rentals/$id/cancel', {}, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Cancel failed.', raw.statusCode);
+    }
   }
 
   // ── Promo code ───────────────────────────────────────────────────────────────

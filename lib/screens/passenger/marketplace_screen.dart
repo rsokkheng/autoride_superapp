@@ -20,8 +20,9 @@ const _green  = Color(0xFF00C48C);
 const _green2 = Color(0xFF00A37A);
 const _white  = Colors.white;
 
-final _fmt = NumberFormat('#,###', 'en_US');
-String _usd(int v) => '\$${_fmt.format(v)}';
+final _fmt    = NumberFormat('#,###', 'en_US');
+final _fmtDec = NumberFormat('#,##0.##', 'en_US');
+String _usd(num v) => v == v.truncate() ? '\$${_fmt.format(v.toInt())}' : '\$${_fmtDec.format(v)}';
 
 Color _condColor(String? c) => switch (c) {
   'new'         => _green,
@@ -209,9 +210,10 @@ class _BrowseTab extends StatefulWidget {
 }
 
 class _BrowseTabState extends State<_BrowseTab> {
-  List<MarketplaceCategoryModel> _cats = [];
+  List<MarketplaceCategoryModel> _cats  = [];
   List<MarketplaceProductModel>  _prods = [];
-  bool _loading = true;
+  int  _totalCount = 0;
+  bool _loading    = true;
   String? _error;
 
   @override
@@ -221,15 +223,17 @@ class _BrowseTabState extends State<_BrowseTab> {
     if (!mounted) return;
     setState(() { _loading = true; _error = null; });
     try {
-      final r = await Future.wait([
+      final results = await Future.wait([
         if (_cats.isEmpty) ApiService.getMarketplaceCategories(),
         ApiService.getMarketplaceProducts(),
       ]);
       if (!mounted) return;
+      final page = results.last as MarketplaceProductsPage;
       setState(() {
-        if (_cats.isEmpty) _cats = r[0] as List<MarketplaceCategoryModel>;
-        _prods  = r.last as List<MarketplaceProductModel>;
-        _loading = false;
+        if (_cats.isEmpty) _cats = results[0] as List<MarketplaceCategoryModel>;
+        _prods       = page.products;
+        _totalCount  = page.total;
+        _loading     = false;
       });
     } on ApiException catch (e) {
       if (mounted) setState(() { _error = e.message; _loading = false; });
@@ -260,31 +264,116 @@ class _BrowseTabState extends State<_BrowseTab> {
         children: [
           // Search bar
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: GestureDetector(
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: context.appSurface,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8, offset: const Offset(0, 2))],
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.07),
+                        blurRadius: 12, offset: const Offset(0, 3)),
+                  ],
                 ),
                 child: Row(children: [
-                  const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text('Search products…',
-                      style: TextStyle(color: Colors.grey.shade400, fontSize: 14))),
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                        color: _green.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.tune_rounded, color: _green, size: 16),
+                      color: _green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.search_rounded, color: _green, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text('Search products…',
+                      style: TextStyle(color: Colors.grey.shade400, fontSize: 14))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: context.appCardBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.tune_rounded, color: Colors.grey, size: 14),
+                      const SizedBox(width: 4),
+                      Text('Filter', style: TextStyle(
+                          color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ]),
                   ),
                 ]),
+              ),
+            ),
+          ),
+
+          // Hero banner (with total count)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
+              child: Container(
+              height: 172,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [_green, _green2],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Stack(children: [
+                Positioned(right: -24, top: -36,
+                  child: Container(width: 150, height: 150,
+                    decoration: BoxDecoration(
+                        color: _white.withValues(alpha: 0.07), shape: BoxShape.circle)),
+                ),
+                Positioned(right: 60, bottom: -50,
+                  child: Container(width: 100, height: 100,
+                    decoration: BoxDecoration(
+                        color: _white.withValues(alpha: 0.05), shape: BoxShape.circle)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text('$_totalCount listings available',
+                          style: TextStyle(color: _white.withValues(alpha: 0.95),
+                              fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Find the best deals',
+                        style: TextStyle(color: _white, fontWeight: FontWeight.w800, fontSize: 22)),
+                    const SizedBox(height: 4),
+                    Text('Buy · Rent · Sell in one place',
+                        style: TextStyle(color: _white.withValues(alpha: 0.8), fontSize: 13)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+                        decoration: BoxDecoration(
+                            color: context.appSurface, borderRadius: BorderRadius.circular(10)),
+                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text('Browse All',
+                              style: TextStyle(color: _green,
+                                  fontWeight: FontWeight.w700, fontSize: 13)),
+                          SizedBox(width: 4),
+                          Icon(Icons.arrow_forward_rounded, color: _green, size: 14),
+                        ]),
+                      ),
+                    ),
+                  ]),
+                ),
+              ]),
               ),
             ),
           ),
@@ -297,94 +386,46 @@ class _BrowseTabState extends State<_BrowseTab> {
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const CarRentalScreen())),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF00838F), Color(0xFF006064)],
+                    colors: [Color(0xFF00838F), Color(0xFF004D56)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(children: [
                   Container(
-                    width: 52, height: 52,
+                    width: 54, height: 54,
                     decoration: BoxDecoration(
                       color: _white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(Icons.drive_eta_outlined, color: _white, size: 28),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       const Text('Car Rental',
                           style: TextStyle(color: _white, fontSize: 16,
-                              fontWeight: FontWeight.w700)),
+                              fontWeight: FontWeight.w800)),
                       const SizedBox(height: 3),
-                      Text('Rent Economy, SUV & more',
-                          style: TextStyle(color: _white.withValues(alpha: 0.8),
+                      Text('Sedan · SUV · Van · Electric',
+                          style: TextStyle(color: _white.withValues(alpha: 0.78),
                               fontSize: 12)),
                     ]),
                   ),
-                  const Icon(Icons.arrow_forward_ios_rounded, color: _white, size: 16),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _white.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_forward_rounded, color: _white, size: 16),
+                  ),
                 ]),
               ),
-            ),
-          ),
-
-          // Hero banner
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Container(
-              height: 160,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_green, _green2],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Stack(children: [
-                // Decorative circles
-                Positioned(right: -20, top: -30,
-                  child: Container(width: 130, height: 130,
-                    decoration: BoxDecoration(
-                        color: _white.withValues(alpha: 0.08), shape: BoxShape.circle)),
-                ),
-                Positioned(right: 50, bottom: -40,
-                  child: Container(width: 90, height: 90,
-                    decoration: BoxDecoration(
-                        color: _white.withValues(alpha: 0.06), shape: BoxShape.circle)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      mainAxisSize: MainAxisSize.max, children: [
-                    const Text('Find the best deals', style: TextStyle(
-                        color: _white, fontWeight: FontWeight.w800, fontSize: 20)),
-                    const SizedBox(height: 5),
-                    Text('${_prods.length} listings available',
-                        style: TextStyle(
-                            color: _white.withValues(alpha: 0.85), fontSize: 13)),
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                            color: context.appSurface, borderRadius: BorderRadius.circular(10)),
-                        child: const Text('Browse All',
-                            style: TextStyle(color: _green,
-                                fontWeight: FontWeight.w700, fontSize: 13)),
-                      ),
-                    ),
-                  ]),
-                ),
-              ]),
             ),
           ),
 
@@ -650,10 +691,14 @@ class _AllListingsScreen extends StatefulWidget {
 }
 
 class _AllListingsScreenState extends State<_AllListingsScreen> {
-  final _search = TextEditingController();
+  final _search     = TextEditingController();
+  final _scrollCtrl = ScrollController();
   List<MarketplaceCategoryModel> _cats  = [];
   List<MarketplaceProductModel>  _prods = [];
-  bool    _loading = true;
+  bool    _loading     = true;
+  bool    _loadingMore = false;
+  bool    _hasMore     = false;
+  int     _page        = 1;
   String? _error;
   bool    _grid = true;
   int?    _selCat;
@@ -667,6 +712,14 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
     _selCat = widget.categoryId;
     _load();
     _search.addListener(_debounce);
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 200 &&
+        _hasMore && !_loadingMore && !_loading) {
+      _loadMore();
+    }
   }
 
   void _debounce() {
@@ -681,21 +734,24 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
 
   Future<void> _load() async {
     if (!mounted) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; _error = null; _page = 1; });
     try {
-      final r = await Future.wait([
+      final futures = await Future.wait([
         if (_cats.isEmpty) ApiService.getMarketplaceCategories(),
         ApiService.getMarketplaceProducts(
           search:      _search.text.trim().isEmpty ? null : _search.text.trim(),
           categoryId:  _selCat,
           listingType: _type,
           condition:   _cond,
+          page:        1,
         ),
       ]);
       if (!mounted) return;
+      final pageResult = futures.last as MarketplaceProductsPage;
       setState(() {
-        if (_cats.isEmpty) _cats = r[0] as List<MarketplaceCategoryModel>;
-        _prods   = r.last as List<MarketplaceProductModel>;
+        if (_cats.isEmpty) _cats = futures[0] as List<MarketplaceCategoryModel>;
+        _prods   = pageResult.products;
+        _hasMore = pageResult.hasMore;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -705,8 +761,35 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
     }
   }
 
+  Future<void> _loadMore() async {
+    if (!mounted || _loadingMore) return;
+    setState(() => _loadingMore = true);
+    try {
+      final pageResult = await ApiService.getMarketplaceProducts(
+        search:      _search.text.trim().isEmpty ? null : _search.text.trim(),
+        categoryId:  _selCat,
+        listingType: _type,
+        condition:   _cond,
+        page:        _page + 1,
+      );
+      if (!mounted) return;
+      setState(() {
+        _page++;
+        _prods   = [..._prods, ...pageResult.products];
+        _hasMore = pageResult.hasMore;
+        _loadingMore = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingMore = false);
+    }
+  }
+
   @override
-  void dispose() { _search.dispose(); super.dispose(); }
+  void dispose() {
+    _search.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -824,24 +907,37 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
         context, MaterialPageRoute(
             builder: (_) => _ProductDetailScreen(product: p))).then((_) => _load());
 
+    final footer = _loadingMore
+        ? const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)))
+        : const SizedBox(height: 32);
+
     return RefreshIndicator(
       onRefresh: _load, color: _green,
       child: _grid
           ? GridView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
                   childAspectRatio: 0.72),
-              itemCount: _prods.length,
-              itemBuilder: (_, i) => _GridCard(
-                  product: _prods[i], onTap: () => open(_prods[i])))
+              itemCount: _prods.length + 1,
+              itemBuilder: (_, i) {
+                if (i == _prods.length) return footer;
+                return _GridCard(product: _prods[i], onTap: () => open(_prods[i]));
+              })
           : ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-              itemCount: _prods.length,
-              itemBuilder: (_, i) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _ListCard(product: _prods[i], onTap: () => open(_prods[i])),
-              )),
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              itemCount: _prods.length + 1,
+              itemBuilder: (_, i) {
+                if (i == _prods.length) return footer;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _ListCard(product: _prods[i], onTap: () => open(_prods[i])),
+                );
+              }),
     );
   }
 }
@@ -1176,16 +1272,40 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 16, offset: const Offset(0, -4))],
           ),
-          child: SizedBox(
-            width: double.infinity,
-            child: _CTA(
-              label: 'Book Now',
-              icon: Icons.shopping_bag_rounded,
-              color: _green,
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => _PurchaseScreen(product: _p))),
-            ),
-          ),
+          child: _isOwner
+              ? SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('Edit Listing',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    onPressed: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => _PostProductScreen(existing: _p))),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _green,
+                      side: const BorderSide(color: _green),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                )
+              : Row(children: [
+                  if (canSell) Expanded(child: _CTA(
+                    label: canRent ? 'Buy' : 'Buy Now',
+                    icon: Icons.shopping_bag_rounded,
+                    color: _green,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => _OrderScreen(product: _p, orderType: 'purchase'))),
+                  )),
+                  if (canSell && canRent) const SizedBox(width: 10),
+                  if (canRent) Expanded(child: _CTA(
+                    label: canSell ? 'Rent' : 'Rent Now',
+                    icon: Icons.key_rounded,
+                    color: const Color(0xFF7C3AED),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => _OrderScreen(product: _p, orderType: 'rent'))),
+                  )),
+                ]),
         ),
       ]),
     );
@@ -1227,11 +1347,11 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
   ];
 
   static const _methods = [
-    ('cash',   'Cash',       Icons.payments_outlined),
-    ('aba',    'ABA Pay',    Icons.account_balance),
-    ('acleda', 'ACLEDA',    Icons.account_balance),
-    ('wing',   'Wing',       Icons.flight_takeoff),
-    ('wallet', 'ROTEH Pay', Icons.account_balance_wallet),
+    ('cash',         'Cash',         Icons.payments_outlined),
+    ('wallet',       'ROTEH Pay',    Icons.account_balance_wallet),
+    ('aba',          'ABA Pay',      Icons.account_balance),
+    ('wing',         'Wing',         Icons.flight_takeoff),
+    ('other_online', 'Other Online', Icons.language_outlined),
   ];
 
   @override
@@ -1285,8 +1405,6 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
       await ApiService.placeMarketplaceOrder(
         widget.product.id,
         paymentMethod: _paymentMethod,
-        guestName:  _isGuest ? _guestNameCtrl.text.trim() : null,
-        guestPhone: _isGuest ? _phoneCtrl.text.trim()     : null,
       );
     } catch (_) {
       // non-fatal: show success dialog anyway (matches existing UX)
@@ -1481,21 +1599,21 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                       icon: Icons.account_balance_wallet_outlined,
                       value: _paymentMethod,
                       items: const [
-                        _DropItemM(value: 'cash',   label: 'Cash',
+                        _DropItemM(value: 'cash',         label: 'Cash',
                             subtitle: 'Pay with cash',
                             icon: Icons.payments_outlined),
-                        _DropItemM(value: 'aba',    label: 'ABA Pay',
-                            subtitle: 'ABA mobile banking',
-                            icon: Icons.account_balance),
-                        _DropItemM(value: 'acleda', label: 'ACLEDA',
-                            subtitle: 'ACLEDA mobile banking',
-                            icon: Icons.account_balance),
-                        _DropItemM(value: 'wing',   label: 'Wing',
-                            subtitle: 'Wing mobile wallet',
-                            icon: Icons.flight_takeoff),
-                        _DropItemM(value: 'wallet', label: 'ROTEH Pay',
+                        _DropItemM(value: 'wallet',       label: 'ROTEH Pay',
                             subtitle: 'In-app wallet balance',
                             icon: Icons.account_balance_wallet),
+                        _DropItemM(value: 'aba',          label: 'ABA Pay',
+                            subtitle: 'ABA mobile banking',
+                            icon: Icons.account_balance),
+                        _DropItemM(value: 'wing',         label: 'Wing',
+                            subtitle: 'Wing mobile wallet',
+                            icon: Icons.flight_takeoff),
+                        _DropItemM(value: 'other_online', label: 'Other Online',
+                            subtitle: 'Other online payment',
+                            icon: Icons.language_outlined),
                       ],
                       onChanged: (v) => setState(() => _paymentMethod = v),
                     ),
@@ -2309,15 +2427,17 @@ class _OrderScreenState extends State<_OrderScreen> {
   int    _qty   = 1;
   String _pay   = 'cash';
   final  _notes = TextEditingController();
-  DateTime _start = DateTime.now().add(const Duration(days: 1));
-  DateTime _end   = DateTime.now().add(const Duration(days: 4));
+  DateTime? _start;
+  DateTime? _end;
   bool    _busy = false;
   String? _err;
 
-  bool get _isRent => widget.orderType == 'rent';
-  int  get _days   => _end.difference(_start).inDays.clamp(1, 365);
-  int  get _total  {
-    if (_isRent && widget.product.rentPricePerDay != null) {
+  bool get _isRent  => widget.orderType == 'rent';
+  bool get _datesOk => !_isRent || (_start != null && _end != null);
+  int  get _days    => (_start != null && _end != null)
+      ? _end!.difference(_start!).inDays.clamp(1, 365) : 0;
+  double get _total  {
+    if (_isRent && widget.product.rentPricePerDay != null && _datesOk) {
       return widget.product.rentPricePerDay! * _days * _qty;
     }
     return widget.product.price * _qty;
@@ -2329,16 +2449,20 @@ class _OrderScreenState extends State<_OrderScreen> {
 
   Future<void> _pickDate(bool isStart) async {
     final now   = DateTime.now();
-    final first = isStart ? now.add(const Duration(days: 1))
-        : _start.add(const Duration(days: 1));
+    final first = isStart
+        ? now.add(const Duration(days: 1))
+        : (_start ?? now).add(const Duration(days: 1));
+    final initial = isStart
+        ? (_start ?? now.add(const Duration(days: 1)))
+        : (_end ?? (_start ?? now).add(const Duration(days: 1)));
     final picked = await showDatePicker(context: context,
-        initialDate: isStart ? _start : _end,
+        initialDate: initial,
         firstDate: first, lastDate: now.add(const Duration(days: 365)));
     if (picked == null || !mounted) return;
     setState(() {
       if (isStart) {
         _start = picked;
-        if (_end.isBefore(picked.add(const Duration(days: 1)))) {
+        if (_end != null && _end!.isBefore(picked.add(const Duration(days: 1)))) {
           _end = picked.add(const Duration(days: 1));
         }
       } else { _end = picked; }
@@ -2346,6 +2470,10 @@ class _OrderScreenState extends State<_OrderScreen> {
   }
 
   Future<void> _submit() async {
+    if (_isRent && (_start == null || _end == null)) {
+      setState(() => _err = 'Please select rental start and end dates.');
+      return;
+    }
     setState(() { _busy = true; _err = null; });
     try {
       await ApiService.placeMarketplaceOrder(widget.product.id,
@@ -2353,8 +2481,8 @@ class _OrderScreenState extends State<_OrderScreen> {
         quantity:      _qty,
         paymentMethod: _pay,
         notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-        rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_start) : null,
-        rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end)   : null,
+        rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_start!) : null,
+        rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end!)   : null,
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -2446,10 +2574,15 @@ class _OrderScreenState extends State<_OrderScreen> {
               const SizedBox(height: 8),
               Center(child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: _color.withValues(alpha: 0.08),
+                decoration: BoxDecoration(
+                    color: _datesOk ? _color.withValues(alpha: 0.08) : Colors.red.withValues(alpha: 0.07),
                     borderRadius: BorderRadius.circular(10)),
-                child: Text('$_days day${_days == 1 ? '' : 's'} selected',
-                    style: TextStyle(color: _color, fontWeight: FontWeight.w700, fontSize: 13)),
+                child: Text(
+                  _start == null ? 'Select start date' : _end == null
+                      ? 'Select end date' : '$_days day${_days == 1 ? '' : 's'} selected',
+                  style: TextStyle(
+                      color: _datesOk ? _color : Colors.red,
+                      fontWeight: FontWeight.w700, fontSize: 13)),
               )),
               const SizedBox(height: 16),
             ],
@@ -2535,12 +2668,14 @@ class _OrderScreenState extends State<_OrderScreen> {
               child: Column(children: [
                 if (!_isRent) _SumRow('Unit price', _usd(p.price)),
                 if (!_isRent && _qty > 1) _SumRow('× $_qty items', _usd(p.price * _qty)),
-                if (_isRent && p.rentPricePerDay != null) ...[
+                if (_isRent && p.rentPricePerDay != null && _datesOk) ...[
                   _SumRow('${_usd(p.rentPricePerDay!)} × $_days days',
                       _usd(p.rentPricePerDay! * _days)),
                   if (_qty > 1) _SumRow('× $_qty items',
                       _usd(p.rentPricePerDay! * _days * _qty)),
                 ],
+                if (_isRent && !_datesOk)
+                  const _SumRow('Select dates above', '—'),
                 Divider(color: context.appCardBg, height: 20, thickness: 1.5),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Total', style: TextStyle(
@@ -2576,7 +2711,8 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
                   : Text(
-                      _isRent ? 'Confirm Rental — ${_usd(_total)}'
+                      _isRent
+                          ? (_datesOk ? 'Confirm Rental — ${_usd(_total)}' : 'Select Dates to Continue')
                           : 'Place Order — ${_usd(_total)}',
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
             ),
@@ -2614,7 +2750,7 @@ class _QtyBtn extends StatelessWidget {
 
 class _DateTile extends StatelessWidget {
   final String label;
-  final DateTime date;
+  final DateTime? date;
   final VoidCallback onTap;
   const _DateTile(this.label, this.date, this.onTap);
   @override
@@ -2622,14 +2758,18 @@ class _DateTile extends StatelessWidget {
     onTap: onTap,
     child: Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE0E0E0))),
+      decoration: BoxDecoration(
+          color: context.appSurface, borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+              color: date == null ? Colors.red.withValues(alpha: 0.5) : const Color(0xFFE0E0E0))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(
             color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600)),
         const SizedBox(height: 5),
-        Text(DateFormat('dd MMM yyyy').format(date),
-            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+        Text(date != null ? DateFormat('dd MMM yyyy').format(date!) : 'Tap to select',
+            style: TextStyle(
+                color: date != null ? context.appTextPrimary : Colors.red.shade300,
+                fontWeight: FontWeight.w700, fontSize: 13)),
       ]),
     ),
   );
@@ -2829,12 +2969,14 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final r = await Future.wait([
+      final results = await Future.wait([
         ApiService.getMyMarketplaceOrders(type: 'buying'),
-        ApiService.getMyMarketplaceOrders(type: 'selling'),
+        ApiService.getMyMarketplaceOrders(type: 'rental'),
       ]);
       if (mounted) setState(() {
-        _buying = r[0]; _selling = r[1]; _loading = false;
+        _buying  = results[0];
+        _selling = results[1];
+        _loading = false;
       });
     } on ApiException catch (e) {
       if (mounted) setState(() { _error = e.message; _loading = false; });
@@ -2879,7 +3021,7 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
       ),
       Expanded(child: TabBarView(controller: _tc, children: [
         _OrderList(orders: _buying,  isSeller: false, onAction: _action, onRefresh: _load),
-        _OrderList(orders: _selling, isSeller: true,  onAction: _action, onRefresh: _load),
+        _OrderList(orders: _selling, isSeller: false, onAction: _action, onRefresh: _load),
       ])),
     ]);
   }
@@ -2922,113 +3064,157 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final o  = order;
-    final sc = _statusColor(o.status);
-    final isRent = o.orderType == 'rent';
+    final o       = order;
+    final sc      = _statusColor(o.status);
+    final isRent  = o.orderType == 'rent';
+    final typeClr = isRent ? const Color(0xFF7C3AED) : _green;
+    final canAct  = o.status == 'pending' || o.status == 'confirmed';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8, offset: const Offset(0, 2))]),
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 10, offset: const Offset(0, 3))],
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Header
+        // ── Card header ────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-          child: Row(children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                  color: (isRent ? const Color(0xFF7C3AED) : _green).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10)),
-              child: Icon(isRent ? Icons.key_rounded : Icons.shopping_bag_rounded,
-                  color: isRent ? const Color(0xFF7C3AED) : _green, size: 18),
+          padding: const EdgeInsets.all(14),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Product image / placeholder
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: SizedBox(
+                width: 64, height: 64,
+                child: o.productImage != null && o.productImage!.isNotEmpty
+                    ? Image.network(o.productImage!, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _imgFallback(typeClr, isRent))
+                    : _imgFallback(typeClr, isRent),
+              ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(o.productTitle ?? 'Order #${o.id}',
-                  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                      fontSize: 13)),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: sc.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text(o.status[0].toUpperCase() + o.status.substring(1),
-                  style: TextStyle(color: sc, fontSize: 11, fontWeight: FontWeight.w700)),
-            ),
-          ]),
-        ),
-        Divider(height: 1, color: context.appCardBg),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.inventory_2_rounded, color: Colors.grey, size: 13),
-              const SizedBox(width: 5),
-              Text('Qty: ${o.quantity}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(width: 12),
+            // Details
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Text(o.productTitle ?? 'Order #${o.id}',
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.appTextPrimary,
+                        fontWeight: FontWeight.w700, fontSize: 13, height: 1.3))),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: sc.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(o.status[0].toUpperCase() + o.status.substring(1),
+                      style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
+                ),
+              ]),
+              const SizedBox(height: 6),
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: typeClr.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(isRent ? 'Rental' : 'Purchase',
+                      style: TextStyle(color: typeClr, fontSize: 10, fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(width: 8),
+                Text('Order #${o.id}',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+              ]),
               if (o.rentStartDate != null) ...[
-                const SizedBox(width: 12),
-                const Icon(Icons.date_range_rounded, color: Colors.grey, size: 13),
-                const SizedBox(width: 5),
-                Text('${o.rentStartDate} → ${o.rentEndDate}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.date_range_rounded, color: context.appTextSecondary, size: 12),
+                  const SizedBox(width: 4),
+                  Flexible(child: Text('${o.rentStartDate} → ${o.rentEndDate}',
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 11))),
+                ]),
+              ] else ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.inventory_2_rounded, color: context.appTextSecondary, size: 12),
+                  const SizedBox(width: 4),
+                  Text('Qty: ${o.quantity}',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                ]),
               ],
-            ]),
-            const SizedBox(height: 10),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text('Total', style: TextStyle(color: Colors.grey, fontSize: 12)),
-              Text(_usd(o.total), style: const TextStyle(
-                  color: _green, fontWeight: FontWeight.w800, fontSize: 17)),
-            ]),
+            ])),
           ]),
         ),
-        if (o.status == 'pending' || o.status == 'confirmed') ...[
-          Divider(height: 1, color: context.appCardBg),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
-            child: Row(children: [
+        // ── Price + actions ────────────────────────────────────────────
+        Container(
+          color: context.appCardBg.withValues(alpha: 0.5),
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          child: Row(children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Total', style: TextStyle(
+                  color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 2),
+              Text(_usd(o.totalPriceUsd), style: const TextStyle(
+                  color: _green, fontWeight: FontWeight.w800, fontSize: 18)),
+            ]),
+            const Spacer(),
+            if (canAct) ...[
               if (isSeller && o.status == 'pending') ...[
-                Expanded(child: _OrdBtn('Confirm', _green,
-                    Icons.check_circle_outline_rounded, () => onAction(o, 'confirm'))),
+                _ActionPill('Confirm', _green, Icons.check_circle_outline_rounded,
+                    () => onAction(o, 'confirm')),
                 const SizedBox(width: 8),
               ],
-              Expanded(child: _OrdBtn('Complete', const Color(0xFF007AFF),
-                  Icons.task_alt_rounded, () => onAction(o, 'complete'))),
+              _ActionPill('Done', const Color(0xFF007AFF), Icons.task_alt_rounded,
+                  () => onAction(o, 'complete')),
               const SizedBox(width: 8),
-              Expanded(child: _OrdBtn('Cancel', Colors.red,
-                  Icons.cancel_outlined, () => onAction(o, 'cancel'))),
-            ]),
-          ),
-        ],
+              _ActionPill('Cancel', Colors.red, Icons.cancel_outlined,
+                  () => onAction(o, 'cancel')),
+            ],
+          ]),
+        ),
       ]),
     );
   }
+
+  Widget _imgFallback(Color color, bool isRent) => Container(
+    color: color.withValues(alpha: 0.08),
+    child: Center(child: Icon(
+        isRent ? Icons.key_rounded : Icons.shopping_bag_rounded,
+        color: color, size: 26)),
+  );
 }
 
-class _OrdBtn extends StatelessWidget {
+class _ActionPill extends StatelessWidget {
   final String label;
   final Color color;
   final IconData icon;
   final VoidCallback onTap;
-  const _OrdBtn(this.label, this.color, this.icon, this.onTap);
+  const _ActionPill(this.label, this.color, this.icon, this.onTap);
+
   @override
   Widget build(BuildContext context) => GestureDetector(
     onTap: onTap,
     child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
       decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withValues(alpha: 0.25))),
-      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Icon(icon, color: color, size: 14),
-        const SizedBox(width: 4),
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, color: color, size: 13),
+        const SizedBox(width: 5),
         Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12)),
       ]),
     ),
   );
 }
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Post / Edit Product Screen
@@ -3101,10 +3287,10 @@ class _PostProductScreenState extends State<_PostProductScreen> {
 
   Future<void> _submit() async {
     final t = _title.text.trim();
-    final p = int.tryParse(_price.text.trim());
+    final p = double.tryParse(_price.text.trim());
     if (t.isEmpty) { setState(() => _err = 'Title is required.'); return; }
     if (p == null) { setState(() => _err = 'Price must be a number.'); return; }
-    final r = int.tryParse(_rent.text.trim());
+    final r = double.tryParse(_rent.text.trim());
     setState(() { _busy = true; _err = null; });
     try {
       if (_isEdit) {

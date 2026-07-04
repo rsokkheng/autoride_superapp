@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import 'ride_booking.dart';
@@ -464,7 +465,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             icon: Icons.person_outline_rounded),
         SizedBox(height: 10),
         _FieldWidget(ctrl: _phoneCtrl, hint: 'Phone number *',
-            icon: Icons.phone_outlined, keyboard: TextInputType.phone),
+            icon: Icons.phone_outlined, keyboard: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
         SizedBox(height: 10),
         _FieldWidget(ctrl: _relationshipCtrl,
             hint: 'Relationship (e.g. Mother, Friend…)',
@@ -582,7 +584,8 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
             icon: Icons.person_outline_rounded),
         SizedBox(height: 10),
         _FieldWidget(ctrl: _phoneCtrl, hint: 'Phone number',
-            icon: Icons.phone_outlined, keyboard: TextInputType.phone),
+            icon: Icons.phone_outlined, keyboard: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
         SizedBox(height: 10),
         _FieldWidget(ctrl: _relationshipCtrl,
             hint: 'Relationship (e.g. Mother, Friend…)',
@@ -644,12 +647,14 @@ class _FieldWidget extends StatelessWidget {
   final String hint;
   final IconData icon;
   final TextInputType? keyboard;
+  final List<TextInputFormatter>? inputFormatters;
   const _FieldWidget({required this.ctrl, required this.hint,
-      required this.icon, this.keyboard});
+      required this.icon, this.keyboard, this.inputFormatters});
   @override
   Widget build(BuildContext context) => TextField(
     controller: ctrl,
     keyboardType: keyboard,
+    inputFormatters: inputFormatters,
     style: TextStyle(color: context.appTextPrimary),
     decoration: InputDecoration(
       hintText: hint,

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -473,7 +474,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
       SizedBox(height: 10),
       _Field(hint: "Sender's phone", icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
-          keyboardType: TextInputType.phone),
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
       _AddressWithMap(
         hint: 'Pickup address', icon: Icons.location_on_outlined, controller: _pickupCtrl,
@@ -487,7 +489,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _Field(hint: "Recipient's name",  icon: Icons.person_outline, controller: _recipientNameCtrl),
       SizedBox(height: 10),
       _Field(hint: "Recipient's phone", icon: Icons.phone_outlined,  controller: _recipientPhoneCtrl,
-          keyboardType: TextInputType.phone),
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
       _AddressWithMap(
         hint: 'Delivery address', icon: Icons.location_on, controller: _dropoffCtrl,
@@ -1454,9 +1457,9 @@ class _SubmitButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.danger,
+          backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
-          disabledBackgroundColor: AppTheme.danger.withValues(alpha: 0.5),
+          disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
@@ -2374,12 +2377,14 @@ class _Field extends StatelessWidget {
   final IconData icon;
   final TextEditingController controller;
   final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _Field({
     required this.hint,
     required this.icon,
     required this.controller,
     this.keyboardType = TextInputType.text,
+    this.inputFormatters,
   });
 
   @override
@@ -2387,6 +2392,7 @@ class _Field extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         hintText: hint,

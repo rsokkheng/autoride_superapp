@@ -306,7 +306,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
           _ModalField(ctrl: nameCtrl, hint: 'Full name', icon: Icons.person_outline),
           const SizedBox(height: 10),
           _ModalField(ctrl: phoneCtrl, hint: 'Phone number', icon: Icons.phone_outlined,
-              type: TextInputType.phone),
+              type: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
           const SizedBox(height: 10),
           _ModalField(ctrl: relCtrl, hint: 'Relationship (e.g. Mom)', icon: Icons.people_outline),
           const SizedBox(height: 10),
@@ -367,7 +367,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
           _ModalField(ctrl: nameCtrl, hint: 'Full name', icon: Icons.person_outline),
           const SizedBox(height: 10),
           _ModalField(ctrl: phoneCtrl, hint: 'Phone number', icon: Icons.phone_outlined,
-              type: TextInputType.phone),
+              type: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
           const SizedBox(height: 10),
           _NotifyRow('Notify on SOS', sos, (v) => setLocal(() => sos = v)),
           _NotifyRow('Notify on trip share', share, (v) => setLocal(() => share = v)),
@@ -824,11 +824,13 @@ class _ModalField extends StatelessWidget {
   final String hint;
   final IconData icon;
   final TextInputType? type;
+  final List<TextInputFormatter>? inputFormatters;
   const _ModalField({required this.ctrl, required this.hint,
-      required this.icon, this.type});
+      required this.icon, this.type, this.inputFormatters});
   @override
   Widget build(BuildContext context) => TextField(
     controller: ctrl, keyboardType: type,
+    inputFormatters: inputFormatters,
     style: TextStyle(color: context.appTextPrimary, fontSize: 14),
     decoration: InputDecoration(
       hintText: hint, hintStyle: TextStyle(color: context.appTextSecondary),

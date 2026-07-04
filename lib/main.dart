@@ -1,5 +1,6 @@
 import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_maps_flutter_android/google_maps_flutter_android.dart';
@@ -54,7 +55,13 @@ void main() async {
 
   final mapsImpl = GoogleMapsFlutterPlatform.instance;
   if (mapsImpl is GoogleMapsFlutterAndroid) {
-    await mapsImpl.initializeWithRenderer(AndroidMapRenderer.legacy);
+    try {
+      await mapsImpl.initializeWithRenderer(AndroidMapRenderer.legacy);
+    } on PlatformException catch (e) {
+      // Benign on Android hot restart: the native process (and its Maps
+      // renderer) survives a Dart-only restart, so re-initializing throws.
+      if (!e.code.contains('already initialized')) rethrow;
+    }
   }
 
   await dotenv.load(fileName: '.env');

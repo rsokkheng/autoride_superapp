@@ -378,7 +378,14 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: _RouteCard(from: widget.from, to: widget.to),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _BackButton(onTap: () => Navigator.pop(context)),
+                const SizedBox(width: 10),
+                Expanded(child: _RouteCard(from: widget.from, to: widget.to)),
+              ],
+            ),
           ),
         ),
 
@@ -520,7 +527,7 @@ class _BottomSheet extends StatelessWidget {
                   child: Text(
                     statusLabel,
                     style: TextStyle(
-                      color: isDelivered ? _kGreen : context.appTextPrimary,
+                      color: isDelivered ? _kGreen : Colors.black87,
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
                     ),
@@ -705,7 +712,7 @@ class _StatusProgressBar extends StatelessWidget {
               _labels[stepIdx],
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: done ? _kGreen : context.appTextSecondary,
+                color: done ? _kGreen : Colors.grey.shade600,
                 fontSize: 9,
                 fontWeight: done ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -736,7 +743,7 @@ class _DriverCard extends StatelessWidget {
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : 'D',
           style: TextStyle(
-            color: context.appTextPrimary,
+            color: Colors.black87,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
@@ -749,21 +756,49 @@ class _DriverCard extends StatelessWidget {
           children: [
             Text(name,
                 style: TextStyle(
-                    color: context.appTextPrimary,
+                    color: Colors.black87,
                     fontWeight: FontWeight.w700,
                     fontSize: 15)),
             SizedBox(height: 2),
             Row(children: [
-              Icon(Icons.phone_outlined, color: context.appTextSecondary, size: 14),
+              Icon(Icons.phone_outlined, color: Colors.grey.shade600, size: 14),
               SizedBox(width: 4),
               Text(phone,
-                  style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
             ]),
           ],
         ),
       ),
     ]);
   }
+}
+
+// ── Back button (top of screen) ────────────────────────────────────────────────
+
+class _BackButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _BackButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87, size: 18),
+    ),
+  );
 }
 
 // ── Route card (top of screen) ────────────────────────────────────────────────
@@ -804,7 +839,7 @@ class _RouteCard extends StatelessWidget {
                 child: Text(from,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: context.appTextPrimary,
+                        color: Colors.black87,
                         fontSize: 13,
                         fontWeight: FontWeight.w500)),
               ),
@@ -825,7 +860,7 @@ class _RouteCard extends StatelessWidget {
                 child: Text(to,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: context.appTextPrimary,
+                        color: Colors.black87,
                         fontSize: 13,
                         fontWeight: FontWeight.w500)),
               ),
@@ -853,15 +888,15 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Icon(icon, color: context.appTextSecondary, size: 16),
+      Icon(icon, color: Colors.grey.shade600, size: 16),
       SizedBox(width: 8),
       Text('$label: ',
-          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+          style: TextStyle(color: Colors.black87, fontSize: 13)),
       Expanded(
         child: Text(value,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-                color: context.appTextPrimary,
+                color: Colors.black87,
                 fontSize: 13,
                 fontWeight: FontWeight.w500)),
       ),
@@ -892,7 +927,7 @@ class _ActionBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color active  = danger ? Colors.red : _kGreen;
     final Color iconClr = disabled
-        ? context.appTextSecondary.withValues(alpha: 0.4)
+        ? Colors.grey.shade600.withValues(alpha: 0.4)
         : active;
 
     return GestureDetector(
@@ -922,10 +957,10 @@ class _ActionBtn extends StatelessWidget {
             label,
             style: TextStyle(
               color: disabled
-                  ? context.appTextSecondary.withValues(alpha: 0.4)
+                  ? Colors.grey.shade600.withValues(alpha: 0.4)
                   : danger
                       ? Colors.red
-                      : context.appTextSecondary,
+                      : Colors.grey.shade600,
               fontSize: 12,
               fontWeight: danger ? FontWeight.w600 : FontWeight.normal,
             ),

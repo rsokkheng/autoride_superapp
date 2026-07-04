@@ -657,6 +657,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _sendOtp(),
               style: TextStyle(color: context.appTextPrimary, fontSize: 16),

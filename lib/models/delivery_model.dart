@@ -159,8 +159,14 @@ class DeliveryModel {
 
   bool get isRequested  => status == 'requested';
   bool get isAccepted   => status == 'accepted';
-  bool get isInProgress => status == 'in_progress';
-  bool get isCompleted  => status == 'completed';
+  // Everything between "accepted" and the final state, for both delivery
+  // (picked_up, in_progress) and moving (arrived, loading, in_transit) jobs.
+  bool get isInProgress => status == 'in_progress' ||
+      status == 'picked_up' ||
+      status == 'arrived' ||
+      status == 'loading' ||
+      status == 'in_transit';
+  bool get isCompleted  => status == 'completed' || status == 'delivered';
   bool get isCancelled  => status == 'cancelled';
   bool get isPending    => status == 'pending';
   bool get isRated      => rating != null;

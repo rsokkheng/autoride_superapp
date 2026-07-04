@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../models/wallet_model.dart';
 import '../../services/api_service.dart';
@@ -959,6 +960,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
           TextField(
             controller: _phoneCtrl,
             keyboardType: TextInputType.phone,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
               hintText: "Recipient's phone number",

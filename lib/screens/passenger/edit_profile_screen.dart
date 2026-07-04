@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
 
@@ -193,7 +194,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     // Phone field with OTP badge
                     Stack(alignment: Alignment.centerRight, children: [
                       _Field(label: 'Phone Number', controller: _phoneCtrl, icon: Icons.phone_outlined,
-                          keyboardType: TextInputType.phone),
+                          keyboardType: TextInputType.phone,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                       if (_phoneCtrl.text.trim() != _originalPhone)
                         Positioned(
                           right: 14,
@@ -491,15 +493,17 @@ class _Field extends StatelessWidget {
   final TextEditingController controller;
   final IconData icon;
   final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
 
   const _Field({required this.label, required this.controller, required this.icon,
-    this.keyboardType = TextInputType.text});
+    this.keyboardType = TextInputType.text, this.inputFormatters});
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: TextStyle(color: context.appTextPrimary),
       decoration: InputDecoration(
         labelText: label,
