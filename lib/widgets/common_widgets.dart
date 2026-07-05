@@ -63,7 +63,8 @@ class ServiceCard extends StatelessWidget {
           ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -78,26 +79,13 @@ class ServiceCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(title,
+                textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 13)),
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                width: 22,
-                height: 22,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.arrow_forward_rounded, color: color, size: 12),
-              ),
-            ),
           ],
         ),
       ),

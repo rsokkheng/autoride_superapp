@@ -14,6 +14,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../widgets/roteh_location_map.dart';
 import '../../widgets/guest_fields.dart';
+import '../../widgets/location_picker_screen.dart';
 
 // ── Tokens ─────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
@@ -1235,7 +1236,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                     title: 'Description',
                     child: Text(_p.description!,
                         style: const TextStyle(
-                            color: Colors.grey, fontSize: 13, height: 1.6)),
+                            color: Colors.grey, fontSize: 13, height: 1.35)),
                   ),
 
                 // Specs grid
@@ -1557,15 +1558,25 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                       onTap: _pickLocation,
                     ),
                   ],
-                  // Pick Up: show seller's real location on embedded map
+                  // Pick Up: show seller's real location on embedded map.
+                  // If the listing has no coordinates, default to the ROTEH
+                  // CAMBODIA office (same as Car Rental) instead of leaving
+                  // this blank — still tappable to set a real pickup point.
                   if (_locType == 'pickup') ...[
                     const SizedBox(height: 10),
-                    RotehLocationMap(
-                      pin: (p.locationLat != null && p.locationLng != null)
-                          ? LatLng(p.locationLat!, p.locationLng!)
-                          : null,
-                      addressLabel: p.locationText,
-                    ),
+                    if (p.locationLat != null && p.locationLng != null)
+                      RotehLocationMap(
+                        pin: LatLng(p.locationLat!, p.locationLng!),
+                        addressLabel: p.locationText ?? 'Pickup location',
+                      )
+                    else
+                      GestureDetector(
+                        onTap: _pickLocation,
+                        child: RotehLocationMap(
+                          pin: _locLatLng,
+                          addressLabel: _locAddress.isNotEmpty ? _locAddress : null,
+                        ),
+                      ),
                   ],
                 ]),
               ),
@@ -2349,17 +2360,17 @@ class _DetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-    padding: const EdgeInsets.all(18),
+    margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+    padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: context.appSurface, borderRadius: BorderRadius.circular(20),
+      color: context.appSurface, borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
           blurRadius: 8, offset: const Offset(0, 2))],
     ),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: TextStyle(color: context.appTextPrimary,
-          fontWeight: FontWeight.w800, fontSize: 14)),
-      const SizedBox(height: 12),
+          fontWeight: FontWeight.w800, fontSize: 13)),
+      const SizedBox(height: 8),
       child,
     ]),
   );
@@ -2380,8 +2391,8 @@ class _SpecGrid extends StatelessWidget {
         final b = i + 1 < cells.length
             ? SizedBox(width: cellWidth, child: cells[i + 1])
             : SizedBox(width: cellWidth);
-        rows.add(Row(children: [a, const SizedBox(width: 10), b]));
-        if (i + 2 < cells.length) rows.add(const SizedBox(height: 10));
+        rows.add(Row(children: [a, const SizedBox(width: 8), b]));
+        if (i + 2 < cells.length) rows.add(const SizedBox(height: 8));
       }
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
     });
@@ -2396,15 +2407,15 @@ class _SpecCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: const TextStyle(
               color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(value, maxLines: 2, overflow: TextOverflow.ellipsis,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                  fontSize: 13, height: 1.3)),
+                  fontSize: 13, height: 1.2)),
         ]),
       );
     });
@@ -2414,6 +2425,47 @@ class _SpecCell extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 // Order Screen
 // ══════════════════════════════════════════════════════════════════════════════
+
+// Rental duration presets — same "pick a duration, end date auto-computes"
+// pattern as the Car Rental page (1M · 2M · 3M · 6M · 1Y · 2Y).
+enum _RentDur { m1, m2, m3, m6, y1, y2 }
+
+extension _RentDurX on _RentDur {
+  String get label => switch (this) {
+    _RentDur.m1 => '1 Month',
+    _RentDur.m2 => '2 Months',
+    _RentDur.m3 => '3 Months',
+    _RentDur.m6 => '6 Months',
+    _RentDur.y1 => '1 Year',
+    _RentDur.y2 => '2 Years',
+  };
+  int get months => switch (this) {
+    _RentDur.m1 => 1,  _RentDur.m2 => 2,  _RentDur.m3 => 3,
+    _RentDur.m6 => 6,  _RentDur.y1 => 12, _RentDur.y2 => 24,
+  };
+  int get days => months * 30;
+  IconData get icon => switch (this) {
+    _RentDur.m1 || _RentDur.m2 || _RentDur.m3 || _RentDur.m6 => Icons.calendar_month_outlined,
+    _RentDur.y1 || _RentDur.y2                                => Icons.calendar_today_outlined,
+  };
+}
+
+// Location type — Pick Up (shows the listing's own location, non-editable)
+// or Delivery (drag the map / search to set an address), same as Car Rental.
+enum _LocType { pickup, delivery }
+
+extension _LocTypeX on _LocType {
+  String get label    => this == _LocType.pickup ? 'Pick Up' : 'Delivery';
+  String get subtitle => this == _LocType.pickup
+      ? "I'll collect it myself"
+      : 'Deliver the car to my address';
+  IconData get icon   => this == _LocType.pickup
+      ? Icons.directions_walk_rounded
+      : Icons.local_shipping_outlined;
+  String get mapTitle => this == _LocType.pickup
+      ? 'Pick-up Location'
+      : 'Set Delivery Location';
+}
 
 class _OrderScreen extends StatefulWidget {
   final MarketplaceProductModel product;
@@ -2427,46 +2479,241 @@ class _OrderScreenState extends State<_OrderScreen> {
   int    _qty   = 1;
   String _pay   = 'cash';
   final  _notes = TextEditingController();
+  final  _couponCtrl = TextEditingController();
+  _RentDur  _duration = _RentDur.m1;
   DateTime? _start;
-  DateTime? _end;
   bool    _busy = false;
   String? _err;
+  bool    _applyingCoupon = false;
+  String? _appliedCode;
+  String? _couponError;
+  int     _discountKhr = 0;
+  _LocType  _locType = _LocType.pickup;
+  String    _deliveryAddress = '';
+  LatLng?   _deliveryLatLng;
+  // Manual pickup point, used only when the listing itself has no
+  // coordinates — lets the buyer drag/search to set one instead of a
+  // dead-end "not set" message.
+  String    _manualPickupAddress = '';
+  LatLng?   _manualPickupLatLng;
 
   bool get _isRent  => widget.orderType == 'rent';
-  bool get _datesOk => !_isRent || (_start != null && _end != null);
-  int  get _days    => (_start != null && _end != null)
-      ? _end!.difference(_start!).inDays.clamp(1, 365) : 0;
-  double get _total  {
+  // Every "rent" listing in this marketplace is a vehicle, so rent orders
+  // always book through the car-rental system (POST /rentals) instead of a
+  // generic marketplace order — that's what makes them show up correctly for
+  // the vehicle's driver/owner to accept.
+  bool get _isVehicleRental => _isRent;
+  bool get _datesOk => !_isRent || _start != null;
+  DateTime? get _end => _start?.add(Duration(days: _duration.days));
+  int  get _days    => _isRent ? _duration.days : 0;
+  double get _subtotal  {
     if (_isRent && widget.product.rentPricePerDay != null && _datesOk) {
       return widget.product.rentPricePerDay! * _days * _qty;
     }
     return widget.product.price * _qty;
   }
-  Color get _color => _isRent ? const Color(0xFF7C3AED) : _green;
+  double get _discountUsd => _discountKhr / 4100.0;
+  double get _total => (_subtotal - _discountUsd).clamp(0.0, _subtotal);
+  // Rentals book through the same /rentals system as the Car Rental page,
+  // so they share its green theme.
+  Color get _color => _isRent ? AppTheme.accent : _green;
+
+  static String _fmt(DateTime d) => DateFormat('MMM d, yyyy').format(d);
 
   @override
-  void dispose() { _notes.dispose(); super.dispose(); }
+  void dispose() {
+    _notes.dispose();
+    _couponCtrl.dispose();
+    super.dispose();
+  }
 
-  Future<void> _pickDate(bool isStart) async {
-    final now   = DateTime.now();
-    final first = isStart
-        ? now.add(const Duration(days: 1))
-        : (_start ?? now).add(const Duration(days: 1));
-    final initial = isStart
-        ? (_start ?? now.add(const Duration(days: 1)))
-        : (_end ?? (_start ?? now).add(const Duration(days: 1)));
+  Future<void> _applyCoupon() async {
+    final code = _couponCtrl.text.trim();
+    if (code.isEmpty) return;
+    setState(() { _applyingCoupon = true; _couponError = null; });
+    try {
+      final subtotalKhr = (_subtotal * 4100).round();
+      final result = await ApiService.applyPromoCode(code, subtotalKhr, serviceType: 'rental');
+      if (!mounted) return;
+      setState(() {
+        _discountKhr    = (result['discount_amount'] as num? ?? 0).toInt();
+        _appliedCode    = code;
+        _couponError    = null;
+        _applyingCoupon = false;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() { _couponError = e.message; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() { _couponError = 'Failed to apply coupon.'; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
+    }
+  }
+
+  void _removeCoupon() => setState(() {
+    _couponCtrl.clear();
+    _discountKhr = 0;
+    _appliedCode = null;
+    _couponError = null;
+  });
+
+  Future<void> _pickStartDate() async {
+    final now = DateTime.now();
     final picked = await showDatePicker(context: context,
-        initialDate: initial,
-        firstDate: first, lastDate: now.add(const Duration(days: 365)));
+        initialDate: _start ?? now.add(const Duration(days: 1)),
+        firstDate: now, lastDate: now.add(const Duration(days: 365)));
     if (picked == null || !mounted) return;
-    setState(() {
-      if (isStart) {
-        _start = picked;
-        if (_end != null && _end!.isBefore(picked.add(const Duration(days: 1)))) {
-          _end = picked.add(const Duration(days: 1));
-        }
-      } else { _end = picked; }
-    });
+    setState(() => _start = picked);
+  }
+
+  Future<void> _pickDeliveryLocation() async {
+    final result = await Navigator.push<LocationPickResult>(
+      context,
+      MaterialPageRoute(builder: (_) => LocationPickerScreen(
+        title:    _locType.mapTitle,
+        pinColor: _color,
+        initial:  _deliveryLatLng,
+      )),
+    );
+    if (result == null || !mounted) return;
+    setState(() { _deliveryAddress = result.address; _deliveryLatLng = result.latLng; });
+  }
+
+  Future<void> _pickManualPickupLocation() async {
+    final result = await Navigator.push<LocationPickResult>(
+      context,
+      MaterialPageRoute(builder: (_) => LocationPickerScreen(
+        title:    'Pick-up Location',
+        pinColor: _color,
+        initial:  _manualPickupLatLng,
+      )),
+    );
+    if (result == null || !mounted) return;
+    setState(() { _manualPickupAddress = result.address; _manualPickupLatLng = result.latLng; });
+  }
+
+  void _openLocTypeSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appSurface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+                color: ctx.appCardBg, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Location Type', style: TextStyle(
+                  color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          Divider(height: 1, color: ctx.appCardBg),
+          ..._LocType.values.map((t) {
+            final isSel = t == _locType;
+            return InkWell(
+              onTap: () {
+                setState(() {
+                  _locType = t;
+                  _deliveryAddress = '';
+                  _deliveryLatLng = null;
+                });
+                Navigator.pop(ctx);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: isSel ? _color.withValues(alpha: 0.12) : ctx.appCardBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(t.icon, color: isSel ? _color : Colors.grey, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(t.label, style: TextStyle(
+                        color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(t.subtitle, style: TextStyle(color: ctx.appTextSecondary, fontSize: 12)),
+                  ])),
+                  if (isSel) Icon(Icons.check_circle_rounded, color: _color, size: 20),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
+  void _openDurationSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appSurface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+                color: ctx.appCardBg, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Rental Duration', style: TextStyle(
+                  color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          Divider(height: 1, color: ctx.appCardBg),
+          ..._RentDur.values.map((d) {
+            final isSel = d == _duration;
+            final endsLabel = _start != null
+                ? 'Ends ${_fmt(_start!.add(Duration(days: d.days)))}'
+                : '${d.days} day${d.days == 1 ? '' : 's'}';
+            return InkWell(
+              onTap: () { setState(() => _duration = d); Navigator.pop(ctx); },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: isSel ? _color.withValues(alpha: 0.12) : ctx.appCardBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(d.icon, color: isSel ? _color : Colors.grey, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(d.label, style: TextStyle(
+                        color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(endsLabel, style: TextStyle(color: ctx.appTextSecondary, fontSize: 12)),
+                  ])),
+                  if (isSel) Icon(Icons.check_circle_rounded, color: _color, size: 20),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -2474,16 +2721,46 @@ class _OrderScreenState extends State<_OrderScreen> {
       setState(() => _err = 'Please select rental start and end dates.');
       return;
     }
+    if (_isVehicleRental && _locType == _LocType.delivery && _deliveryAddress.isEmpty) {
+      setState(() => _err = 'Please set a delivery location.');
+      return;
+    }
     setState(() { _busy = true; _err = null; });
     try {
-      await ApiService.placeMarketplaceOrder(widget.product.id,
-        orderType:     widget.orderType,
-        quantity:      _qty,
-        paymentMethod: _pay,
-        notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-        rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_start!) : null,
-        rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end!)   : null,
-      );
+      if (_isVehicleRental) {
+        // Pickup falls back to the listing's own location, then a manually
+        // picked override, then the ROTEH CAMBODIA office as a last resort
+        // (matching what the map already shows by default).
+        final pickupLocation = _locType == _LocType.pickup
+            ? (widget.product.locationText ??
+                (_manualPickupAddress.isNotEmpty ? _manualPickupAddress : kRotehAddress))
+            : _deliveryAddress;
+        final pickupLat = _locType == _LocType.pickup
+            ? (widget.product.locationLat ?? _manualPickupLatLng?.latitude ?? kRotehPin.latitude)
+            : _deliveryLatLng?.latitude;
+        final pickupLng = _locType == _LocType.pickup
+            ? (widget.product.locationLng ?? _manualPickupLatLng?.longitude ?? kRotehPin.longitude)
+            : _deliveryLatLng?.longitude;
+        await ApiService.createCarRental(
+          marketplaceProductId: widget.product.id,
+          pickupLocation: pickupLocation,
+          pickupLat:      pickupLat,
+          pickupLng:      pickupLng,
+          startDate:      _start!,
+          endDate:        _end!,
+          paymentMethod:  _pay,
+          notes:          _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+        );
+      } else {
+        await ApiService.placeMarketplaceOrder(widget.product.id,
+          orderType:     widget.orderType,
+          quantity:      _qty,
+          paymentMethod: _pay,
+          notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+          rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_start!) : null,
+          rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end!)   : null,
+        );
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Order placed successfully!'), backgroundColor: _green));
@@ -2495,12 +2772,70 @@ class _OrderScreenState extends State<_OrderScreen> {
     }
   }
 
+  void _openPaymentSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appSurface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+                color: ctx.appCardBg, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Payment Method', style: TextStyle(
+                  color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          Divider(height: 1, color: ctx.appCardBg),
+          ..._pays.map((o) {
+            final (id, label, icon, subtitle) = o;
+            final isSel = id == _pay;
+            return InkWell(
+              onTap: () { setState(() => _pay = id); Navigator.pop(ctx); },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: isSel ? _color.withValues(alpha: 0.12) : ctx.appCardBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: isSel ? _color : Colors.grey, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(label, style: TextStyle(
+                        color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(subtitle, style: TextStyle(color: ctx.appTextSecondary, fontSize: 12)),
+                  ])),
+                  if (isSel) Icon(Icons.check_circle_rounded, color: _color, size: 20),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
+
   static const _pays = [
-    ('cash',         'Cash',   Icons.money_rounded),
-    ('aba',          'ABA',    Icons.account_balance_rounded),
-    ('wing',         'Wing',   Icons.account_balance_wallet_rounded),
-    ('wallet',       'Wallet', Icons.wallet_rounded),
-    ('other_online', 'Online', Icons.phone_android_rounded),
+    ('cash',         'Cash',   Icons.money_rounded,             'Pay in cash on pickup'),
+    ('aba',          'ABA',    Icons.account_balance_rounded,   'ABA mobile banking'),
+    ('wing',         'Wing',   Icons.account_balance_wallet_rounded, 'Wing mobile wallet'),
+    ('wallet',       'Wallet', Icons.wallet_rounded,            'In-app wallet balance'),
+    ('other_online', 'Online', Icons.phone_android_rounded,     'Other online payment'),
   ];
 
   @override
@@ -2562,84 +2897,234 @@ class _OrderScreenState extends State<_OrderScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Rental dates
-            if (_isRent) ...[
-              _FormLabel('Rental Dates'),
+            // Location (vehicle rentals only — books via /rentals), matching
+            // the Car Rental page's Location Type + embedded map.
+            if (_isVehicleRental) ...[
+              _FormLabel('Location'),
               const SizedBox(height: 10),
-              Row(children: [
-                Expanded(child: _DateTile('Start', _start, () => _pickDate(true))),
-                const SizedBox(width: 12),
-                Expanded(child: _DateTile('End', _end, () => _pickDate(false))),
-              ]),
-              const SizedBox(height: 8),
-              Center(child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                    color: _datesOk ? _color.withValues(alpha: 0.08) : Colors.red.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Text(
-                  _start == null ? 'Select start date' : _end == null
-                      ? 'Select end date' : '$_days day${_days == 1 ? '' : 's'} selected',
-                  style: TextStyle(
-                      color: _datesOk ? _color : Colors.red,
-                      fontWeight: FontWeight.w700, fontSize: 13)),
-              )),
+              _OrderDropdownTile(
+                icon: _locType.icon,
+                label: 'Location Type',
+                value: _locType.label,
+                subtitle: _locType.subtitle,
+                color: _color,
+                onTap: _openLocTypeSheet,
+              ),
+              const SizedBox(height: 10),
+              if (_locType == _LocType.pickup) ...[
+                if (widget.product.locationLat != null && widget.product.locationLng != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: context.appSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6, offset: const Offset(0, 2))],
+                    ),
+                    child: RotehLocationMap(
+                      pin: LatLng(widget.product.locationLat!, widget.product.locationLng!),
+                      // Never fall back to RotehLocationMap's own default label
+                      // (the ROTEH HQ address) — this is the listing's own
+                      // pickup point, not the company office.
+                      addressLabel: widget.product.locationText ?? 'Pickup location',
+                    ),
+                  )
+                else if (_manualPickupLatLng != null)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: context.appSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 6, offset: const Offset(0, 2))],
+                    ),
+                    child: RotehLocationMap(
+                      pin: _manualPickupLatLng,
+                      addressLabel: _manualPickupAddress,
+                    ),
+                  )
+                else
+                  // No listing coordinates and nothing picked yet — default
+                  // to the ROTEH CAMBODIA office (same as Car Rental's Pick
+                  // Up default) instead of leaving this blank. Still tappable
+                  // to override with a real pickup point.
+                  GestureDetector(
+                    onTap: _pickManualPickupLocation,
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: context.appSurface,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 6, offset: const Offset(0, 2))],
+                      ),
+                      child: const RotehLocationMap(),
+                    ),
+                  ),
+              ] else
+                GestureDetector(
+                  onTap: _pickDeliveryLocation,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: context.appSurface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                          color: _deliveryAddress.isEmpty
+                              ? Colors.red.withValues(alpha: 0.4) : context.appCardBg),
+                    ),
+                    child: Row(children: [
+                      Icon(Icons.location_on_rounded, color: _color, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(
+                          _deliveryAddress.isEmpty ? 'Tap to set delivery location' : _deliveryAddress,
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: _deliveryAddress.isEmpty
+                                  ? Colors.grey : context.appTextPrimary,
+                              fontSize: 13,
+                              fontWeight: _deliveryAddress.isEmpty ? FontWeight.w400 : FontWeight.w600))),
+                      Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
+                    ]),
+                  ),
+                ),
               const SizedBox(height: 16),
             ],
 
-            // Quantity
-            _FormLabel('Quantity'),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14),
+            // Rental period — Duration dropdown + Start Date / End Date (auto),
+            // same pattern as the Car Rental page.
+            if (_isRent) ...[
+              _FormLabel('Rental Period'),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: context.appSurface,
+                  borderRadius: BorderRadius.circular(14),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6)]),
-              child: Row(children: [
-                _QtyBtn(Icons.remove_rounded, _qty > 1, _color,
-                    () { if (_qty > 1) setState(() => _qty--); }),
-                Expanded(child: Center(
-                    child: Text('$_qty', style: TextStyle(
-                        color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)))),
-                _QtyBtn(Icons.add_rounded, _qty < p.quantity, _color,
-                    () { if (_qty < p.quantity) setState(() => _qty++); }),
-                const SizedBox(width: 10),
-                Text('of ${p.quantity}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
-              ]),
-            ),
-            const SizedBox(height: 16),
+                      blurRadius: 6, offset: const Offset(0, 2))],
+                ),
+                child: Column(children: [
+                  _OrderDropdownTile(
+                    icon: _duration.icon,
+                    label: 'Duration',
+                    value: _duration.label,
+                    subtitle: _start != null
+                        ? '$_days days  ·  ends ${_fmt(_end!)}'
+                        : '$_days day${_days == 1 ? '' : 's'}',
+                    color: _color,
+                    onTap: _openDurationSheet,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: GestureDetector(
+                      onTap: _pickStartDate,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                        decoration: BoxDecoration(
+                          color: context.appCardBg,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text('Start Date', style: TextStyle(
+                              color: context.appTextSecondary,
+                              fontSize: 10, fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            Icon(Icons.calendar_today_outlined, color: _color, size: 13),
+                            const SizedBox(width: 5),
+                            Expanded(child: Text(_start == null ? 'Select' : _fmt(_start!),
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: context.appTextPrimary,
+                                    fontWeight: FontWeight.w700, fontSize: 12))),
+                          ]),
+                        ]),
+                      ),
+                    )),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(Icons.arrow_forward_rounded, color: _color, size: 16),
+                    ),
+                    Expanded(child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+                      decoration: BoxDecoration(
+                        color: _color.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: _color.withValues(alpha: 0.18)),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('End Date (auto)', style: TextStyle(
+                            color: _color, fontSize: 10, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          Icon(Icons.event_available_outlined, color: _color, size: 13),
+                          const SizedBox(width: 5),
+                          Expanded(child: Text(_end == null ? '—' : _fmt(_end!),
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: _color,
+                                  fontWeight: FontWeight.w700, fontSize: 12))),
+                        ]),
+                      ]),
+                    )),
+                  ]),
+                  if (_start == null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Text('Select a start date',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.red,
+                              fontWeight: FontWeight.w700, fontSize: 13)),
+                    ),
+                  ],
+                ]),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Quantity (not applicable to a single vehicle-rental booking)
+            if (!_isVehicleRental) ...[
+              _FormLabel('Quantity'),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 6)]),
+                child: Row(children: [
+                  _QtyBtn(Icons.remove_rounded, _qty > 1, _color,
+                      () { if (_qty > 1) setState(() => _qty--); }),
+                  Expanded(child: Center(
+                      child: Text('$_qty', style: TextStyle(
+                          color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)))),
+                  _QtyBtn(Icons.add_rounded, _qty < p.quantity, _color,
+                      () { if (_qty < p.quantity) setState(() => _qty++); }),
+                  const SizedBox(width: 10),
+                  Text('of ${p.quantity}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ]),
+              ),
+              const SizedBox(height: 16),
+            ],
 
             // Payment
             _FormLabel('Payment Method'),
             const SizedBox(height: 10),
-            GridView.count(
-              crossAxisCount: 3, shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 10, crossAxisSpacing: 10, childAspectRatio: 2.2,
-              children: _pays.map((o) {
-                final active = _pay == o.$1;
-                return GestureDetector(
-                  onTap: () => setState(() => _pay = o.$1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    decoration: BoxDecoration(
-                      color: active ? _color : context.appSurface,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: active ? _color : const Color(0xFFE0E0E0), width: 1.5),
-                    ),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(o.$3, color: active ? _white : Colors.grey, size: 16),
-                      const SizedBox(height: 3),
-                      Text(o.$2, style: TextStyle(
-                          color: active ? _white : Colors.grey,
-                          fontSize: 10, fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                );
-              }).toList(),
-            ),
+            Builder(builder: (context) {
+              final selected = _pays.firstWhere((o) => o.$1 == _pay);
+              return _OrderDropdownTile(
+                icon: selected.$3,
+                label: 'Payment Method',
+                value: selected.$2,
+                subtitle: selected.$4,
+                color: _color,
+                onTap: _openPaymentSheet,
+              );
+            }),
             const SizedBox(height: 16),
 
             // Notes
@@ -2659,6 +3144,94 @@ class _OrderScreenState extends State<_OrderScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Coupon code (rentals only, matching Car Rental)
+            if (_isRent) ...[
+              _FormLabel('Coupon Code'),
+              const SizedBox(height: 10),
+              if (_appliedCode != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _color.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _color.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(children: [
+                    Icon(Icons.local_offer_rounded, color: _color, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(_appliedCode!, style: TextStyle(
+                          color: _color, fontWeight: FontWeight.w700, fontSize: 14)),
+                      Text('- ${_usd(_discountUsd)} discount applied',
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                    ])),
+                    GestureDetector(
+                      onTap: _removeCoupon,
+                      child: Container(
+                        width: 28, height: 28,
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close_rounded, color: Colors.red, size: 16),
+                      ),
+                    ),
+                  ]),
+                ),
+              ] else ...[
+                Row(children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _couponCtrl,
+                      textCapitalization: TextCapitalization.characters,
+                      style: TextStyle(color: context.appTextPrimary, fontSize: 14,
+                          fontWeight: FontWeight.w600, letterSpacing: 1.2),
+                      decoration: InputDecoration(
+                        hintText: 'Enter coupon code',
+                        hintStyle: TextStyle(color: context.appTextSecondary,
+                            fontWeight: FontWeight.w400, letterSpacing: 0),
+                        filled: true,
+                        fillColor: context.appSurface,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                        prefixIcon: Icon(Icons.local_offer_outlined, color: _color, size: 18),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _applyingCoupon ? null : _applyCoupon,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _color,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: _color.withValues(alpha: 0.4),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                      ),
+                      child: _applyingCoupon
+                          ? const SizedBox(width: 18, height: 18,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ]),
+                if (_couponError != null) ...[
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 14),
+                    const SizedBox(width: 6),
+                    Text(_couponError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                  ]),
+                ],
+              ],
+              const SizedBox(height: 16),
+            ],
+
             // Summary
             Container(
               padding: const EdgeInsets.all(16),
@@ -2666,16 +3239,45 @@ class _OrderScreenState extends State<_OrderScreen> {
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 8)]),
               child: Column(children: [
-                if (!_isRent) _SumRow('Unit price', _usd(p.price)),
-                if (!_isRent && _qty > 1) _SumRow('× $_qty items', _usd(p.price * _qty)),
-                if (_isRent && p.rentPricePerDay != null && _datesOk) ...[
-                  _SumRow('${_usd(p.rentPricePerDay!)} × $_days days',
-                      _usd(p.rentPricePerDay! * _days)),
-                  if (_qty > 1) _SumRow('× $_qty items',
-                      _usd(p.rentPricePerDay! * _days * _qty)),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(_isRent ? 'Booking Summary' : 'Order Summary',
+                      style: TextStyle(color: context.appTextPrimary,
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 12),
+                if (!_isRent) ...[
+                  _SumRow('Unit price', _usd(p.price)),
+                  if (_qty > 1) _SumRow('× $_qty items', _usd(p.price * _qty)),
+                ] else ...[
+                  // Matches the Car Rental page's summary rows exactly.
+                  _SumRow('Vehicle', p.title),
+                  _SumRow('Duration', _duration.label),
+                  _SumRow('Daily Rate', p.rentPricePerDay != null ? _usd(p.rentPricePerDay!) : '—'),
+                  _SumRow('Days', _datesOk ? '$_days days' : '—'),
                 ],
-                if (_isRent && !_datesOk)
-                  const _SumRow('Select dates above', '—'),
+                if (_isRent) ...[
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.local_offer_outlined, size: 14, color: _color),
+                      const SizedBox(width: 4),
+                      Text(
+                        _appliedCode != null ? 'Discount ($_appliedCode)' : 'Discount',
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                      ),
+                    ]),
+                    const Spacer(),
+                    Text(
+                      _discountKhr > 0 ? '- ${_usd(_discountUsd)}' : '—',
+                      style: TextStyle(
+                        color: _discountKhr > 0 ? _color : context.appTextSecondary,
+                        fontWeight: _discountKhr > 0 ? FontWeight.w600 : FontWeight.w400,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ]),
+                ],
                 Divider(color: context.appCardBg, height: 20, thickness: 1.5),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Total', style: TextStyle(
@@ -2731,6 +3333,49 @@ class _FormLabel extends StatelessWidget {
       style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14));
 }
 
+// Tappable summary tile that opens a bottom sheet — matches the Car Rental
+// page's picker style (icon + label + value + subtitle + chevron).
+class _OrderDropdownTile extends StatelessWidget {
+  final IconData icon;
+  final String label, value, subtitle;
+  final Color color;
+  final VoidCallback onTap;
+  const _OrderDropdownTile({
+    required this.icon, required this.label, required this.value,
+    required this.subtitle, required this.color, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.appCardBg),
+      ),
+      child: Row(children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: TextStyle(
+              color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 2),
+          Text(value, style: TextStyle(
+              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (subtitle.isNotEmpty)
+            Text(subtitle, style: TextStyle(
+                color: context.appTextSecondary, fontSize: 10),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+        ])),
+        Icon(Icons.keyboard_arrow_down, color: context.appTextSecondary, size: 20),
+      ]),
+    ),
+  );
+}
+
 class _QtyBtn extends StatelessWidget {
   final IconData icon;
   final bool active;
@@ -2745,33 +3390,6 @@ class _QtyBtn extends StatelessWidget {
           color: active ? color.withValues(alpha: 0.1) : context.appCardBg,
           borderRadius: BorderRadius.circular(10)),
       child: Icon(icon, color: active ? color : Colors.grey, size: 20)),
-  );
-}
-
-class _DateTile extends StatelessWidget {
-  final String label;
-  final DateTime? date;
-  final VoidCallback onTap;
-  const _DateTile(this.label, this.date, this.onTap);
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-          color: context.appSurface, borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-              color: date == null ? Colors.red.withValues(alpha: 0.5) : const Color(0xFFE0E0E0))),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(
-            color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600)),
-        const SizedBox(height: 5),
-        Text(date != null ? DateFormat('dd MMM yyyy').format(date!) : 'Tap to select',
-            style: TextStyle(
-                color: date != null ? context.appTextPrimary : Colors.red.shade300,
-                fontWeight: FontWeight.w700, fontSize: 13)),
-      ]),
-    ),
   );
 }
 

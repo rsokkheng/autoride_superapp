@@ -31,7 +31,15 @@ class _BannerCarouselState extends State<BannerCarousel> {
     try {
       final list = await ApiService.getBanners();
       if (!mounted) return;
-      setState(() { _banners = list; _loading = false; });
+      // Skip banners with no image and no text — they'd render as an empty
+      // colored box.
+      final usable = list.where((b) {
+        final image    = (b['image_url'] as String?) ?? (b['image'] as String?) ?? '';
+        final title    = (b['title']     as String?) ?? '';
+        final subtitle = (b['subtitle']  as String?) ?? (b['description'] as String?) ?? '';
+        return image.isNotEmpty || title.isNotEmpty || subtitle.isNotEmpty;
+      }).toList();
+      setState(() { _banners = usable; _loading = false; });
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
@@ -39,14 +47,7 @@ class _BannerCarouselState extends State<BannerCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Container(
-        height: 140,
-        margin: EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
-      );
-    }
-    if (_banners.isEmpty) return const SizedBox.shrink();
+    if (_loading || _banners.isEmpty) return const SizedBox.shrink();
 
     return Column(children: [
       SizedBox(
@@ -102,7 +103,10 @@ class _BannerItem extends StatelessWidget {
             child: Image.network(
               imageUrl,
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              errorBuilder: (_, __, ___) => Center(
+                child: Icon(Icons.image_not_supported_outlined,
+                    color: AppTheme.accent.withValues(alpha: 0.4), size: 32),
+              ),
             ),
           ),
         if (title.isNotEmpty || subtitle.isNotEmpty)

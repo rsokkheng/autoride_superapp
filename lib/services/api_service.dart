@@ -777,9 +777,16 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final outer     = (body['data'] as Map<String, dynamic>?) ?? body;
-      final pagination = outer['rides'] as Map<String, dynamic>;
-      final data = pagination['data'] as List<dynamic>;
+      final outer = (body['data'] as Map<String, dynamic>?) ?? body;
+      final candidate = outer['rides'] ?? outer;
+      final List<dynamic> data;
+      if (candidate is List) {
+        data = candidate;
+      } else if (candidate is Map<String, dynamic>) {
+        data = (candidate['data'] as List<dynamic>?) ?? [];
+      } else {
+        data = [];
+      }
       return data
           .map((e) => RideModel.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -3563,6 +3570,49 @@ class ApiService {
     if (raw.statusCode != 200 && raw.statusCode != 201) {
       final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
       throw ApiException(body['message'] as String? ?? 'Cancel failed.', raw.statusCode);
+    }
+  }
+
+  // ── Driver: rental requests ───────────────────────────────────────────────
+  // "Available rentals" for a driver/vehicle-owner are their own pending
+  // bookings — GET /rentals?status=pending ("My bookings" per the API docs).
+  // (/rentals/available is a public, no-auth car-browsing endpoint, not this.)
+
+  static Future<List<Map<String, dynamic>>> getAvailableRentals() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawGet('/rentals?status=pending', token: token);
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed to load rentals.', raw.statusCode);
+    }
+    return _extractList(body).whereType<Map<String, dynamic>>().toList();
+  }
+
+  static Future<void> acceptRentalRequest(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/rentals/$id/accept', {}, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Accept failed.', raw.statusCode);
+    }
+  }
+
+  // There's no dedicated "decline" endpoint — rejecting a pending booking
+  // uses the same /cancel action as a customer cancellation.
+  static Future<void> declineRentalRequest(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/rentals/$id/cancel', {}, token: token);
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Decline failed.', raw.statusCode);
     }
   }
 

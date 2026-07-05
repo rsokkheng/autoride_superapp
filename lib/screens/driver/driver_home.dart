@@ -259,6 +259,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
   DriverStatsModel? _stats;
   RideModel?     _pendingRide;
   DeliveryModel? _pendingDelivery;
+  Map<String, dynamic>? _pendingRental;
   RideModel?     _activeRide;
   DeliveryModel? _activeDelivery;
   SurgeInfo?     _surgeInfo;
@@ -404,6 +405,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
         widget.onBusy();
       }
     } catch (_) {}
+
+    // Fetched separately so a failure here (e.g. endpoint not yet deployed)
+    // doesn't take down rides/deliveries loading above.
+    try {
+      final rentals = await ApiService.getAvailableRentals();
+      if (!mounted) return;
+      setState(() => _pendingRental = rentals.isNotEmpty ? rentals.first : null);
+    } catch (e) {
+      debugPrint('[Driver] getAvailableRentals error: $e');
+    }
   }
 
   Future<void> _openActiveTrip() async {
@@ -462,6 +473,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
         if (deliveries.isNotEmpty) setState(() => _pendingDelivery = deliveries.first);
       } catch (e) {
         debugPrint('[Driver] getAvailableDeliveries error: $e');
+      }
+    }
+    if (_pendingRental == null) {
+      try {
+        final rentals = await ApiService.getAvailableRentals();
+        if (!mounted) return;
+        if (rentals.isNotEmpty) setState(() => _pendingRental = rentals.first);
+      } catch (e) {
+        debugPrint('[Driver] getAvailableRentals error: $e');
       }
     }
   }
@@ -806,12 +826,30 @@ class _DriverDashboardState extends State<_DriverDashboard>
                   const SizedBox(height: 14),
                 ],
                 if (widget.modeRental) ...[
-                  _ModeEmptyCard(
-                    icon: Icons.car_rental_outlined,
-                    color: const Color(0xFF9C27B0),
-                    title: 'Rental Mode Active',
-                    subtitle: 'Your vehicle is listed for hourly rentals.',
-                  ),
+                  if (_pendingRental != null) ...[
+                    const SectionHeader(title: 'Incoming Rental Request'),
+                    const SizedBox(height: 14),
+                    _RentalRequestCard(
+                      rental: _pendingRental!,
+                      onDeclined: () => setState(() => _pendingRental = null),
+                      onAccept: (rental) async {
+                        setState(() => _pendingRental = null);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Rental request accepted.'),
+                          backgroundColor: AppTheme.success,
+                          behavior: SnackBarBehavior.floating,
+                        ));
+                      },
+                    ),
+                  ] else ...[
+                    _ModeEmptyCard(
+                      icon: Icons.car_rental_outlined,
+                      color: const Color(0xFF9C27B0),
+                      title: 'Rental Mode Active',
+                      subtitle: 'Your vehicle is listed for hourly rentals.',
+                    ),
+                  ],
                   const SizedBox(height: 14),
                 ],
               ],
@@ -1487,6 +1525,219 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                   ? const SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Text('Accept Delivery',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
+            ),
+          )),
+        ]),
+      ]),
+    );
+  }
+}
+
+// ─── Rental request card ────────────────────────────────────────────────────
+
+class _RentalRequestCard extends StatefulWidget {
+  final Map<String, dynamic> rental;
+  final Future<void> Function(Map<String, dynamic>) onAccept;
+  final VoidCallback onDeclined;
+
+  const _RentalRequestCard({
+    required this.rental,
+    required this.onAccept,
+    required this.onDeclined,
+  });
+
+  @override
+  State<_RentalRequestCard> createState() => _RentalRequestCardState();
+}
+
+class _RentalRequestCardState extends State<_RentalRequestCard> {
+  static const _color = Color(0xFF9C27B0);
+
+  int _seconds = 30;
+  Timer? _timer;
+  bool _acting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      if (_seconds <= 1) {
+        t.cancel();
+        widget.onDeclined();
+      } else {
+        setState(() => _seconds--);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  int get _id => ((widget.rental['id'] ?? widget.rental['rental_id']) as num?)?.toInt() ?? 0;
+
+  Future<void> _accept() async {
+    if (_acting) return;
+    _timer?.cancel();
+    setState(() => _acting = true);
+    try {
+      await ApiService.acceptRentalRequest(_id);
+      if (!mounted) return;
+      await widget.onAccept(widget.rental);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      setState(() => _acting = false);
+    } catch (_) {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  Future<void> _decline() async {
+    if (_acting) return;
+    _timer?.cancel();
+    try {
+      await ApiService.declineRentalRequest(_id);
+    } catch (_) {}
+    widget.onDeclined();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = _seconds / 30.0;
+    final urgent   = _seconds <= 8;
+    final cardColor = urgent ? AppTheme.danger : _color;
+
+    final r = widget.rental;
+    final customerName = (r['customer'] as Map<String, dynamic>?)?['name'] as String?
+        ?? r['customer_name'] as String?
+        ?? 'Customer #${r['customer_id'] ?? ''}';
+    final vehicleType = r['vehicle_type'] as String?;
+    final pickup = r['pickup_location'] as String? ?? '--';
+    final startDate = r['start_date'] as String?;
+    final endDate = r['end_date'] as String?;
+    final total = (r['total'] as num?)?.toDouble();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cardColor.withValues(alpha: 0.5), width: 1.5),
+        boxShadow: [BoxShadow(
+            color: cardColor.withValues(alpha: 0.15),
+            blurRadius: 16, offset: const Offset(0, 4))],
+      ),
+      child: Column(children: [
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+                color: cardColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20)),
+            child: Text(
+              urgent ? '⚡ URGENT' : '🚗 NEW RENTAL',
+              style: TextStyle(color: cardColor,
+                  fontWeight: FontWeight.w800, fontSize: 11),
+            ),
+          ),
+          const Spacer(),
+          Text('$_seconds s', style: TextStyle(
+              color: cardColor, fontWeight: FontWeight.w900, fontSize: 16)),
+        ]),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress,
+            backgroundColor: context.appCardBg,
+            valueColor: AlwaysStoppedAnimation<Color>(cardColor),
+            minHeight: 5,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        Row(children: [
+          CircleAvatar(
+            backgroundColor: cardColor.withValues(alpha: 0.15),
+            radius: 18,
+            child: Text(customerName.isNotEmpty ? customerName[0] : '?',
+                style: TextStyle(color: cardColor, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 10),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(customerName,
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+            if (vehicleType != null)
+              Text(vehicleType,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          ])),
+          if (total != null)
+            Text('\$${total.toStringAsFixed(0)}',
+                style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+        ]),
+        const SizedBox(height: 12),
+
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+              color: context.appCardBg,
+              borderRadius: BorderRadius.circular(10)),
+          child: Column(children: [
+            Row(children: [
+              Icon(Icons.location_on, color: cardColor, size: 14),
+              const SizedBox(width: 8),
+              Expanded(child: Text(pickup,
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 13),
+                  overflow: TextOverflow.ellipsis)),
+            ]),
+            if (startDate != null && endDate != null) ...[
+              const SizedBox(height: 6),
+              Row(children: [
+                Icon(Icons.date_range_rounded, color: context.appTextSecondary, size: 14),
+                const SizedBox(width: 8),
+                Expanded(child: Text('$startDate → $endDate',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13),
+                    overflow: TextOverflow.ellipsis)),
+              ]),
+            ],
+          ]),
+        ),
+
+        const SizedBox(height: 14),
+
+        Row(children: [
+          Expanded(child: GestureDetector(
+            onTap: _acting ? null : _decline,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                  border: Border.all(color: context.appTextSecondary.withValues(alpha: 0.4)),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Center(child: Text('Decline',
+                  style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600))),
+            ),
+          )),
+          const SizedBox(width: 12),
+          Expanded(flex: 2, child: GestureDetector(
+            onTap: _acting ? null : _accept,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              decoration: BoxDecoration(
+                  color: cardColor, borderRadius: BorderRadius.circular(10)),
+              child: Center(child: _acting
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Accept Rental',
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             ),
           )),

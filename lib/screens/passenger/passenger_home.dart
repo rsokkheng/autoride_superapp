@@ -13,6 +13,7 @@ import 'package:autoride_superapp/screens/auth/role_selection.dart';
 import 'package:autoride_superapp/screens/auth/login_screen.dart';
 import 'package:autoride_superapp/screens/driver/driver_home.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import 'package:autoride_superapp/utils/app_log.dart';
 import 'package:autoride_superapp/models/ride_model.dart';
 import 'ride_booking.dart';
 import 'delivery_screen.dart';
@@ -74,19 +75,18 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _NavItem(icon: Icons.home_outlined, label: AppLocalizations.of(context).home, index: 0, current: _tab, onTap: (i) => setState(() => _tab = i)),
-               _NavItem(
+                Expanded(child: _NavItem(icon: Icons.home_outlined, label: AppLocalizations.of(context).home, index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(
                     icon: Icons.directions_car_outlined,
                     label: AppLocalizations.of(context).bookRide,
                     index: 1,
                     current: _tab,
                     onTap: (i) => setState(() => _tab = i),
-                  ),
-                _NavItem(icon: Icons.ev_station_outlined, label: AppLocalizations.of(context).charging, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.chat_bubble_outline, label: AppLocalizations.of(context).chat, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.person_outline, label: AppLocalizations.of(context).profile, index: 4, current: _tab, onTap: (i) => setState(() => _tab = i)),
+                  )),
+                Expanded(child: _NavItem(icon: Icons.ev_station_outlined, label: AppLocalizations.of(context).charging, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.chat_bubble_outline, label: AppLocalizations.of(context).chat, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.person_outline, label: AppLocalizations.of(context).profile, index: 4, current: _tab, onTap: (i) => setState(() => _tab = i))),
               ],
             ),
           ),
@@ -112,7 +112,9 @@ class _NavItem extends StatelessWidget {
       onTap: () => onTap(index),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: selected ? AppTheme.accent.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -123,6 +125,8 @@ class _NavItem extends StatelessWidget {
             Icon(icon, color: selected ? AppTheme.accent : context.appTextSecondary, size: 22),
             SizedBox(height: 4),
             Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                     color: selected ? AppTheme.accent : context.appTextSecondary,
                     fontSize: 11,
@@ -189,8 +193,10 @@ class _HomeTabState extends State<_HomeTab> {
     try {
       final rides = await ApiService.getRides(status: 'completed');
       if (!mounted) return;
-      setState(() => _recentRides = rides.take(2).toList());
-    } catch (_) {}
+      setState(() => _recentRides = rides.take(5).toList());
+    } catch (e, s) {
+      AppLog.e('Home', 'loadRecentRides failed', e, s);
+    }
   }
 
   Future<void> _loadActiveRide() async {
@@ -461,7 +467,7 @@ class _HomeTabState extends State<_HomeTab> {
                 crossAxisCount: _gridColumns,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: _gridColumns == 2 ? 1.35 : 0.95,
+                childAspectRatio: _gridColumns == 2 ? 1.7 : 1.1,
                 children: [
                   ServiceCard(
                     icon: Icons.directions_car_outlined,
