@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
+import 'voucher_screen.dart' show StoreTab, MyVouchersTab;
 
 class PromoScreen extends StatefulWidget {
   const PromoScreen({super.key});
@@ -10,7 +11,55 @@ class PromoScreen extends StatefulWidget {
   State<PromoScreen> createState() => _PromoScreenState();
 }
 
-class _PromoScreenState extends State<PromoScreen> {
+class _PromoScreenState extends State<PromoScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tab;
+
+  @override
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tab.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Promos & Vouchers'),
+        bottom: TabBar(
+          controller: _tab,
+          indicatorColor: AppTheme.accent,
+          labelColor: AppTheme.accent,
+          unselectedLabelColor: context.appTextSecondary,
+          tabs: const [
+            Tab(icon: Icon(Icons.local_offer_outlined), text: 'Promos'),
+            Tab(icon: Icon(Icons.store_outlined), text: 'Store'),
+            Tab(icon: Icon(Icons.wallet_giftcard_rounded), text: 'My Vouchers'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tab,
+        children: const [_PromosTab(), StoreTab(), MyVouchersTab()],
+      ),
+    );
+  }
+}
+
+class _PromosTab extends StatefulWidget {
+  const _PromosTab();
+
+  @override
+  State<_PromosTab> createState() => _PromosTabState();
+}
+
+class _PromosTabState extends State<_PromosTab> {
   final _codeController = TextEditingController();
   String? _applyError;
   String? _applySuccess;
@@ -49,76 +98,73 @@ class _PromoScreenState extends State<PromoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Promos & Vouchers')),
-      body: ListView(
-        padding: EdgeInsets.all(16),
-        children: [
-          // Enter code
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Enter Promo Code', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
-              SizedBox(height: 12),
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _codeController,
-                    style: TextStyle(color: context.appTextPrimary, letterSpacing: 1.5, fontWeight: FontWeight.w700),
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: InputDecoration(
-                      hintText: 'e.g. ROTEH15',
-                      hintStyle: TextStyle(color: context.appTextSecondary, letterSpacing: 0, fontWeight: FontWeight.normal),
-                      filled: true,
-                      fillColor: context.appCardBg,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    ),
+    return ListView(
+      padding: EdgeInsets.all(16),
+      children: [
+        // Enter code
+        Container(
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Enter Promo Code', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+            SizedBox(height: 12),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _codeController,
+                  style: TextStyle(color: context.appTextPrimary, letterSpacing: 1.5, fontWeight: FontWeight.w700),
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(
+                    hintText: 'e.g. ROTEH15',
+                    hintStyle: TextStyle(color: context.appTextSecondary, letterSpacing: 0, fontWeight: FontWeight.normal),
+                    filled: true,
+                    fillColor: context.appCardBg,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   ),
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: _applyCode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
-                    foregroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w800)),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: _applyCode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accent,
+                  foregroundColor: AppTheme.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-              ]),
-              if (_applyError != null) ...[
-                const SizedBox(height: 8),
-                Text(_applyError!, style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
-              ],
-              if (_applySuccess != null) ...[
-                const SizedBox(height: 8),
-                Text(_applySuccess!, style: const TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600)),
-              ],
+                child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w800)),
+              ),
             ]),
-          ),
-          const SizedBox(height: 20),
+            if (_applyError != null) ...[
+              const SizedBox(height: 8),
+              Text(_applyError!, style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+            ],
+            if (_applySuccess != null) ...[
+              const SizedBox(height: 8),
+              Text(_applySuccess!, style: const TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600)),
+            ],
+          ]),
+        ),
+        const SizedBox(height: 20),
 
-          const SectionHeader(title: 'Available Vouchers'),
-          const SizedBox(height: 12),
+        const SectionHeader(title: 'Available Vouchers'),
+        const SizedBox(height: 12),
 
-          ..._promos.map((p) => _PromoCard(
-            promo: p,
-            onCopy: () {
-              Clipboard.setData(ClipboardData(text: p.code));
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Code "${p.code}" copied!'),
-                backgroundColor: AppTheme.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                duration: const Duration(seconds: 2),
-              ));
-            },
-          )),
-        ],
-      ),
+        ..._promos.map((p) => _PromoCard(
+          promo: p,
+          onCopy: () {
+            Clipboard.setData(ClipboardData(text: p.code));
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Code "${p.code}" copied!'),
+              backgroundColor: AppTheme.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              duration: const Duration(seconds: 2),
+            ));
+          },
+        )),
+      ],
     );
   }
 }

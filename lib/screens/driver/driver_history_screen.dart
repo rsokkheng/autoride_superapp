@@ -128,7 +128,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trip History'),
+        title: const Text('Trip'),
         actions: [
           IconButton(
             icon: const Icon(Icons.filter_list_rounded),

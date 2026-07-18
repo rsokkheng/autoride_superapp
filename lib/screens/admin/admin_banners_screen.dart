@@ -99,8 +99,12 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                           final active = b['active'] == true || b['is_active'] == true;
 
                           return Container(
-                            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14), border: Border.all(color: active ? AppTheme.accent.withValues(alpha: 0.3) : context.appCardBg)),
-                            child: ListTile(
+                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), border: Border.all(color: active ? AppTheme.accent.withValues(alpha: 0.3) : context.appCardBg)),
+                            child: Material(
+                              color: context.appSurface,
+                              borderRadius: BorderRadius.circular(14),
+                              clipBehavior: Clip.antiAlias,
+                              child: ListTile(
                               contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               leading: img.isNotEmpty
                                   ? ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.network(img, width: 52, height: 52, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.image_outlined, color: context.appTextSecondary, size: 28)))
@@ -113,6 +117,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                                 IconButton(icon: Icon(Icons.edit_outlined, color: context.appTextSecondary, size: 20), onPressed: () => _showForm(b), tooltip: 'Edit'),
                                 IconButton(icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20), onPressed: () => _delete(b), tooltip: 'Delete'),
                               ]),
+                              ),
                             ),
                           );
                         },

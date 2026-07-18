@@ -44,7 +44,7 @@ class _VoucherScreenState extends State<VoucherScreen>
       ),
       body: TabBarView(
         controller: _tab,
-        children: const [_StoreTab(), _MyVouchersTab()],
+        children: const [StoreTab(), MyVouchersTab()],
       ),
     );
   }
@@ -52,14 +52,14 @@ class _VoucherScreenState extends State<VoucherScreen>
 
 // ── Store tab ─────────────────────────────────────────────────────────────────
 
-class _StoreTab extends StatefulWidget {
-  const _StoreTab();
+class StoreTab extends StatefulWidget {
+  const StoreTab();
 
   @override
-  State<_StoreTab> createState() => _StoreTabState();
+  State<StoreTab> createState() => _StoreTabState();
 }
 
-class _StoreTabState extends State<_StoreTab> {
+class _StoreTabState extends State<StoreTab> {
   List<Map<String, dynamic>> _vouchers = [];
   bool _loading = true;
   String? _error;
@@ -158,14 +158,14 @@ class _StoreTabState extends State<_StoreTab> {
 
 // ── My Vouchers tab ───────────────────────────────────────────────────────────
 
-class _MyVouchersTab extends StatefulWidget {
-  const _MyVouchersTab();
+class MyVouchersTab extends StatefulWidget {
+  const MyVouchersTab();
 
   @override
-  State<_MyVouchersTab> createState() => _MyVouchersTabState();
+  State<MyVouchersTab> createState() => _MyVouchersTabState();
 }
 
-class _MyVouchersTabState extends State<_MyVouchersTab> {
+class _MyVouchersTabState extends State<MyVouchersTab> {
   List<Map<String, dynamic>> _vouchers = [];
   bool _loading = true;
   String? _error;

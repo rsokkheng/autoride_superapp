@@ -2002,30 +2002,34 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
               Container(
                 margin: const EdgeInsets.fromLTRB(62, 6, 12, 0),
                 decoration: BoxDecoration(
-                  color: context.appSurface,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
                       blurRadius: 10)],
                 ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _searchResults.length.clamp(0, 5),
-                  separatorBuilder: (_, __) =>
-                      Divider(height: 1, color: context.appCardBg),
-                  itemBuilder: (_, i) {
-                    final r = _searchResults[i];
-                    return ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.place_outlined,
-                          color: _green, size: 18),
-                      title: Text(r.address,
-                          maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: context.appTextPrimary, fontSize: 13)),
-                      onTap: () => _selectResult(r),
-                    );
-                  },
+                child: Material(
+                  color: context.appSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _searchResults.length.clamp(0, 5),
+                    separatorBuilder: (_, __) =>
+                        Divider(height: 1, color: context.appCardBg),
+                    itemBuilder: (_, i) {
+                      final r = _searchResults[i];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.place_outlined,
+                            color: _green, size: 18),
+                        title: Text(r.address,
+                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.appTextPrimary, fontSize: 13)),
+                        onTap: () => _selectResult(r),
+                      );
+                    },
+                  ),
                 ),
               ),
           ]),
@@ -2533,7 +2537,8 @@ class _OrderScreenState extends State<_OrderScreen> {
     setState(() { _applyingCoupon = true; _couponError = null; });
     try {
       final subtotalKhr = (_subtotal * 4100).round();
-      final result = await ApiService.applyPromoCode(code, subtotalKhr, serviceType: 'rental');
+      final result = await ApiService.applyPromoCode(code, subtotalKhr,
+          serviceType: _isRent ? 'rental' : 'marketplace');
       if (!mounted) return;
       setState(() {
         _discountKhr    = (result['discount_amount'] as num? ?? 0).toInt();
@@ -3144,9 +3149,8 @@ class _OrderScreenState extends State<_OrderScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Coupon code (rentals only, matching Car Rental)
-            if (_isRent) ...[
-              _FormLabel('Coupon Code'),
+            // Coupon code (buy & rent, matching Car Rental)
+            _FormLabel('Coupon Code'),
               const SizedBox(height: 10),
               if (_appliedCode != null) ...[
                 Container(
@@ -3229,8 +3233,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ]),
                 ],
               ],
-              const SizedBox(height: 16),
-            ],
+            const SizedBox(height: 16),
 
             // Summary
             Container(
@@ -3304,8 +3307,9 @@ class _OrderScreenState extends State<_OrderScreen> {
             child: ElevatedButton(
               onPressed: _busy ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _color, foregroundColor: _white, elevation: 0,
-                disabledBackgroundColor: _color.withValues(alpha: 0.5),
+                backgroundColor: AppTheme.confirmBlue,
+                foregroundColor: _white, elevation: 0,
+                disabledBackgroundColor: AppTheme.confirmBlue.withValues(alpha: 0.5),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -3783,7 +3787,7 @@ class _OrderCard extends StatelessWidget {
             const Spacer(),
             if (canAct) ...[
               if (isSeller && o.status == 'pending') ...[
-                _ActionPill('Confirm', _green, Icons.check_circle_outline_rounded,
+                _ActionPill('Confirm', AppTheme.confirmBlue, Icons.check_circle_outline_rounded,
                     () => onAction(o, 'confirm')),
                 const SizedBox(width: 8),
               ],

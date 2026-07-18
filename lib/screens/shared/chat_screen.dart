@@ -458,14 +458,18 @@ class _SupportTab extends StatelessWidget {
             ('Lost item in vehicle',   Icons.inventory_2_outlined, AppTheme.accent),
             ('Report a safety issue',  Icons.shield_outlined,      AppTheme.danger),
             ('Cancel my trip',         Icons.cancel_outlined,      context.appTextSecondary),
-          ].map((item) => Container(
-            margin: EdgeInsets.only(bottom: 10),
-            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-            child: ListTile(
-              leading: Icon(item.$2, color: item.$3, size: 20),
-              title: Text(item.$1, style: TextStyle(color: context.appTextPrimary, fontSize: 14)),
-              trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
-              onTap: () {},
+          ].map((item) => Padding(
+            padding: EdgeInsets.only(bottom: 10),
+            child: Material(
+              color: context.appSurface,
+              borderRadius: BorderRadius.circular(14),
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                leading: Icon(item.$2, color: item.$3, size: 20),
+                title: Text(item.$1, style: TextStyle(color: context.appTextPrimary, fontSize: 14)),
+                trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
+                onTap: () {},
+              ),
             ),
           )),
           SizedBox(height: 20),

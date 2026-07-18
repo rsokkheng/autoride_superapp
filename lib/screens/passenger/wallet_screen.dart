@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
@@ -140,8 +141,13 @@ class _WalletScreenState extends State<WalletScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => _TopUpSheet(
-        onSuccess: () {
-          if (mounted) {
+        onSubmitted: (request) async {
+          final approved = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(builder: (_) => TopUpStatusScreen(topUpId: request.id)),
+          );
+          if (!mounted) return;
+          if (approved == true) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Balance updated'),
@@ -151,8 +157,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     borderRadius: BorderRadius.circular(10)),
               ),
             );
-            _loadAll();
           }
+          _loadAll();
         },
       ),
     );
@@ -617,9 +623,9 @@ class _TxErrorBanner extends StatelessWidget {
 // ── Top Up bottom sheet ───────────────────────────────────────────────────────
 
 class _TopUpSheet extends StatefulWidget {
-  final VoidCallback onSuccess;
+  final void Function(TopUpRequestModel request) onSubmitted;
 
-  const _TopUpSheet({required this.onSuccess});
+  const _TopUpSheet({required this.onSubmitted});
 
   @override
   State<_TopUpSheet> createState() => _TopUpSheetState();
@@ -664,10 +670,10 @@ class _TopUpSheetState extends State<_TopUpSheet> {
     }
     setState(() => _submitting = true);
     try {
-      await ApiService.requestTopUp(amount: amount, method: _selectedMethod);
+      final request = await ApiService.requestTopUp(amount: amount, method: _selectedMethod);
       if (!mounted) return;
       Navigator.pop(context);
-      widget.onSuccess();
+      widget.onSubmitted(request);
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _submitting = false);
@@ -829,9 +835,9 @@ class _TopUpSheetState extends State<_TopUpSheet> {
               child: ElevatedButton(
                 onPressed: _submitting ? null : _submit,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accent,
+                  backgroundColor: AppTheme.confirmBlue,
                   disabledBackgroundColor:
-                      AppTheme.accent.withValues(alpha: 0.4),
+                      AppTheme.confirmBlue.withValues(alpha: 0.4),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -853,6 +859,151 @@ class _TopUpSheetState extends State<_TopUpSheet> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Top-up pending/approval status screen ─────────────────────────────────────
+//
+// Flow: driver/passenger submits a top-up request, which stays 'pending'
+// until an admin approves or rejects it in the admin panel. This screen
+// polls GET /wallet/topup/{id} until the status changes, then pops `true`
+// (approved — balance changed) or `false` (rejected/left early).
+
+class TopUpStatusScreen extends StatefulWidget {
+  final int topUpId;
+  const TopUpStatusScreen({super.key, required this.topUpId});
+
+  @override
+  State<TopUpStatusScreen> createState() => _TopUpStatusScreenState();
+}
+
+class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
+  TopUpRequestModel? _request;
+  String? _error;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) => _check());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _check() async {
+    try {
+      final r = await ApiService.getTopUpRequest(widget.topUpId);
+      if (!mounted) return;
+      setState(() { _request = r; _error = null; });
+      if (!r.isPending) _pollTimer?.cancel();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _request;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) Navigator.pop(context, false);
+      },
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        appBar: AppBar(
+          backgroundColor: context.appBackground,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          title: Text('Top Up Status',
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (r == null) ...[
+                const CircularProgressIndicator(color: AppTheme.accent),
+                const SizedBox(height: 16),
+                Text('Loading…', style: TextStyle(color: context.appTextSecondary)),
+              ] else if (r.isPending) ...[
+                const SizedBox(
+                    width: 64, height: 64,
+                    child: CircularProgressIndicator(color: AppTheme.warning, strokeWidth: 3)),
+                const SizedBox(height: 20),
+                Text('Waiting for admin approval…',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Text('${AppTheme.khr(r.amount)} · ${r.method}',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                const SizedBox(height: 24),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Check later'),
+                ),
+              ] else if (r.isApproved) ...[
+                const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 64),
+                const SizedBox(height: 20),
+                Text('Top-up approved!',
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text('${AppTheme.khr(r.amount)} has been added to your wallet.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.success,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ] else ...[
+                const Icon(Icons.cancel_rounded, color: AppTheme.danger, size: 64),
+                const SizedBox(height: 20),
+                Text('Top-up rejected',
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
+                if (r.adminNote != null && r.adminNote!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(r.adminNote!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                ],
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+              if (_error != null) ...[
+                const SizedBox(height: 16),
+                Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+              ],
+            ]),
+          ),
         ),
       ),
     );

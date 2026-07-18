@@ -20,6 +20,7 @@ import '../../models/wallet_model.dart';
 import '../auth/role_selection.dart';
 import '../auth/login_screen.dart';
 import '../passenger/passenger_home.dart';
+import '../passenger/wallet_screen.dart';
 import '../shared/chat_screen.dart';
 import '../passenger/safety_screen.dart';
 import 'driver_active_trip_screen.dart';
@@ -27,7 +28,6 @@ import 'driver_delivery_active_screen.dart';
 import 'driver_missions_screen.dart';
 import 'driver_history_screen.dart';
 import 'driver_earnings_screen.dart';
-import 'driver_withdrawal_screen.dart';
 import 'helmet_check_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
@@ -46,10 +46,96 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   bool   _modeRental   = false;
   String _vehicleType  = 'motorbike'; // raw type from VehicleModel.type
 
+  // Wallet-balance gate — checked before showing/allowing the online toggle.
+  // min_balance_khr is admin-configurable, so always read it from the API.
+  bool _canGoOnline      = true;
+  int  _walletBalanceKhr = 0;
+  int  _minBalanceKhr    = 0;
+
   bool get _isOnline => _driverStatus != DriverStatus.offline;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGoOnlineGate();
+  }
+
+  Future<void> _loadGoOnlineGate() async {
+    try {
+      final status = await ApiService.getDriverStatus();
+      if (!mounted) return;
+      setState(() {
+        _canGoOnline      = status.canGoOnline;
+        _walletBalanceKhr = status.walletBalanceKhr;
+        _minBalanceKhr    = status.minBalanceKhr;
+      });
+    } catch (_) {
+      // Fail open — don't block the dashboard if this check fails; the
+      // backend still enforces the gate on the actual go-online call.
+    }
+  }
+
+  void _showTopUpRequired({String? message, int? shortByKhr}) {
+    final shortfall = shortByKhr ?? (_minBalanceKhr - _walletBalanceKhr);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(children: [
+          const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.danger),
+          const SizedBox(width: 10),
+          const Expanded(child: Text('Top Up Required', style: TextStyle(fontWeight: FontWeight.w800))),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            message ??
+                'Your wallet balance is too low to go online. Please top up at least ${AppTheme.khr(_minBalanceKhr)} to continue.',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 13),
+          ),
+          if (shortfall > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text('Short by ${AppTheme.khr(shortfall)}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+          ],
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+              _loadGoOnlineGate();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Top Up Now'),
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _toggleOnline(bool value) async {
     if (_togglingOnline || _driverStatus == DriverStatus.busy) return;
+    if (value && !_canGoOnline) {
+      _showTopUpRequired();
+      return;
+    }
     setState(() => _togglingOnline = true);
     try {
       final user     = await ApiService.getSavedUser();
@@ -76,12 +162,17 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(e.message),
-          backgroundColor: AppTheme.danger,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ));
+        if (value && e.statusCode == 403) {
+          setState(() => _canGoOnline = false);
+          _showTopUpRequired(message: e.message);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message),
+            backgroundColor: AppTheme.danger,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ));
+        }
       }
     } finally {
       if (mounted) setState(() => _togglingOnline = false);
@@ -159,10 +250,11 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         onBusy:         _setBusy,
         onTripCompleted: _setOnlineAfterTrip,
       ),
-      const _DriverEarnings(),
+      _DriverEarnings(onWalletChanged: _loadGoOnlineGate),
       const DriverMissionsScreen(),
       const ChatScreen(isDriver: true),
-      _DriverProfile(onGoToEarnings: () => setState(() => _tab = 1)),
+      _DriverProfile(onGoToEarnings: () => setState(() => _tab = 1),
+          onWalletChanged: _loadGoOnlineGate),
     ];
 
     return Scaffold(
@@ -176,13 +268,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _NavItem(icon: Icons.dashboard_outlined,           label: 'Home',     index: 0, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.account_balance_wallet_outlined, label: AppLocalizations.of(context).earnings, index: 1, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.rocket_launch_outlined,       label: 'Missions', index: 2, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.chat_bubble_outline,          label: AppLocalizations.of(context).chat,     index: 3, current: _tab, onTap: (i) => setState(() => _tab = i)),
-                _NavItem(icon: Icons.person_outline,               label: AppLocalizations.of(context).profile,  index: 4, current: _tab, onTap: (i) => setState(() => _tab = i)),
+                Expanded(child: _NavItem(icon: Icons.dashboard_outlined,           label: 'Home',     index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.account_balance_wallet_outlined, label: AppLocalizations.of(context).earnings, index: 1, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.rocket_launch_outlined,       label: 'Missions', index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.chat_bubble_outline,          label: AppLocalizations.of(context).chat,     index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.person_outline,               label: AppLocalizations.of(context).profile,  index: 4, current: _tab, onTap: (i) => setState(() => _tab = i))),
               ],
             ),
           ),
@@ -208,7 +299,9 @@ class _NavItem extends StatelessWidget {
       onTap: () => onTap(index),
       child: AnimatedContainer(
         duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
           color: selected ? AppTheme.accentOrange.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -216,10 +309,14 @@ class _NavItem extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(icon, color: selected ? AppTheme.accentOrange : context.appTextSecondary, size: 22),
           SizedBox(height: 3),
-          Text(label, style: TextStyle(
-            color: selected ? AppTheme.accentOrange : context.appTextSecondary,
-            fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
-          )),
+          Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? AppTheme.accentOrange : context.appTextSecondary,
+                fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+              )),
         ]),
       ),
     );
@@ -1834,7 +1931,8 @@ class _RecentRidesSectionState extends State<_RecentRidesSection> {
 
 // ─── Earnings tab ─────────────────────────────────────────────────────────────
 class _DriverEarnings extends StatefulWidget {
-  const _DriverEarnings();
+  final VoidCallback? onWalletChanged;
+  const _DriverEarnings({this.onWalletChanged});
 
   @override
   State<_DriverEarnings> createState() => _DriverEarningsState();
@@ -1854,16 +1952,97 @@ class _DriverEarningsState extends State<_DriverEarnings> {
   bool _txLoading     = false;
   bool _txLoadingMore = false;
   String? _txError;
+  bool _showAllTx     = false; // false = today only, true = full history
+
+  bool _isToday(String createdAt) {
+    final dt = DateTime.tryParse(createdAt)?.toLocal();
+    if (dt == null) return false;
+    final now = DateTime.now();
+    return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+  }
+
+  List<WalletTransactionModel> get _visibleTx => _showAllTx
+      ? _transactions
+      : _transactions.where((t) => _isToday(t.createdAt)).toList();
 
   String _bank       = 'ABA Bank';
   bool   _withdrawing = false;
+  final _payoutAccNumCtrl  = TextEditingController();
+  final _payoutAccNameCtrl = TextEditingController();
 
   static const _banks = [
-    {'name': 'ABA Bank',    'icon': Icons.account_balance,        'color': Color(0xFF00D4AA)},
-    {'name': 'ACLEDA Bank', 'icon': Icons.account_balance_wallet, 'color': Color(0xFF2196F3)},
-    {'name': 'Wing Money',  'icon': Icons.phone_android,           'color': Color(0xFFFF6B35)},
-    {'name': 'Canadia Bank','icon': Icons.credit_card,             'color': Color(0xFF9C27B0)},
+    {'name': 'ABA Bank',    'icon': Icons.account_balance,        'color': Color(0xFF00D4AA), 'method': 'aba'},
+    {'name': 'ACLEDA Bank', 'icon': Icons.account_balance_wallet, 'color': Color(0xFF2196F3), 'method': 'acleda'},
+    {'name': 'Wing Money',  'icon': Icons.phone_android,           'color': Color(0xFFFF6B35), 'method': 'wing'},
+    {'name': 'Canadia Bank','icon': Icons.credit_card,             'color': Color(0xFF9C27B0), 'method': 'bank_transfer'},
   ];
+
+  String get _bankMethod => (_banks.firstWhere((b) => b['name'] == _bank)['method'] as String?) ?? 'bank_transfer';
+
+  @override
+  void dispose() {
+    _payoutAccNumCtrl.dispose();
+    _payoutAccNameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _openBankSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appSurface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40, height: 4,
+            decoration: BoxDecoration(
+                color: ctx.appCardBg, borderRadius: BorderRadius.circular(2)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Select Bank', style: TextStyle(
+                  color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
+            ),
+          ),
+          Divider(height: 1, color: ctx.appCardBg),
+          ..._banks.map((b) {
+            final name = b['name'] as String;
+            final isSel = name == _bank;
+            return InkWell(
+              onTap: () { setState(() => _bank = name); Navigator.pop(ctx); },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                child: Row(children: [
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: isSel
+                          ? (b['color'] as Color).withValues(alpha: 0.12)
+                          : ctx.appCardBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(b['icon'] as IconData,
+                        color: isSel ? b['color'] as Color : Colors.grey, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(name, style: TextStyle(
+                      color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14))),
+                  if (isSel) Icon(Icons.check_circle_rounded, color: b['color'] as Color, size: 20),
+                ]),
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -1937,34 +2116,124 @@ class _DriverEarningsState extends State<_DriverEarnings> {
       .where((t) => t.type == 'top_up')
       .fold<int>(0, (s, t) => s + t.amount);
 
+  // Approximate KHR → USD rate, same as used elsewhere in the app (e.g.
+  // coupon discount conversion in car_rental_screen.dart).
+  static const _khrPerUsd = 4100;
+
+  Future<void> _confirmWithdraw() async {
+    final balance = _wallet?.balance ?? 0;
+    final canWithdraw   = _wallet?.canWithdraw ?? true;
+    final minWithdrawal = _wallet?.minWithdrawalKhr ?? 0;
+    final hasPending    = _wallet?.hasPendingWithdrawal ?? false;
+    if (balance == 0 || _withdrawing || !canWithdraw || hasPending) return;
+    if (minWithdrawal > 0 && balance < minWithdrawal) return;
+    final usd = balance / _khrPerUsd;
+    String? fieldError;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Confirm Withdrawal',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Withdraw your full balance to $_bank?\nThis will be sent to admin for approval.',
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentOrange.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(children: [
+                  Text(AppTheme.khr(balance),
+                      style: const TextStyle(
+                          color: AppTheme.accentOrange, fontWeight: FontWeight.w800, fontSize: 20)),
+                  const SizedBox(height: 2),
+                  Text('≈ \$${usd.toStringAsFixed(2)} USD',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                ]),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _payoutAccNumCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Account Number',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _payoutAccNameCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Account Holder Name',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              if (fieldError != null) ...[
+                const SizedBox(height: 8),
+                Text(fieldError!, style: const TextStyle(color: AppTheme.danger, fontSize: 12)),
+              ],
+            ]),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('No'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (_payoutAccNumCtrl.text.trim().isEmpty || _payoutAccNameCtrl.text.trim().isEmpty) {
+                  setDialogState(() => fieldError = 'Please enter your account number and holder name.');
+                  return;
+                }
+                Navigator.pop(ctx, true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentOrange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Yes, Withdraw'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _withdraw();
+  }
+
   Future<void> _withdraw() async {
     final balance = _wallet?.balance ?? 0;
     if (balance == 0 || _withdrawing) return;
     setState(() => _withdrawing = true);
     try {
-      final result = await ApiService.withdraw(
-        amount: balance,
-        note:   'Withdrawal to $_bank',
+      // Goes into Driver Payouts, pending admin approval — not an instant
+      // wallet debit.
+      await ApiService.requestWithdrawal(
+        amountKhr:     balance,
+        paymentMethod: _bankMethod,
+        accountNumber: _payoutAccNumCtrl.text.trim(),
+        accountName:   _payoutAccNameCtrl.text.trim(),
+        bankName:      _bank,
       );
       if (!mounted) return;
-      setState(() {
-        _withdrawing = false;
-        // Update displayed balance optimistically
-        if (_wallet != null) {
-          _wallet = WalletModel(
-            balance:      result.newBalance,
-            currency:     _wallet!.currency,
-            transactions: _wallet!.transactions,
-          );
-        }
-      });
+      setState(() => _withdrawing = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('✅ ${AppTheme.khr(balance)} sent to $_bank'),
+        content: Text('✅ Withdrawal request for ${AppTheme.khr(balance)} submitted — pending admin approval'),
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ));
-      // Refresh full data to get updated transactions
+      // Refresh full data to reflect any pending-payout state from backend
       _loadAll();
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -2041,6 +2310,28 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                           Text(AppTheme.usd(balance / 4000),
                               style: const TextStyle(
                                   color: Colors.white70, fontSize: 13)),
+                          const SizedBox(height: 12),
+                          GestureDetector(
+                            onTap: () async {
+                              await Navigator.push(context,
+                                  MaterialPageRoute(builder: (_) => const WalletScreen()));
+                              widget.onWalletChanged?.call();
+                              _loadAll();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(Icons.add_circle_outline, color: Colors.white, size: 16),
+                                SizedBox(width: 6),
+                                Text('Top Up', style: TextStyle(
+                                    color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                              ]),
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -2074,11 +2365,21 @@ class _DriverEarningsState extends State<_DriverEarnings> {
 
             // ── Transaction history ───────────────────────────────────────
             Row(children: [
-              Expanded(child: SectionHeader(title: 'Transaction History')),
-              if (_total > 0)
+              Expanded(child: SectionHeader(
+                  title: _showAllTx ? 'Transaction History' : "Today's Transactions")),
+              if (_showAllTx && _total > 0)
                 Text('$_total total',
                     style: TextStyle(
                         color: context.appTextSecondary, fontSize: 12)),
+              if (!_showAllTx)
+                TextButton(
+                  onPressed: () => setState(() => _showAllTx = true),
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero,
+                      minimumSize: Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  child: Text('Show All',
+                      style: TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w600)),
+                ),
             ]),
             SizedBox(height: 14),
 
@@ -2109,20 +2410,20 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                   ),
                 ]),
               )
-            else if (_transactions.isEmpty)
+            else if (_visibleTx.isEmpty)
               Container(
                 padding: EdgeInsets.all(24),
                 decoration: BoxDecoration(
                     color: context.appSurface,
                     borderRadius: BorderRadius.circular(14)),
                 child: Center(
-                  child: Text('No transactions yet',
+                  child: Text(_showAllTx ? 'No transactions yet' : 'No transactions today',
                       style: TextStyle(color: context.appTextSecondary)),
                 ),
               )
             else ...[
-              ..._transactions.map((t) => _TxnTile(txn: t)),
-              if (_currentPage < _lastPage)
+              ..._visibleTx.map((t) => _TxnTile(txn: t)),
+              if (_showAllTx && _currentPage < _lastPage)
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
                   child: Center(
@@ -2147,71 +2448,103 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             // ── Instant withdrawal ────────────────────────────────────────
             SectionHeader(title: 'Instant Withdrawal'),
             SizedBox(height: 12),
-            ..._banks.map((b) => GestureDetector(
-              onTap: () => setState(() => _bank = b['name'] as String),
-              child: Container(
-                margin: EdgeInsets.only(bottom: 10),
-                padding: EdgeInsets.all(14),
+            if (_wallet?.hasPendingWithdrawal ?? false) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                      color: _bank == b['name']
-                          ? AppTheme.accent
-                          : Colors.transparent),
+                  color: AppTheme.warning.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
                 ),
                 child: Row(children: [
-                  Icon(b['icon'] as IconData,
-                      color: b['color'] as Color, size: 22),
-                  SizedBox(width: 12),
-                  Text(b['name'] as String,
-                      style: TextStyle(
-                          color: context.appTextPrimary,
-                          fontWeight: FontWeight.w600)),
-                  Spacer(),
-                  Icon(
-                    _bank == b['name']
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                    color: _bank == b['name']
-                        ? AppTheme.accent
-                        : context.appTextSecondary,
-                    size: 20,
-                  ),
+                  const Icon(Icons.schedule_rounded, color: AppTheme.warning, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(
+                      'You have a withdrawal request pending admin approval.',
+                      style: TextStyle(color: context.appTextPrimary, fontSize: 12, fontWeight: FontWeight.w600))),
                 ]),
               ),
-            )),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: (balance == 0 || _withdrawing) ? null : _withdraw,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.accentOrange,
-                  disabledBackgroundColor:
-                      AppTheme.accentOrange.withValues(alpha: 0.4),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+              const SizedBox(height: 12),
+            ],
+            Builder(builder: (context) {
+              final selected = _banks.firstWhere((b) => b['name'] == _bank);
+              return GestureDetector(
+                onTap: () => _openBankSheet(context),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: context.appCardBg),
+                  ),
+                  child: Row(children: [
+                    Icon(selected['icon'] as IconData,
+                        color: selected['color'] as Color, size: 22),
+                    SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Bank', style: TextStyle(
+                          color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
+                      SizedBox(height: 2),
+                      Text(selected['name'] as String,
+                          style: TextStyle(
+                              color: context.appTextPrimary,
+                              fontWeight: FontWeight.w700, fontSize: 14)),
+                    ])),
+                    Icon(Icons.keyboard_arrow_down, color: context.appTextSecondary, size: 22),
+                  ]),
                 ),
-                child: _withdrawing
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2.5))
-                    : Text(
-                        balance == 0
-                            ? 'No balance to withdraw'
-                            : '💸  Withdraw ${AppTheme.khr(balance)} to $_bank',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 15)),
-              ),
-            ),
+              );
+            }),
+            const SizedBox(height: 16),
+            Builder(builder: (context) {
+              final canWithdraw   = _wallet?.canWithdraw ?? true;
+              final minWithdrawal = _wallet?.minWithdrawalKhr ?? 0;
+              final hasPending    = _wallet?.hasPendingWithdrawal ?? false;
+              final belowMin      = minWithdrawal > 0 && balance < minWithdrawal;
+              final disabled = balance == 0 || _withdrawing || !canWithdraw || hasPending || belowMin;
+
+              String label;
+              if (hasPending) {
+                label = 'Withdrawal pending approval';
+              } else if (balance == 0) {
+                label = 'No balance to withdraw';
+              } else if (belowMin) {
+                label = 'Minimum withdrawal: ${AppTheme.khr(minWithdrawal)}';
+              } else if (!canWithdraw) {
+                label = 'Withdrawals unavailable';
+              } else {
+                label = '💸  Withdraw ${AppTheme.khr(balance)} to $_bank';
+              }
+
+              return SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: disabled ? null : _confirmWithdraw,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentOrange,
+                    disabledBackgroundColor:
+                        AppTheme.accentOrange.withValues(alpha: 0.4),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _withdrawing
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2.5))
+                      : Text(label,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w800, fontSize: 15)),
+                ),
+              );
+            }),
             SizedBox(height: 8),
             Center(
-              child: Text('Funds arrive within 5 minutes',
+              child: Text('Reviewed by admin before funds are sent',
                   style: TextStyle(
                       color: context.appTextSecondary, fontSize: 12)),
             ),
@@ -2255,15 +2588,45 @@ class _TxnTile extends StatelessWidget {
       case 'platform_commission': return Icons.percent;
       case 'bonus':               return Icons.emoji_events;
       case 'top_up':              return Icons.add_circle_outline;
+      case 'withdrawal':          return Icons.account_balance_outlined;
       case 'refund':              return Icons.undo;
       default:                    return Icons.swap_horiz;
     }
   }
 
+  Color get _statusColor {
+    switch (txn.status) {
+      case 'completed':  return AppTheme.success;
+      case 'pending':    return AppTheme.warning;
+      case 'processing': return AppTheme.accentOrange;
+      case 'failed':
+      case 'rejected':
+      case 'cancelled':  return AppTheme.danger;
+      default:            return Colors.grey;
+    }
+  }
+
+  IconData get _statusIcon {
+    switch (txn.status) {
+      case 'completed':  return Icons.check_circle_rounded;
+      case 'pending':     return Icons.schedule_rounded;
+      case 'processing': return Icons.autorenew_rounded;
+      case 'failed':
+      case 'rejected':
+      case 'cancelled':  return Icons.cancel_rounded;
+      default:            return Icons.circle;
+    }
+  }
+
+  String get _statusLabel =>
+      txn.status.isEmpty ? '' : txn.status[0].toUpperCase() + txn.status.substring(1);
+
   @override
   Widget build(BuildContext context) {
-    final isCredit  = txn.isCredit;
-    final itemColor = isCredit ? AppTheme.success : AppTheme.accentOrange;
+    final isCredit    = txn.isCredit;
+    final itemColor   = isCredit ? AppTheme.success : AppTheme.accentOrange;
+    final statusColor = _statusColor;
+    final isPending    = txn.status == 'pending' || txn.status == 'processing';
     final amountStr = isCredit
         ? '+${AppTheme.khr(txn.amount)}'
         : '-${AppTheme.khr(txn.amount)}';
@@ -2273,7 +2636,9 @@ class _TxnTile extends StatelessWidget {
       padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
           color: context.appSurface,
-          borderRadius: BorderRadius.circular(14)),
+          borderRadius: BorderRadius.circular(14),
+          border: Border(left: BorderSide(
+              color: isPending ? statusColor : Colors.transparent, width: 3))),
       child: Row(children: [
         Container(
           padding: EdgeInsets.all(10),
@@ -2303,14 +2668,19 @@ class _TxnTile extends StatelessWidget {
                   SizedBox(width: 8),
                   Container(
                     padding: EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 1),
+                        horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                        color: context.appCardBg,
-                        borderRadius: BorderRadius.circular(4)),
-                    child: Text(txn.status,
-                        style: TextStyle(
-                            color: context.appTextSecondary,
-                            fontSize: 10)),
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(_statusIcon, color: statusColor, size: 10),
+                      const SizedBox(width: 3),
+                      Text(_statusLabel,
+                          style: TextStyle(
+                              color: statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ]),
                   ),
                 ]),
               ]),
@@ -2333,8 +2703,9 @@ class _TxnTile extends StatelessWidget {
 
 // ─── Driver profile ───────────────────────────────────────────────────────────
 class _DriverProfile extends StatefulWidget {
-  const _DriverProfile({required this.onGoToEarnings});
+  const _DriverProfile({required this.onGoToEarnings, this.onWalletChanged});
   final VoidCallback onGoToEarnings;
+  final VoidCallback? onWalletChanged;
 
   @override
   State<_DriverProfile> createState() => _DriverProfileState();
@@ -2431,7 +2802,10 @@ class _DriverProfileState extends State<_DriverProfile> {
               ...([
                 (l.bankPayouts,     Icons.account_balance_outlined, () => widget.onGoToEarnings(), false),
                 ('My Earnings',     Icons.account_balance_wallet_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverEarningsScreen())), false),
-                ('Withdraw Earnings', Icons.send_rounded,           () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverWithdrawalScreen())), false),
+                ('Top Up Wallet',   Icons.add_circle_outline,       () async {
+                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+                  widget.onWalletChanged?.call();
+                }, false),
                 ('Helmet Check',    Icons.security_rounded,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelmetCheckScreen())), false),
                 (l.safetySettings,  Icons.shield_outlined,          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())),  false),
                 (l.documents,       Icons.description_outlined,     () {}, false),
@@ -2444,14 +2818,18 @@ class _DriverProfileState extends State<_DriverProfile> {
                     (_) => false,
                   );
                 }, true),
-              ].map((item) => Container(
-                margin: EdgeInsets.only(bottom: 10),
-                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-                child: ListTile(
-                  leading: Icon(item.$2, color: item.$4 ? AppTheme.danger : context.appTextSecondary, size: 20),
-                  title: Text(item.$1, style: TextStyle(color: item.$4 ? AppTheme.danger : context.appTextPrimary, fontSize: 14)),
-                  trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
-                  onTap: item.$3,
+              ].map((item) => Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: context.appSurface,
+                  borderRadius: BorderRadius.circular(14),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    leading: Icon(item.$2, color: item.$4 ? AppTheme.danger : context.appTextSecondary, size: 20),
+                    title: Text(item.$1, style: TextStyle(color: item.$4 ? AppTheme.danger : context.appTextPrimary, fontSize: 14)),
+                    trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
+                    onTap: item.$3,
+                  ),
                 ),
               ))),
               // ── Switch to Passenger Mode ────────────────────────────────

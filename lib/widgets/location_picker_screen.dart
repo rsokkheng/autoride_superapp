@@ -184,27 +184,31 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
               Container(
                 margin: const EdgeInsets.fromLTRB(62, 6, 12, 0),
                 decoration: BoxDecoration(
-                  color: context.appSurface,
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12),
                       blurRadius: 10)],
                 ),
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _results.length.clamp(0, 5),
-                  separatorBuilder: (_, __) => Divider(height: 1, color: context.appCardBg),
-                  itemBuilder: (_, i) {
-                    final r = _results[i];
-                    return ListTile(
-                      dense: true,
-                      leading: const Icon(Icons.place_outlined,
-                          color: AppTheme.accent, size: 18),
-                      title: Text(r.address, maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: context.appTextPrimary, fontSize: 13)),
-                      onTap: () => _selectResult(r),
-                    );
-                  },
+                child: Material(
+                  color: context.appSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _results.length.clamp(0, 5),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: context.appCardBg),
+                    itemBuilder: (_, i) {
+                      final r = _results[i];
+                      return ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.place_outlined,
+                            color: AppTheme.accent, size: 18),
+                        title: Text(r.address, maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.appTextPrimary, fontSize: 13)),
+                        onTap: () => _selectResult(r),
+                      );
+                    },
+                  ),
                 ),
               ),
           ]),
@@ -263,11 +267,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     ));
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
+                    backgroundColor: AppTheme.confirmBlue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
-                    disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
+                    disabledBackgroundColor: AppTheme.confirmBlue.withValues(alpha: 0.4),
                   ),
                   child: const Text('Confirm Location',
                       style: TextStyle(fontWeight: FontWeight.w700)),

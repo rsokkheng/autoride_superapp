@@ -892,7 +892,8 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      return DriverStatusModel.fromJson(body);
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return DriverStatusModel.fromJson(data);
     }
 
     final message = body['message'] as String? ??
@@ -1501,14 +1502,6 @@ class ApiService {
     return jsonDecode(raw.body) as Map<String, dynamic>;
   }
 
-  static Future<Map<String, dynamic>> getDriverEarningsSummary({String period = 'today'}) async {
-    final token = await getToken();
-    if (token == null) return {'total': 0, 'trips': [], 'trip_count': 0};
-    final raw = await _rawGet('/driver/earnings?period=$period', token: token);
-    if (raw.statusCode != 200) return {'total': 0, 'trips': [], 'trip_count': 0};
-    return jsonDecode(raw.body) as Map<String, dynamic>;
-  }
-
   static Future<RideModel> declineRide(int id) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -1957,7 +1950,7 @@ class ApiService {
     }
   }
 
-  // ── Unified trip history ─────────────────────────────────────────────────
+  // ── Unified Trip ─────────────────────────────────────────────────
 
   static Future<TripListResult> getTrips({
     String filter = 'recent', // recent | day | month
@@ -2786,7 +2779,12 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      // 'data' may be a flat array of transactions, or a nested object
+      // ({ transactions / data: [...], pagination fields }) — support both.
+      final rawData = body['data'];
+      final Map<String, dynamic> data = rawData is Map<String, dynamic>
+          ? rawData
+          : rawData is List ? {...body, 'transactions': rawData} : body;
       return WalletTransactionsPage.fromJson(data);
     }
 
@@ -2984,7 +2982,17 @@ class ApiService {
     final raw  = await _rawGet('/saved-places', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? (body['saved_places'] as List<dynamic>?) ?? [];
+      // 'data' may be a flat array, or a nested object
+      // ({ saved_places / data: [...] }) — support both shapes.
+      final rawData = body['data'];
+      final List<dynamic> list;
+      if (rawData is List) {
+        list = rawData;
+      } else if (rawData is Map<String, dynamic>) {
+        list = (rawData['saved_places'] as List<dynamic>?) ?? (rawData['data'] as List<dynamic>?) ?? [];
+      } else {
+        list = (body['saved_places'] as List<dynamic>?) ?? [];
+      }
       return list.whereType<Map<String, dynamic>>().map(SavedPlaceModel.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
@@ -3203,9 +3211,23 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Invalid promo code.', raw.statusCode);
   }
 
-  // ── Driver earnings (with period) ─────────────────────────────────────────
+  // ── Driver earnings ────────────────────────────────────────────────────────
 
-  static Future<DriverEarningsModel> getDriverEarnings({String period = 'daily'}) async {
+  /// GET /driver/earnings/summary — dashboard summary card.
+  static Future<DriverEarningsSummaryModel> getDriverEarningsSummary() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/driver/earnings/summary', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return DriverEarningsSummaryModel.fromJson(data);
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load earnings summary.', raw.statusCode);
+  }
+
+  /// GET /driver/earnings?period=daily|weekly|monthly
+  static Future<DriverEarningsModel> getDriverEarningsByPeriod({String period = 'daily'}) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw  = await _rawGet('/driver/earnings?period=$period', token: token);
@@ -3215,6 +3237,23 @@ class ApiService {
       return DriverEarningsModel.fromJson(data);
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  /// GET /driver/earnings/history?days=7 — zero-filled daily chart data.
+  static Future<List<DriverEarningsHistoryItem>> getDriverEarningsHistory({int days = 7}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/driver/earnings/history?days=$days', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data  = (body['data'] as Map<String, dynamic>?) ?? body;
+      final items = (data['items'] as List<dynamic>?) ?? [];
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map(DriverEarningsHistoryItem.fromJson)
+          .toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load earnings history.', raw.statusCode);
   }
 
   // ── Driver incentives ─────────────────────────────────────────────────────
@@ -5278,43 +5317,125 @@ class PromoValidationResult {
 // ── Driver earnings model ─────────────────────────────────────────────────────
 
 class DriverEarningsModel {
-  final double totalEarnings;
-  final double totalTrips;
-  final double totalHours;
   final String period;
+  final int    rideEarnings;
+  final int    deliveryEarnings;
+  final int    totalEarnings;
+  final int    tripCount;
+  final int    deliveryCount;
+  final String currency;
+  final int    walletBalance;
   final List<EarningEntryModel> breakdown;
 
   const DriverEarningsModel({
-    required this.totalEarnings, required this.totalTrips,
-    required this.totalHours,   required this.period,
+    required this.period,
+    required this.rideEarnings,
+    required this.deliveryEarnings,
+    required this.totalEarnings,
+    required this.tripCount,
+    required this.deliveryCount,
+    required this.currency,
+    required this.walletBalance,
     required this.breakdown,
   });
 
   factory DriverEarningsModel.fromJson(Map<String, dynamic> j) {
     final list = (j['breakdown'] as List<dynamic>?) ?? [];
     return DriverEarningsModel(
-      totalEarnings: (j['total_earnings'] as num? ?? 0).toDouble(),
-      totalTrips:    (j['total_trips']    as num? ?? 0).toDouble(),
-      totalHours:    (j['total_hours']    as num? ?? 0).toDouble(),
-      period:        j['period'] as String? ?? 'daily',
-      breakdown:     list.whereType<Map<String, dynamic>>()
+      period:           j['period'] as String? ?? 'daily',
+      rideEarnings:     _toInt(j['ride_earnings']),
+      deliveryEarnings: _toInt(j['delivery_earnings']),
+      totalEarnings:    _toInt(j['total_earnings']),
+      tripCount:        _toInt(j['trip_count']),
+      deliveryCount:    _toInt(j['delivery_count']),
+      currency:         j['currency'] as String? ?? 'KHR',
+      walletBalance:    _toInt(j['wallet_balance']),
+      breakdown:        list.whereType<Map<String, dynamic>>()
           .map(EarningEntryModel.fromJson).toList(),
     );
   }
+
+  static int _toInt(dynamic v) =>
+      v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
 }
 
 class EarningEntryModel {
   final String date;
-  final double amount;
+  final int    total;
   final int    trips;
 
-  const EarningEntryModel({required this.date, required this.amount, required this.trips});
+  const EarningEntryModel({required this.date, required this.total, required this.trips});
 
   factory EarningEntryModel.fromJson(Map<String, dynamic> j) => EarningEntryModel(
-    date:   j['date'] as String? ?? '',
-    amount: (j['amount'] as num? ?? 0).toDouble(),
-    trips:  j['trips']  as int? ?? 0,
+    date:  j['date'] as String? ?? '',
+    total: _toInt(j['total'] ?? j['amount']),
+    trips: _toInt(j['trips']),
   );
+
+  static int _toInt(dynamic v) =>
+      v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
+}
+
+// ── Driver earnings summary model (dashboard card) ────────────────────────────
+
+class DriverEarningsSummaryModel {
+  final int    todayKhr;
+  final int    weekKhr;
+  final int    totalTrips;
+  final String currency;
+  final int    walletBalance;
+  final double walletBalanceUsd;
+  final bool   canWithdraw;
+  final int    minWithdrawalKhr;
+  final Map<String, dynamic>? pendingWithdrawal;
+
+  const DriverEarningsSummaryModel({
+    required this.todayKhr,
+    required this.weekKhr,
+    required this.totalTrips,
+    required this.currency,
+    required this.walletBalance,
+    required this.walletBalanceUsd,
+    required this.canWithdraw,
+    required this.minWithdrawalKhr,
+    this.pendingWithdrawal,
+  });
+
+  bool get hasPendingWithdrawal => pendingWithdrawal != null;
+
+  factory DriverEarningsSummaryModel.fromJson(Map<String, dynamic> j) => DriverEarningsSummaryModel(
+    todayKhr:          _toInt(j['today_khr']),
+    weekKhr:           _toInt(j['week_khr']),
+    totalTrips:        _toInt(j['total_trips']),
+    currency:          j['currency'] as String? ?? 'KHR',
+    walletBalance:     _toInt(j['wallet_balance']),
+    walletBalanceUsd:  (j['wallet_balance_usd'] as num? ?? 0).toDouble(),
+    canWithdraw:       j['can_withdraw'] as bool? ?? true,
+    minWithdrawalKhr:  _toInt(j['min_withdrawal_khr']),
+    pendingWithdrawal: j['pending_withdrawal'] as Map<String, dynamic>?,
+  );
+
+  static int _toInt(dynamic v) =>
+      v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
+}
+
+// ── Driver earnings history model (chart data) ────────────────────────────────
+
+class DriverEarningsHistoryItem {
+  final String date;
+  final int    trips;
+  final int    amountKhr;
+
+  const DriverEarningsHistoryItem({required this.date, required this.trips, required this.amountKhr});
+
+  factory DriverEarningsHistoryItem.fromJson(Map<String, dynamic> j) => DriverEarningsHistoryItem(
+    date:      j['date'] as String? ?? '',
+    trips:     _toInt(j['trips']),
+    amountKhr: _toInt(j['amount_khr']),
+  );
+
+  static int _toInt(dynamic v) =>
+      v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
 }
 
 // ── Driver incentive model ────────────────────────────────────────────────────

@@ -185,8 +185,10 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           final email= u['email'] as String? ?? '';
           final role = u['role']  as String? ?? '';
           final roleColor = role == 'admin' ? AppTheme.danger : role == 'driver' ? AppTheme.accentOrange : AppTheme.accent;
-          return Container(
-            decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(12)),
+          return Material(
+            color: context.appSurface,
+            borderRadius: BorderRadius.circular(12),
+            clipBehavior: Clip.antiAlias,
             child: ListTile(
               contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               leading: CircleAvatar(

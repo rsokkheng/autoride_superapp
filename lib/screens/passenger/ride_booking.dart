@@ -1355,7 +1355,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             child: ElevatedButton(
               onPressed: () => _goToStep(2),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
+                backgroundColor: AppTheme.confirmBlue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -1598,9 +1598,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           _afterStopFilled();
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.danger,
+                    backgroundColor: AppTheme.confirmBlue,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.danger.withValues(alpha: 0.4),
+                    disabledBackgroundColor: AppTheme.confirmBlue.withValues(alpha: 0.4),
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -2061,7 +2061,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             child: ElevatedButton(
               onPressed: _isBooking ? null : _bookRide,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.danger,
+                backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.confirmBlue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

@@ -84,12 +84,52 @@ class _WithdrawFormState extends State<_WithdrawForm> {
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  Future<void> _confirmAndSubmit() async {
     final amt = int.tryParse(_amtCtrl.text.trim());
     if (amt == null || amt <= 0) { setState(() => _error = 'Enter a valid amount.'); return; }
     if (_accNumCtrl.text.trim().isEmpty) { setState(() => _error = 'Enter account number.'); return; }
     if (_accNameCtrl.text.trim().isEmpty) { setState(() => _error = 'Enter account holder name.'); return; }
 
+    final methodLabel = _methods.firstWhere((m) => m.$1 == _method).$2;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Confirm Withdrawal',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _ConfirmRow('Amount', '${amt.toString()} ៛'),
+          _ConfirmRow('Method', methodLabel),
+          _ConfirmRow('Account Number', _accNumCtrl.text.trim()),
+          _ConfirmRow('Account Name', _accNameCtrl.text.trim()),
+          if (_bankCtrl.text.trim().isNotEmpty)
+            _ConfirmRow('Bank', _bankCtrl.text.trim()),
+          const SizedBox(height: 8),
+          Text('Please make sure these details are correct. This cannot be undone once submitted.',
+              style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color, fontSize: 12)),
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.confirmBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    await _submit(amt);
+  }
+
+  Future<void> _submit(int amt) async {
     setState(() { _submitting = true; _error = null; });
     try {
       await ApiService.requestWithdrawal(
@@ -184,7 +224,7 @@ class _WithdrawFormState extends State<_WithdrawForm> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _submitting ? null : _submit,
+            onPressed: _submitting ? null : _confirmAndSubmit,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
               disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
@@ -199,6 +239,25 @@ class _WithdrawFormState extends State<_WithdrawForm> {
       ]),
     );
   }
+}
+
+class _ConfirmRow extends StatelessWidget {
+  final String label, value;
+  const _ConfirmRow(this.label, this.value);
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(
+        width: 110,
+        child: Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+      ),
+      Expanded(
+        child: Text(value,
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+      ),
+    ]),
+  );
 }
 
 class _Field extends StatelessWidget {

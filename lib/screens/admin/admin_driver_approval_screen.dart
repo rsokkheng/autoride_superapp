@@ -401,7 +401,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, ctrl.text.trim().isEmpty ? '' : ctrl.text.trim()),
-              style: ElevatedButton.styleFrom(backgroundColor: _green),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.confirmBlue),
               child: const Text('Confirm Approve', style: TextStyle(color: Colors.white)),
             ),
           ],

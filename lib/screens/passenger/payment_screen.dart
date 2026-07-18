@@ -345,7 +345,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _paying ? null : _pay,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _kGreen,
+                    backgroundColor: AppTheme.confirmBlue,
                     disabledBackgroundColor: Colors.grey[300],
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     elevation: 0,

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/location_picker_screen.dart';
 
 const _green = Color(0xFF00C48C);
 
@@ -190,13 +192,13 @@ class _PlaceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10),
+      child: Material(
         color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
-      ),
-      child: ListTile(
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
         contentPadding: EdgeInsets.symmetric(
             horizontal: 16, vertical: 4),
         leading: Container(
@@ -257,6 +259,7 @@ class _PlaceTile extends StatelessWidget {
             },
           ),
         ]),
+        ),
       ),
     );
   }
@@ -370,11 +373,11 @@ class _AddEditSheet extends StatefulWidget {
 
 class _AddEditSheetState extends State<_AddEditSheet> {
   final _labelCtrl   = TextEditingController();
-  final _addressCtrl = TextEditingController();
-  final _latCtrl     = TextEditingController();
-  final _lngCtrl     = TextEditingController();
+  String  _address = '';
+  LatLng? _latLng;
   bool  _isDefault = false;
   bool  _saving    = false;
+  bool  _picking   = false;
   String? _error;
 
   @override
@@ -382,11 +385,10 @@ class _AddEditSheetState extends State<_AddEditSheet> {
     super.initState();
     final e = widget.existing;
     if (e != null) {
-      _labelCtrl.text   = e.label;
-      _addressCtrl.text = e.address;
-      _latCtrl.text     = e.lat.toString();
-      _lngCtrl.text     = e.lng.toString();
-      _isDefault        = e.isDefault;
+      _labelCtrl.text = e.label;
+      _address        = e.address;
+      _latLng         = LatLng(e.lat, e.lng);
+      _isDefault      = e.isDefault;
     } else if (widget.presetLabel != null) {
       _labelCtrl.text = widget.presetLabel!;
     }
@@ -394,18 +396,36 @@ class _AddEditSheetState extends State<_AddEditSheet> {
 
   @override
   void dispose() {
-    _labelCtrl.dispose(); _addressCtrl.dispose();
-    _latCtrl.dispose(); _lngCtrl.dispose();
+    _labelCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _pickLocation() async {
+    setState(() => _picking = true);
+    final result = await Navigator.push<LocationPickResult>(
+      context,
+      MaterialPageRoute(builder: (_) => LocationPickerScreen(
+        title:    'Set Location',
+        pinColor: _green,
+        initial:  _latLng,
+      )),
+    );
+    if (!mounted) return;
+    setState(() {
+      _picking = false;
+      if (result != null) {
+        _address = result.address;
+        _latLng  = result.latLng;
+      }
+    });
+  }
+
   Future<void> _save() async {
-    final label   = _labelCtrl.text.trim();
-    final address = _addressCtrl.text.trim();
-    final lat     = double.tryParse(_latCtrl.text.trim()) ?? 0;
-    final lng     = double.tryParse(_lngCtrl.text.trim()) ?? 0;
-    if (label.isEmpty || address.isEmpty) {
-      setState(() => _error = 'Label and address are required');
+    final label = _labelCtrl.text.trim();
+    final lat   = _latLng?.latitude  ?? 0;
+    final lng   = _latLng?.longitude ?? 0;
+    if (label.isEmpty || _address.isEmpty || _latLng == null) {
+      setState(() => _error = 'Label and location are required');
       return;
     }
     setState(() { _saving = true; _error = null; });
@@ -413,11 +433,11 @@ class _AddEditSheetState extends State<_AddEditSheet> {
       SavedPlaceModel result;
       if (widget.existing != null) {
         result = await ApiService.updateSavedPlace(widget.existing!.id,
-            label: label, address: address, lat: lat, lng: lng,
+            label: label, address: _address, lat: lat, lng: lng,
             isDefault: _isDefault);
       } else {
         result = await ApiService.addSavedPlace(
-            label: label, address: address, lat: lat, lng: lng,
+            label: label, address: _address, lat: lat, lng: lng,
             isDefault: _isDefault);
       }
       if (!mounted) return;
@@ -460,23 +480,43 @@ class _AddEditSheetState extends State<_AddEditSheet> {
             hint: 'Home, Work, Gym…',
             icon: Icons.bookmark_outline),
         SizedBox(height: 12),
-        _SheetField(ctrl: _addressCtrl, label: 'Address',
-            hint: 'Full address',
-            icon: Icons.location_on_outlined),
-        SizedBox(height: 12),
-        Row(children: [
-          Expanded(child: _SheetField(ctrl: _latCtrl, label: 'Latitude',
-              hint: '11.5564',
-              icon: Icons.my_location,
-              keyboardType: TextInputType.numberWithOptions(
-                  signed: true, decimal: true))),
-          SizedBox(width: 10),
-          Expanded(child: _SheetField(ctrl: _lngCtrl, label: 'Longitude',
-              hint: '104.9282',
-              icon: Icons.my_location,
-              keyboardType: TextInputType.numberWithOptions(
-                  signed: true, decimal: true))),
-        ]),
+        Text('Location', style: TextStyle(
+            color: context.appTextSecondary, fontSize: 12,
+            fontWeight: FontWeight.w600)),
+        SizedBox(height: 4),
+        InkWell(
+          onTap: _picking ? null : _pickLocation,
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: context.appCardBg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(children: [
+              Icon(Icons.location_on_outlined,
+                  color: _address.isEmpty ? context.appTextSecondary : _green, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _picking
+                    ? Text('Opening map…',
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 14))
+                    : Text(
+                        _address.isEmpty ? 'Search or drag pin on map' : _address,
+                        maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: _address.isEmpty
+                                ? context.appTextSecondary
+                                : context.appTextPrimary,
+                            fontSize: 14),
+                      ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: context.appTextSecondary, size: 18),
+            ]),
+          ),
+        ),
         SizedBox(height: 12),
 
         Row(children: [

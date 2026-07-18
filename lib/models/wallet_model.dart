@@ -94,6 +94,7 @@ class TopUpRequestModel {
   final String  method;   // 'cash' | 'online' | 'company_credit'
   final String? note;
   final String  status;   // 'pending' | 'approved' | 'rejected'
+  final String? adminNote;
   final int?    approvedBy;
   final String? approvedAt;
   final String  createdAt;
@@ -105,6 +106,7 @@ class TopUpRequestModel {
     required this.method,
     this.note,
     required this.status,
+    this.adminNote,
     this.approvedBy,
     this.approvedAt,
     required this.createdAt,
@@ -120,6 +122,7 @@ class TopUpRequestModel {
       method:     r['method']?.toString()      ?? 'cash',
       note:       r['note']?.toString(),
       status:     r['status']?.toString()      ?? 'pending',
+      adminNote:  r['admin_note']?.toString(),
       approvedBy: r['approved_by'] == null ? null : _toInt(r['approved_by']),
       approvedAt: r['approved_at']?.toString(),
       createdAt:  r['created_at']?.toString()  ?? '',
@@ -164,23 +167,37 @@ class WalletTransactionsPage {
   });
 
   factory WalletTransactionsPage.fromJson(Map<String, dynamic> json) {
-    // API may return paginated list under 'transactions', 'data', or root level
-    final page = (json['transactions'] as Map<String, dynamic>?)
-        ?? (json['data'] as Map<String, dynamic>?)
-        ?? json;
-    final rawList = page['data'] as List<dynamic>?
-        ?? json['data'] as List<dynamic>?
-        ?? [];
+    // 'transactions' may be a flat list (with pagination info in a sibling
+    // 'pagination' object) or a nested Laravel paginator ({ data: [...],
+    // current_page, ... }) — support both shapes.
+    final txField = json['transactions'];
+    final List<dynamic> rawList;
+    Map<String, dynamic>? paginator;
+    if (txField is List) {
+      rawList = txField;
+    } else if (txField is Map<String, dynamic>) {
+      paginator = txField;
+      rawList = (txField['data'] as List<dynamic>?) ?? [];
+    } else {
+      rawList = (json['data'] as List<dynamic>?) ?? [];
+    }
+
+    // Pagination metadata: prefer a sibling 'pagination' object, else fall
+    // back to fields on the paginator itself, else on the root object.
+    final pageInfo = (json['pagination'] as Map<String, dynamic>?) ?? paginator ?? json;
+
     final data = rawList
         .whereType<Map<String, dynamic>>()
         .map(WalletTransactionModel.fromJson)
         .toList();
+    final currentPage = _toInt(pageInfo['current_page'] ?? 1);
+    final lastPage     = _toInt(pageInfo['last_page'] ?? 1);
     return WalletTransactionsPage(
       transactions: data,
-      currentPage:  _toInt(page['current_page']),
-      lastPage:     _toInt(page['last_page'] ?? 1),
-      total:        _toInt(page['total']),
-      hasNextPage:  page['next_page_url'] != null,
+      currentPage:  currentPage,
+      lastPage:     lastPage,
+      total:        _toInt(pageInfo['total']),
+      hasNextPage:  pageInfo['next_page_url'] != null || currentPage < lastPage,
     );
   }
 
@@ -192,27 +209,53 @@ class WalletModel {
   final int    balance;      // KHR
   final String currency;
   final List<WalletTransactionModel> transactions;
+  // Withdrawal eligibility — min_withdrawal_khr is admin-configurable
+  // (Settings → Ride Pricing), never hardcode it on the frontend.
+  final bool    canWithdraw;
+  final int     minWithdrawalKhr;
+  final Map<String, dynamic>? pendingWithdrawal;
+  // Go-online gate — also present on /wallet and /wallet/balance responses.
+  final bool    canGoOnline;
 
   const WalletModel({
     required this.balance,
     required this.currency,
     required this.transactions,
+    this.canWithdraw       = true,
+    this.minWithdrawalKhr  = 0,
+    this.pendingWithdrawal,
+    this.canGoOnline       = true,
   });
 
+  bool get hasPendingWithdrawal => pendingWithdrawal != null;
+
   factory WalletModel.fromJson(Map<String, dynamic> json) {
-    final rawBalance = json['balance'];
+    final rawBalance = json['balance'] ?? json['wallet_balance'] ?? json['balance_khr'];
     final balance = rawBalance is int
         ? rawBalance
         : int.tryParse(rawBalance?.toString() ?? '') ?? 0;
 
-    final txList = (json['transactions'] as List<dynamic>? ?? [])
-        .map((e) => WalletTransactionModel.fromJson(e as Map<String, dynamic>))
+    final txField = json['transactions'];
+    final rawTxList = txField is List
+        ? txField
+        : (txField is Map<String, dynamic> ? txField['data'] as List<dynamic>? : null) ?? [];
+    final txList = rawTxList
+        .whereType<Map<String, dynamic>>()
+        .map(WalletTransactionModel.fromJson)
         .toList();
+
+    final minWithdrawal = json['min_withdrawal_khr'];
 
     return WalletModel(
       balance:      balance,
       currency:     json['currency']?.toString() ?? 'KHR',
       transactions: txList,
+      canWithdraw:  json['can_withdraw'] as bool? ?? true,
+      minWithdrawalKhr: minWithdrawal is int
+          ? minWithdrawal
+          : int.tryParse(minWithdrawal?.toString() ?? '') ?? 0,
+      pendingWithdrawal: json['pending_withdrawal'] as Map<String, dynamic>?,
+      canGoOnline:  json['can_go_online'] as bool? ?? true,
     );
   }
 }

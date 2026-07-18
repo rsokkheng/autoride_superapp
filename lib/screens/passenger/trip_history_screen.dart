@@ -174,7 +174,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       appBar: AppBar(
         backgroundColor: context.appBackground,
         elevation: 0,
-        title: Text('Trip History',
+        title: Text('Trip',
             style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         iconTheme: IconThemeData(color: context.appTextPrimary),
@@ -833,7 +833,8 @@ class _TripCard extends StatelessWidget {
     }
   }
 
-  bool get _isInProgress => trip.status == 'in_progress';
+  bool get _isInProgress =>
+      trip.status != 'completed' && trip.status != 'cancelled';
 
   void _openTracking(BuildContext context) {
     final netAmount = trip.amount - trip.discount + trip.tip;

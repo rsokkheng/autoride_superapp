@@ -2,14 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:provider/provider.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
-import 'package:autoride_superapp/providers/theme_provider.dart';
-import 'package:autoride_superapp/providers/biometric_provider.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:autoride_superapp/widgets/banner_carousel.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
-import 'package:autoride_superapp/screens/auth/role_selection.dart';
 import 'package:autoride_superapp/screens/auth/login_screen.dart';
 import 'package:autoride_superapp/screens/driver/driver_home.dart';
 import 'package:autoride_superapp/services/api_service.dart';
@@ -20,11 +16,10 @@ import 'delivery_screen.dart';
 import 'marketplace_screen.dart';
 import 'charging_stations.dart';
 import 'chat_screen.dart';
-import 'payment_screen.dart';
+import 'payment_methods_screen.dart';
 import 'safety_screen.dart';
 import 'trip_history_screen.dart';
 import 'trip_tracking_screen.dart';
-import 'notifications_screen.dart';
 import 'wallet_screen.dart';
 import 'promo_screen.dart';
 import 'edit_profile_screen.dart';
@@ -33,11 +28,8 @@ import 'support_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'loyalty_screen.dart';
 import 'referral_screen.dart';
-import 'cancellation_policy_screen.dart';
 import 'qr_payment_screen.dart';
-import 'voucher_screen.dart';
-import 'accessibility_screen.dart';
-import '../auth/account_switcher_screen.dart';
+import 'settings_screen.dart';
 import 'airport_trip_screen.dart';
 import 'business_screen.dart';
 import 'family_screen.dart';
@@ -825,16 +817,12 @@ class _ProfileTabState extends State<_ProfileTab> {
               return Column(children: [
                 _ProfileMenuItem(icon: Icons.edit_outlined, label: 'Edit Profile',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
-                _ProfileMenuItem(icon: Icons.manage_accounts_outlined, label: 'Switch Account',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountSwitcherScreen()))),
                 _ProfileMenuItem(icon: Icons.account_balance_wallet_outlined, label: 'ROTEH Pay',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
                 _ProfileMenuItem(icon: Icons.qr_code_outlined, label: 'QR Payment',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrPaymentScreen()))),
                 _ProfileMenuItem(icon: Icons.local_offer_outlined, label: 'Promos & Vouchers',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen()))),
-                _ProfileMenuItem(icon: Icons.wallet_giftcard_rounded, label: 'My Vouchers',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VoucherScreen()))),
                 _ProfileMenuItem(icon: Icons.calendar_month_outlined, label: 'Scheduled Rides',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledRidesScreen()))),
                 _ProfileMenuItem(icon: Icons.workspace_premium_rounded, label: 'Subscription Plans',
@@ -843,105 +831,18 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen()))),
                 _ProfileMenuItem(icon: Icons.card_giftcard_outlined, label: 'Refer & Earn',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen()))),
-                _ProfileMenuItem(icon: Icons.cancel_outlined, label: 'Cancellation Policy',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CancellationPolicyScreen()))),
                 _ProfileMenuItem(icon: Icons.payment_outlined, label: l.paymentMethods,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentScreen()))),
-                _ProfileMenuItem(icon: Icons.shield_outlined, label: l.safetySettings,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen()))),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentMethodsScreen()))),
                 _ProfileMenuItem(icon: Icons.history_outlined, label: l.tripHistory,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()))),
                 _ProfileMenuItem(icon: Icons.directions_car_outlined, label: 'My Rentals',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRentalsScreen()))),
-                _ProfileMenuItem(icon: Icons.notifications_outlined, label: l.notifications,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()))),
                 _ProfileMenuItem(icon: Icons.bookmark_outline, label: 'Saved Places',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedPlacesScreen()))),
                 _ProfileMenuItem(icon: Icons.help_outline, label: l.helpSupport,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()))),
-                _ProfileMenuItem(icon: Icons.accessibility_new_rounded, label: 'Accessibility',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AccessibilityScreen()))),
-                // Biometric toggle
-                Consumer<BiometricProvider>(
-                  builder: (context, bio, _) {
-                    if (!bio.available) return const SizedBox.shrink();
-                    return Container(
-                      margin: EdgeInsets.only(bottom: 10),
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: context.appSurface,
-                          borderRadius: BorderRadius.circular(14)),
-                      child: Row(children: [
-                        Icon(Icons.fingerprint,
-                            color: context.appTextSecondary, size: 20),
-                        SizedBox(width: 14),
-                        Text('Biometric Login',
-                            style: TextStyle(color: context.appTextPrimary,
-                                fontSize: 14, fontWeight: FontWeight.w500)),
-                        const Spacer(),
-                        Switch(
-                          value: bio.enabled,
-                          activeColor: AppTheme.accent,
-                          onChanged: (v) async {
-                            if (v) {
-                              try {
-                                final email = await ApiService.getEmail() ?? '';
-                                await bio.enable(email: email);
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                    content: Text(e.toString().replaceFirst('Exception: ', '')),
-                                    backgroundColor: AppTheme.danger,
-                                    behavior: SnackBarBehavior.floating,
-                                  ));
-                                }
-                              }
-                            } else {
-                              await bio.disable();
-                            }
-                          },
-                        ),
-                      ]),
-                    );
-                  },
-                ),
-                // Dark mode toggle
-                Consumer<ThemeProvider>(
-                  builder: (context, tp, _) => Container(
-                    margin: EdgeInsets.only(bottom: 10),
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: context.appSurface,
-                        borderRadius: BorderRadius.circular(14)),
-                    child: Row(children: [
-                      Icon(Icons.dark_mode_outlined,
-                          color: context.appTextSecondary, size: 20),
-                      SizedBox(width: 14),
-                      Text('Dark Mode',
-                          style: TextStyle(color: context.appTextPrimary,
-                              fontSize: 14, fontWeight: FontWeight.w500)),
-                      Spacer(),
-                      Switch(
-                        value: tp.isDark,
-                        activeColor: AppTheme.accent,
-                        onChanged: tp.setDark,
-                      ),
-                    ]),
-                  ),
-                ),
-                // Language switcher row
-                Container(
-                  margin: EdgeInsets.only(bottom: 10),
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-                  child: Row(children: [
-                    Icon(Icons.language, color: context.appTextSecondary, size: 20),
-                    SizedBox(width: 14),
-                    Text(l.language, style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
-                    const Spacer(),
-                    const LanguagePickerButton(),
-                  ]),
-                ),
+                _ProfileMenuItem(icon: Icons.settings_outlined, label: 'Settings',
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
                 _ProfileMenuItem(
                   icon: Icons.drive_eta_outlined,
                   label: 'Switch to Driver Mode',

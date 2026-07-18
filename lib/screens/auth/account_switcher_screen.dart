@@ -445,11 +445,14 @@ class _AccountTile extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: context.appSurface,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: switching ? AppTheme.accent : context.appCardBg, width: switching ? 1.5 : 1),
       ),
-      child: ListTile(
+      child: Material(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
           backgroundColor: AppTheme.accent.withValues(alpha: 0.12),
@@ -499,6 +502,7 @@ class _AccountTile extends StatelessWidget {
                   child: const Text('Switch'),
                 ),
               ]),
+        ),
       ),
     );
   }

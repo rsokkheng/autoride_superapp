@@ -86,7 +86,7 @@ class AppLocalizations {
       'signOut': 'Sign Out',
       'paymentMethods': 'Payment Methods',
       'safetySettings': 'Safety Settings',
-      'tripHistory': 'Trip History',
+      'tripHistory': 'Trip',
       'notifications': 'Notifications',
       'helpSupport': 'Help & Support',
       'bankPayouts': 'Bank & Payouts',

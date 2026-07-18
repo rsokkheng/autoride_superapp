@@ -1839,7 +1839,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                             _LocationResult(_address, _center),
                           ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF00C853),
+                    backgroundColor: AppTheme.confirmBlue,
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: context.appCardBg,
                     padding: const EdgeInsets.symmetric(vertical: 15),
