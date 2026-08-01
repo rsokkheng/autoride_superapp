@@ -22,16 +22,7 @@ class RoleSelectionScreen extends StatelessWidget {
               SizedBox(height: 20),
               Row(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.electric_car,
-                        color: AppTheme.primary, size: 24),
-                  ),
+                  Image.asset('assets/library/icon_fa.png', width: 44, height: 44),
                   SizedBox(width: 12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

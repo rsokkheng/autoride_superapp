@@ -480,6 +480,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _AddressWithMap(
         hint: 'Pickup address', icon: Icons.location_on_outlined, controller: _pickupCtrl,
         onMapTap: () => _openLocationPicker(_pickupCtrl, _pickupLatLng, (ll) => _pickupLatLng = ll),
+        onLatLng: (ll) => setState(() => _pickupLatLng = ll),
       ),
       SizedBox(height: 20),
 
@@ -495,6 +496,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       _AddressWithMap(
         hint: 'Delivery address', icon: Icons.location_on, controller: _dropoffCtrl,
         onMapTap: () => _openLocationPicker(_dropoffCtrl, _dropoffLatLng, (ll) => _dropoffLatLng = ll),
+        onLatLng: (ll) => setState(() => _dropoffLatLng = ll),
       ),
       SizedBox(height: 20),
 
@@ -633,11 +635,19 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           _moveFromLatLng = ll;
           _fetchMovingEstimate();
         }),
+        onLatLng: (ll) => setState(() {
+          _moveFromLatLng = ll;
+          _fetchMovingEstimate();
+        }),
       ),
       const SizedBox(height: 10),
       _AddressWithMap(
         hint: 'Moving to (full address)', icon: Icons.location_on, controller: _moveToCtrl,
         onMapTap: () => _openLocationPicker(_moveToCtrl, _moveToLatLng, (ll) {
+          _moveToLatLng = ll;
+          _fetchMovingEstimate();
+        }),
+        onLatLng: (ll) => setState(() {
           _moveToLatLng = ll;
           _fetchMovingEstimate();
         }),
@@ -1475,62 +1485,148 @@ class _SubmitButton extends StatelessWidget {
   }
 }
 
-// ── Tappable address field — opens map picker directly ────────────────────────
+// ── Typable address field with autocomplete — plus a map-picker shortcut ──────
 
-class _AddressWithMap extends StatelessWidget {
+class _AddressWithMap extends StatefulWidget {
   final TextEditingController controller;
   final String hint;
   final IconData icon;
   final VoidCallback onMapTap;
+  final ValueChanged<LatLng>? onLatLng;
   const _AddressWithMap({
     required this.controller,
     required this.hint,
     required this.icon,
     required this.onMapTap,
+    this.onLatLng,
   });
 
   @override
+  State<_AddressWithMap> createState() => _AddressWithMapState();
+}
+
+class _AddressWithMapState extends State<_AddressWithMap> {
+  final _focusNode = FocusNode();
+  List<PlaceResult> _results = [];
+  bool _searching = false;
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged(String q) {
+    _debounce?.cancel();
+    if (q.trim().isEmpty) {
+      setState(() { _results = []; _searching = false; });
+      return;
+    }
+    setState(() => _searching = true);
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      final results = await MapsService.searchAddress(q.trim());
+      if (!mounted) return;
+      setState(() { _results = results; _searching = false; });
+    });
+  }
+
+  void _selectResult(PlaceResult r) {
+    widget.controller.text = r.address;
+    widget.onLatLng?.call(r.latLng);
+    setState(() => _results = []);
+    _focusNode.unfocus();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final filled = controller.text.trim().isNotEmpty;
-    return GestureDetector(
-      onTap: onMapTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+    final filled = widget.controller.text.trim().isNotEmpty;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
           color: context.appSurface,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: filled
-                ? Color(0xFF00C853).withValues(alpha: 0.4)
+                ? const Color(0xFF00C853).withValues(alpha: 0.4)
                 : context.appCardBg,
           ),
         ),
         child: Row(children: [
-          Icon(icon,
-              color: filled ? Color(0xFF00C853) : context.appTextSecondary,
-              size: 20),
-          SizedBox(width: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Icon(widget.icon,
+                color: filled ? const Color(0xFF00C853) : context.appTextSecondary,
+                size: 20),
+          ),
           Expanded(
-            child: Text(
-              filled ? controller.text.trim() : hint,
-              style: TextStyle(
-                color: filled ? context.appTextPrimary : context.appTextSecondary,
-                fontSize: 14,
-                fontWeight: filled ? FontWeight.w500 : FontWeight.normal,
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              onChanged: _onChanged,
+              style: TextStyle(color: context.appTextPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
-          Icon(
-            filled ? Icons.check_circle : Icons.map_outlined,
-            color: filled ? const Color(0xFF00C853) : AppTheme.accent,
-            size: 20,
-          ),
+          if (_searching)
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent)),
+            )
+          else
+            GestureDetector(
+              onTap: () {
+                _focusNode.unfocus();
+                setState(() => _results = []);
+                widget.onMapTap();
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                child: Icon(
+                  filled ? Icons.check_circle : Icons.map_outlined,
+                  color: filled ? const Color(0xFF00C853) : AppTheme.accent,
+                  size: 20,
+                ),
+              ),
+            ),
         ]),
       ),
-    );
+      if (_results.isNotEmpty)
+        Container(
+          margin: const EdgeInsets.only(top: 4),
+          decoration: BoxDecoration(
+            color: context.appSurface,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8)],
+          ),
+          constraints: const BoxConstraints(maxHeight: 220),
+          child: ListView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            itemCount: _results.length,
+            itemBuilder: (_, i) {
+              final r = _results[i];
+              return ListTile(
+                dense: true,
+                leading: Icon(Icons.location_on_outlined, color: context.appTextSecondary, size: 18),
+                title: Text(r.address,
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 13),
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                onTap: () => _selectResult(r),
+              );
+            },
+          ),
+        ),
+    ]);
   }
 }
 

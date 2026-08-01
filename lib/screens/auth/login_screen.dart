@@ -190,32 +190,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // ── Logo ────────────────────────────────────────────────────
               Row(children: [
-                Container(
+                Image.asset(
+                  'assets/library/icon_fa.png',
                   width: 48,
                   height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(Icons.electric_car, color: AppTheme.primary, size: 26),
                 ),
                 SizedBox(width: 12),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('ROTEH', style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                  Text('ROTEH App', style: TextStyle(color: AppTheme.accent, fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 3)),
-                ]),
+                Text('ROTEH APP', style: TextStyle(color: AppTheme.accent, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 1)),
                 Spacer(),
                 LanguagePickerButton(),
               ]),
 
               SizedBox(height: 52),
-
-              // ── Heading ─────────────────────────────────────────────────
-              Text('Welcome back', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
-              SizedBox(height: 4),
-              Text('Sign in to continue', style: TextStyle(color: context.appTextPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
-
-              SizedBox(height: 36),
 
               // ── Error banner ────────────────────────────────────────────
               if (_error != null) ...[

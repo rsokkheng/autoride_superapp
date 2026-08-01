@@ -403,12 +403,12 @@ class _BrowseTabState extends State<_BrowseTab> {
                       color: _white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.drive_eta_outlined, color: _white, size: 28),
+                    child: const Icon(Icons.electric_rickshaw, color: _white, size: 28),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Car Rental',
+                      const Text('Rental Vehicle',
                           style: TextStyle(color: _white, fontSize: 16,
                               fontWeight: FontWeight.w800)),
                       const SizedBox(height: 3),

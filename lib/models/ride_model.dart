@@ -1,6 +1,37 @@
 import 'user_model.dart';
 import 'vehicle_model.dart';
 
+// Lightweight intermediate-stop entry embedded directly in a ride's JSON
+// (as opposed to RideStopModel in api_service.dart, which comes from the
+// dedicated /rides/{id}/stops endpoint). Kept separate to avoid a circular
+// import between this file and api_service.dart.
+class RideStopEntry {
+  final int?    id;
+  final int     order;
+  final String  address;
+  final double  lat;
+  final double  lng;
+  final bool    arrived;
+
+  const RideStopEntry({
+    this.id,
+    required this.order,
+    required this.address,
+    required this.lat,
+    required this.lng,
+    this.arrived = false,
+  });
+
+  factory RideStopEntry.fromJson(Map<String, dynamic> j) => RideStopEntry(
+    id:      j['id'] as int?,
+    order:   j['order'] as int? ?? j['stop_order'] as int? ?? 0,
+    address: j['address']?.toString() ?? '',
+    lat:     (j['lat'] as num? ?? 0).toDouble(),
+    lng:     (j['lng'] as num? ?? 0).toDouble(),
+    arrived: j['arrived'] == true || j['arrived'] == 1,
+  );
+}
+
 class RideModel {
   final int    id;
   final int    passengerId;
@@ -30,6 +61,11 @@ class RideModel {
   final String? acceptedAt;
   final String? startedAt;
   final String? completedAt;
+  // "Book Without Destination" — passenger tells the driver in person and
+  // the fare is metered/GPS-calculated at trip end.
+  final bool noDestination;
+  // Intermediate waypoints, embedded directly in the ride payload.
+  final List<RideStopEntry> stops;
   // Relations
   final UserModel?    passenger;
   final UserModel?    driver;
@@ -61,6 +97,8 @@ class RideModel {
     this.acceptedAt,
     this.startedAt,
     this.completedAt,
+    this.noDestination = false,
+    this.stops = const [],
     this.passenger,
     this.driver,
     this.vehicle,
@@ -110,6 +148,12 @@ class RideModel {
       acceptedAt:     json['accepted_at']?.toString(),
       startedAt:      json['started_at']?.toString(),
       completedAt:    json['completed_at']?.toString(),
+      noDestination:  json['no_destination'] as bool? ??
+          (json['dropoff_address'] == null && json['dropoff_lat'] == null),
+      stops: ((json['stops'] as List<dynamic>?) ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(RideStopEntry.fromJson)
+          .toList(),
       passenger: json['passenger'] != null
           ? UserModel.fromJson(json['passenger'] as Map<String, dynamic>)
           : null,

@@ -189,6 +189,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     });
 
     _initMarkers();
+    _fetchStaticFullRoute();
     _startTracking();
     _startRidePoll();
   }
@@ -216,8 +217,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         infoWindow: InfoWindow(title: widget.to),
       ),
     ]);
-    // Static full-route line (gray dashed): pickup → destination
-    // This stays visible the entire trip as context.
+    // Static full-route line (gray dashed): pickup → destination.
+    // Drawn as a straight line immediately, then upgraded to follow actual
+    // roads once _fetchStaticFullRoute() resolves. Stays visible as context
+    // for the whole trip.
     _polylines.add(Polyline(
       polylineId: const PolylineId('full_route'),
       points:     [_pickupPoint, _destPoint],
@@ -225,6 +228,33 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       width:      4,
       patterns:   [PatternItem.dash(16), PatternItem.gap(8)],
     ));
+  }
+
+  // Replaces the straight-line 'full_route' placeholder with one that
+  // follows actual roads through pickup → each stop → destination.
+  Future<void> _fetchStaticFullRoute() async {
+    final legs = [_pickupPoint, ...widget.wayStops.map((s) => s.latLng), _destPoint];
+    if (legs.length < 2) return;
+
+    final routedPoints = <LatLng>[];
+    for (int i = 0; i < legs.length - 1; i++) {
+      final result = await MapsService.getRoute(origin: legs[i], destination: legs[i + 1]);
+      routedPoints.addAll(
+          result != null && result.points.isNotEmpty ? result.points : [legs[i], legs[i + 1]]);
+    }
+    if (!mounted || routedPoints.isEmpty) return;
+
+    setState(() {
+      _polylines
+        ..removeWhere((p) => p.polylineId.value == 'full_route')
+        ..add(Polyline(
+          polylineId: const PolylineId('full_route'),
+          points:     routedPoints,
+          color:      const Color(0x55888888),
+          width:      4,
+          patterns:   [PatternItem.dash(16), PatternItem.gap(8)],
+        ));
+    });
   }
 
   // ── Marker animation ────────────────────────────────────────────────────────
@@ -732,7 +762,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           // ── Route card (top) ───────────────────────────────────────────
           SafeArea(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: Container(
                 decoration: BoxDecoration(
                   color: context.appSurface,
@@ -748,7 +778,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Padding(
-                      padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      padding: EdgeInsets.fromLTRB(16, 18, 16, 0),
                       child: Row(children: [
                         Container(
                             width: 12, height: 12,
@@ -828,7 +858,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                         ]),
                       ),
                     Padding(
-                      padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      padding: EdgeInsets.fromLTRB(16, 0, 16, 18),
                       child: Row(children: [
                         Icon(Icons.location_on, color: Colors.red, size: 18),
                         SizedBox(width: 8),
@@ -908,7 +938,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  padding: EdgeInsets.fromLTRB(20, 4, 20, 10),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -916,7 +946,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                       // Handle
                       Center(
                         child: Container(
-                          margin: EdgeInsets.symmetric(vertical: 10),
+                          margin: EdgeInsets.symmetric(vertical: 6),
                           width: 40, height: 4,
                           decoration: BoxDecoration(
                               color: context.appCardBg,
@@ -966,12 +996,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                       ] else
                         Text('Looking for a nearby driver…',
                             style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
-                      SizedBox(height: 18),
+                      SizedBox(height: 8),
 
                       // Driver + Car
                       Row(children: [
                         CircleAvatar(
-                          radius: 28,
+                          radius: 22,
                           backgroundColor: context.appCardBg,
                           foregroundImage: _driverAvatarUrl != null
                               ? CachedNetworkImageProvider(_driverAvatarUrl!)
@@ -1019,7 +1049,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Icon(_vehicleTypeIcon(_vehicleType),
-                                size: 42, color: context.appTextSecondary),
+                                size: 30, color: context.appTextSecondary),
                             Text(_plate,
                                 style: TextStyle(
                                     color: context.appTextPrimary,
@@ -1036,9 +1066,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           ],
                         ),
                       ]),
-                      const SizedBox(height: 18),
-                      Divider(color: Theme.of(context).dividerColor, height: 1),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 8),
 
                       // Action buttons
                       Row(
@@ -1088,39 +1116,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                             ),
                         ],
                       ),
-                      const SizedBox(height: 14),
-                      Divider(color: Theme.of(context).dividerColor, height: 1),
-
-                      // Promo code
-                      InkWell(
-                        onTap: () {},
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: Row(children: [
-                            Icon(Icons.local_offer_outlined,
-                                color: _kGreen, size: 20),
-                            SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Save on future rides',
-                                      style: TextStyle(
-                                          color: context.appTextPrimary,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500)),
-                                  Text('Add a promo code',
-                                      style: TextStyle(
-                                          color: _kGreen, fontSize: 12)),
-                                ],
-                              ),
-                            ),
-                            Icon(Icons.chevron_right, color: context.appTextSecondary),
-                          ]),
-                        ),
-                      ),
-                      Divider(color: Theme.of(context).dividerColor, height: 1),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
 
                       // Buttons row
                       Row(children: [
@@ -1128,7 +1124,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           GestureDetector(
                             onTap: _cancelling ? null : _cancelRide,
                             child: Container(
-                              width: 52, height: 52,
+                              width: 48, height: 48,
                               margin: const EdgeInsets.only(right: 12),
                               decoration: BoxDecoration(
                                 color: _cancelling
@@ -1198,6 +1194,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                             durationMin:    durMin,
                                             from:           fromAddr,
                                             to:             toAddr,
+                                            stops:          widget.wayStops.map((s) => s.address).toList(),
                                             paymentMethod:  payMethod,
                                             baseFareKhr:    baseFareKhr,
                                             distanceFeeKhr: distFeeKhr,
@@ -1214,8 +1211,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                               }
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _kGreen,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              backgroundColor: AppTheme.confirmBlue,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
                               shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14)),
                               elevation: 0,
@@ -1600,7 +1597,7 @@ class _ActionBtn extends StatelessWidget {
       onTap: disabled ? null : onTap,
       child: Column(children: [
         Container(
-          width: 50, height: 50,
+          width: 42, height: 42,
           decoration: BoxDecoration(
             color: disabled
                 ? Colors.grey.withValues(alpha: 0.08)
@@ -1616,12 +1613,12 @@ class _ActionBtn extends StatelessWidget {
           ),
           child: loading
               ? Padding(
-                  padding: EdgeInsets.all(14),
+                  padding: EdgeInsets.all(11),
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: activeColor))
-              : Icon(icon, color: iconColor, size: 22),
+              : Icon(icon, color: iconColor, size: 19),
         ),
-        SizedBox(height: 6),
+        SizedBox(height: 4),
         Text(label,
             style: TextStyle(
               color: disabled

@@ -30,8 +30,7 @@ import 'loyalty_screen.dart';
 import 'referral_screen.dart';
 import 'qr_payment_screen.dart';
 import 'settings_screen.dart';
-import 'airport_trip_screen.dart';
-import 'business_screen.dart';
+import 'car_rental_screen.dart';
 import 'family_screen.dart';
 import 'subscription_screen.dart';
 import 'my_rentals_screen.dart';
@@ -70,7 +69,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
               children: [
                 Expanded(child: _NavItem(icon: Icons.home_outlined, label: AppLocalizations.of(context).home, index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(
-                    icon: Icons.directions_car_outlined,
+                    icon: Icons.electric_rickshaw,
                     label: AppLocalizations.of(context).bookRide,
                     index: 1,
                     current: _tab,
@@ -218,9 +217,9 @@ class _HomeTabState extends State<_HomeTab> {
 
   String _greeting() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return '';
+    if (h < 18) return '';
+    return '';
   }
 
   void _resumeActiveRide() {
@@ -320,7 +319,7 @@ class _HomeTabState extends State<_HomeTab> {
                         color: AppTheme.success.withValues(alpha: 0.4)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.directions_car_rounded,
+                    const Icon(Icons.electric_rickshaw,
                         color: AppTheme.success, size: 22),
                     const SizedBox(width: 10),
                     Expanded(child: Column(
@@ -430,11 +429,6 @@ class _HomeTabState extends State<_HomeTab> {
             ),
             const SizedBox(height: 16),
             const BannerCarousel(),
-            const SizedBox(height: 16),
-            _AirportBanner(
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AirportTripScreen())),
-            ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -462,7 +456,7 @@ class _HomeTabState extends State<_HomeTab> {
                 childAspectRatio: _gridColumns == 2 ? 1.7 : 1.1,
                 children: [
                   ServiceCard(
-                    icon: Icons.directions_car_outlined,
+                    icon: Icons.electric_rickshaw,
                     title: l.bookRide,
                     color: AppTheme.accent,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RideBookingScreen())),
@@ -486,10 +480,10 @@ class _HomeTabState extends State<_HomeTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
                   ServiceCard(
-                    icon: Icons.business_rounded,
-                    title: 'Business',
+                    icon: Icons.key,
+                    title: 'Rental',
                     color: const Color(0xFF1565C0),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BusinessScreen())),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.family_restroom_rounded,
@@ -597,52 +591,6 @@ class _ColumnOption extends StatelessWidget {
       ),
       child: Icon(icon, size: 16,
           color: active ? AppTheme.primary : context.appTextSecondary),
-    ),
-  );
-}
-
-class _AirportBanner extends StatelessWidget {
-  final VoidCallback onTap;
-  const _AirportBanner({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF004D40), Color(0xFF00B14F)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(children: [
-        const Icon(Icons.flight_rounded, color: Colors.white, size: 36),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Airport Transfer',
-                style: TextStyle(color: Colors.white, fontSize: 16,
-                    fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text('Fixed fare · 60-min free wait · PNH, SAI, KOS',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
-                    fontSize: 12)),
-          ]),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text('Book', style: TextStyle(color: Colors.white,
-              fontWeight: FontWeight.w700, fontSize: 13)),
-        ),
-      ]),
     ),
   );
 }

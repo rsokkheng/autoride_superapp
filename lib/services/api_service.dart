@@ -35,7 +35,40 @@ class ApiService {
 
   // ── Raw HTTP helpers (dart:io — allows Host header override) ─────────────
 
+  // Dedupes concurrent refresh attempts so a burst of 401s only triggers
+  // one /auth/refresh call; all callers await the same in-flight Future.
+  static Future<String>? _refreshingFuture;
+
+  static Future<String?> _refreshAccessToken() {
+    return _refreshingFuture ??= () async {
+      try {
+        return await refreshToken();
+      } catch (e, s) {
+        AppLog.w('API', 'Silent token refresh failed, clearing session: $e');
+        AppLog.e('API', 'refresh stack', e, s);
+        await clearSession();
+        rethrow;
+      } finally {
+        _refreshingFuture = null;
+      }
+    }();
+  }
+
   static Future<_RawResponse> _rawGet(
+    String path, {
+    String? token,
+  }) async {
+    final res = await _rawGetOnce(path, token: token);
+    if (res.statusCode == 401 && token != null) {
+      try {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) return _rawGetOnce(path, token: newToken);
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  static Future<_RawResponse> _rawGetOnce(
     String path, {
     String? token,
   }) async {
@@ -64,6 +97,21 @@ class ApiService {
   }
 
   static Future<_RawResponse> _rawPost(
+    String path,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final res = await _rawPostOnce(path, body, token: token);
+    if (res.statusCode == 401 && token != null) {
+      try {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) return _rawPostOnce(path, body, token: newToken);
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  static Future<_RawResponse> _rawPostOnce(
     String path,
     Map<String, dynamic> body, {
     String? token,
@@ -103,6 +151,24 @@ class ApiService {
     required List<MapEntry<String, File>> files,
     String? token,
   }) async {
+    final res = await _rawPostMultipartOnce(path, fields: fields, files: files, token: token);
+    if (res.statusCode == 401 && token != null) {
+      try {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) {
+          return _rawPostMultipartOnce(path, fields: fields, files: files, token: newToken);
+        }
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  static Future<_RawResponse> _rawPostMultipartOnce(
+    String path, {
+    Map<String, String> fields = const {},
+    required List<MapEntry<String, File>> files,
+    String? token,
+  }) async {
     final uri = Uri.parse('$_baseUrl$path');
     final req = http.MultipartRequest('POST', uri);
     req.headers['Accept'] = 'application/json';
@@ -118,6 +184,21 @@ class ApiService {
   }
 
   static Future<_RawResponse> _rawPut(
+    String path,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
+    final res = await _rawPutOnce(path, body, token: token);
+    if (res.statusCode == 401 && token != null) {
+      try {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) return _rawPutOnce(path, body, token: newToken);
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  static Future<_RawResponse> _rawPutOnce(
     String path,
     Map<String, dynamic> body, {
     String? token,
@@ -156,6 +237,21 @@ class ApiService {
     Map<String, dynamic> body, {
     String? token,
   }) async {
+    final res = await _rawPatchOnce(path, body, token: token);
+    if (res.statusCode == 401 && token != null) {
+      try {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) return _rawPatchOnce(path, body, token: newToken);
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  static Future<_RawResponse> _rawPatchOnce(
+    String path,
+    Map<String, dynamic> body, {
+    String? token,
+  }) async {
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 10);
     try {
@@ -186,6 +282,20 @@ class ApiService {
   }
 
   static Future<_RawResponse> _rawDelete(
+    String path, {
+    String? token,
+  }) async {
+    final res = await _rawDeleteOnce(path, token: token);
+    if (res.statusCode == 401 && token != null) {
+      try {
+        final newToken = await _refreshAccessToken();
+        if (newToken != null) return _rawDeleteOnce(path, token: newToken);
+      } catch (_) {}
+    }
+    return res;
+  }
+
+  static Future<_RawResponse> _rawDeleteOnce(
     String path, {
     String? token,
   }) async {
@@ -937,6 +1047,10 @@ class ApiService {
     required double pickupLng,
     required double dropoffLat,
     required double dropoffLng,
+    // Intermediate waypoints, in visit order — without these the backend
+    // can only price the direct pickup→dropoff distance, undercounting the
+    // detour through each stop (same shape as createRide's `stops`).
+    List<Map<String, dynamic>>? stops,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -946,6 +1060,7 @@ class ApiService {
       'pickup_lng':  pickupLng,
       'dropoff_lat': dropoffLat,
       'dropoff_lng': dropoffLng,
+      if (stops != null && stops.isNotEmpty) 'stops': stops,
     }, token: token);
 
     final Map<String, dynamic> resBody;
@@ -976,11 +1091,14 @@ class ApiService {
 
   static Future<RideModel> createRide({
     required String pickupAddress,
-    required String dropoffAddress,
+    String? dropoffAddress,
     required double pickupLat,
     required double pickupLng,
-    required double dropoffLat,
-    required double dropoffLng,
+    double? dropoffLat,
+    double? dropoffLng,
+    // Rider hasn't picked a destination yet — they'll tell the driver in
+    // person and the fare is metered/GPS-calculated at trip end.
+    bool    noDestination  = false,
     String  serviceType    = 'standard',
     String  vehicleType    = 'car',
     String  paymentMethod  = 'cash',
@@ -1002,21 +1120,27 @@ class ApiService {
     String? expenseRef,
     // Family member booking
     int?    familyMemberId,
+    // Intermediate waypoints (multi-stop rides), in visit order — each
+    // {'address', 'lat', 'lng'}. Sent inline so the backend persists them
+    // atomically with the ride instead of via a separate follow-up call.
+    List<Map<String, dynamic>>? stops,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
     final body = <String, dynamic>{
       'pickup_address':  pickupAddress,
-      'dropoff_address': dropoffAddress,
       'pickup_lat':      pickupLat,
       'pickup_lng':      pickupLng,
-      'dropoff_lat':     dropoffLat,
-      'dropoff_lng':     dropoffLng,
       'service_type':    serviceType,
       'vehicle_type':    vehicleType,
       'payment_method':  paymentMethod,
       'surge_accepted':  surgeAccepted,
+      'no_destination':  noDestination,
+      if (dropoffAddress != null)   'dropoff_address':  dropoffAddress,
+      if (dropoffLat      != null)  'dropoff_lat':      dropoffLat,
+      if (dropoffLng      != null)  'dropoff_lng':      dropoffLng,
+      if (stops != null && stops.isNotEmpty) 'stops': stops,
       if (vehicleId       != null)  'vehicle_id':       vehicleId,
       if (scheduledAt     != null)  'scheduled_at':     scheduledAt,
       if (notes           != null)  'notes':            notes,
@@ -1442,10 +1566,24 @@ class ApiService {
     return _parseRideResponse(raw);
   }
 
-  static Future<RideModel> completeRide(int id) async {
+  static Future<RideModel> completeRide(
+    int id, {
+    // Manually entered final fare + destination — used for "no destination"
+    // (metered) trips, where these weren't known when the ride was booked.
+    int?    fareKhr,
+    String? dropoffAddress,
+    double? dropoffLat,
+    double? dropoffLng,
+  }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw = await _rawPost('/rides/$id/complete', {}, token: token);
+    final body = <String, dynamic>{
+      if (fareKhr        != null) 'fare':            fareKhr,
+      if (dropoffAddress != null) 'dropoff_address': dropoffAddress,
+      if (dropoffLat      != null) 'dropoff_lat':     dropoffLat,
+      if (dropoffLng      != null) 'dropoff_lng':     dropoffLng,
+    };
+    final raw = await _rawPost('/rides/$id/complete', body, token: token);
     return _parseRideResponse(raw);
   }
 
@@ -5017,9 +5155,15 @@ class ChargingStationModel {
   final double  lng;
   final double? distanceKm;
   final int     availablePorts;
+  final int?    totalPorts;
   final String  operator;
   final double? rating;
   final String  details;
+  final bool    verified;
+  final bool    fastCharging;
+  final double? pricePerKwh;
+  final List<String> connectorTypes;
+  final String  hours;
 
   const ChargingStationModel({
     required this.id,
@@ -5029,24 +5173,71 @@ class ChargingStationModel {
     required this.lng,
     this.distanceKm,
     this.availablePorts = 0,
+    this.totalPorts,
     this.operator = '',
     this.rating,
     this.details = '',
+    this.verified = false,
+    this.fastCharging = false,
+    this.pricePerKwh,
+    this.connectorTypes = const [],
+    this.hours = '',
   });
 
-  factory ChargingStationModel.fromJson(Map<String, dynamic> j) => ChargingStationModel(
-    id:             j['id']               as int,
-    name:           j['name']             as String? ?? '',
-    address:        j['address']          as String? ?? '',
-    lat:            double.parse((j['latitude']  ?? j['lat']  ?? 0).toString()),
-    lng:            double.parse((j['longitude'] ?? j['lng']  ?? 0).toString()),
-    distanceKm:     j['distance_km'] != null
-        ? (j['distance_km'] as num).toDouble() : null,
-    availablePorts: j['available_ports']  as int? ?? 0,
-    operator:       j['operator']         as String? ?? '',
-    rating:         j['rating'] != null
-        ? double.tryParse(j['rating'].toString()) : null,
-    details:        j['details']          as String? ?? '',
+  factory ChargingStationModel.fromJson(Map<String, dynamic> j) {
+    // The backend sometimes packs connector/pricing/hours info as a
+    // JSON-encoded *string* inside 'details' instead of top-level fields
+    // (e.g. details: '{"connector_types":["Type 2","CCS"],"price_per_kwh":
+    // 0.18,"open_hours":"07:00-21:00"}'). Unwrap it so the UI never shows
+    // raw JSON text, and so these fields populate even when the backend
+    // doesn't send them at the top level.
+    Map<String, dynamic>? nested;
+    final rawDetails = j['details'];
+    if (rawDetails is String && rawDetails.trim().startsWith('{')) {
+      try {
+        final decoded = jsonDecode(rawDetails);
+        if (decoded is Map<String, dynamic>) nested = decoded;
+      } catch (_) {}
+    } else if (rawDetails is Map<String, dynamic>) {
+      nested = rawDetails;
+    }
+    final src = nested ?? j;
+
+    return ChargingStationModel(
+      id:             j['id']               as int,
+      name:           j['name']             as String? ?? '',
+      address:        j['address']          as String? ?? '',
+      lat:            double.parse((j['latitude']  ?? j['lat']  ?? 0).toString()),
+      lng:            double.parse((j['longitude'] ?? j['lng']  ?? 0).toString()),
+      distanceKm:     j['distance_km'] != null
+          ? double.tryParse(j['distance_km'].toString()) : null,
+      availablePorts: j['available_ports']  as int? ?? 0,
+      totalPorts:     j['total_ports'] as int?,
+      verified:       j['verified'] == true || j['verified'] == 1,
+      fastCharging:   j['fast_charging'] == true || j['fast_charging'] == 1 ||
+          (src['power_kw'] is List &&
+              (src['power_kw'] as List).any((p) => (p as num) >= 50)),
+      pricePerKwh:    src['price_per_kwh'] != null
+          ? double.tryParse(src['price_per_kwh'].toString()) : null,
+      connectorTypes: (src['connector_types'] as List<dynamic>?)
+              ?.map((e) => e.toString()).toList() ??
+          const [],
+      operator:       j['operator']         as String? ?? '',
+      rating:         j['rating'] != null
+          ? double.tryParse(j['rating'].toString()) : null,
+      // Only keep 'details' as free text if it wasn't actually a JSON blob —
+      // otherwise there's nothing human-readable left to show.
+      details:        nested == null ? (rawDetails as String? ?? '') : '',
+      hours:          (j['hours'] ?? src['open_hours']) as String? ?? '',
+    );
+  }
+
+  ChargingStationModel copyWith({double? distanceKm}) => ChargingStationModel(
+    id: id, name: name, address: address, lat: lat, lng: lng,
+    distanceKm: distanceKm ?? this.distanceKm,
+    availablePorts: availablePorts, totalPorts: totalPorts, operator: operator,
+    rating: rating, details: details, verified: verified, fastCharging: fastCharging,
+    pricePerKwh: pricePerKwh, connectorTypes: connectorTypes, hours: hours,
   );
 }
 

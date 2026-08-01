@@ -43,7 +43,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _pages = [
     _OnboardPage(
-      icon: Icons.electric_car_outlined,
+      icon: Icons.electric_rickshaw,
       color: Color(0xFF00B14F),
       title: 'Welcome to ROTEH',
       subtitle:

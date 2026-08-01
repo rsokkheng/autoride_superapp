@@ -19,6 +19,13 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc"/>
 
+        <!-- Status bar must show a monochrome silhouette, not the full-color
+             app icon (Android tints it white, but a solid raster launcher
+             icon renders as a solid blob) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

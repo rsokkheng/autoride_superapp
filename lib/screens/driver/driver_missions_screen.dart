@@ -677,7 +677,7 @@ class _RentalPlaceholder extends StatelessWidget {
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.car_rental_outlined, color: context.appTextSecondary, size: 56),
       SizedBox(height: 16),
-      Text('Car Rental missions',
+      Text('Rental Vehicle missions',
           style: TextStyle(
               color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
       SizedBox(height: 8),

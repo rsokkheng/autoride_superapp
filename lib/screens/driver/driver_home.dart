@@ -696,7 +696,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     ]),
                   ],
                 ])),
-                Icon(Icons.directions_car,
+                Icon(Icons.electric_rickshaw,
                     color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : context.appTextSecondary,
                     size: 50),
               ]),
@@ -707,7 +707,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
             const SectionHeader(title: 'Service Modes'),
             const SizedBox(height: 10),
             Row(children: [
-              _ModeChip(icon: Icons.directions_car_outlined,  label: 'Ride',     active: widget.modeRide,     color: AppTheme.accent,         onTap: () => widget.onModeRide(!widget.modeRide)),
+              _ModeChip(icon: Icons.electric_rickshaw,  label: 'Ride',     active: widget.modeRide,     color: AppTheme.accent,         onTap: () => widget.onModeRide(!widget.modeRide)),
               const SizedBox(width: 8),
               _ModeChip(icon: Icons.delivery_dining_outlined, label: 'Delivery', active: widget.modeDelivery, color: AppTheme.accentOrange,    onTap: () => widget.onModeDelivery(!widget.modeDelivery)),
               const SizedBox(width: 8),
@@ -727,12 +727,158 @@ class _DriverDashboardState extends State<_DriverDashboard>
               childAspectRatio: 1.6,
               children: [
                 _StatCard(label: 'Accepted',       value: '${_stats?.acceptedRides  ?? 0}',                                     icon: Icons.check_circle_outline, color: AppTheme.accent),
-                _StatCard(label: 'Completed',      value: '${_stats?.completedRides ?? 0}',                                     icon: Icons.directions_car,       color: AppTheme.accentOrange),
+                _StatCard(label: 'Completed',      value: '${_stats?.completedRides ?? 0}',                                     icon: Icons.electric_rickshaw,       color: AppTheme.accentOrange),
                 _StatCard(label: 'Hours Online',   value: _stats == null ? '--' : '${_stats!.hoursOnline.toStringAsFixed(1)}h', icon: Icons.access_time,          color: const Color(0xFF9C27B0)),
                 _StatCard(label: 'Acceptance Rate',value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', icon: Icons.thumb_up_outlined, color: AppTheme.success),
               ],
             ),
             SizedBox(height: 20),
+
+            // Active mode cards (one per active mode)
+            if (widget.isOnline) ...[
+              // While busy — show resume card
+              if (widget.isBusy) ...[
+                GestureDetector(
+                  onTap: _openActiveTrip,
+                  child: Container(
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
+                    ),
+                    child: Row(children: [
+                      Container(
+                        padding: EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _activeDelivery != null
+                              ? Icons.delivery_dining
+                              : Icons.electric_rickshaw,
+                          color: AppTheme.warning, size: 24),
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(
+                          _activeDelivery != null
+                              ? (_activeDelivery!.isMoving ? 'Moving In Progress' : 'Delivery In Progress')
+                              : 'Ride In Progress',
+                          style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
+                        SizedBox(height: 2),
+                        Text('Tap to open the map and see where to go.',
+                            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                      ])),
+                      const SizedBox(width: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Text('Resume',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                      ),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 14),
+              ] else ...[
+                if (widget.modeRide) ...[
+                  if (_pendingRide != null) ...[
+                    const SectionHeader(title: 'Incoming Ride Request'),
+                    const SizedBox(height: 14),
+                    _RideRequestCard(
+                      ride: _pendingRide!,
+                      onDeclined: () => setState(() => _pendingRide = null),
+                      onAccept: (RideModel ride) async {
+                        setState(() { _pendingRide = null; _activeRide = ride; });
+                        widget.onBusy();
+                        await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => DriverActiveTripScreen(ride: ride),
+                        ));
+                        if (mounted) {
+                          setState(() => _activeRide = null);
+                          widget.onTripCompleted();
+                        }
+                      },
+                    ),
+                  ] else ...[
+                    _ModeEmptyCard(
+                      icon: Icons.electric_rickshaw,
+                      color: AppTheme.accent,
+                      title: 'Looking for Ride Requests',
+                      subtitle: 'You\'ll be notified when a passenger nearby needs a ride.',
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                ],
+                if (widget.modeDelivery) ...[
+                  if (_pendingDelivery != null) ...[
+                    const SectionHeader(title: 'Incoming Delivery Request'),
+                    const SizedBox(height: 14),
+                    _DeliveryRequestCard(
+                      delivery: _pendingDelivery!,
+                      onDeclined: () => setState(() => _pendingDelivery = null),
+                      onAccept: (DeliveryModel delivery) async {
+                        setState(() { _pendingDelivery = null; _activeDelivery = delivery; });
+                        final user = await ApiService.getSavedUser();
+                        final driverIdStr = user?.id.toString() ?? 'unknown';
+                        if (!mounted) return;
+                        await Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => DriverDeliveryActiveScreen(
+                            delivery: delivery,
+                            driverIdStr: driverIdStr,
+                          ),
+                        ));
+                        if (mounted) setState(() => _activeDelivery = null);
+                      },
+                    ),
+                  ] else ...[
+                    _ModeEmptyCard(
+                      icon: Icons.delivery_dining_outlined,
+                      color: AppTheme.accentOrange,
+                      title: 'Delivery Mode Active',
+                      subtitle: 'Waiting for delivery orders in your area.',
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                ],
+                if (widget.modeRental) ...[
+                  if (_pendingRental != null) ...[
+                    const SectionHeader(title: 'Incoming Rental Request'),
+                    const SizedBox(height: 14),
+                    _RentalRequestCard(
+                      rental: _pendingRental!,
+                      onDeclined: () => setState(() => _pendingRental = null),
+                      onAccept: (rental) async {
+                        setState(() => _pendingRental = null);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('Rental request accepted.'),
+                          backgroundColor: AppTheme.success,
+                          behavior: SnackBarBehavior.floating,
+                        ));
+                      },
+                    ),
+                  ] else ...[
+                    _ModeEmptyCard(
+                      icon: Icons.car_rental_outlined,
+                      color: const Color(0xFF9C27B0),
+                      title: 'Rental Mode Active',
+                      subtitle: 'Your vehicle is listed for hourly rentals.',
+                    ),
+                  ],
+                  const SizedBox(height: 14),
+                ],
+              ],
+            ],
+
+            // Share location card
+            _DriverShareLocationCard(isOnline: widget.isOnline),
+            const SizedBox(height: 20),
 
             // Peak hour bonus tracker
             Container(
@@ -809,152 +955,6 @@ class _DriverDashboardState extends State<_DriverDashboard>
               ]),
             ),
             SizedBox(height: 20),
-
-            // Active mode cards (one per active mode)
-            if (widget.isOnline) ...[
-              // While busy — show resume card
-              if (widget.isBusy) ...[
-                GestureDetector(
-                  onTap: _openActiveTrip,
-                  child: Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.warning.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
-                    ),
-                    child: Row(children: [
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppTheme.warning.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          _activeDelivery != null
-                              ? Icons.delivery_dining
-                              : Icons.directions_car,
-                          color: AppTheme.warning, size: 24),
-                      ),
-                      SizedBox(width: 14),
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(
-                          _activeDelivery != null
-                              ? (_activeDelivery!.isMoving ? 'Moving In Progress' : 'Delivery In Progress')
-                              : 'Ride In Progress',
-                          style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
-                        SizedBox(height: 2),
-                        Text('Tap to open the map and see where to go.',
-                            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-                      ])),
-                      const SizedBox(width: 10),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.warning,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text('Resume',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
-                      ),
-                    ]),
-                  ),
-                ),
-                const SizedBox(height: 14),
-              ] else ...[
-                if (widget.modeRide) ...[
-                  if (_pendingRide != null) ...[
-                    const SectionHeader(title: 'Incoming Ride Request'),
-                    const SizedBox(height: 14),
-                    _RideRequestCard(
-                      ride: _pendingRide!,
-                      onDeclined: () => setState(() => _pendingRide = null),
-                      onAccept: (RideModel ride) async {
-                        setState(() { _pendingRide = null; _activeRide = ride; });
-                        widget.onBusy();
-                        await Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => DriverActiveTripScreen(ride: ride),
-                        ));
-                        if (mounted) {
-                          setState(() => _activeRide = null);
-                          widget.onTripCompleted();
-                        }
-                      },
-                    ),
-                  ] else ...[
-                    _ModeEmptyCard(
-                      icon: Icons.directions_car_outlined,
-                      color: AppTheme.accent,
-                      title: 'Looking for Ride Requests',
-                      subtitle: 'You\'ll be notified when a passenger nearby needs a ride.',
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                ],
-                if (widget.modeDelivery) ...[
-                  if (_pendingDelivery != null) ...[
-                    const SectionHeader(title: 'Incoming Delivery Request'),
-                    const SizedBox(height: 14),
-                    _DeliveryRequestCard(
-                      delivery: _pendingDelivery!,
-                      onDeclined: () => setState(() => _pendingDelivery = null),
-                      onAccept: (DeliveryModel delivery) async {
-                        setState(() { _pendingDelivery = null; _activeDelivery = delivery; });
-                        final user = await ApiService.getSavedUser();
-                        final driverIdStr = user?.id.toString() ?? 'unknown';
-                        if (!mounted) return;
-                        await Navigator.push(context, MaterialPageRoute(
-                          builder: (_) => DriverDeliveryActiveScreen(
-                            delivery: delivery,
-                            driverIdStr: driverIdStr,
-                          ),
-                        ));
-                        if (mounted) setState(() => _activeDelivery = null);
-                      },
-                    ),
-                  ] else ...[
-                    _ModeEmptyCard(
-                      icon: Icons.delivery_dining_outlined,
-                      color: AppTheme.accentOrange,
-                      title: 'Delivery Mode Active',
-                      subtitle: 'Waiting for delivery orders in your area.',
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                ],
-                if (widget.modeRental) ...[
-                  if (_pendingRental != null) ...[
-                    const SectionHeader(title: 'Incoming Rental Request'),
-                    const SizedBox(height: 14),
-                    _RentalRequestCard(
-                      rental: _pendingRental!,
-                      onDeclined: () => setState(() => _pendingRental = null),
-                      onAccept: (rental) async {
-                        setState(() => _pendingRental = null);
-                        if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Rental request accepted.'),
-                          backgroundColor: AppTheme.success,
-                          behavior: SnackBarBehavior.floating,
-                        ));
-                      },
-                    ),
-                  ] else ...[
-                    _ModeEmptyCard(
-                      icon: Icons.car_rental_outlined,
-                      color: const Color(0xFF9C27B0),
-                      title: 'Rental Mode Active',
-                      subtitle: 'Your vehicle is listed for hourly rentals.',
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                ],
-              ],
-            ],
-
-            // Share location card
-            _DriverShareLocationCard(isOnline: widget.isOnline),
-            const SizedBox(height: 20),
 
             const SectionHeader(title: 'Recent Trips'),
             const SizedBox(height: 14),
@@ -1304,9 +1304,18 @@ class _RideRequestCardState extends State<_RideRequestCard> {
           SizedBox(width: 10),
           Expanded(child: Text(passengerLabel,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600))),
-          Text(AppTheme.khr(widget.ride.fareKhr),
-              style: TextStyle(color: context.appTextPrimary,
-                  fontSize: 20, fontWeight: FontWeight.w800)),
+          widget.ride.noDestination
+              ? Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: AppTheme.accent.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8)),
+                  child: const Text('Metered fare',
+                      style: TextStyle(color: AppTheme.accent, fontSize: 12, fontWeight: FontWeight.w700)),
+                )
+              : Text(AppTheme.khr(widget.ride.fareKhr),
+                  style: TextStyle(color: context.appTextPrimary,
+                      fontSize: 20, fontWeight: FontWeight.w800)),
         ]),
         SizedBox(height: 12),
 
@@ -1326,10 +1335,17 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             ]),
             SizedBox(height: 6),
             Row(children: [
-              Icon(Icons.location_on, color: AppTheme.danger, size: 10),
+              Icon(widget.ride.noDestination ? Icons.record_voice_over_outlined : Icons.location_on,
+                  color: widget.ride.noDestination ? AppTheme.accent : AppTheme.danger, size: 10),
               SizedBox(width: 8),
-              Expanded(child: Text(widget.ride.dropoffAddress,
-                  style: TextStyle(color: context.appTextSecondary, fontSize: 13),
+              Expanded(child: Text(
+                  widget.ride.noDestination
+                      ? 'No destination — passenger will tell you'
+                      : widget.ride.dropoffAddress,
+                  style: TextStyle(
+                      color: widget.ride.noDestination ? AppTheme.accent : context.appTextSecondary,
+                      fontSize: 13,
+                      fontWeight: widget.ride.noDestination ? FontWeight.w600 : FontWeight.w400),
                   overflow: TextOverflow.ellipsis)),
             ]),
           ]),
@@ -1921,7 +1937,7 @@ class _RecentRidesSectionState extends State<_RecentRidesSection> {
       children: _rides.map((ride) => _DriverTripCard(
         passenger: ride.driver?.name ?? 'Passenger #${ride.passengerId}',
         from:      ride.pickupAddress,
-        to:        ride.dropoffAddress,
+        to:        ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : 'No destination set',
         earned:    '+${AppTheme.khr(ride.fareKhr)}',
         time:      ride.createdAt.length >= 16 ? ride.createdAt.substring(11, 16) : '',
       )).toList(),
@@ -2584,7 +2600,7 @@ class _TxnTile extends StatelessWidget {
 
   IconData get _icon {
     switch (txn.type) {
-      case 'trip_earning':        return Icons.directions_car;
+      case 'trip_earning':        return Icons.electric_rickshaw;
       case 'platform_commission': return Icons.percent;
       case 'bonus':               return Icons.emoji_events;
       case 'top_up':              return Icons.add_circle_outline;

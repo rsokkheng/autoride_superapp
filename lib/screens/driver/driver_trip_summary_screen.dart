@@ -6,12 +6,17 @@ class DriverTripSummaryScreen extends StatelessWidget {
   final RideModel ride;
   final double?   distanceKmFallback;
   final int?      durationMinFallback;
+  /// Intermediate stop addresses, in order — the ride's own `stops` field
+  /// isn't reliably populated by every backend response, so the caller
+  /// passes the already-loaded stops from the active trip screen instead.
+  final List<String> wayStops;
 
   const DriverTripSummaryScreen({
     super.key,
     required this.ride,
     this.distanceKmFallback,
     this.durationMinFallback,
+    this.wayStops = const [],
   });
 
   static const _kGreen = Color(0xFF00B14F);
@@ -112,7 +117,10 @@ class DriverTripSummaryScreen extends StatelessWidget {
                         width: 10, height: 10,
                         decoration: BoxDecoration(color: _kGreen, shape: BoxShape.circle),
                       ),
-                      Container(width: 1.5, height: 36, color: Theme.of(context).dividerColor),
+                      Container(
+                          width: 1.5,
+                          height: wayStops.isEmpty ? 36 : 20 + 22.0 * wayStops.length,
+                          color: Theme.of(context).dividerColor),
                       Icon(Icons.location_on, color: Colors.red, size: 14),
                     ]),
                     SizedBox(width: 12),
@@ -122,10 +130,18 @@ class DriverTripSummaryScreen extends StatelessWidget {
                       Text(ride.pickupAddress,
                           style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
+                      for (int i = 0; i < wayStops.length; i++) ...[
+                        SizedBox(height: 14),
+                        Text('Stop ${i + 1}', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                        SizedBox(height: 2),
+                        Text(wayStops[i],
+                            style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                      ],
                       SizedBox(height: 16),
                       Text('Destination', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                       SizedBox(height: 2),
-                      Text(ride.dropoffAddress,
+                      Text(ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : '--',
                           style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     ])),

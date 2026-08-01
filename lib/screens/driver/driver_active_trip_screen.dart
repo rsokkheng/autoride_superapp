@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/app_log.dart';
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
@@ -71,6 +72,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   final Set<Marker>   _markers   = {};
   final Set<Polyline> _polylines = {};
 
+  // Intermediate stops (multi-stop rides) — fetched from the backend since
+  // RideModel itself doesn't carry them.
+  List<RideStopModel> _wayStops     = [];
+  int                 _nextStopIndex = 0;
+
   late AnimationController _pulseCtrl;
   late Animation<double>   _pulseAnim;
 
@@ -81,15 +87,34 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           ? LatLng(widget.ride!.pickupLat!, widget.ride!.pickupLng!)
           : const LatLng(11.5650, 104.9175);
 
-  LatLng get _destLatLng =>
-      (widget.ride?.dropoffLat != null && widget.ride?.dropoffLng != null)
-          ? LatLng(widget.ride!.dropoffLat!, widget.ride!.dropoffLng!)
-          : const LatLng(11.5616, 104.9282);
+  // "Book Without Destination" — no dropoff was picked at booking time, so
+  // there's nothing to route to until the driver enters a fare on completion.
+  bool get _isMetered => widget.ride?.noDestination ?? false;
+
+  LatLng? get _destLatLng {
+    if (widget.ride?.dropoffLat != null && widget.ride?.dropoffLng != null) {
+      return LatLng(widget.ride!.dropoffLat!, widget.ride!.dropoffLng!);
+    }
+    return _isMetered ? null : const LatLng(11.5616, 104.9282);
+  }
+
+  // Next leg to route/fit-camera to: pickup while en-route, then each
+  // unarrived stop in order, then the final destination once all stops
+  // are done.
+  LatLng? get _nextWaypoint {
+    if (_phase != _TripPhase.inProgress) return _pickupLatLng;
+    if (_nextStopIndex < _wayStops.length) {
+      return LatLng(_wayStops[_nextStopIndex].lat, _wayStops[_nextStopIndex].lng);
+    }
+    return _destLatLng;
+  }
 
   String get _passengerName => widget.ride?.passenger?.name
       ?? (widget.ride != null ? 'Passenger #${widget.ride!.passengerId}' : widget.passengerName);
   String get _pickupAddr    => widget.ride?.pickupAddress  ?? widget.pickup;
-  String get _destAddr      => widget.ride?.dropoffAddress ?? widget.destination;
+  String get _destAddr      => (widget.ride?.dropoffAddress.isNotEmpty ?? false)
+      ? widget.ride!.dropoffAddress
+      : (_isMetered ? 'No destination — ask passenger' : widget.destination);
   String get _fare          => widget.ride != null
       ? AppTheme.khr(widget.ride!.fareKhr)
       : widget.fare;
@@ -119,8 +144,66 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     });
 
     _initMap();
+    _fetchFullRoute();
     _startTracking();
+    _loadWayStops();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  Future<void> _loadWayStops({int attempt = 0}) async {
+    if (widget.ride == null) return;
+    List<RideStopModel> stops = const [];
+    try {
+      stops = await ApiService.getRideStops(widget.ride!.id);
+    } catch (e, s) {
+      // Most rides have no stops — a 404/empty response is expected —
+      // but log it so a genuine failure (network, auth, parse) is visible
+      // rather than silently looking identical to "no stops booked".
+      AppLog.w('DriverTrip', 'getRideStops(${widget.ride!.id}) failed: $e');
+      AppLog.e('DriverTrip', 'getRideStops stack', e, s);
+    }
+    if (stops.isEmpty) {
+      // Fallback: stops are now sent inline with ride creation. If the
+      // dedicated /rides/{id}/stops endpoint hasn't caught up, read them
+      // straight off a fresh ride fetch instead (embedded 'stops' field).
+      try {
+        final ride = await ApiService.getRide(widget.ride!.id);
+        AppLog.d('DriverTrip',
+            'getRide(${widget.ride!.id}) fallback found ${ride.stops.length} embedded stop(s)');
+        stops = ride.stops.map((s) => RideStopModel(
+          id:      s.id ?? -(s.order),
+          rideId:  widget.ride!.id,
+          order:   s.order,
+          address: s.address,
+          lat:     s.lat,
+          lng:     s.lng,
+          arrived: s.arrived,
+        )).toList();
+      } catch (e, s) {
+        AppLog.e('DriverTrip', 'getRide fallback failed for ${widget.ride!.id}', e, s);
+      }
+    }
+    if (stops.isEmpty && attempt < 2) {
+      // Both reads came back empty — could be a write/read race right after
+      // booking (backend hasn't finished persisting the stops yet). Retry a
+      // couple of times before accepting "no stops" as final.
+      AppLog.w('DriverTrip',
+          'no stops found for ride ${widget.ride!.id} on attempt $attempt — retrying');
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      return _loadWayStops(attempt: attempt + 1);
+    }
+    stops.sort((a, b) => a.order.compareTo(b.order));
+    if (!mounted || stops.isEmpty) return;
+    setState(() {
+      _wayStops      = stops;
+      _nextStopIndex = stops.indexWhere((s) => !s.arrived);
+      if (_nextStopIndex == -1) _nextStopIndex = stops.length;
+      _markers.clear();
+      _polylines.clear();
+    });
+    _initMap();
+    _fetchFullRoute();
   }
 
   @override
@@ -148,7 +231,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     if (_driverLatLng != null) {
       _lastRouteFetch = null;
       _fetchLiveRoute(_driverLatLng!);
-      final waypoint = _phase == _TripPhase.inProgress ? _destLatLng : _pickupLatLng;
+      final waypoint = _nextWaypoint;
       Future.delayed(const Duration(milliseconds: 300),
           () => mounted ? _fitCamera(_driverLatLng!, waypoint) : null);
     }
@@ -160,28 +243,58 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     final pickup = _pickupLatLng;
     final dest   = _destLatLng;
 
-    _markers.addAll([
-      Marker(
-        markerId: const MarkerId('pickup'),
-        position: pickup,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: InfoWindow(title: _pickupAddr),
-      ),
-      Marker(
-        markerId: const MarkerId('dest'),
-        position: dest,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: InfoWindow(title: _destAddr),
-      ),
-    ]);
+    _markers.add(Marker(
+      markerId: const MarkerId('pickup'),
+      position: pickup,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      infoWindow: InfoWindow(title: _pickupAddr),
+    ));
 
-    // Static full route — dashed gray context line (pickup → destination)
+    // Intermediate stops — numbered orange markers between pickup and dest
+    for (int i = 0; i < _wayStops.length; i++) {
+      final s = _wayStops[i];
+      _markers.add(Marker(
+        markerId: MarkerId('stop_${s.id}'),
+        position: LatLng(s.lat, s.lng),
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+            s.arrived ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueOrange),
+        infoWindow: InfoWindow(title: 'Stop ${i + 1}: ${s.address}'),
+      ));
+    }
+
+    if (dest == null) {
+      // No final destination (metered ride) — still draw pickup → stops.
+      if (_wayStops.isNotEmpty) {
+        final points = [pickup, ..._wayStops.map((s) => LatLng(s.lat, s.lng))];
+        _polylines.add(Polyline(
+          polylineId: const PolylineId('full_route'),
+          points:     points,
+          color:      AppTheme.accent,
+          width:      4,
+        ));
+      }
+      return;
+    }
+
+    _markers.add(Marker(
+      markerId: const MarkerId('dest'),
+      position: dest,
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      infoWindow: InfoWindow(title: _destAddr),
+    ));
+
+    // Static full route — solid green line through every leg, including
+    // each stop-to-stop segment (pickup → stop 1 → stop 2 → … → destination)
+    final points = [
+      pickup,
+      ..._wayStops.map((s) => LatLng(s.lat, s.lng)),
+      dest,
+    ];
     _polylines.add(Polyline(
       polylineId: const PolylineId('full_route'),
-      points:     [pickup, dest],
-      color:      const Color(0x55888888),
+      points:     points,
+      color:      AppTheme.accent,
       width:      4,
-      patterns:   [PatternItem.dash(16), PatternItem.gap(8)],
     ));
   }
 
@@ -279,9 +392,17 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       }
     }
 
-    // Camera: show driver + next waypoint
-    final waypoint = _phase == _TripPhase.inProgress ? _destLatLng : _pickupLatLng;
-    _fitCamera(pos, waypoint);
+    // Auto-detect arrival at the next intermediate stop (within 80 m)
+    if (_phase == _TripPhase.inProgress && _nextStopIndex < _wayStops.length) {
+      final nextStop = _wayStops[_nextStopIndex];
+      final distToStop = _distanceMetres(pos, LatLng(nextStop.lat, nextStop.lng));
+      if (distToStop <= 80) {
+        _autoArriveAtStop(nextStop);
+      }
+    }
+
+    // Camera: show driver + next waypoint (pickup → each stop → destination)
+    _fitCamera(pos, _nextWaypoint);
 
     // Also push location to backend API during trip (throttled to once per 10 s)
     _pushLocationToBackend(position);
@@ -303,11 +424,30 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     );
   }
 
+  bool _arrivingAtStop = false;
+
+  Future<void> _autoArriveAtStop(RideStopModel stop) async {
+    if (_arrivingAtStop) return;
+    _arrivingAtStop = true;
+    setState(() => _nextStopIndex++);
+    NotificationService.instance.showTripUpdate(
+      title: 'Arrived at Stop',
+      body:  'You have arrived at ${stop.address}',
+    );
+    if (widget.ride != null) {
+      try {
+        await ApiService.arriveAtRideStop(widget.ride!.id, stop.id);
+      } catch (_) {}
+    }
+    _arrivingAtStop = false;
+  }
+
   // ── Routes API — live route ────────────────────────────────────────────────────
 
   Future<void> _fetchLiveRoute(LatLng driverPos) async {
-    final destination =
-        _phase == _TripPhase.inProgress ? _destLatLng : _pickupLatLng;
+    final destination = _nextWaypoint;
+    // No destination picked yet (metered trip) — nothing to route to.
+    if (destination == null) return;
 
     final result = await MapsService.getRoute(
       origin:      driverPos,
@@ -328,6 +468,34 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           startCap:   Cap.roundCap,
           endCap:     Cap.roundCap,
           jointType:  JointType.round,
+        ));
+    });
+  }
+
+  // Overview route (pickup → each stop → destination), following actual
+  // roads instead of the straight-line placeholder drawn by _initMap.
+  Future<void> _fetchFullRoute() async {
+    final pickup = _pickupLatLng;
+    final dest   = _destLatLng;
+    final legs = [pickup, ..._wayStops.map((s) => LatLng(s.lat, s.lng)), if (dest != null) dest];
+    if (legs.length < 2) return;
+
+    final routedPoints = <LatLng>[];
+    for (int i = 0; i < legs.length - 1; i++) {
+      final result = await MapsService.getRoute(origin: legs[i], destination: legs[i + 1]);
+      routedPoints.addAll(
+          result != null && result.points.isNotEmpty ? result.points : [legs[i], legs[i + 1]]);
+    }
+    if (!mounted || routedPoints.isEmpty) return;
+
+    setState(() {
+      _polylines
+        ..removeWhere((p) => p.polylineId.value == 'full_route')
+        ..add(Polyline(
+          polylineId: const PolylineId('full_route'),
+          points:     routedPoints,
+          color:      AppTheme.accent,
+          width:      4,
         ));
     });
   }
@@ -354,7 +522,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   // ── Camera ─────────────────────────────────────────────────────────────────────
 
-  void _fitCamera(LatLng a, LatLng b) {
+  void _fitCamera(LatLng a, LatLng? b) {
+    if (b == null) {
+      _mapController?.animateCamera(CameraUpdate.newLatLng(a));
+      return;
+    }
     final sw = LatLng(
       min(a.latitude,  b.latitude)  - 0.004,
       min(a.longitude, b.longitude) - 0.004,
@@ -405,11 +577,28 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     }
 
     if (_phase == _TripPhase.inProgress) {
+      // No destination was picked at booking — the driver enters the final
+      // metered fare now. If they cancel, stay in the trip.
+      int? finalFareKhr;
+      if (_isMetered) {
+        setState(() => _completing = true);
+        final suggested = await _estimateMeteredFare();
+        if (!mounted) return;
+        setState(() => _completing = false);
+        finalFareKhr = await _promptFinalFare(suggested);
+        if (finalFareKhr == null) return;
+      }
+
       setState(() => _completing = true);
       RideModel? completedRide;
       if (widget.ride != null) {
         try {
-          completedRide = await ApiService.completeRide(widget.ride!.id);
+          completedRide = await ApiService.completeRide(
+            widget.ride!.id,
+            fareKhr:        finalFareKhr,
+            dropoffLat:     _isMetered ? _driverLatLng?.latitude  : null,
+            dropoffLng:     _isMetered ? _driverLatLng?.longitude : null,
+          );
           // The complete endpoint may not return distance/duration —
           // fetch the finalized ride to get server-computed values.
           if (completedRide.distanceKm == null || completedRide.durationMin == null) {
@@ -446,6 +635,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             ride:            finalRide,
             distanceKmFallback: fallbackDist,
             durationMinFallback: fallbackDur,
+            wayStops:        _wayStops.map((s) => s.address).toList(),
           ),
         ),
       );
@@ -493,6 +683,94 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     createdAt:     DateTime.now().toIso8601String(),
     updatedAt:     DateTime.now().toIso8601String(),
   );
+
+  // ── Metered fare entry (no-destination trips) ─────────────────────────────────
+
+  // Uses the same admin-configured rate table as normal ride estimates —
+  // pickup → driver's current position stands in for the actual distance
+  // travelled, since there was no destination to route against.
+  Future<({int amount, double distanceKm})?> _estimateMeteredFare() async {
+    if (widget.ride == null || _driverLatLng == null) return null;
+    try {
+      final estimate = await ApiService.estimateRide(
+        pickupLat:  _pickupLatLng.latitude,
+        pickupLng:  _pickupLatLng.longitude,
+        dropoffLat: _driverLatLng!.latitude,
+        dropoffLng: _driverLatLng!.longitude,
+      );
+      final fare = estimate.fares[widget.ride!.serviceType] ??
+          (estimate.fares.values.isNotEmpty ? estimate.fares.values.first : null);
+      if (fare == null) return null;
+      return (amount: fare.total, distanceKm: estimate.distanceKm);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<int?> _promptFinalFare(({int amount, double distanceKm})? suggested) async {
+    final ctrl = TextEditingController(
+        text: suggested != null ? suggested.amount.toString() : '');
+    String? error;
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          backgroundColor: context.appSurface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Enter Final Fare',
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800)),
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              suggested != null
+                  ? 'This trip had no destination set. Suggested fare below is calculated '
+                    'from ${suggested.distanceKm.toStringAsFixed(1)} km travelled — adjust if needed.'
+                  : "This trip had no destination set — enter the metered fare to complete it. "
+                    "Couldn't auto-calculate a suggestion (no signal/location).",
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 18),
+              decoration: InputDecoration(
+                prefixText: '៛ ',
+                hintText: 'e.g. 8000',
+                filled: true,
+                fillColor: context.appCardBg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                errorText: error,
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final amt = int.tryParse(ctrl.text.trim());
+                if (amt == null || amt <= 0) {
+                  setLocal(() => error = 'Enter a valid amount');
+                  return;
+                }
+                Navigator.pop(ctx, amt);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Complete Trip'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ── Dialogs / actions ─────────────────────────────────────────────────────────
 
@@ -608,8 +886,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     final isCompleted = _phase == _TripPhase.completed;
     final pickup  = _pickupLatLng;
     final dest    = _destLatLng;
-    final midLat  = (pickup.latitude  + dest.latitude)  / 2;
-    final midLng  = (pickup.longitude + dest.longitude) / 2;
+    final midLat  = dest != null ? (pickup.latitude  + dest.latitude)  / 2 : pickup.latitude;
+    final midLng  = dest != null ? (pickup.longitude + dest.longitude) / 2 : pickup.longitude;
 
     return Scaffold(
       body: Stack(children: [
@@ -618,6 +896,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         GoogleMap(
           onMapCreated: (c) {
             _mapController = c;
+            if (dest == null) {
+              c.animateCamera(CameraUpdate.newLatLngZoom(pickup, 15));
+              return;
+            }
             // Fit camera to show full pickup → destination route
             c.animateCamera(CameraUpdate.newLatLngBounds(
               LatLngBounds(
@@ -809,20 +1091,22 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                       ],
                     ),
                   ),
-                  Text(_fare,
+                  Text(_isMetered ? 'Metered' : _fare,
                       style: TextStyle(
                           color: AppTheme.accent,
-                          fontSize: 20,
+                          fontSize: _isMetered ? 14 : 20,
                           fontWeight: FontWeight.w800)),
                   SizedBox(width: 12),
                   _ActionBtn(
                       icon: Icons.call_outlined,
                       color: AppTheme.success,
+                      label: 'Call',
                       onTap: _callPassenger),
                   SizedBox(width: 8),
                   _ActionBtn(
                       icon: Icons.chat_bubble_outline,
                       color: AppTheme.accent,
+                      label: 'Chat',
                       onTap: _openRideChat),
                 ]),
                 SizedBox(height: 12),
@@ -845,6 +1129,44 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600))),
                     ]),
+                    for (int i = 0; i < _wayStops.length; i++) ...[
+                      SizedBox(height: 4),
+                      Row(children: [
+                        Container(
+                            width: 1,
+                            height: 16,
+                            color: context.appTextSecondary,
+                            margin: EdgeInsets.only(left: 4)),
+                      ]),
+                      SizedBox(height: 4),
+                      Row(children: [
+                        Container(
+                          width: 16, height: 16,
+                          decoration: BoxDecoration(
+                            color: (_wayStops[i].arrived ? AppTheme.success : AppTheme.warning)
+                                .withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: _wayStops[i].arrived ? AppTheme.success : AppTheme.warning,
+                                width: 1.2),
+                          ),
+                          child: Center(
+                            child: Text('${i + 1}',
+                                style: TextStyle(
+                                    color: _wayStops[i].arrived ? AppTheme.success : AppTheme.warning,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Expanded(
+                            child: Text(_wayStops[i].address,
+                                style: TextStyle(
+                                    color: context.appTextPrimary,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600))),
+                      ]),
+                    ],
                     SizedBox(height: 4),
                     Row(children: [
                       Container(
@@ -855,13 +1177,31 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     ]),
                     SizedBox(height: 4),
                     Row(children: [
-                      Icon(Icons.location_on,
-                          color: AppTheme.accentOrange, size: 12),
-                      SizedBox(width: 8),
+                      if (_isMetered || _wayStops.isEmpty)
+                        Icon(_isMetered ? Icons.record_voice_over_outlined : Icons.location_on,
+                            color: _isMetered ? AppTheme.accent : AppTheme.accentOrange, size: 12)
+                      else
+                        Container(
+                          width: 16, height: 16,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE53935).withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFFE53935), width: 1.2),
+                          ),
+                          child: Center(
+                            child: Text('${_wayStops.length + 1}',
+                                style: const TextStyle(
+                                    color: Color(0xFFE53935),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800)),
+                          ),
+                        ),
+                      SizedBox(width: _isMetered || _wayStops.isEmpty ? 8 : 6),
                       Expanded(
                           child: Text(_destAddr,
                               style: TextStyle(
-                                  color: context.appTextSecondary,
+                                  color: _isMetered ? AppTheme.accent : context.appTextSecondary,
+                                  fontWeight: _isMetered ? FontWeight.w600 : FontWeight.w400,
                                   fontSize: 13))),
                     ]),
                   ]),
@@ -928,18 +1268,26 @@ class _ActionBtn extends StatelessWidget {
   final IconData     icon;
   final Color        color;
   final VoidCallback onTap;
+  final String?      label;
   const _ActionBtn(
-      {required this.icon, required this.color, required this.onTap});
+      {required this.icon, required this.color, required this.onTap, this.label});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(9),
-          decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
-          child: Icon(icon, color: color, size: 18),
-        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          if (label != null) ...[
+            const SizedBox(height: 4),
+            Text(label!,
+                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+          ],
+        ]),
       );
 }
 

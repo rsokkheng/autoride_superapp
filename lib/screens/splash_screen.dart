@@ -264,7 +264,7 @@ class _SplashScreenState extends State<SplashScreen>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         _ServiceChip(
-                          icon: Icons.directions_car_outlined,
+                          icon: Icons.electric_rickshaw,
                           label: l.bookRide,
                           color: AppTheme.accent,
                           scale: _chipScales[0].value,
@@ -382,18 +382,18 @@ class _LogoCluster extends StatelessWidget {
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: [Color(0xFF0F4040), Color(0xFF00D4AA)],
+                colors: [Color(0xFF00753A), AppTheme.accent],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
           ),
 
-          // App icon
-          const Icon(
-            Icons.electric_car_rounded,
-            color: Colors.white,
-            size: 48,
+          // App logo
+          Image.asset(
+            'assets/library/icon_fa.png',
+            width: 52,
+            height: 52,
           ),
 
           // Small delivery bike badge (bottom-right)
@@ -414,8 +414,7 @@ class _LogoCluster extends StatelessWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.delivery_dining,
-                  color: Colors.white, size: 18),
+              child: const Text('🛺', style: TextStyle(fontSize: 18)),
             ),
           ),
 

@@ -55,9 +55,8 @@ class _RideType {
 }
 
 const _kRideTypes = [
-  _RideType(name: 'Standard', serviceType: 'standard',   icon: Icons.directions_car,      eta: '4 min', desc: '4 seats'),
+  _RideType(name: 'Standard', serviceType: 'standard',   icon: Icons.electric_rickshaw,   eta: '4 min', desc: '4 seats'),
   _RideType(name: 'Premium',  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '6 min', desc: 'Luxury'),
-  _RideType(name: 'Shared',   serviceType: 'shared',     icon: Icons.airport_shuttle,     eta: '8 min', desc: 'Shared · Split fare'),
   _RideType(name: 'Van',      serviceType: 'van',        icon: Icons.directions_bus,      eta: '6 min', desc: '6+ seats'),
 ];
 
@@ -222,7 +221,20 @@ Future<BitmapDescriptor> _buildPickupMarker({double logical = 26.0}) async {
 
 class RideBookingScreen extends StatefulWidget {
   final FamilyMember? forFamilyMember;
-  const RideBookingScreen({super.key, this.forFamilyMember});
+  // Jump straight into "no destination" booking (pickup only, tell the
+  // driver in person) — used by the dedicated home-screen shortcut.
+  final bool skipDestination;
+  // Pre-fill the destination and jump straight to the confirm screen —
+  // used by "Book a ride to this EV station" deep links.
+  final String? initialDestAddress;
+  final LatLng?  initialDestLatLng;
+  const RideBookingScreen({
+    super.key,
+    this.forFamilyMember,
+    this.skipDestination = false,
+    this.initialDestAddress,
+    this.initialDestLatLng,
+  });
   @override
   State<RideBookingScreen> createState() => _RideBookingScreenState();
 }
@@ -246,6 +258,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   final List<_WayStop> _stops = [_WayStop()];
   int    _activeStopIdx = 0;
   int    _whereToTab    = 0; // 0=Recent  1=Suggestions  2=Saved
+  // Rider hasn't picked a destination yet — they'll tell the driver in
+  // person once onboard, and the fare is metered/GPS-calculated at the end.
+  bool   _noDestination = false;
 
   // Getters for backward-compat with route/booking methods
   String  get _destAddress => _stops.last.address;
@@ -276,7 +291,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   List<_LabeledMarker> _stopMarkers = [];
 
   String   _selectedRide       = 'Standard';
-  String   _selectedVehicleType = 'car';
+  String   _selectedVehicleType = 'tuk_tuk';
   String   _paymentMethod      = 'cash';
   bool     _isScheduled     = false;
   DateTime _scheduledTime   = DateTime.now().add(const Duration(hours: 1));
@@ -305,6 +320,12 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _detectGps();
     _loadSurge();
     _loadSavedPlaces();
+    if (widget.skipDestination) _skipDestination();
+    if (widget.initialDestAddress != null && widget.initialDestLatLng != null) {
+      _stops[0].address = widget.initialDestAddress!;
+      _stops[0].latLng  = widget.initialDestLatLng;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _goToStep(2));
+    }
   }
 
   void _onLocaleChanged() => setState(() {});
@@ -466,9 +487,30 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       if (s != 1) _choosingDestOnMap = false;
     });
     if (s == 2) {
-      _fetchRoute();
-      _buildMarkerIcons();
+      if (_noDestination) {
+        _buildPickupOnlyMarker();
+      } else {
+        _fetchRoute();
+        _buildMarkerIcons();
+      }
     }
+  }
+
+  // Used in "no destination" mode — just need the pickup pin, no route/fare.
+  Future<void> _buildPickupOnlyMarker() async {
+    final pickup = await _buildPickupMarker();
+    if (!mounted) return;
+    setState(() => _pickupIcon = pickup);
+  }
+
+  void _skipDestination() {
+    setState(() {
+      _noDestination = true;
+      _stops
+        ..clear()
+        ..add(_WayStop());
+    });
+    _goToStep(2);
   }
 
   Future<void> _buildMarkerIcons() async {
@@ -770,11 +812,25 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
   Future<void> _doFetchFares(LatLng dest) async {
     try {
+      // Intermediate stops (every filled stop except the final destination)
+      // so the fare reflects the full route, not just a direct pickup→dest
+      // line — otherwise the pre-booking estimate undercounts any detour.
+      final intermediateStops = _stops.length > 1
+          ? _stops.sublist(0, _stops.length - 1).where((s) => s.isFilled).toList()
+          : const <_WayStop>[];
       final estimate = await ApiService.estimateRide(
         pickupLat:  _pickupCenter.latitude,
         pickupLng:  _pickupCenter.longitude,
         dropoffLat: dest.latitude,
         dropoffLng: dest.longitude,
+        stops: intermediateStops.isEmpty
+            ? null
+            : List.generate(intermediateStops.length, (i) => {
+                'order':   i + 1,
+                'address': intermediateStops[i].address,
+                'lat':     intermediateStops[i].latLng!.latitude,
+                'lng':     intermediateStops[i].latLng!.longitude,
+              }),
       );
       if (!mounted) return;
       setState(() {
@@ -794,17 +850,25 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   // ── Book ride ─────────────────────────────────────────────────────────────────
 
   Future<void> _bookRide() async {
-    if (_pickupAddress.isEmpty || _destAddress.isEmpty || _destLatLng == null) return;
+    if (_pickupAddress.isEmpty) return;
+    if (!_noDestination && (_destAddress.isEmpty || _destLatLng == null)) return;
     setState(() { _isBooking = true; _bookError = null; });
     final type = _kRideTypes.firstWhere((r) => r.name == _selectedRide);
+    // Intermediate stops sent inline with ride creation so the backend
+    // persists them atomically — a driver app that fetches the ride right
+    // after creation will already see them.
+    final intermediateStops = (!_noDestination && _stops.length > 1)
+        ? _stops.sublist(0, _stops.length - 1).where((s) => s.isFilled).toList()
+        : const <_WayStop>[];
     try {
       final ride = await ApiService.createRide(
         pickupAddress:  _pickupAddress,
-        dropoffAddress: _destAddress,
+        dropoffAddress: _noDestination ? null : _destAddress,
         pickupLat:      _pickupCenter.latitude,
         pickupLng:      _pickupCenter.longitude,
-        dropoffLat:     _destLatLng!.latitude,
-        dropoffLng:     _destLatLng!.longitude,
+        dropoffLat:     _noDestination ? null : _destLatLng!.latitude,
+        dropoffLng:     _noDestination ? null : _destLatLng!.longitude,
+        noDestination:  _noDestination,
         serviceType:    type.serviceType,
         vehicleType:    _selectedVehicleType,
         paymentMethod:  _paymentMethod,
@@ -819,7 +883,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               '${_scheduledTime.hour.toString().padLeft(2,'0')}:'
               '${_scheduledTime.minute.toString().padLeft(2,'0')}:00'
             : null,
+        stops: intermediateStops.isEmpty
+            ? null
+            : List.generate(intermediateStops.length, (i) => {
+                'order':   i + 1,
+                'address': intermediateStops[i].address,
+                'lat':     intermediateStops[i].latLng!.latitude,
+                'lng':     intermediateStops[i].latLng!.longitude,
+              }),
       );
+
       await NotificationService.instance.showTripUpdate(
         title: 'Ride Requested!',
         body:  'Looking for a driver…',
@@ -832,11 +905,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             rideId:       ride.id,
             fare:         AppTheme.khr(ride.fareKhr),
             from:         _pickupAddress.isNotEmpty ? _pickupAddress : (ride.pickupAddress.isNotEmpty ? ride.pickupAddress : '--'),
-            to:           _destAddress.isNotEmpty   ? _destAddress   : (ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : '--'),
+            to:           _noDestination
+                ? 'Tell driver on arrival'
+                : (_destAddress.isNotEmpty ? _destAddress : (ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : '--')),
             isScheduled:  _isScheduled,
             pickupLatLng: _pickupCenter,
-            destLatLng:   _destLatLng,
-            wayStops:     _stops.length > 1
+            destLatLng:   _noDestination ? null : _destLatLng,
+            wayStops:     (!_noDestination && _stops.length > 1)
                 ? _stops
                     .sublist(0, _stops.length - 1)
                     .where((s) => s.isFilled)
@@ -897,15 +972,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     if (_step == 2) {
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: _buildConfirm(),
+        body: _noDestination ? _buildNoDestinationConfirm() : _buildConfirm(),
       );
     }
     return Scaffold(
       backgroundColor: context.appBackground,
-      body: Column(children: [
-        _StepHeader(step: _step - 1, onBack: _onBack),
-        Expanded(child: _buildDestination()),
-      ]),
+      body: SafeArea(
+        child: Column(children: [
+          _StepHeader(step: _step - 1, onBack: _onBack),
+          Expanded(child: _buildDestination()),
+        ]),
+      ),
     );
   }
 
@@ -1044,6 +1121,31 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               ),
             ),
 
+            // ── Confirm Booking without a destination — tell the driver later ──
+            if (!_stops.last.isFilled) ...[
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _skipDestination,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.confirmBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: const Text('Confirm Booking',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Center(
+                child: Text('No destination needed — tell the driver in person',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 11.5)),
+              ),
+            ],
+
             // ── Saved places shortcuts (Home / Work / etc.) ────────────
             if (_savedPlaces.isNotEmpty) ...[
               const SizedBox(height: 12),
@@ -1155,11 +1257,87 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
     return Column(children: [
 
+      // ── Live map (when all filled) or search results — shown first ────────
+      Expanded(
+        child: _activeStopIdx == -1
+            // All stops confirmed → full live map showing route
+            ? GoogleMap(
+                key: ValueKey('step1_map_${appLocale.value.languageCode}'),
+                onMapCreated: (c) {
+                  _step1MapCtrl = c;
+                  _fitStep1Camera();
+                },
+                initialCameraPosition:
+                    CameraPosition(target: _pickupCenter, zoom: 14),
+                style: _kDarkMapStyle,
+                markers: _step1Markers,
+                polylines: {
+                  for (int i = 0; i < _segmentRoutes.length; i++)
+                    if (_segmentRoutes[i].length >= 2)
+                      Polyline(
+                        polylineId: PolylineId('step1_seg_$i'),
+                        points: _segmentRoutes[i],
+                        color: const [
+                          Color(0xFF00C48C),
+                          Color(0xFFE53935),
+                          Color(0xFF1976D2),
+                          Color(0xFFFF9800),
+                          Color(0xFF9C27B0),
+                        ][i % 5],
+                        width: 4,
+                      ),
+                },
+                myLocationEnabled:       true,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled:     false,
+              )
+            // Still searching / selecting → search results or tabs
+            : _searching
+                ? Center(
+                    child: CircularProgressIndicator(color: AppTheme.accent))
+                : hasQuery && _searchResults.isEmpty
+                    ? Center(
+                        child: Text('No results found',
+                            style: TextStyle(color: context.appTextSecondary)))
+                    : hasQuery
+                        ? ListView(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            children: _searchResults.map((r) {
+                              final isAlreadySelected =
+                                  _stops.any((s) => s.address == r.address);
+                              return _DestTile(
+                                icon: Icons.location_on,
+                                iconColor: AppTheme.accent,
+                                title: r.address,
+                                trailing: isAlreadySelected
+                                    ? const Icon(Icons.check_circle,
+                                        color: AppTheme.success, size: 20)
+                                    : null,
+                                onTap: () => _selectResult(r),
+                              );
+                            }).toList(),
+                          )
+                        : _buildWhereToTabs(),
+      ),
+
       // ── Route card (Grab-style) ──────────────────────────────────────────
       Container(
         color: context.appSurface,
         padding: EdgeInsets.fromLTRB(14, 14, 14, 10),
         child: Column(children: [
+
+          // ── "Where To?" label — moved below the map ──────────────────────
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Text('Where To?',
+                  style: TextStyle(
+                      color: context.appTextPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15)),
+            ),
+          ),
 
           // ── Pickup row (read-only) ──────────────────────────────────────
           Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
@@ -1202,17 +1380,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       )
                     : null,
                 child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                  // Stop icon
+                  // Stop icon — numbered in the order each address was
+                  // picked (Add a stop always appends, so an earlier stop's
+                  // number never shifts). A lone destination with no
+                  // intermediate stops gets a plain pin instead.
                   isLast && _stops.length == 1
-                    // Single destination → plain red pin (no number)
                     ? const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 20)
-                    // All multi-stop items (including last) get a numbered circle
                     : Container(
                         width: 20, height: 20,
                         decoration: BoxDecoration(
-                          color: (isLast
-                              ? const Color(0xFFE53935)
-                              : AppTheme.warning).withValues(alpha: 0.15),
+                          color: (isLast ? const Color(0xFFE53935) : AppTheme.warning)
+                              .withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: isLast ? const Color(0xFFE53935) : AppTheme.warning,
@@ -1221,9 +1399,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                         child: Center(
                           child: Text('${i + 1}',
                               style: TextStyle(
-                                color: isLast
-                                    ? const Color(0xFFE53935)
-                                    : AppTheme.warning,
+                                color: isLast ? const Color(0xFFE53935) : AppTheme.warning,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w800)),
                         ),
@@ -1318,6 +1494,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   // Focus the first unfilled stop instead of adding a new one
                   setState(() { _activeStopIdx = unfilled; _searchCtrl.clear(); });
                 } else {
+                  // Append at the end — whatever was picked first keeps its
+                  // position/number, and each new stop becomes the new final
+                  // destination (matching the "Add a stop" behaviour on the
+                  // confirm screen).
                   setState(() {
                     _stops.add(_WayStop());
                     _activeStopIdx = _stops.length - 1;
@@ -1346,10 +1526,15 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
       Divider(height: 1, color: context.appCardBg),
 
-      // ── Confirm button (shown when all stops are filled, above the map) ───
+      // ── Confirm button (shown when all stops are filled, below the map) ───
       if (allFilled)
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+          // Extra bottom buffer beyond the SafeArea inset — some Samsung
+          // devices (e.g. the Flip series) reserve a gesture-nav touch zone
+          // taller than what MediaQuery reports, which can swallow taps on
+          // a button placed right at the edge of the safe area.
+          padding: EdgeInsets.fromLTRB(
+              14, 10, 14, 10 + MediaQuery.of(context).viewPadding.bottom + 8),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
@@ -1367,69 +1552,6 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
           ),
         ),
-
-      // ── Live map (when all filled) or search results ──────────────────────
-      Expanded(
-        child: _activeStopIdx == -1
-            // All stops confirmed → full live map showing route
-            ? GoogleMap(
-                key: ValueKey('step1_map_${appLocale.value.languageCode}'),
-                onMapCreated: (c) {
-                  _step1MapCtrl = c;
-                  _fitStep1Camera();
-                },
-                initialCameraPosition:
-                    CameraPosition(target: _pickupCenter, zoom: 14),
-                style: _kDarkMapStyle,
-                markers: _step1Markers,
-                polylines: {
-                  for (int i = 0; i < _segmentRoutes.length; i++)
-                    if (_segmentRoutes[i].length >= 2)
-                      Polyline(
-                        polylineId: PolylineId('step1_seg_$i'),
-                        points: _segmentRoutes[i],
-                        color: const [
-                          Color(0xFF00C48C),
-                          Color(0xFFE53935),
-                          Color(0xFF1976D2),
-                          Color(0xFFFF9800),
-                          Color(0xFF9C27B0),
-                        ][i % 5],
-                        width: 4,
-                      ),
-                },
-                myLocationEnabled:       true,
-                myLocationButtonEnabled: false,
-                zoomControlsEnabled:     false,
-              )
-            // Still searching / selecting → search results or tabs
-            : _searching
-                ? Center(
-                    child: CircularProgressIndicator(color: AppTheme.accent))
-                : hasQuery && _searchResults.isEmpty
-                    ? Center(
-                        child: Text('No results found',
-                            style: TextStyle(color: context.appTextSecondary)))
-                    : hasQuery
-                        ? ListView(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            children: _searchResults.map((r) {
-                              final isAlreadySelected =
-                                  _stops.any((s) => s.address == r.address);
-                              return _DestTile(
-                                icon: Icons.location_on,
-                                iconColor: AppTheme.accent,
-                                title: r.address,
-                                trailing: isAlreadySelected
-                                    ? const Icon(Icons.check_circle,
-                                        color: AppTheme.success, size: 20)
-                                    : null,
-                                onTap: () => _selectResult(r),
-                              );
-                            }).toList(),
-                          )
-                        : _buildWhereToTabs(),
-      ),
     ]);
   }
 
@@ -1539,8 +1661,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         bottom: 0, left: 0, right: 0,
         child: Builder(builder: (ctx) {
           // Use viewPadding so this always sits above the system nav bar,
-          // regardless of whether the parent Scaffold already consumed the inset.
-          final bottomInset = MediaQuery.of(ctx).viewPadding.bottom;
+          // regardless of whether the parent Scaffold already consumed the
+          // inset. The extra +8 is a buffer for devices (e.g. Samsung Flip)
+          // whose gesture-nav touch zone is taller than the reported inset.
+          final bottomInset = MediaQuery.of(ctx).viewPadding.bottom + 8;
           return Container(
             decoration: BoxDecoration(
               color: context.appSurface,
@@ -1610,6 +1734,336 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 ),
               ),
             ]),
+          );
+        }),
+      ),
+    ]);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 2 (no-destination mode) — single-screen confirm: map + pickup pin,
+  // optional "Where to?", vehicle type, quick actions, one Confirm button.
+  // No fare-by-type list since the fare is metered.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildNoDestinationConfirm() {
+    return Stack(children: [
+      GoogleMap(
+        key: ValueKey('confirm_map_nodest_${appLocale.value.languageCode}'),
+        onMapCreated: (c) {
+          _confirmMapCtrl = c;
+          c.animateCamera(CameraUpdate.newLatLngZoom(_pickupCenter, 16));
+        },
+        initialCameraPosition: CameraPosition(target: _pickupCenter, zoom: 16),
+        style: _kDarkMapStyle,
+        markers: {
+          Marker(
+            markerId: const MarkerId('pickup'),
+            position: _pickupCenter,
+            icon: _pickupIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+            infoWindow: InfoWindow(title: '📍 Pickup', snippet: _pickupAddress),
+          ),
+        },
+        myLocationEnabled:       true,
+        myLocationButtonEnabled: false,
+        zoomControlsEnabled:     false,
+      ),
+
+      // ── Floating back button ──────────────────────────────────────────────
+      SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: GestureDetector(
+            onTap: () => setState(() {
+              _step          = 1;
+              _noDestination = false;
+              _searchCtrl.clear();
+              _choosingDestOnMap = false;
+            }),
+            child: Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: context.appSurface,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 8)],
+              ),
+              child: Icon(Icons.arrow_back_ios_new,
+                  color: context.appTextPrimary, size: 18),
+            ),
+          ),
+        ),
+      ),
+
+      // ── Scrollable content — mirrors the normal Confirm screen's layout ───
+      DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize:     0.2,
+        maxChildSize:     0.9,
+        snap:             true,
+        snapSizes:        const [0.55, 0.9],
+        builder: (ctx, scrollCtrl) {
+          final safeBottom = MediaQuery.of(ctx).viewPadding.bottom;
+          return Container(
+          decoration: BoxDecoration(
+            color: context.appSurface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 20)],
+          ),
+          child: ListView(
+            controller: scrollCtrl,
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 96 + safeBottom),
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                      color: context.appCardBg,
+                      borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              // Route summary — pickup + optional destination, same card
+              // style as the normal Confirm screen's route summary.
+              Container(
+                decoration: BoxDecoration(
+                    color: context.appCardBg, borderRadius: BorderRadius.circular(14)),
+                child: Column(children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                    child: Row(children: [
+                      Container(
+                        width: 10, height: 10,
+                        decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          _pickupAddress.isEmpty || _pickupAddress == 'Detecting location…'
+                              ? 'Current location'
+                              : _pickupAddress,
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 13),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ]),
+                  ),
+                  Divider(height: 1, indent: 40, color: context.appSurface.withValues(alpha: 0.8)),
+                  InkWell(
+                    onTap: () {
+                      setState(() => _noDestination = false);
+                      _goToStep(1);
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+                      child: Row(children: [
+                        const Icon(Icons.location_on_outlined, color: AppTheme.accentOrange, size: 18),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text('Where to? (optional)',
+                              style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                        ),
+                        Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
+                      ]),
+                    ),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: 14),
+
+              if (_bookError != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(_bookError!,
+                        style: const TextStyle(color: AppTheme.danger, fontSize: 12))),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Choose Ride
+              Text('Choose Ride',
+                  style: TextStyle(color: context.appTextPrimary,
+                      fontSize: 15, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+
+              // Vehicle type selector (car / bike / tuk-tuk / van)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('Vehicle Type',
+                    style: TextStyle(
+                        color: context.appTextSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+              ),
+              VehicleTypeSelector(
+                selected: _selectedVehicleType,
+                onChanged: (t) => setState(() => _selectedVehicleType = t),
+              ),
+              const SizedBox(height: 12),
+
+              ..._kRideTypes.map((r) => _RideTypeCard(
+                    type:     r,
+                    selected: _selectedRide == r.name,
+                    metered:  true,
+                    onTap:    () => setState(() => _selectedRide = r.name),
+                  )),
+              const SizedBox(height: 4),
+
+              // Promo code
+              GestureDetector(
+                onTap: () => _showPromoSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _promoCode != null
+                        ? AppTheme.success.withValues(alpha: 0.08)
+                        : context.appCardBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: _promoCode != null
+                        ? Border.all(color: AppTheme.success.withValues(alpha: 0.4))
+                        : null,
+                  ),
+                  child: Row(children: [
+                    Icon(
+                      _promoCode != null ? Icons.check_circle_outline : Icons.local_offer_outlined,
+                      color: _promoCode != null ? AppTheme.success : AppTheme.warning,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _promoCode != null
+                          ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text(_promoCode!, style: const TextStyle(
+                                  color: AppTheme.success, fontWeight: FontWeight.w700, letterSpacing: 1)),
+                              if (_promoDiscount != null)
+                                Text('− ${AppTheme.khr(_promoDiscount!)} discount',
+                                    style: TextStyle(color: AppTheme.success, fontSize: 12)),
+                            ])
+                          : Text('Add promo code',
+                              style: TextStyle(color: context.appTextSecondary)),
+                    ),
+                    GestureDetector(
+                      onTap: _promoCode != null
+                          ? () => setState(() { _promoCode = null; _promoDiscount = null; })
+                          : null,
+                      child: Icon(
+                        _promoCode != null ? Icons.close : Icons.chevron_right,
+                        color: context.appTextSecondary,
+                      ),
+                    ),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Payment method
+              GestureDetector(
+                onTap: () => _showPaymentSheet(context),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                      color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
+                  child: Row(children: [
+                    const Icon(Icons.payment_outlined, color: AppTheme.accent, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(_paymentLabel(_paymentMethod),
+                        style: TextStyle(color: context.appTextPrimary))),
+                    Icon(Icons.chevron_right, color: context.appTextSecondary),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Schedule toggle
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(
+                    color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
+                child: Column(children: [
+                  Row(children: [
+                    Text('Schedule for later',
+                        style: TextStyle(color: context.appTextPrimary,
+                            fontSize: 14, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    Switch(
+                      value: _isScheduled,
+                      onChanged: (v) => setState(() => _isScheduled = v),
+                      activeThumbColor: AppTheme.accent,
+                      activeTrackColor: AppTheme.accent.withValues(alpha: 0.4),
+                    ),
+                  ]),
+                  if (_isScheduled)
+                    GestureDetector(
+                      onTap: () async {
+                        final dt = await _pickDateTime(context);
+                        if (dt != null) setState(() => _scheduledTime = dt);
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Row(children: [
+                          const Icon(Icons.schedule, color: AppTheme.accent, size: 18),
+                          const SizedBox(width: 10),
+                          Text(
+                            '${_scheduledTime.day}/${_scheduledTime.month}/'
+                            '${_scheduledTime.year}  '
+                            '${_scheduledTime.hour}:'
+                            '${_scheduledTime.minute.toString().padLeft(2, '0')}',
+                            style: TextStyle(
+                                color: context.appTextPrimary, fontWeight: FontWeight.w500),
+                          ),
+                          const Spacer(),
+                          Icon(Icons.chevron_right, color: context.appTextSecondary),
+                        ]),
+                      ),
+                    ),
+                ]),
+              ),
+            ],
+          ),
+        );
+        },
+      ),
+
+      // ── Fixed confirm button (footer) ─────────────────────────────────────
+      Positioned(
+        left: 0, right: 0, bottom: 0,
+        child: Builder(builder: (ctx) {
+          final safeBot = MediaQuery.of(ctx).viewPadding.bottom;
+          return Container(
+            decoration: BoxDecoration(
+              color: context.appSurface,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.18),
+                    blurRadius: 16,
+                    offset: const Offset(0, -4)),
+              ],
+            ),
+            padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + safeBot),
+            child: ElevatedButton(
+              onPressed: _isBooking ? null : _bookRide,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.confirmBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: _isBooking
+                  ? const SizedBox(width: 22, height: 22,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                  : const Text('Confirm Booking',
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
           );
         }),
       ),
@@ -1842,11 +2296,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   _buildMarkerIcons();
                 } : null,
                 onAddStop: _stops.length < 5 ? () {
-                  final insertAt = _stops.length - 1;
                   setState(() {
-                    _stops.insert(insertAt, _WayStop());
+                    _stops.add(_WayStop());
                     _step          = 1;
-                    _activeStopIdx = insertAt;
+                    _activeStopIdx = _stops.length - 1;
                     _searchCtrl.clear();
                     _choosingDestOnMap = false;
                   });
@@ -2095,11 +2548,8 @@ class _StepHeader extends StatelessWidget {
   final VoidCallback? onBack;
   const _StepHeader({required this.step, this.onBack});
 
-  static const _labels = ['Where To?', 'Confirm'];
-
   @override
   Widget build(BuildContext context) {
-    final label = _labels[step.clamp(0, _labels.length - 1)];
     return SafeArea(
       bottom: false,
       child: Container(
@@ -2118,12 +2568,6 @@ class _StepHeader extends StatelessWidget {
           ),
           Expanded(
             child: Column(children: [
-              Text(label,
-                  style: TextStyle(
-                      color: context.appTextPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15)),
-              const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(2, (i) {
@@ -2381,25 +2825,27 @@ class _RouteSummary extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                 child: Row(children: [
-                  // Numbered circle
-                  Container(
-                    width: 24, height: 24,
-                    decoration: BoxDecoration(
-                      color: isLast
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFFFF9800),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${i + 1}',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800),
+                  // Numbered in the order each address was picked — Add a
+                  // stop always appends, so an earlier stop's number never
+                  // shifts. A lone destination gets a plain pin instead.
+                  isLast && stops.length == 1
+                    ? const Icon(Icons.location_on, color: Color(0xFFE53935), size: 24)
+                    : Container(
+                        width: 24, height: 24,
+                        decoration: BoxDecoration(
+                          color: isLast ? const Color(0xFFE53935) : const Color(0xFFFF9800),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${i + 1}',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                   SizedBox(width: 14),
                   // Address
                   Expanded(
@@ -2463,12 +2909,14 @@ class _RouteSummary extends StatelessWidget {
 }
 
 
+// ─── Quick action icon (Cash / Coupon / Option / Note row) ────────────────────
 class _RideTypeCard extends StatelessWidget {
   final _RideType    type;
   final bool         selected;
   final VoidCallback onTap;
   final FareInfo?    fareInfo;
   final bool         fareLoading;
+  final bool         metered;
   final double       surgeMultiplier;
   const _RideTypeCard({
     required this.type,
@@ -2476,13 +2924,16 @@ class _RideTypeCard extends StatelessWidget {
     required this.onTap,
     this.fareInfo,
     this.fareLoading = false,
+    this.metered = false,
     this.surgeMultiplier = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
     String priceText;
-    if (fareInfo != null) {
+    if (metered) {
+      priceText = 'Metered fare';
+    } else if (fareInfo != null) {
       if (surgeMultiplier > 1.0) {
         final surgedTotal = (fareInfo!.total * surgeMultiplier).round();
         priceText = AppTheme.khr(surgedTotal);

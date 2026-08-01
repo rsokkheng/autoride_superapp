@@ -6,6 +6,8 @@ class TripReceiptScreen extends StatelessWidget {
   final int?    rideId;
   final String  from;
   final String  to;
+  /// Intermediate stop addresses, in order.
+  final List<String> stops;
   final String  driverName;
   final int     starsGiven;
   final String  fareTotal;
@@ -23,6 +25,7 @@ class TripReceiptScreen extends StatelessWidget {
     this.rideId,
     required this.from,
     required this.to,
+    this.stops = const [],
     required this.driverName,
     required this.starsGiven,
     required this.fareTotal,
@@ -81,6 +84,9 @@ class TripReceiptScreen extends StatelessWidget {
     if (rideId != null) buffer.writeln('Ride #$rideId');
     buffer.writeln();
     buffer.writeln('From: $from');
+    for (int i = 0; i < stops.length; i++) {
+      buffer.writeln('Stop ${i + 1}: ${stops[i]}');
+    }
     buffer.writeln('To:   $to');
     buffer.writeln('Date: $_formattedDate');
     if (distanceKm != null) buffer.writeln('Distance: ${distanceKm!.toStringAsFixed(1)} km');
@@ -247,6 +253,22 @@ class TripReceiptScreen extends StatelessWidget {
           ),
           SizedBox(height: 14),
           _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: 'Pickup', address: from),
+          for (int i = 0; i < stops.length; i++) ...[
+            Padding(
+              padding: EdgeInsets.only(left: 9),
+              child: Container(
+                width: 2,
+                height: 20,
+                color: context.appCardBg,
+              ),
+            ),
+            _TripAddressRow(
+              icon: Icons.location_on,
+              color: AppTheme.warning,
+              label: 'Stop ${i + 1}',
+              address: stops[i],
+            ),
+          ],
           Padding(
             padding: EdgeInsets.only(left: 9),
             child: Container(

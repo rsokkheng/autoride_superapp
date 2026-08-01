@@ -30,7 +30,7 @@ class AppLocalizations {
   static const Map<String, Map<String, String>> _t = {
     'en': {
       'appName': 'RETEH',
-      'tagline': 'ROTEH App',
+      'tagline': 'ROTEH APP',
       'copyright': 'ROTEH © 2026 — All rights reserved',
       'whoAreYou': 'Who are you?',
       'selectRole': 'Select your role to continue',

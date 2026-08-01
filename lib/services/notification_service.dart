@@ -28,7 +28,7 @@ class NotificationService {
   Future<void> initialize() async {
     if (_initialized) return;
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidInit = AndroidInitializationSettings('@drawable/ic_notification');
     const iosInit = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -71,7 +71,7 @@ class NotificationService {
           channelDescription: _rideChannel.description,
           importance: Importance.high,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_notification',
           color: const Color(0xFF00D4AA),
         ),
         iOS: const DarwinNotificationDetails(
@@ -99,7 +99,7 @@ class NotificationService {
           _rideChannel.name,
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_notification',
         ),
         iOS: const DarwinNotificationDetails(),
       ),
@@ -121,7 +121,7 @@ class NotificationService {
           _deliveryChannel.name,
           channelDescription: _deliveryChannel.description,
           importance: Importance.defaultImportance,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_notification',
         ),
         iOS: const DarwinNotificationDetails(),
       ),
@@ -142,7 +142,7 @@ class NotificationService {
           _rideChannel.id,
           _rideChannel.name,
           importance: Importance.defaultImportance,
-          icon: '@mipmap/ic_launcher',
+          icon: '@drawable/ic_notification',
           color: const Color(0xFF00D4AA),
         ),
         iOS: const DarwinNotificationDetails(),

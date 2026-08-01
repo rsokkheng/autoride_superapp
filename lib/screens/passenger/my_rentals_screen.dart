@@ -289,7 +289,7 @@ class _RentalCard extends StatelessWidget {
                       .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(isOrder ? 'Marketplace' : 'Car Rental',
+                child: Text(isOrder ? 'Marketplace' : 'Rental Vehicle',
                     style: TextStyle(
                       color: isOrder ? AppTheme.accent : const Color(0xFF7C3AED),
                       fontSize: 10, fontWeight: FontWeight.w700,

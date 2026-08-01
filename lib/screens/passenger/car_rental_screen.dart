@@ -492,7 +492,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
 
   Future<void> _bookNow() async {
     if (_selectedCar == null) {
-      setState(() => _bookError = 'Please select a car before booking.');
+      setState(() => _bookError = 'Please select a Vehicle before booking.');
       return;
     }
     if (_locType == _LocType.delivery && _locAddress.isEmpty) {
@@ -548,7 +548,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: const Text('Car Rental',
+        title: const Text('Rental Vehicle',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
       ),
       body: Column(children: [
@@ -580,8 +580,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 ),
               const SizedBox(height: 16),
 
-              // ── Cars for rent ─────────────────────────────────────────────
-              _label('Cars for Rent'),
+              // ── Vehicle for rent ─────────────────────────────────────────────
+              _label('Vehicle for Rent'),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _browseCars,
@@ -605,16 +605,16 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                                 color: AppTheme.accent.withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: const Icon(Icons.directions_car_outlined,
+                              child: const Icon(Icons.electric_rickshaw,
                                   color: AppTheme.accent, size: 26),
                             ),
                             const SizedBox(width: 14),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('Browse Available Cars',
+                              Text('Browse Available Vehicle',
                                   style: TextStyle(color: context.appTextPrimary,
                                       fontWeight: FontWeight.w700, fontSize: 14)),
                               const SizedBox(height: 2),
-                              Text('Tap to view all cars for rent',
+                              Text('Tap to view all Vehicle for rent',
                                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                             ])),
                             const Icon(Icons.chevron_right_rounded,
@@ -1253,7 +1253,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: const Text('Cars for Rent',
+        title: const Text('Vehicle for Rent',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
       ),
       body: Column(children: [
@@ -1278,7 +1278,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                 elevation: 0,
               ),
               child: Text(
-                _selected == null ? 'Select a Car' : 'Rent — ${_selected!.title}',
+                _selected == null ? 'Select a Vehicle' : 'Rent — ${_selected!.title}',
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
@@ -1297,14 +1297,14 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
         const SizedBox(height: 12),
-        Text('Failed to load cars',
+        Text('Failed to load vehicles',
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
         TextButton(onPressed: _load, child: const Text('Retry')),
       ]));
     }
     if (_products.isEmpty) {
-      return Center(child: Text('No cars available for rent.',
+      return Center(child: Text('No Vehicle available for rent.',
           style: TextStyle(color: context.appTextSecondary)));
     }
     return ListView.separated(

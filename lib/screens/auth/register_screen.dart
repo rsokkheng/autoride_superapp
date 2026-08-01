@@ -108,7 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: _green.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.directions_car_rounded, color: _green, size: 36),
+                    child: Image.asset('assets/library/icon_fa.png', width: 40, height: 40),
                   ),
                   SizedBox(height: 12),
                   Text('Join ROTEH',
@@ -134,7 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(width: 10),
                 _RoleChip(
                   label: 'Drive & Earn',
-                  icon:  Icons.local_taxi_outlined,
+                  icon:  Icons.electric_rickshaw,
                   selected: _role == 'driver',
                   onTap: () => setState(() => _role = 'driver'),
                 ),

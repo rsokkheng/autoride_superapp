@@ -17,6 +17,7 @@ import 'providers/biometric_provider.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
+import 'widgets/idle_timeout_wrapper.dart';
 
 // Resolved after WidgetsFlutterBinding.ensureInitialized() in main()
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
@@ -95,6 +96,8 @@ class AutoRideApp extends StatefulWidget {
 }
 
 class _AutoRideAppState extends State<AutoRideApp> {
+  final navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
@@ -114,14 +117,19 @@ class _AutoRideAppState extends State<AutoRideApp> {
       valueListenable: appLocale,
       builder: (context, locale, _) {
         return MaterialApp(
-          title: 'ROTEH App',
+          title: 'ROTEH APP',
           debugShowCheckedModeBanner: false,
+          navigatorKey: navigatorKey,
           theme:     AppTheme.lightTheme,
           darkTheme: AppTheme.darkModeTheme,
           themeMode: themeProvider.mode,
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
+          builder: (context, child) => IdleTimeoutWrapper(
+            navigatorKey: navigatorKey,
+            child: child!,
+          ),
           home: const SplashScreen(),
         );
       },
