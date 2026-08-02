@@ -115,11 +115,7 @@ class _WithdrawFormState extends State<_WithdrawForm> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.confirmBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
+            style: AppTheme.confirmButtonStyle(),
             child: const Text('Confirm'),
           ),
         ],

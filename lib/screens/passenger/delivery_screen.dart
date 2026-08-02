@@ -1466,19 +1466,13 @@ class _SubmitButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: loading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
+        style: AppTheme.confirmButtonStyle(),
         child: loading
             ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
             : Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(icon, size: 20),
                 const SizedBox(width: 8),
-                Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                Text(label),
               ]),
       ),
     );
@@ -1934,18 +1928,8 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                             context,
                             _LocationResult(_address, _center),
                           ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.confirmBlue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: context.appCardBg,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Confirm Location',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 15)),
+                  style: AppTheme.confirmButtonStyle(),
+                  child: const Text('Confirm Location'),
                 ),
               ),
             ]),
@@ -2204,16 +2188,8 @@ class _DeliveryConfirmDialog extends StatelessWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1976D2),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Yes, Send Now',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  style: AppTheme.confirmButtonStyle(background: const Color(0xFF1976D2)),
+                  child: const Text('Yes, Send Now'),
                 ),
               ),
             ]),

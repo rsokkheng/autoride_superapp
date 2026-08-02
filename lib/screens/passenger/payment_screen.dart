@@ -344,18 +344,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 height: 52,
                 child: ElevatedButton.icon(
                   onPressed: _paying ? null : _pay,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.confirmBlue,
-                    disabledBackgroundColor: Colors.grey[300],
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
+                  style: AppTheme.confirmButtonStyle(),
                   icon: _paying
                       ? const SizedBox(width: 18, height: 18,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.lock_outline, color: Colors.white, size: 18),
-                  label: Text(_paying ? 'Processing…' : 'Confirm & Pay',
-                      style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                  label: Text(_paying ? 'Processing…' : 'Confirm & Pay'),
                 ),
               ),
             ),

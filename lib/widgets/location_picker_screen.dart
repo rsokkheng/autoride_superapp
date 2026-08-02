@@ -266,15 +266,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       latLng:  _center,
                     ));
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.confirmBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                    disabledBackgroundColor: AppTheme.confirmBlue.withValues(alpha: 0.4),
-                  ),
-                  child: const Text('Confirm Location',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  style: AppTheme.confirmButtonStyle(),
+                  child: const Text('Confirm Location'),
                 ),
               ),
             ]),

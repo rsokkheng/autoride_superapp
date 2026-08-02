@@ -22,6 +22,19 @@ class AppTheme {
   static const Color darkTextPrimary   = Color(0xFFF5F5F5);
   static const Color darkTextSecondary = Color(0xFF9E9E9E);
 
+  // ── Standard action button (Confirm / Save / Send / Submit) ────────────────
+  // Single source of truth so every primary action button across the app
+  // shares the same compact size instead of ad-hoc padding/font sizes.
+  static ButtonStyle confirmButtonStyle({Color? background, Color? foreground}) => ElevatedButton.styleFrom(
+    backgroundColor: background ?? confirmBlue,
+    foregroundColor: foreground ?? Colors.white,
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    minimumSize: const Size(0, 44),
+    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    elevation: 0,
+  );
+
   // ── Vehicle types ─────────────────────────────────────────────────────────
   static const List<VehicleTypeOption> vehicleTypes = [
     VehicleTypeOption(type: 'tuk_tuk', label: 'Tuk-Tuk', icon: Icons.electric_rickshaw, description: 'Classic tuk-tuk'),

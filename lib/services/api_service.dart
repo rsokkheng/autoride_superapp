@@ -434,7 +434,9 @@ class ApiService {
     }
 
     if (raw.statusCode == 200) {
-      final userJson = body['user'] ?? body;
+      // { "data": { "user": {...} } } — unwrap 'data' first, then 'user'.
+      final data    = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson = data['user'] ?? data;
       return UserModel.fromJson(userJson as Map<String, dynamic>);
     }
 
@@ -512,13 +514,20 @@ class ApiService {
     String? name,
     String? phone,
     String? email,
+    // Driver-only fields.
+    String? statusNote,
+    String? driverType, // 'owner' | 'company_staff' | 'rental'
+    String? companyName,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final payload = <String, dynamic>{
-      if (name  != null) 'name':  name,
-      if (phone != null) 'phone': phone,
-      if (email != null) 'email': email,
+      if (name        != null) 'name':         name,
+      if (phone       != null) 'phone':        phone,
+      if (email       != null) 'email':        email,
+      if (statusNote  != null) 'status_note':  statusNote,
+      if (driverType  != null) 'driver_type':  driverType,
+      if (companyName != null) 'company_name': companyName,
     };
     final raw  = await _rawPut('/auth/profile', payload, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;

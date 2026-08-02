@@ -10,6 +10,7 @@ import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
+import '../../services/locale_service.dart';
 import '../../services/marker_icon_service.dart';
 import '../../models/driver_marker_model.dart';
 import '../../models/ride_model.dart';
@@ -17,6 +18,11 @@ import '../shared/ride_chat_screen.dart';
 import 'driver_trip_summary_screen.dart';
 
 enum _TripPhase { headingToPickup, waitingAtPickup, inProgress, completed }
+
+// Restrict the trip map to Cambodia only.
+const _kCambodiaSW = LatLng(10.4, 102.3);
+const _kCambodiaNE = LatLng(14.7, 107.6);
+final _kCambodiaBounds = LatLngBounds(southwest: _kCambodiaSW, northeast: _kCambodiaNE);
 
 class DriverActiveTripScreen extends StatefulWidget {
   final RideModel? ride;
@@ -46,6 +52,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   GoogleMapController? _mapController;
   _TripPhase _phase     = _TripPhase.headingToPickup;
   bool       _completing = false;
+  bool       _locationPermissionDenied = false;
 
   // Live route data
   int    _etaMinutes    = 0;
@@ -123,9 +130,18 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────────
 
+  String? _prevMapsLanguage;
+
   @override
   void initState() {
     super.initState();
+    // Force the native Maps SDK (road/place labels) to Khmer for this trip
+    // screen, regardless of the app's current UI language — restored on
+    // dispose so the rest of the app keeps the user's chosen language.
+    _prevMapsLanguage = MapsService.language;
+    MapsService.language = 'km';
+    LocaleService.setLocale('km');
+
     _pulseCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 1))
       ..repeat(reverse: true);
     _pulseAnim = Tween<double>(begin: 0.6, end: 1.0).animate(_pulseCtrl);
@@ -210,6 +226,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     LocationService.instance.stopTracking(_driverId);
+    if (_prevMapsLanguage != null) {
+      MapsService.language = _prevMapsLanguage!;
+      LocaleService.setLocale(_prevMapsLanguage!);
+    }
     _pulseCtrl.dispose();
     _markerAnimCtrl.dispose();
     _mapController?.dispose();
@@ -302,7 +322,16 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   Future<void> _startTracking() async {
     final granted = await LocationService.instance.requestPermission();
-    if (!granted) return;
+    if (!granted) {
+      // Previously failed completely silently — the driver had no idea
+      // live tracking (route, ETA, and the metered fare calculation) was
+      // broken for the whole trip until they tried to complete it.
+      if (mounted) setState(() => _locationPermissionDenied = true);
+      return;
+    }
+    if (mounted && _locationPermissionDenied) {
+      setState(() => _locationPermissionDenied = false);
+    }
     LocationService.instance.startTracking(
       driverId:    _driverId,
       onPosition:  _onDriverPosition,
@@ -577,16 +606,36 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     }
 
     if (_phase == _TripPhase.inProgress) {
-      // No destination was picked at booking — the driver enters the final
-      // metered fare now. If they cancel, stay in the trip.
-      int? finalFareKhr;
+      // No destination was picked at booking — the fare is auto-calculated
+      // from pickup → the driver's current GPS position, using the same
+      // admin-configured rate table as a normal fare estimate. The driver
+      // still reviews a read-only summary (km/duration/fare) and taps
+      // Confirm before it's finalized, so they know what to collect from
+      // the passenger. If the calculation fails (no GPS signal), fall back
+      // to manual entry instead.
+      int?    finalFareKhr;
+      double? meteredDistanceKm;
+      int?    meteredDurationMin;
       if (_isMetered) {
         setState(() => _completing = true);
         final suggested = await _estimateMeteredFare();
         if (!mounted) return;
         setState(() => _completing = false);
-        finalFareKhr = await _promptFinalFare(suggested);
-        if (finalFareKhr == null) return;
+        if (suggested != null) {
+          meteredDistanceKm  = suggested.distanceKm;
+          meteredDurationMin = _tripStartTime != null
+              ? DateTime.now().difference(_tripStartTime!).inMinutes
+              : null;
+          finalFareKhr = await _confirmTripSummary(
+            fareKhr: suggested.amount,
+            distanceKm: suggested.distanceKm,
+            durationMin: meteredDurationMin,
+          );
+          if (finalFareKhr == null) return;
+        } else {
+          finalFareKhr = await _promptFinalFare(suggested);
+          if (finalFareKhr == null) return;
+        }
       }
 
       setState(() => _completing = true);
@@ -616,17 +665,29 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       if (!mounted) return;
       setState(() { _completing = false; _phase = _TripPhase.completed; });
 
+      final notifiedFareKhr = (completedRide ?? widget.ride)?.fareKhr ?? 0;
       await NotificationService.instance.showTripUpdate(
         title: 'Trip Completed',
-        body:  'You earned ${AppTheme.khr((completedRide ?? widget.ride)?.fareKhr ?? 0)}',
+        body:  'You earned ${AppTheme.khr(notifiedFareKhr > 0 ? notifiedFareKhr : (finalFareKhr ?? 0))}',
       );
       if (!mounted) return;
       final finalRide = completedRide ?? widget.ride ?? _fakeSummaryRide();
-      final fallbackDist = finalRide.distanceKm ?? _tripDistanceKm;
-      final fallbackDur  = finalRide.durationMin ??
-          (_tripStartTime != null
-              ? DateTime.now().difference(_tripStartTime!).inMinutes
-              : null);
+      // For metered rides, prefer the values just calculated and shown to
+      // the driver in the confirm dialog — the backend's completion
+      // response doesn't reliably echo the fare/distance/duration back.
+      // Using `> 0 ? x : fallback` rather than `??` throughout: the
+      // backend has been observed returning a real `0` (not null) for
+      // these fields, which `??` would never fall back past.
+      final fallbackDist = (finalRide.distanceKm != null && finalRide.distanceKm! > 0)
+          ? finalRide.distanceKm
+          : (meteredDistanceKm ?? _tripDistanceKm);
+      final fallbackDur  = (finalRide.durationMin != null && finalRide.durationMin! > 0)
+          ? finalRide.durationMin
+          : (meteredDurationMin ??
+              (_tripStartTime != null
+                  ? DateTime.now().difference(_tripStartTime!).inMinutes
+                  : null));
+      final fallbackFareKhr = finalRide.fareKhr > 0 ? null : finalFareKhr;
 
       await Navigator.push(
         context,
@@ -635,6 +696,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             ride:            finalRide,
             distanceKmFallback: fallbackDist,
             durationMinFallback: fallbackDur,
+            fareKhrFallback: fallbackFareKhr,
             wayStops:        _wayStops.map((s) => s.address).toList(),
           ),
         ),
@@ -686,25 +748,157 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   // ── Metered fare entry (no-destination trips) ─────────────────────────────────
 
+  // Surfaced in the manual-entry dialog when auto-calculation fails, so a
+  // screenshot shows the real cause instead of a generic message — useful
+  // when the person hitting this has no console/log access.
+  String? _meteredFareError;
+
   // Uses the same admin-configured rate table as normal ride estimates —
   // pickup → driver's current position stands in for the actual distance
   // travelled, since there was no destination to route against.
   Future<({int amount, double distanceKm})?> _estimateMeteredFare() async {
-    if (widget.ride == null || _driverLatLng == null) return null;
+    _meteredFareError = null;
+    if (widget.ride == null) {
+      _meteredFareError = 'No active ride.';
+      return null;
+    }
+
+    // _driverLatLng only updates from the live GPS stream — if it hasn't
+    // fired yet at the exact moment "Complete Trip" is tapped (stream lag,
+    // just-granted permission, etc.) this was null. Try progressively
+    // harder fallbacks: last-known fix, then a fresh high-accuracy fix,
+    // then a fresh lower-accuracy fix with a longer timeout.
+    var pos = _driverLatLng;
+    if (pos == null) {
+      try {
+        final lastKnown = await Geolocator.getLastKnownPosition();
+        if (lastKnown != null) pos = LatLng(lastKnown.latitude, lastKnown.longitude);
+      } catch (_) {}
+    }
+    if (pos == null) {
+      try {
+        final fresh = await Geolocator.getCurrentPosition(
+                desiredAccuracy: LocationAccuracy.high)
+            .timeout(const Duration(seconds: 8));
+        pos = LatLng(fresh.latitude, fresh.longitude);
+      } catch (_) {
+        try {
+          final fresh = await Geolocator.getCurrentPosition(
+                  desiredAccuracy: LocationAccuracy.medium)
+              .timeout(const Duration(seconds: 15));
+          pos = LatLng(fresh.latitude, fresh.longitude);
+        } catch (e2, s) {
+          AppLog.w('DriverTrip', 'GPS fix failed for metered fare, using pickup as fallback: $e2');
+          AppLog.e('DriverTrip', 'GPS fix stack', e2, s);
+        }
+      }
+    }
+
+    // Reject a GPS fix outside Cambodia — a stale cached position, a
+    // simulator's default location, or bad data would otherwise produce a
+    // huge nonsensical "distance" (seen in practice: 17,000+ km, roughly a
+    // third of the way around the Earth) and charge the passenger for it.
+    if (pos != null && !_inCambodia(pos.latitude, pos.longitude)) {
+      AppLog.w('DriverTrip',
+          'GPS position (${pos.latitude}, ${pos.longitude}) outside Cambodia, using pickup as fallback');
+      pos = null;
+    }
+
+    // No usable GPS position — fall back to pickup-as-dropoff (distance ≈
+    // 0) so the driver still gets an automatically-calculated base fare
+    // from the same rate table, rather than a blank manual-entry field.
+    pos ??= _pickupLatLng;
+
     try {
       final estimate = await ApiService.estimateRide(
         pickupLat:  _pickupLatLng.latitude,
         pickupLng:  _pickupLatLng.longitude,
-        dropoffLat: _driverLatLng!.latitude,
-        dropoffLng: _driverLatLng!.longitude,
+        dropoffLat: pos.latitude,
+        dropoffLng: pos.longitude,
       );
+      // Sanity clamp — Cambodia is ~450 km at its widest, so any single
+      // metered trip's straight-line distance should never exceed this by
+      // much even accounting for a winding route. Catches a backend
+      // calculation bug even when the GPS position itself was valid.
+      if (estimate.distanceKm > 500) {
+        _meteredFareError = 'Calculated distance (${estimate.distanceKm.toStringAsFixed(1)} km) '
+            'looks wrong — that\'s farther than any trip within Cambodia.';
+        return null;
+      }
       final fare = estimate.fares[widget.ride!.serviceType] ??
           (estimate.fares.values.isNotEmpty ? estimate.fares.values.first : null);
-      if (fare == null) return null;
+      if (fare == null) {
+        _meteredFareError = 'No fare returned for service type '
+            '"${widget.ride!.serviceType}" (available: ${estimate.fares.keys.join(', ')}).';
+        return null;
+      }
       return (amount: fare.total, distanceKm: estimate.distanceKm);
-    } catch (_) {
+    } catch (e, s) {
+      AppLog.e('DriverTrip', 'estimateRide failed for metered fare', e, s);
+      _meteredFareError = 'Fare calculation failed: $e';
       return null;
     }
+  }
+
+  // Read-only review of the auto-calculated trip — driver confirms before
+  // it's submitted, so they know exactly what to collect from the passenger.
+  Future<int?> _confirmTripSummary({
+    required int fareKhr,
+    required double distanceKm,
+    required int? durationMin,
+  }) async {
+    return showDialog<int>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.appSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Trip Completed',
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800)),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('This trip had no destination set — here\'s the calculated summary.',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+                color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
+            child: Column(children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                _SummaryStat(icon: Icons.route_outlined, label: 'Distance',
+                    value: '${distanceKm.toStringAsFixed(1)} km'),
+                _SummaryStat(icon: Icons.timer_outlined, label: 'Duration',
+                    value: durationMin != null ? '$durationMin min' : '--'),
+              ]),
+              const SizedBox(height: 14),
+              Divider(height: 1, color: context.appTextSecondary.withValues(alpha: 0.2)),
+              const SizedBox(height: 14),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Amount to collect',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                Text(AppTheme.khr(fareKhr),
+                    style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 20)),
+              ]),
+            ]),
+          ),
+        ]),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, fareKhr),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.accent,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<int?> _promptFinalFare(({int amount, double distanceKm})? suggested) async {
@@ -725,8 +919,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
               suggested != null
                   ? 'This trip had no destination set. Suggested fare below is calculated '
                     'from ${suggested.distanceKm.toStringAsFixed(1)} km travelled — adjust if needed.'
-                  : "This trip had no destination set — enter the metered fare to complete it. "
-                    "Couldn't auto-calculate a suggestion (no signal/location).",
+                  : "This trip had no destination set — enter the metered fare to complete it.\n"
+                    "Couldn't auto-calculate a suggestion: "
+                    "${_meteredFareError ?? 'unknown error'}",
               style: TextStyle(color: context.appTextSecondary, fontSize: 13),
             ),
             const SizedBox(height: 14),
@@ -796,7 +991,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                   style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () { Navigator.pop(context); _sendSOS(); },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            style: AppTheme.confirmButtonStyle(background: AppTheme.danger),
             child: const Text('Send SOS'),
           ),
         ],
@@ -918,6 +1113,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           initialCameraPosition: CameraPosition(
               target: LatLng(midLat, midLng), zoom: 13),
           style: _kDarkMapStyle,
+          cameraTargetBounds: CameraTargetBounds(_kCambodiaBounds),
+          minMaxZoomPreference: const MinMaxZoomPreference(6, 20),
           markers:   _markers,
           polylines: _polylines,
           myLocationEnabled: false,
@@ -926,7 +1123,39 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
         // ── Top bar ───────────────────────────────────────────────────────────
         SafeArea(
-          child: Padding(
+          child: Column(children: [
+            if (_locationPermissionDenied)
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.danger.withValues(alpha: 0.95),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.location_off, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Location permission denied — live tracking and fare '
+                      'calculation won\'t work.',
+                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Geolocator.openAppSettings(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                      child: const Text('Enable',
+                          style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w800, fontSize: 12)),
+                    ),
+                  ),
+                ]),
+              ),
+            Padding(
             padding: EdgeInsets.all(16),
             child: Row(children: [
               GestureDetector(
@@ -992,7 +1221,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                 ),
               ),
             ]),
-          ),
+            ),
+          ]),
         ),
 
         // ── ETA badge (only while en-route) ───────────────────────────────────
@@ -1263,6 +1493,23 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 }
 
 // ── Widgets ───────────────────────────────────────────────────────────────────
+
+class _SummaryStat extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final String   value;
+  const _SummaryStat({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(children: [
+      Icon(icon, color: AppTheme.accent, size: 18),
+      const SizedBox(height: 4),
+      Text(value, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+      Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+    ]);
+  }
+}
 
 class _ActionBtn extends StatelessWidget {
   final IconData     icon;

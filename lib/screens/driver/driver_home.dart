@@ -7,6 +7,7 @@ import '../../providers/theme_provider.dart';
 import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
+import '../../services/notification_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
 import '../../services/maps_service.dart';
 import '../../services/location_service.dart' show LocationService, DriverStatus;
@@ -553,32 +554,47 @@ class _DriverDashboardState extends State<_DriverDashboard>
 
   Future<void> _pollRequests() async {
     if (widget.driverStatus != DriverStatus.online) return;
-    if (_pendingRide == null) {
-      try {
-        final rides = await ApiService.getAvailableRides();
-        if (!mounted) return;
-        if (rides.isNotEmpty) setState(() => _pendingRide = rides.first);
-      } catch (e) {
-        debugPrint('[Driver] getAvailableRides error: $e');
+    // Always re-fetch, even while a request is already showing — /available
+    // naturally excludes cancelled/taken rides, so this is how we detect a
+    // passenger cancelling a request that's currently on screen. Previously
+    // this only ran when _pendingRide was null, so a cancelled request just
+    // sat there forever until the driver manually accepted/declined it.
+    try {
+      final rides = await ApiService.getAvailableRides();
+      if (!mounted) return;
+      if (_pendingRide != null && !rides.any((r) => r.id == _pendingRide!.id)) {
+        setState(() => _pendingRide = null);
+        NotificationService.instance.showTripUpdate(
+          title: 'Request cancelled',
+          body:  'The passenger cancelled that ride request.',
+        );
+      } else if (_pendingRide == null && rides.isNotEmpty) {
+        setState(() => _pendingRide = rides.first);
       }
+    } catch (e) {
+      debugPrint('[Driver] getAvailableRides error: $e');
     }
-    if (_pendingDelivery == null) {
-      try {
-        final deliveries = await ApiService.getAvailableDeliveries();
-        if (!mounted) return;
-        if (deliveries.isNotEmpty) setState(() => _pendingDelivery = deliveries.first);
-      } catch (e) {
-        debugPrint('[Driver] getAvailableDeliveries error: $e');
+    try {
+      final deliveries = await ApiService.getAvailableDeliveries();
+      if (!mounted) return;
+      if (_pendingDelivery != null && !deliveries.any((d) => d.id == _pendingDelivery!.id)) {
+        setState(() => _pendingDelivery = null);
+      } else if (_pendingDelivery == null && deliveries.isNotEmpty) {
+        setState(() => _pendingDelivery = deliveries.first);
       }
+    } catch (e) {
+      debugPrint('[Driver] getAvailableDeliveries error: $e');
     }
-    if (_pendingRental == null) {
-      try {
-        final rentals = await ApiService.getAvailableRentals();
-        if (!mounted) return;
-        if (rentals.isNotEmpty) setState(() => _pendingRental = rentals.first);
-      } catch (e) {
-        debugPrint('[Driver] getAvailableRentals error: $e');
+    try {
+      final rentals = await ApiService.getAvailableRentals();
+      if (!mounted) return;
+      if (_pendingRental != null && !rentals.any((r) => r['id'] == _pendingRental!['id'])) {
+        setState(() => _pendingRental = null);
+      } else if (_pendingRental == null && rentals.isNotEmpty) {
+        setState(() => _pendingRental = rentals.first);
       }
+    } catch (e) {
+      debugPrint('[Driver] getAvailableRentals error: $e');
     }
   }
 

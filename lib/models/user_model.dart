@@ -62,7 +62,7 @@ class UserModel {
       walletBalance:         walletBalance,
       tokenExpiresAt:        json['token_expires_at']?.toString(),
       refreshTokenExpiresAt: json['refresh_token_expires_at']?.toString(),
-      photoUrl:   json['photo_url']?.toString(),
+      photoUrl:   (json['avatar_url'] ?? json['photo_url'])?.toString(),
       rating:     json['rating']     == null ? null : num.tryParse(json['rating'].toString())?.toDouble(),
       totalTrips: json['total_trips'] != null
           ? int.tryParse(json['total_trips'].toString())

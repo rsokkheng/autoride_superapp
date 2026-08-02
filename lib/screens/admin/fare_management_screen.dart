@@ -407,19 +407,11 @@ class _FareEditSheetState extends State<_FareEditSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
-                disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
               child: _submitting
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.rule != null ? 'Save Changes' : 'Create Rule',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  : Text(widget.rule != null ? 'Save Changes' : 'Create Rule'),
             ),
           ),
         ]),

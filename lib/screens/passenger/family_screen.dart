@@ -620,19 +620,11 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: _busy ? null : _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.accent,
-              disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
+            style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
             child: _busy
                 ? const SizedBox(width: 20, height: 20,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : const Text('Save Changes',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                : const Text('Save Changes'),
           ),
         ),
       ]),

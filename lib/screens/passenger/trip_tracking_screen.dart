@@ -1153,6 +1153,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                 String  payMethod    = 'cash';
                                 int?    baseFareKhr;
                                 int?    distFeeKhr;
+                                // Was set once at booking time — for a metered
+                                // (no-destination) ride the real fare isn't known
+                                // until completion, so this starts as '0'/a
+                                // placeholder. Overwritten below once the fresh
+                                // fare comes back from the server.
+                                String  fareText = widget.fare;
                                 if (widget.rideId != null) {
                                   try {
                                     final r = await ApiService.getRide(widget.rideId!);
@@ -1169,6 +1175,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                     // for it so the two parts still sum to the displayed total.
                                     final totalKhr = r.fareKhr;
                                     if (totalKhr > 0) {
+                                      fareText = AppTheme.khr(totalKhr);
                                       final surge = r.surgeMultiplier ?? 1.0;
                                       final preSurge = (totalKhr / surge).round();
                                       baseFareKhr = (preSurge * 0.4).round();
@@ -1176,8 +1183,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                     }
                                   } catch (_) {}
                                 }
-                                // Fall back to live-tracked distance if server didn't return one
-                                distKm ??= _distanceKm > 0 ? _distanceKm : null;
+                                // Fall back to live-tracked distance if the server
+                                // didn't return one — checking for a real 0 too,
+                                // since the backend has been observed returning
+                                // that (not null) for a completed metered ride.
+                                if ((distKm == null || distKm <= 0) && _distanceKm > 0) {
+                                  distKm = _distanceKm;
+                                }
                                 if (!mounted) return;
                                 // Dispose map before replacing route to avoid
                                 // iOS "recreating_view" PlatformException.
@@ -1189,7 +1201,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                       builder: (_) => RateDriverScreen(
                                             rideId:         widget.rideId,
                                             driverName:     _driverName,
-                                            fare:           widget.fare,
+                                            fare:           fareText,
                                             distanceKm:     distKm,
                                             durationMin:    durMin,
                                             from:           fromAddr,
@@ -1279,13 +1291,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
               child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red, foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8))),
-            child: const Text('Send SOS',
-                style: TextStyle(fontWeight: FontWeight.w800)),
+            style: AppTheme.confirmButtonStyle(background: Colors.red),
+            child: const Text('Send SOS'),
           ),
         ],
       ),

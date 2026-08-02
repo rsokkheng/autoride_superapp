@@ -1080,16 +1080,8 @@ class _RatingDialogState extends State<_RatingDialog> {
           Expanded(
             child: ElevatedButton(
               onPressed: () => widget.onSubmit(_stars, _ctrl.text.trim()),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _kGreen,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Submit',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              style: AppTheme.confirmButtonStyle(background: _kGreen),
+              child: const Text('Submit'),
             ),
           ),
         ]),

@@ -419,18 +419,12 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
             width: double.infinity, height: 50,
             child: ElevatedButton(
               onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _green, foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
+              style: AppTheme.confirmButtonStyle(background: _green),
               child: _saving
                   ? const SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : Text(isEdit ? 'Save Changes' : 'Register Vehicle',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  : Text(isEdit ? 'Save Changes' : 'Register Vehicle'),
             ),
           ),
         ]),

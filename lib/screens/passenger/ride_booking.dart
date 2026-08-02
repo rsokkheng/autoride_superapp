@@ -1128,15 +1128,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _skipDestination,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.confirmBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 0,
-                  ),
-                  child: const Text('Confirm Booking',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  style: AppTheme.confirmButtonStyle(),
+                  child: const Text('Confirm Booking'),
                 ),
               ),
               const SizedBox(height: 2),
@@ -1527,27 +1520,33 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       Divider(height: 1, color: context.appCardBg),
 
       // ── Confirm button (shown when all stops are filled, below the map) ───
+      // Same fixed-footer treatment (surface color + top shadow) as the
+      // "Confirm Booking" footer on the final confirm screen, so the button
+      // reads as a consistent, elevated footer bar throughout the flow.
       if (allFilled)
-        Padding(
-          // Extra bottom buffer beyond the SafeArea inset — some Samsung
-          // devices (e.g. the Flip series) reserve a gesture-nav touch zone
-          // taller than what MediaQuery reports, which can swallow taps on
-          // a button placed right at the edge of the safe area.
-          padding: EdgeInsets.fromLTRB(
-              14, 10, 14, 10 + MediaQuery.of(context).viewPadding.bottom + 8),
+        Container(
+          decoration: BoxDecoration(
+            color: context.appSurface,
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 16,
+                  offset: const Offset(0, -4)),
+            ],
+          ),
+          // Small fixed buffer only — the outer SafeArea already reserves
+          // the real system-inset space, so adding viewPadding.bottom here
+          // too would double-count it and leave a large empty gap below
+          // the button. This just nudges the tap target clear of Samsung's
+          // gesture-nav touch zone (e.g. the Flip series).
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 12 + 8),
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () => _goToStep(2),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.confirmBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
+              style: AppTheme.confirmButtonStyle(),
               child: Text(
                 _stops.length > 1 ? 'Confirm destinations' : 'Confirm destination',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -1721,16 +1720,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           });
                           _afterStopFilled();
                         },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.confirmBlue,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppTheme.confirmBlue.withValues(alpha: 0.4),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: const Text('Confirm Destination',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  style: AppTheme.confirmButtonStyle(),
+                  child: const Text('Confirm Destination'),
                 ),
               ),
             ]),
@@ -2051,18 +2042,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + safeBot),
             child: ElevatedButton(
               onPressed: _isBooking ? null : _bookRide,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.confirmBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(),
               child: _isBooking
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Confirm Booking',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  : const Text('Confirm Booking'),
             ),
           );
         }),
@@ -2513,14 +2497,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + safeBot),
             child: ElevatedButton(
               onPressed: _isBooking ? null : _bookRide,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isScheduled ? AppTheme.warning : AppTheme.confirmBlue,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(
+                  background: _isScheduled ? AppTheme.warning : null),
               child: _isBooking
                   ? const SizedBox(
                       width: 22, height: 22,
@@ -2529,9 +2507,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   : Text(
                       _isScheduled
                           ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
-                          : '🚗  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 15)),
+                          : '🛺  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
+                    ),
             ),
           );
         }),

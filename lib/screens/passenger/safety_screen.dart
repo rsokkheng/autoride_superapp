@@ -193,10 +193,8 @@ class _SafetyScreenState extends State<SafetyScreen> {
               child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () { Navigator.pop(ctx); _sendSos(); },
-            style: ElevatedButton.styleFrom(backgroundColor: _red,
-                foregroundColor: _white, elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            child: const Text('Send SOS', style: TextStyle(fontWeight: FontWeight.w800)),
+            style: AppTheme.confirmButtonStyle(background: _red),
+            child: const Text('Send SOS'),
           ),
         ],
       ),
@@ -272,12 +270,8 @@ class _SafetyScreenState extends State<SafetyScreen> {
                   if (mounted) _snack(e.toString(), _red);
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: _red,
-                  foregroundColor: _white, elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Submit Report',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              style: AppTheme.confirmButtonStyle(background: _red),
+              child: const Text('Submit Report'),
             ),
           ),
         ]),
@@ -387,12 +381,8 @@ class _SafetyScreenState extends State<SafetyScreen> {
                   if (mounted) _snack(e.message, _red);
                 }
               },
-              style: ElevatedButton.styleFrom(backgroundColor: _green,
-                  foregroundColor: _white, elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Save Changes',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              style: AppTheme.confirmButtonStyle(background: _green),
+              child: const Text('Save Changes'),
             ),
           ),
         ]),

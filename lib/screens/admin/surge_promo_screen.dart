@@ -379,19 +379,11 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _saving ? null : _save,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.warning,
-                disabledBackgroundColor: AppTheme.warning.withValues(alpha: 0.4),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(background: AppTheme.warning),
               child: _saving
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.zone == null ? 'Create Zone' : 'Save Changes',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  : Text(widget.zone == null ? 'Create Zone' : 'Save Changes'),
             ),
           ),
         ]),
@@ -758,19 +750,11 @@ class _PromoEditSheetState extends State<_PromoEditSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
-                disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
               child: _submitting
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.promo != null ? 'Save Changes' : 'Create Promo',
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  : Text(widget.promo != null ? 'Save Changes' : 'Create Promo'),
             ),
           ),
         ]),

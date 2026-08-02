@@ -6,6 +6,11 @@ class DriverTripSummaryScreen extends StatelessWidget {
   final RideModel ride;
   final double?   distanceKmFallback;
   final int?      durationMinFallback;
+  /// Used when ride.fareKhr is 0 — the completion response doesn't
+  /// reliably echo back the fare for a metered (no-destination) ride, so
+  /// the caller passes the amount it already calculated and confirmed
+  /// with the driver instead.
+  final int?      fareKhrFallback;
   /// Intermediate stop addresses, in order — the ride's own `stops` field
   /// isn't reliably populated by every backend response, so the caller
   /// passes the already-loaded stops from the active trip screen instead.
@@ -16,6 +21,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
     required this.ride,
     this.distanceKmFallback,
     this.durationMinFallback,
+    this.fareKhrFallback,
     this.wayStops = const [],
   });
 
@@ -37,12 +43,17 @@ class DriverTripSummaryScreen extends StatelessWidget {
     }
   }
 
-  double? get _distKm  => ride.distanceKm  ?? distanceKmFallback;
-  int?    get _durMin  => ride.durationMin ?? durationMinFallback;
+  // The backend has been observed returning a real `0` (not null) for
+  // these fields on a completed metered ride, which `??` would never
+  // fall back past — so treat a non-positive value the same as missing.
+  double? get _distKm =>
+      (ride.distanceKm != null && ride.distanceKm! > 0) ? ride.distanceKm : distanceKmFallback;
+  int?    get _durMin =>
+      (ride.durationMin != null && ride.durationMin! > 0) ? ride.durationMin : durationMinFallback;
 
   @override
   Widget build(BuildContext context) {
-    final fareKhr = ride.fareKhr;
+    final fareKhr = ride.fareKhr > 0 ? ride.fareKhr : (fareKhrFallback ?? 0);
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -141,7 +152,10 @@ class DriverTripSummaryScreen extends StatelessWidget {
                       SizedBox(height: 16),
                       Text('Destination', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                       SizedBox(height: 2),
-                      Text(ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : '--',
+                      Text(
+                          ride.dropoffAddress.isNotEmpty
+                              ? ride.dropoffAddress
+                              : (ride.noDestination ? 'No destination — told in person' : '--'),
                           style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     ])),

@@ -478,18 +478,12 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
         width: double.infinity, height: 50,
         child: ElevatedButton(
           onPressed: _saving ? null : _submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _green, foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
+          style: AppTheme.confirmButtonStyle(background: _green),
           child: _saving
               ? const SizedBox(width: 20, height: 20,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: Colors.white))
-              : const Text('Submit Ticket',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              : const Text('Submit Ticket'),
         ),
       ),
     ]),

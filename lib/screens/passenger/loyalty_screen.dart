@@ -100,10 +100,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.confirmBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
+            style: AppTheme.confirmButtonStyle(),
             child: const Text('Confirm'),
           ),
         ],

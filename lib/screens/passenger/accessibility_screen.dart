@@ -157,15 +157,10 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _saving ? null : _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accent,
-                          disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
+                        style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
                         child: _saving
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('Save Settings', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                            : const Text('Save Settings'),
                       ),
                     ),
                     const SizedBox(height: 16),

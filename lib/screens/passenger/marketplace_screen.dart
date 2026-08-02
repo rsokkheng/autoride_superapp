@@ -3306,21 +3306,14 @@ class _OrderScreenState extends State<_OrderScreen> {
           child: SizedBox(width: double.infinity,
             child: ElevatedButton(
               onPressed: _busy ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.confirmBlue,
-                foregroundColor: _white, elevation: 0,
-                disabledBackgroundColor: AppTheme.confirmBlue.withValues(alpha: 0.5),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
+              style: AppTheme.confirmButtonStyle(),
               child: _busy
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
                   : Text(
                       _isRent
                           ? (_datesOk ? 'Confirm Rental — ${_usd(_total)}' : 'Select Dates to Continue')
-                          : 'Place Order — ${_usd(_total)}',
-                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                          : 'Place Order — ${_usd(_total)}'),
             ),
           ),
         ),
@@ -4074,16 +4067,11 @@ class _PostProductScreenState extends State<_PostProductScreen> {
           child: SizedBox(width: double.infinity,
             child: ElevatedButton(
               onPressed: _busy ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: _green, foregroundColor: _white, elevation: 0,
-                  disabledBackgroundColor: _green.withValues(alpha: 0.5),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              style: AppTheme.confirmButtonStyle(background: _green),
               child: _busy
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
-                  : Text(_isEdit ? 'Save Changes' : 'Post Listing',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  : Text(_isEdit ? 'Save Changes' : 'Post Listing'),
             ),
           ),
         ),

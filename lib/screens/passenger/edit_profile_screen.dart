@@ -275,16 +275,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: _saving ? null : _save,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accent,
-                          foregroundColor: AppTheme.primary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
+                        style: AppTheme.confirmButtonStyle(
+                          background: AppTheme.accent, foreground: AppTheme.primary),
                         child: _saving
                             ? const SizedBox(width: 22, height: 22,
                                 child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-                            : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                            : const Text('Save Changes'),
                       ),
                     ),
                   ]),
@@ -526,13 +522,9 @@ class _OtpSheetState extends State<_OtpSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _sendOtp,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
-                foregroundColor: AppTheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              child: const Text('Send OTP', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              style: AppTheme.confirmButtonStyle(
+                background: AppTheme.accent, foreground: AppTheme.primary),
+              child: const Text('Send OTP'),
             ),
           ),
         ],

@@ -834,16 +834,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _submitting ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.confirmBlue,
-                  disabledBackgroundColor:
-                      AppTheme.confirmBlue.withValues(alpha: 0.4),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                  elevation: 0,
-                ),
+                style: AppTheme.confirmButtonStyle(),
                 child: _submitting
                     ? const SizedBox(
                         width: 22,
@@ -851,11 +842,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2.5),
                       )
-                    : const Text(
-                        'Confirm Top Up',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w800, fontSize: 15),
-                      ),
+                    : const Text('Confirm Top Up'),
               ),
             ),
           ],
@@ -1161,16 +1148,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submitting ? null : _submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
-                disabledBackgroundColor:
-                    AppTheme.accent.withValues(alpha: 0.4),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
               child: _submitting
                   ? const SizedBox(
                       width: 22,
@@ -1178,11 +1156,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2.5),
                     )
-                  : const Text(
-                      'Send',
-                      style: TextStyle(
-                          fontWeight: FontWeight.w800, fontSize: 15),
-                    ),
+                  : const Text('Send'),
             ),
           ),
         ],

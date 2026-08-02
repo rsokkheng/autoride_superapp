@@ -700,6 +700,7 @@ class _ProfileTab extends StatefulWidget {
 class _ProfileTabState extends State<_ProfileTab> {
   String _name  = '';
   String _phone = '';
+  String? _photoUrl;
   bool _loadingProfile = true;
 
   @override
@@ -715,6 +716,7 @@ class _ProfileTabState extends State<_ProfileTab> {
       setState(() {
         _name  = user.name;
         _phone = user.phone;
+        _photoUrl = user.photoUrl;
         _loadingProfile = false;
       });
     } catch (_) {
@@ -740,7 +742,12 @@ class _ProfileTabState extends State<_ProfileTab> {
             CircleAvatar(
               radius: 48,
               backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-              child: Icon(Icons.person, color: AppTheme.accent, size: 48),
+              backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
+                  ? NetworkImage(_photoUrl!)
+                  : null,
+              child: _photoUrl == null || _photoUrl!.isEmpty
+                  ? Icon(Icons.person, color: AppTheme.accent, size: 48)
+                  : null,
             ),
             SizedBox(height: 12),
             _loadingProfile
@@ -764,7 +771,13 @@ class _ProfileTabState extends State<_ProfileTab> {
               final l = AppLocalizations.of(context);
               return Column(children: [
                 _ProfileMenuItem(icon: Icons.edit_outlined, label: 'Edit Profile',
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen()))),
+                    onTap: () async {
+                      await Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const EditProfileScreen()));
+                      // Pushing doesn't unmount this tab, so its cached
+                      // profile data would otherwise stay stale after a save.
+                      _loadProfile();
+                    }),
                 _ProfileMenuItem(icon: Icons.account_balance_wallet_outlined, label: 'ROTEH Pay',
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
                 _ProfileMenuItem(icon: Icons.qr_code_outlined, label: 'QR Payment',

@@ -213,8 +213,8 @@ class _BannerFormState extends State<_BannerForm> {
         const SizedBox(height: 16),
         SizedBox(width: double.infinity, child: ElevatedButton(
           onPressed: _saving ? null : _save,
-          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent, disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4), padding: const EdgeInsets.symmetric(vertical: 15), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-          child: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Banner', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+          style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
+          child: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Banner'),
         )),
       ]),
     );

@@ -353,19 +353,11 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                       );
                       if (mounted) setState(() => _submitted = true);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accent,
-                      disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.5),
-                      foregroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      elevation: 0,
-                    ),
+                    style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
                     child: (_submitting || _tipping)
                         ? const SizedBox(width: 22, height: 22,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                        : const Text('Submit Rating',
-                            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        : const Text('Submit Rating'),
                   ),
                 ),
               ),

@@ -183,15 +183,8 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
                 width: double.infinity, height: 52,
                 child: ElevatedButton(
                   onPressed: _requiredComplete && !_anyUploading ? _continue : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _green,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: _green.withValues(alpha: 0.4),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: Text('Submit for Review',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: AppTheme.confirmButtonStyle(background: _green),
+                  child: Text('Submit for Review'),
                 ),
               ),
               SizedBox(height: 12),
