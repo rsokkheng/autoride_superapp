@@ -480,7 +480,7 @@ class _HomeTabState extends State<_HomeTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
                   ServiceCard(
-                    icon: Icons.key,
+                    icon: Icons.handshake,
                     title: 'Rental',
                     color: const Color(0xFF1565C0),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen())),

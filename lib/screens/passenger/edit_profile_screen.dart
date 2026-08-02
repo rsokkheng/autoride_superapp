@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
 
@@ -17,8 +19,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _phoneCtrl = TextEditingController();
 
   String _originalPhone = '';
+  String? _photoUrl;
   bool _loading = true;
   bool _saving  = false;
+  bool _uploadingPhoto = false;
   String? _error;
 
   @override
@@ -35,6 +39,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
+  Future<void> _changePhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: context.appSurface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.photo_camera_outlined, color: AppTheme.accent),
+            title: Text('Take a photo', style: TextStyle(color: context.appTextPrimary)),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+          ListTile(
+            leading: Icon(Icons.photo_library_outlined, color: AppTheme.accent),
+            title: Text('Choose from gallery', style: TextStyle(color: context.appTextPrimary)),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(
+        source: source, maxWidth: 1024, maxHeight: 1024, imageQuality: 85);
+    if (picked == null || !mounted) return;
+
+    setState(() => _uploadingPhoto = true);
+    try {
+      final url = await ApiService.uploadAvatar(File(picked.path));
+      if (!mounted) return;
+      setState(() => _photoUrl = url);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Could not update photo: ${e.message}'),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not update photo. Try again.'),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } finally {
+      if (mounted) setState(() => _uploadingPhoto = false);
+    }
+  }
+
   Future<void> _loadProfile() async {
     setState(() { _loading = true; _error = null; });
     try {
@@ -45,6 +101,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _emailCtrl.text = user.email;
         _phoneCtrl.text = user.phone;
         _originalPhone  = user.phone;
+        _photoUrl       = user.photoUrl;
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -146,31 +203,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
                     // Avatar
                     GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            backgroundColor: context.appSurface,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            title: Text('Change Photo',
-                                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-                            content: Text('Feature coming soon',
-                                style: TextStyle(color: context.appTextSecondary)),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('OK', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                      onTap: _uploadingPhoto ? null : _changePhoto,
                       child: Stack(children: [
                         CircleAvatar(
                           radius: 52,
                           backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-                          child: Icon(Icons.person, color: AppTheme.accent, size: 52),
+                          backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
+                              ? NetworkImage(_photoUrl!)
+                              : null,
+                          child: _photoUrl == null || _photoUrl!.isEmpty
+                              ? Icon(Icons.person, color: AppTheme.accent, size: 52)
+                              : null,
                         ),
+                        if (_uploadingPhoto)
+                          const Positioned.fill(
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black45,
+                              child: SizedBox(
+                                width: 24, height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              ),
+                            ),
+                          ),
                         Positioned(
                           bottom: 0, right: 0,
                           child: Container(

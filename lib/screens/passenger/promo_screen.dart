@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
+import 'package:autoride_superapp/services/api_service.dart';
 import 'voucher_screen.dart' show StoreTab, MyVouchersTab;
 
 class PromoScreen extends StatefulWidget {
@@ -63,6 +64,7 @@ class _PromosTabState extends State<_PromosTab> {
   final _codeController = TextEditingController();
   String? _applyError;
   String? _applySuccess;
+  bool _applying = false;
 
   static const _promos = [
     _Promo(code: 'NEWUSER50', title: '50% Off First Ride', desc: 'Valid for new users only. Max discount \$5.', expiry: 'Expires Jun 30, 2026', discount: '50%', type: 'ride', color: Color(0xFF00D4AA), icon: Icons.directions_car),
@@ -78,21 +80,43 @@ class _PromosTabState extends State<_PromosTab> {
     super.dispose();
   }
 
-  void _applyCode() {
+  Future<void> _applyCode() async {
     final code = _codeController.text.trim().toUpperCase();
     if (code.isEmpty) return;
 
     setState(() {
-      _applyError = null;
+      _applyError   = null;
       _applySuccess = null;
+      _applying     = true;
     });
 
-    // Simulate validation
-    if (_promos.any((p) => p.code == code)) {
-      setState(() => _applySuccess = 'Promo "$code" applied successfully!');
-      _codeController.clear();
-    } else {
-      setState(() => _applyError = 'Invalid or expired promo code.');
+    try {
+      final result = await ApiService.validatePromoCode(
+        code: code,
+        serviceType: 'ride',
+        orderAmount: 0,
+      );
+      if (!mounted) return;
+      if (result.valid) {
+        final discount = result.discountPercent != null
+            ? '${result.discountPercent!.toStringAsFixed(0)}% off'
+            : result.discountAmount != null
+                ? '${AppTheme.khr(result.discountAmount!)} off'
+                : 'discount applied';
+        setState(() => _applySuccess =
+            'Promo "$code" applied — $discount${result.description != null ? '\n${result.description}' : ''}');
+        _codeController.clear();
+      } else {
+        setState(() => _applyError = 'Invalid or expired promo code.');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _applyError = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _applyError = 'Could not validate code. Try again.');
+    } finally {
+      if (mounted) setState(() => _applying = false);
     }
   }
 
@@ -126,14 +150,17 @@ class _PromosTabState extends State<_PromosTab> {
               ),
               const SizedBox(width: 10),
               ElevatedButton(
-                onPressed: _applyCode,
+                onPressed: _applying ? null : _applyCode,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accent,
                   foregroundColor: AppTheme.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w800)),
+                child: _applying
+                    ? SizedBox(width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary))
+                    : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w800)),
               ),
             ]),
             if (_applyError != null) ...[

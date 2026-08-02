@@ -22,12 +22,29 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
   String? _errorDeliveries;
   String? _errorMovings;
 
+  List<DriverIncentiveModel> _incentives = [];
+  bool    _loadingIncentives = true;
+  String? _errorIncentives;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadDeliveries();
     _loadMovings();
+    _loadIncentives();
+  }
+
+  Future<void> _loadIncentives() async {
+    setState(() { _loadingIncentives = true; _errorIncentives = null; });
+    try {
+      final list = await ApiService.getDriverIncentives();
+      if (mounted) setState(() { _incentives = list; _loadingIncentives = false; });
+    } on ApiException catch (e) {
+      if (mounted) setState(() { _errorIncentives = e.message; _loadingIncentives = false; });
+    } catch (_) {
+      if (mounted) setState(() { _errorIncentives = 'Failed to load rental missions.'; _loadingIncentives = false; });
+    }
   }
 
   @override
@@ -138,7 +155,12 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
             onRefresh: _loadMovings,
           ),
           // ── Rental tab ─────────────────────────────────────────────────
-          const _RentalPlaceholder(),
+          _IncentiveList(
+            loading:  _loadingIncentives,
+            error:    _errorIncentives,
+            items:    _incentives,
+            onRefresh: _loadIncentives,
+          ),
         ],
       ),
     );
@@ -667,22 +689,139 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ─── Car Rental placeholder tab ───────────────────────────────────────────────
+// ─── Rental vehicle incentives tab ─────────────────────────────────────────────
 
-class _RentalPlaceholder extends StatelessWidget {
-  const _RentalPlaceholder();
+class _IncentiveList extends StatelessWidget {
+  final bool                        loading;
+  final String?                     error;
+  final List<DriverIncentiveModel>  items;
+  final Future<void> Function()     onRefresh;
+
+  const _IncentiveList({
+    required this.loading,
+    required this.error,
+    required this.items,
+    required this.onRefresh,
+  });
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Icon(Icons.car_rental_outlined, color: context.appTextSecondary, size: 56),
-      SizedBox(height: 16),
-      Text('Rental Vehicle missions',
-          style: TextStyle(
-              color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
-      SizedBox(height: 8),
-      Text('Coming soon',
-          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
-    ]),
-  );
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.accentOrange));
+    }
+
+    if (error != null) {
+      return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
+        SizedBox(height: 12),
+        Text(error!,
+            style: TextStyle(color: context.appTextSecondary),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 16),
+        ElevatedButton(
+          onPressed: onRefresh,
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentOrange),
+          child: const Text('Retry'),
+        ),
+      ]));
+    }
+
+    if (items.isEmpty) {
+      return RefreshIndicator(
+        onRefresh: onRefresh,
+        color: AppTheme.accentOrange,
+        child: ListView(padding: EdgeInsets.all(32), children: [
+          Icon(Icons.car_rental_outlined, color: context.appTextSecondary, size: 56),
+          SizedBox(height: 16),
+          Text('No rental vehicle missions right now',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+          SizedBox(height: 8),
+          Text('Check back later for new incentives.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+        ]),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: onRefresh,
+      color: AppTheme.accentOrange,
+      child: ListView.builder(
+        padding: EdgeInsets.all(16),
+        itemCount: items.length,
+        itemBuilder: (context, i) => _IncentiveCard(incentive: items[i]),
+      ),
+    );
+  }
+}
+
+class _IncentiveCard extends StatelessWidget {
+  final DriverIncentiveModel incentive;
+  const _IncentiveCard({required this.incentive});
+
+  @override
+  Widget build(BuildContext context) {
+    final complete = incentive.status == 'completed' || incentive.progress >= 1.0;
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: complete
+                ? AppTheme.success.withValues(alpha: 0.4)
+                : context.appCardBg),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: (complete ? AppTheme.success : AppTheme.accentOrange).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              complete ? Icons.check_circle : Icons.car_rental_outlined,
+              color: complete ? AppTheme.success : AppTheme.accentOrange,
+              size: 20,
+            ),
+          ),
+          SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(incentive.title,
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+            if (incentive.description.isNotEmpty) ...[
+              SizedBox(height: 2),
+              Text(incentive.description,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+            ],
+          ])),
+          if (incentive.reward > 0)
+            Text(AppTheme.khr(incentive.reward),
+                style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w800, fontSize: 14)),
+        ]),
+        SizedBox(height: 12),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: incentive.progress,
+            minHeight: 6,
+            backgroundColor: context.appCardBg,
+            valueColor: AlwaysStoppedAnimation(complete ? AppTheme.success : AppTheme.accentOrange),
+          ),
+        ),
+        SizedBox(height: 6),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('${incentive.current.toStringAsFixed(0)} / ${incentive.target.toStringAsFixed(0)}',
+              style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          if (incentive.expiresAt != null)
+            Text('Expires ${incentive.expiresAt!.month}/${incentive.expiresAt!.day}',
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+        ]),
+      ]),
+    );
+  }
 }

@@ -129,13 +129,6 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Trip'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_list_rounded),
-            onPressed: () {},
-            tooltip: 'Filter',
-          ),
-        ],
       ),
       body: Column(children: [
         // Filter chips

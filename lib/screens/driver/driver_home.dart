@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
@@ -876,10 +875,6 @@ class _DriverDashboardState extends State<_DriverDashboard>
               ],
             ],
 
-            // Share location card
-            _DriverShareLocationCard(isOnline: widget.isOnline),
-            const SizedBox(height: 20),
-
             // Peak hour bonus tracker
             Container(
               padding: EdgeInsets.all(14),
@@ -962,101 +957,6 @@ class _DriverDashboardState extends State<_DriverDashboard>
           ],
         ),
       ),
-    );
-  }
-}
-
-// ─── Driver share location card ───────────────────────────────────────────────
-
-class _DriverShareLocationCard extends StatefulWidget {
-  final bool isOnline;
-  const _DriverShareLocationCard({required this.isOnline});
-
-  @override
-  State<_DriverShareLocationCard> createState() => _DriverShareLocationCardState();
-}
-
-class _DriverShareLocationCardState extends State<_DriverShareLocationCard> {
-  bool _sharing = false;
-
-  Future<void> _shareLocation() async {
-    setState(() => _sharing = true);
-    try {
-      // Get current GPS position (try last known first, fallback to full fix)
-      Position? pos = await Geolocator.getLastKnownPosition();
-      pos ??= await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
-      if (!mounted) return;
-
-      final lat = pos.latitude;
-      final lng = pos.longitude;
-      final mapsUrl = 'https://maps.google.com/?q=$lat,$lng';
-      final text    = 'My current location as an ROTEH driver:\n$mapsUrl';
-
-      final box = context.findRenderObject() as RenderBox?;
-      await Share.share(text,
-          subject: 'My live location',
-          sharePositionOrigin:
-              box != null ? box.localToGlobal(Offset.zero) & box.size : null);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Could not get your location. Make sure GPS is on.'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.red,
-      ));
-    } finally {
-      if (mounted) setState(() => _sharing = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.success.withValues(alpha: 0.35)),
-      ),
-      child: Row(children: [
-        Container(
-          padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppTheme.success.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(Icons.share_location, color: AppTheme.success, size: 22),
-        ),
-        SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Share My Location', style: TextStyle(
-              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-          SizedBox(height: 2),
-          Text('Send your live GPS link to friends or family via Telegram, SMS, etc.',
-              style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-        ])),
-        const SizedBox(width: 10),
-        SizedBox(
-          height: 36,
-          child: ElevatedButton(
-            onPressed: _sharing ? null : _shareLocation,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.success,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              elevation: 0,
-            ),
-            child: _sharing
-                ? const SizedBox(width: 14, height: 14,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Share', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-          ),
-        ),
-      ]),
     );
   }
 }

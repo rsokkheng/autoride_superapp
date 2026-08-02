@@ -3200,10 +3200,24 @@ class ApiService {
     final raw  = await _rawGet('/rides/$rideId/stops', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _extractStopsList(body['data']);
       return list.whereType<Map<String, dynamic>>().map(RideStopModel.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // 'data' has been observed as either a flat array, or an object wrapping
+  // the array under 'stops'/'data'/'items' (e.g. a pagination envelope) —
+  // handle both shapes instead of assuming it's always a List.
+  static List<dynamic> _extractStopsList(dynamic data) {
+    if (data is List<dynamic>) return data;
+    if (data is Map<String, dynamic>) {
+      for (final key in ['stops', 'data', 'items']) {
+        final v = data[key];
+        if (v is List<dynamic>) return v;
+      }
+    }
+    return const [];
   }
 
   static Future<List<RideStopModel>> addRideStops(int rideId, List<Map<String, dynamic>> stops) async {
@@ -3212,7 +3226,7 @@ class ApiService {
     final raw  = await _rawPost('/rides/$rideId/stops', {'stops': stops}, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _extractStopsList(body['data']);
       return list.whereType<Map<String, dynamic>>().map(RideStopModel.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);

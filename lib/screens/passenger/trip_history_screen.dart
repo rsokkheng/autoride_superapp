@@ -6,6 +6,7 @@ import '../../models/trip_model.dart';
 import 'rate_driver_screen.dart';
 import 'trip_tracking_screen.dart';
 import 'delivery_tracking_screen.dart';
+import 'ride_booking.dart';
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -1040,7 +1041,25 @@ class _TripCard extends StatelessWidget {
                 if (trip.canRebook)
                   Expanded(
                       child: GestureDetector(
-                    onTap: () {},
+                    onTap: () {
+                      if (trip.dropoffLat == null || trip.dropoffLng == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text('This trip has no destination to rebook.'),
+                          behavior: SnackBarBehavior.floating,
+                        ));
+                        return;
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RideBookingScreen(
+                            initialDestAddress: trip.dropoff,
+                            initialDestLatLng:
+                                LatLng(trip.dropoffLat!, trip.dropoffLng!),
+                          ),
+                        ),
+                      );
+                    },
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: 10),
                       child: Row(
