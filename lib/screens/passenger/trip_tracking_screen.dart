@@ -18,6 +18,7 @@ import '../../models/driver_marker_model.dart';
 import 'rate_driver_screen.dart';
 import '../shared/ride_chat_screen.dart';
 import '../../theme/app_theme.dart';
+import '../../main.dart' show appLocale;
 
 const _kGreen = Color(0xFF00B14F);
 
@@ -129,6 +130,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   String  _currentDriverId = '';
   String? _driverAvatarUrl;
   Timer? _ridePollTimer;
+
+  // One-shot guard so the "driver is arriving" alert fires only once per
+  // driver, the moment they first come within 50m of the pickup point.
+  bool _arrivingAlertShown = false;
+
+  // One-shot guard for the "almost at your destination" alert.
+  bool _arrivingDestAlertShown = false;
 
   // Dynamic vehicle icon — loaded async; null means use default pin
   BitmapDescriptor? _driverIcon;
@@ -355,6 +363,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       ..reset()
       ..forward();
 
+    _checkArrivingSoon(pos);
+    _checkArrivingAtDestination(pos);
+
     // Throttle Routes API calls — at most once every 15 s
     final now = DateTime.now();
     if (_lastRouteFetch == null ||
@@ -418,6 +429,60 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           jointType:  JointType.round,
         ));
     });
+  }
+
+  /// Notifies the passenger once when the driver first comes within 50m of
+  /// the pickup point, while still en route to pick them up.
+  void _checkArrivingSoon(LatLng driverPos) {
+    if (!_isApproachingPickup || _arrivingAlertShown) return;
+    final dist = Geolocator.distanceBetween(
+      driverPos.latitude, driverPos.longitude,
+      _pickupPoint.latitude, _pickupPoint.longitude,
+    );
+    if (dist <= 50) {
+      _arrivingAlertShown = true;
+      NotificationService.instance.showTripUpdate(
+        title: '🚗 Your driver is almost here',
+        body: '$_driverName is arriving at your pickup point.',
+        payload: 'arriving_soon',
+      );
+    }
+  }
+
+  /// Notifies the passenger once when the driver first comes within 50m of
+  /// the final destination, while the trip is already in progress (i.e. the
+  /// passenger is already onboard — this is a "check your belongings" alert,
+  /// not a pickup alert). Localized to the app's current language (km/en/zh).
+  void _checkArrivingAtDestination(LatLng driverPos) {
+    final inProgress =
+        _rideStatus == 'in_progress' || _lastUpdate?.status == TripStatus.inProgress;
+    if (!inProgress || _arrivingDestAlertShown) return;
+    final dist = Geolocator.distanceBetween(
+      driverPos.latitude, driverPos.longitude,
+      _destPoint.latitude, _destPoint.longitude,
+    );
+    if (dist <= 50) {
+      _arrivingDestAlertShown = true;
+      final String title, body;
+      switch (appLocale.value.languageCode) {
+        case 'km':
+          title = '🔔 ជិតដល់គោលដៅហើយ';
+          body  = 'សូមពិនិត្យមើលសម្ភារៈរបស់អ្នក មុនចុះចេញពីកង់បី។';
+          break;
+        case 'zh':
+          title = '🔔 即将到达目的地';
+          body  = '下车前，请检查您的随身物品。';
+          break;
+        default:
+          title = '🔔 You\'re almost at your destination';
+          body  = 'Please check your belongings before getting off the Tuk Tuk.';
+      }
+      NotificationService.instance.showTripUpdate(
+        title: title,
+        body:  body,
+        payload: 'arriving_destination',
+      );
+    }
   }
 
   /// Called by websocket/poll when driver position is close to the current
@@ -588,6 +653,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         driverId != _currentDriverId) {
       // New driver assigned — re-subscribe to their live position
       _currentDriverId = driverId;
+      _arrivingAlertShown = false;
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(driverId)
@@ -649,6 +715,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (newId == _currentDriverId) return;
       setState(() {
         _currentDriverId = newId;
+        _arrivingAlertShown = false;
         _driverName      = ride.driver?.name ?? 'Driver #${ride.driverId}';
         _driverAvatarUrl = ride.driver?.photoUrl;
         _driverRating    = ride.driver?.rating != null
@@ -692,7 +759,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   static IconData _vehicleTypeIcon(String type) {
     switch (type) {
-      case 'motorbike': return Icons.two_wheeler;
+      case 'motorbike': return Icons.electric_rickshaw;
       case 'van':       return Icons.airport_shuttle;
       case 'truck':     return Icons.local_shipping;
       default:          return Icons.directions_car;
@@ -706,6 +773,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _driverAssigned &&
       (_lastUpdate?.status == TripStatus.arrived ||
        _rideStatus == 'driver_arrived');
+
+  // Driver assigned and still en route to pick up the passenger — i.e. not
+  // yet arrived and not already picked up/driving to the destination.
+  bool get _isApproachingPickup =>
+      _driverAssigned &&
+      !_isArrived &&
+      _rideStatus != 'in_progress' &&
+      _lastUpdate?.status != TripStatus.inProgress;
 
   String get _statusTitle {
     if (!_driverAssigned) return 'Finding your driver...';

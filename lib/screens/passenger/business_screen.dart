@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 
 class BusinessScreen extends StatefulWidget {
   const BusinessScreen({super.key});
@@ -196,6 +197,11 @@ class _NoAccountViewState extends State<_NoAccountView> {
 
   Future<void> _register() async {
     if (_nameCtrl.text.trim().isEmpty) return;
+    final phoneError = validateLocalPhone(normalizeLocalPhone(_phoneCtrl.text));
+    if (phoneError != null) {
+      setState(() => _err = phoneError);
+      return;
+    }
     setState(() { _busy = true; _err = null; });
     try {
       final acc = await ApiService.registerBusiness({
@@ -203,7 +209,7 @@ class _NoAccountViewState extends State<_NoAccountView> {
         'tax_id':        _taxCtrl.text.trim(),
         'industry':      _industryCtrl.text.trim(),
         'contact_name':  _contactCtrl.text.trim(),
-        'contact_phone': _phoneCtrl.text.trim(),
+        'contact_phone': normalizeLocalPhone(_phoneCtrl.text),
         'billing_email': _emailCtrl.text.trim(),
         'billing_cycle': _billingCycle,
         'address':       _addressCtrl.text.trim(),
@@ -406,6 +412,11 @@ class _AccountDetailState extends State<_AccountDetail> {
   }
 
   Future<void> _save() async {
+    final phoneError = validateLocalPhone(normalizeLocalPhone(_phoneCtrl.text));
+    if (phoneError != null) {
+      setState(() => _err = phoneError);
+      return;
+    }
     setState(() { _busy = true; _err = null; });
     try {
       final updated = await ApiService.updateBusinessAccount({
@@ -413,7 +424,7 @@ class _AccountDetailState extends State<_AccountDetail> {
         'tax_id':        _taxCtrl.text.trim(),
         'industry':      _industryCtrl.text.trim(),
         'contact_name':  _contactCtrl.text.trim(),
-        'contact_phone': _phoneCtrl.text.trim(),
+        'contact_phone': normalizeLocalPhone(_phoneCtrl.text),
         'billing_email': _emailCtrl.text.trim(),
         'billing_cycle': _billingCycle,
         'address':       _addressCtrl.text.trim(),

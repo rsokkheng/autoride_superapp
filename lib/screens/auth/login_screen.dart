@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 import '../../models/user_model.dart';
 import '../../providers/biometric_provider.dart';
 import '../passenger/passenger_home.dart';
@@ -538,6 +539,11 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
       setState(() => _error = 'Enter your phone number.');
       return;
     }
+    final phoneError = validateLocalPhone(normalizeLocalPhone(raw));
+    if (phoneError != null) {
+      setState(() => _error = phoneError);
+      return;
+    }
     final phone = _normalizePhone(raw);
     setState(() { _loading = true; _error = null; });
     try {
@@ -681,7 +687,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
               onSubmitted: (_) => _sendOtp(),
               style: TextStyle(color: context.appTextPrimary, fontSize: 16),
               decoration: InputDecoration(
-                hintText: '+855 xx xxx xxx',
+                hintText: 'xxx xxx xxx',
                 hintStyle: TextStyle(color: context.appTextSecondary),
                 prefixIcon: Icon(Icons.phone_outlined,
                     color: context.appTextSecondary, size: 20),

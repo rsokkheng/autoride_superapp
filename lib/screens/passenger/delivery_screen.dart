@@ -6,6 +6,7 @@ import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 import '../../models/delivery_model.dart' show MovingEstimateModel;
 import '../../services/maps_service.dart';
 import 'delivery_tracking_screen.dart';
@@ -105,6 +106,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       setState(() => _error = 'Pickup and delivery address are required.');
       return;
     }
+    for (final ctrl in [_senderPhoneCtrl, _recipientPhoneCtrl]) {
+      if (ctrl.text.trim().isEmpty) continue;
+      final phoneError = validateLocalPhone(normalizeLocalPhone(ctrl.text));
+      if (phoneError != null) {
+        setState(() => _error = phoneError);
+        return;
+      }
+    }
 
     // ── Confirmation dialog ──────────────────────────────────────────────
     final confirmed = await showDialog<bool>(
@@ -114,9 +123,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         pickupAddress:  pickup,
         dropoffAddress: dropoff,
         senderName:     _senderNameCtrl.text.trim().isEmpty    ? null : _senderNameCtrl.text.trim(),
-        senderPhone:    _senderPhoneCtrl.text.trim().isEmpty   ? null : _senderPhoneCtrl.text.trim(),
+        senderPhone:    _senderPhoneCtrl.text.trim().isEmpty   ? null : normalizeLocalPhone(_senderPhoneCtrl.text),
         recipientName:  _recipientNameCtrl.text.trim().isEmpty ? null : _recipientNameCtrl.text.trim(),
-        recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty? null : _recipientPhoneCtrl.text.trim(),
+        recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty? null : normalizeLocalPhone(_recipientPhoneCtrl.text),
         packageDetails: _packageDetailsCtrl.text.trim().isEmpty
             ? 'No description'
             : _packageDetailsCtrl.text.trim(),
@@ -140,9 +149,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             ? 'No description'
             : _packageDetailsCtrl.text.trim(),
         senderName:     _senderNameCtrl.text.trim().isEmpty     ? null : _senderNameCtrl.text.trim(),
-        senderPhone:    _senderPhoneCtrl.text.trim().isEmpty    ? null : _senderPhoneCtrl.text.trim(),
+        senderPhone:    _senderPhoneCtrl.text.trim().isEmpty    ? null : normalizeLocalPhone(_senderPhoneCtrl.text),
         recipientName:  _recipientNameCtrl.text.trim().isEmpty  ? null : _recipientNameCtrl.text.trim(),
-        recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty ? null : _recipientPhoneCtrl.text.trim(),
+        recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty ? null : normalizeLocalPhone(_recipientPhoneCtrl.text),
         packageSize:    _packageSize,
         fee:            int.tryParse(_feeCtrl.text.trim()),
         paymentBy:      _paymentBy,
@@ -1545,7 +1554,7 @@ class _AddressWithMapState extends State<_AddressWithMap> {
           border: Border.all(
             color: filled
                 ? const Color(0xFF00C853).withValues(alpha: 0.4)
-                : context.appCardBg,
+                : context.appTextSecondary.withValues(alpha: 0.25),
           ),
         ),
         child: Row(children: [

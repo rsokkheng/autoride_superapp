@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 import 'ride_booking.dart';
 
 class FamilyScreen extends StatefulWidget {
@@ -432,11 +433,16 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
 
   Future<void> _add() async {
     if (_nameCtrl.text.trim().isEmpty || _phoneCtrl.text.trim().isEmpty) return;
+    final phoneError = validateLocalPhone(normalizeLocalPhone(_phoneCtrl.text));
+    if (phoneError != null) {
+      setState(() => _err = phoneError);
+      return;
+    }
     setState(() { _busy = true; _err = null; });
     try {
       final m = await ApiService.addFamilyMember(
         name:         _nameCtrl.text.trim(),
-        phone:        _phoneCtrl.text.trim(),
+        phone:        normalizeLocalPhone(_phoneCtrl.text),
         relationship: _relationshipCtrl.text.trim(),
       );
       if (mounted) {
@@ -550,12 +556,17 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   }
 
   Future<void> _save() async {
+    final phoneError = validateLocalPhone(normalizeLocalPhone(_phoneCtrl.text));
+    if (phoneError != null) {
+      setState(() => _err = phoneError);
+      return;
+    }
     setState(() { _busy = true; _err = null; });
     try {
       await ApiService.updateFamilyMember(
         widget.member.id,
         name:         _nameCtrl.text.trim(),
-        phone:        _phoneCtrl.text.trim(),
+        phone:        normalizeLocalPhone(_phoneCtrl.text),
         relationship: _relationshipCtrl.text.trim(),
       );
       if (mounted) {

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
@@ -311,8 +312,13 @@ class _SafetyScreenState extends State<SafetyScreen> {
             child: ElevatedButton(
               onPressed: () async {
                 final n = nameCtrl.text.trim();
-                final p = phoneCtrl.text.trim();
+                final p = normalizeLocalPhone(phoneCtrl.text);
                 if (n.isEmpty || p.isEmpty) return;
+                final phoneError = validateLocalPhone(p);
+                if (phoneError != null) {
+                  _snack(phoneError, _red);
+                  return;
+                }
                 Navigator.pop(ctx);
                 try {
                   await ApiService.addEmergencyContact(
@@ -369,10 +375,16 @@ class _SafetyScreenState extends State<SafetyScreen> {
           SizedBox(width: double.infinity,
             child: ElevatedButton(
               onPressed: () async {
+                final p = normalizeLocalPhone(phoneCtrl.text);
+                final phoneError = validateLocalPhone(p);
+                if (phoneError != null) {
+                  _snack(phoneError, _red);
+                  return;
+                }
                 Navigator.pop(ctx);
                 try {
                   await ApiService.updateEmergencyContact(c.id,
-                    name: nameCtrl.text.trim(), phone: phoneCtrl.text.trim(),
+                    name: nameCtrl.text.trim(), phone: p,
                     notifyOnSos: sos, notifyOnTripShare: share,
                   );
                   _loadContacts();

@@ -15,7 +15,8 @@ class MarkerIconService {
   // ── Vehicle type catalogue ─────────────────────────────────────────────────
 
   static const _vehicles = {
-    'motorbike': _VehicleSpec(emoji: '🏍️', bg: Color(0xFF1A3FAA), label: 'Bike'),
+    'motorbike': _VehicleSpec(emoji: '🛺', bg: Color(0xFF1A3FAA), label: 'Bike'),
+    'tuk_tuk':   _VehicleSpec(emoji: '🛺', bg: Color(0xFF1A3FAA), label: 'Tuk-Tuk'),
     'car':       _VehicleSpec(emoji: '🚗', bg: Color(0xFF2E7D32), label: 'Car'),
     'small_car': _VehicleSpec(emoji: '🚗', bg: Color(0xFF2E7D32), label: 'Car'),
     'van':       _VehicleSpec(emoji: '🚐', bg: Color(0xFFE65100), label: 'Van'),
@@ -23,7 +24,7 @@ class MarkerIconService {
   };
 
   static const _fallback = _VehicleSpec(
-    emoji: '🚕', bg: Color(0xFF1A3FAA), label: 'Driver',
+    emoji: '🛺', bg: Color(0xFF1A3FAA), label: 'Driver',
   );
 
   // ── Public API ─────────────────────────────────────────────────────────────

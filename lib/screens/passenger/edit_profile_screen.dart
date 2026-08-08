@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -114,7 +115,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _save() async {
-    final newPhone = _phoneCtrl.text.trim();
+    final newPhone = _phoneCtrl.text.trim().isEmpty
+        ? '' : normalizeLocalPhone(_phoneCtrl.text);
+    if (newPhone.isNotEmpty) {
+      final phoneError = validateLocalPhone(newPhone);
+      if (phoneError != null) {
+        setState(() => _error = phoneError);
+        return;
+      }
+    }
     final phoneChanged = newPhone.isNotEmpty && newPhone != _originalPhone;
 
     if (phoneChanged) {

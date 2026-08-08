@@ -56,6 +56,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: _pages[_tab],
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

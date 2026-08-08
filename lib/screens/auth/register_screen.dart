@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/phone_utils.dart';
 import '../driver/driver_document_upload_screen.dart';
 
 const _green = Color(0xFF00C48C);
@@ -51,6 +52,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_phoneCtrl.text.trim().isNotEmpty) {
+      final phoneError = validateLocalPhone(normalizeLocalPhone(_phoneCtrl.text));
+      if (phoneError != null) {
+        setState(() => _error = phoneError);
+        return;
+      }
+    }
     setState(() { _loading = true; _error = null; });
     try {
       final result = await ApiService.register(
@@ -58,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email:                _emailCtrl.text.trim(),
         password:             _passCtrl.text,
         passwordConfirmation: _confCtrl.text,
-        phone:                _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        phone:                _phoneCtrl.text.trim().isEmpty ? null : normalizeLocalPhone(_phoneCtrl.text),
         role:                 _role,
         driverType:           _role == 'driver' ? _driverType : null,
         city:                 _role == 'driver' && _cityCtrl.text.trim().isNotEmpty
@@ -211,7 +219,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(height: 14),
               _Field(
                 controller: _phoneCtrl,
-                label: 'Phone (optional)', hint: '+855 963430534',
+                label: 'Phone (optional)', hint: 'xxx xxx xxx',
                 icon:  Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],

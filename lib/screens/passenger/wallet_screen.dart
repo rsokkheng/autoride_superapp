@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../models/wallet_model.dart';
 import '../../services/api_service.dart';
+import '../../utils/phone_utils.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -1032,6 +1033,15 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
       ));
       return;
     }
+    final normalizedPhone = normalizeLocalPhone(phone);
+    final phoneError = validateLocalPhone(normalizedPhone);
+    if (phoneError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(phoneError),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
     if (amount == null || amount < 1000) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text('Minimum transfer amount is 1,000 KHR.'),
@@ -1042,7 +1052,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
 
     setState(() => _submitting = true);
     try {
-      await ApiService.walletTransfer(phone: phone, amountKhr: amount);
+      await ApiService.walletTransfer(phone: normalizedPhone, amountKhr: amount);
       if (!mounted) return;
       Navigator.pop(context);
       widget.onSuccess();
