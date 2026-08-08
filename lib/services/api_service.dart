@@ -1587,7 +1587,7 @@ class ApiService {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final body = <String, dynamic>{
-      if (fareKhr        != null) 'fare':            fareKhr,
+      if (fareKhr        != null) 'final_fare':      fareKhr,
       if (dropoffAddress != null) 'dropoff_address': dropoffAddress,
       if (dropoffLat      != null) 'dropoff_lat':     dropoffLat,
       if (dropoffLng      != null) 'dropoff_lng':     dropoffLng,
@@ -1725,6 +1725,29 @@ class ApiService {
         resBody['message'] as String? ?? 'Failed to update location (${raw.statusCode}).',
         raw.statusCode,
       );
+    }
+  }
+
+  /// Updates the driver's `current_latitude`/`current_longitude` on their
+  /// user record — separate from [updateDriverLocation] (which is
+  /// ride-scoped, for live tracking/map display). This is what
+  /// `/rides/{id}/complete` falls back to for the dropoff location when
+  /// the client doesn't send explicit `dropoff_lat`/`dropoff_lng` — must
+  /// be called continuously during a trip for that fallback to work.
+  static Future<void> updateCurrentLocation({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final token = await getToken();
+    if (token == null) return;
+    try {
+      await _rawPost('/driver/location', {
+        'latitude':  latitude,
+        'longitude': longitude,
+      }, token: token);
+    } catch (_) {
+      // Best-effort — the ride-scoped tracking call is the primary path;
+      // this just keeps the fallback populated.
     }
   }
 
@@ -2585,7 +2608,41 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
-  /// Verify OTP and return the logged-in user + token (login flow).
+  /// Exchanges a Firebase Phone Auth ID token for an app session
+  /// (production phone-login flow — Firebase sends the real SMS client-side,
+  /// this just hands the resulting ID token to the backend to mint tokens).
+  static Future<({UserModel user, String token})> verifyFirebasePhone(String idToken) async {
+    final raw = await _rawPost('/auth/phone/verify', {
+      'firebase_id_token': idToken,
+    });
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data        = (body['data'] as Map<String, dynamic>?) ?? body;
+      final userJson    = data['user'];
+      final accessToken = data['access_token'] as String? ?? data['token'] as String?;
+      if (userJson == null || accessToken == null) {
+        throw ApiException('Phone verified but no session returned.', raw.statusCode);
+      }
+      final user = UserModel.fromJson(userJson as Map<String, dynamic>);
+      await _saveSession(user, accessToken,
+          refreshToken: data['refresh_token'] as String?);
+      return (user: user, token: accessToken);
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Phone verification failed (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  /// Verify OTP and return the logged-in user + token (dev-only mock flow —
+  /// use [verifyFirebasePhone] in production).
   static Future<({UserModel user, String token})> loginWithOtp(String phone, String code) async {
     final raw = await _rawPost('/auth/otp/verify', {
       'phone': phone,

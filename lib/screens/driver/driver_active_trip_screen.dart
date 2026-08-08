@@ -547,6 +547,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       heading:   pos.heading,
       status:    _phase == _TripPhase.inProgress ? 'in_progress' : 'picking_up',
     ).catchError((_) {});
+    // Also keeps user.current_latitude/longitude fresh — the dropoff
+    // fallback /rides/{id}/complete uses if we don't send explicit
+    // dropoff_lat/lng (e.g. metered trips where GPS failed at the exact
+    // moment of completion).
+    ApiService.updateCurrentLocation(latitude: pos.latitude, longitude: pos.longitude);
   }
 
   // ── Camera ─────────────────────────────────────────────────────────────────────

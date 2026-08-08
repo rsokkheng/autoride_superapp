@@ -497,6 +497,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
   bool _loading   = false;
   String? _error;
   String? _sentPhone;
+  int? _devCode; // dev-mode backend returns the code directly (no real SMS)
 
   // Resend countdown
   int _countdown = 0;
@@ -522,12 +523,22 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
     });
   }
 
+  // Normalizes the user's digits-only input into E.164 for Cambodia
+  // (+855...), which is what the backend's OTP endpoints expect.
+  String _normalizePhone(String digits) {
+    var d = digits.replaceAll(RegExp(r'[^0-9]'), '');
+    if (d.startsWith('855')) d = d.substring(3);
+    if (d.startsWith('0')) d = d.substring(1);
+    return '+855$d';
+  }
+
   Future<void> _sendOtp() async {
-    final phone = _phoneCtrl.text.trim();
-    if (phone.isEmpty) {
+    final raw = _phoneCtrl.text.trim();
+    if (raw.isEmpty) {
       setState(() => _error = 'Enter your phone number.');
       return;
     }
+    final phone = _normalizePhone(raw);
     setState(() { _loading = true; _error = null; });
     try {
       final result = await ApiService.sendOtp(phone);
@@ -535,6 +546,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
       setState(() {
         _codeSent  = true;
         _sentPhone = result.phone;
+        _devCode   = result.code;
         _loading   = false;
       });
       _startCountdown();
@@ -593,7 +605,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
                 icon: Icon(Icons.arrow_back_ios_new_rounded,
                     color: context.appTextSecondary, size: 18),
                 onPressed: _loading ? null : () => setState(() {
-                  _codeSent = false; _error = null;
+                  _codeSent = false; _error = null; _devCode = null;
                   for (final c in _otpCtrls) c.clear();
                   _timer?.cancel();
                 }),
@@ -613,6 +625,27 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
               ]),
             ),
           ]),
+          if (_codeSent && _devCode != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Dev mode — no real SMS sent. Your code is $_devCode',
+                    style: const TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ]),
+            ),
+          ],
           SizedBox(height: 24),
 
           // Error
@@ -643,7 +676,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
             TextField(
               controller: _phoneCtrl,
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _sendOtp(),
               style: TextStyle(color: context.appTextPrimary, fontSize: 16),

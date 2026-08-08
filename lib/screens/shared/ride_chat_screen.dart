@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/firestore_message.dart';
 import '../../services/firestore_chat_service.dart';
 import '../../theme/app_theme.dart';
@@ -35,6 +37,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
   bool    _loadingChat = true;
   String? _chatError;
   bool    _sending     = false;
+  bool    _sendingImage = false;
 
   @override
   void initState() {
@@ -91,6 +94,61 @@ class _RideChatScreenState extends State<RideChatScreen> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  Future<void> _pickAndSendImage(ImageSource source) async {
+    if (_chatId == null || _sendingImage) return;
+    final picked = await ImagePicker().pickImage(
+        source: source, maxWidth: 1600, maxHeight: 1600, imageQuality: 80);
+    if (picked == null || !mounted) return;
+    setState(() => _sendingImage = true);
+    try {
+      await FirestoreChatService.sendImageMessage(
+        chatId:     _chatId!,
+        senderId:   widget.myId,
+        senderName: widget.myName,
+        image:      File(picked.path),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Could not send photo: $e'),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } finally {
+      if (mounted) setState(() => _sendingImage = false);
+    }
+  }
+
+  void _showAttachmentSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appSurface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+            leading: Icon(Icons.photo_camera_outlined, color: AppTheme.accent),
+            title: Text('Take a photo', style: TextStyle(color: context.appTextPrimary)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendImage(ImageSource.camera);
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.photo_library_outlined, color: AppTheme.accent),
+            title: Text('Upload from gallery', style: TextStyle(color: context.appTextPrimary)),
+            onTap: () {
+              Navigator.pop(context);
+              _pickAndSendImage(ImageSource.gallery);
+            },
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -198,7 +256,26 @@ class _RideChatScreenState extends State<RideChatScreen> {
                     color: context.appSurface,
                     child: SafeArea(
                       top: false,
-                      child: Row(children: [
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                        GestureDetector(
+                          onTap: _sendingImage ? null : _showAttachmentSheet,
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                                color: context.appCardBg,
+                                shape: BoxShape.circle),
+                            child: _sendingImage
+                                ? SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        color: AppTheme.accent,
+                                        strokeWidth: 2))
+                                : Icon(Icons.attach_file,
+                                    color: context.appTextSecondary, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _msgCtrl,
@@ -206,6 +283,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                                 color: context.appTextPrimary),
                             maxLines: 3,
                             minLines: 1,
+                            textAlignVertical: TextAlignVertical.center,
                             textInputAction: TextInputAction.newline,
                             onSubmitted: (_) => _send(),
                             decoration: InputDecoration(
@@ -288,12 +366,51 @@ class _Bubble extends StatelessWidget {
                         fontSize: 11,
                         fontWeight: FontWeight.w700)),
               ),
-            Text(msg.message,
-                style: TextStyle(
-                    color: isMe
-                        ? AppTheme.primary
-                        : context.appTextPrimary,
-                    fontSize: 14)),
+            if (msg.isImage)
+              GestureDetector(
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (_) => Dialog(
+                    backgroundColor: Colors.transparent,
+                    insetPadding: const EdgeInsets.all(12),
+                    child: InteractiveViewer(
+                      child: Image.network(msg.attachmentUrl!),
+                    ),
+                  ),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    msg.attachmentUrl!,
+                    width: 200,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
+                      return SizedBox(
+                        width: 200, height: 200,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                              color: isMe ? AppTheme.primary : AppTheme.accent, strokeWidth: 2),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stack) => SizedBox(
+                      width: 200, height: 120,
+                      child: Center(
+                        child: Icon(Icons.broken_image_outlined,
+                            color: isMe ? AppTheme.primary : context.appTextSecondary),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Text(msg.message,
+                  style: TextStyle(
+                      color: isMe
+                          ? AppTheme.primary
+                          : context.appTextPrimary,
+                      fontSize: 14)),
             SizedBox(height: 4),
             Text(msg.timeLabel,
                 style: TextStyle(

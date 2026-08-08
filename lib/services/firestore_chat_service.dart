@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/firestore_message.dart';
 import 'auth_service.dart';
 
 class FirestoreChatService {
   static final _db = FirebaseFirestore.instance;
+  static final _storage = FirebaseStorage.instance;
 
   // Finds the existing chat doc for a ride, or creates one.
   // Returns the Firestore chat document ID.
@@ -37,7 +40,7 @@ class FirestoreChatService {
   static Stream<List<FirestoreMessage>> messagesStream(String chatId) {
     return _db
         .collection('messages')
-        .where('chat_id', isEqualTo: chatId)
+        .where('conversation_id', isEqualTo: chatId)
         .snapshots()
         .map((snap) {
           final msgs =
@@ -54,16 +57,51 @@ class FirestoreChatService {
     required String chatId,
     required int    senderId,
     required String senderName,
+    String?         senderAvatar,
     required String message,
   }) async {
     await AuthService.signInAnon();
     await _db.collection('messages').add({
-      'chat_id':     chatId,
-      'sender_id':   senderId,
-      'sender_name': senderName,
-      'message':     message,
-      'timestamp':   FieldValue.serverTimestamp(),
-      'read_at':     null,
+      'conversation_id': chatId,
+      'sender_id':        senderId,
+      'sender_name':      senderName,
+      'sender_avatar':    senderAvatar,
+      'message':          message,
+      'type':             'text',
+      'attachment_url':   null,
+      'attachment_name':  null,
+      'read_at':          null,
+      'created_at':       FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Uploads an image (from file upload or camera) to Firebase Storage,
+  // then appends a message pointing at it — same shape as a text message,
+  // just with `attachment_url`/`type: image` set and `message` left null.
+  static Future<void> sendImageMessage({
+    required String chatId,
+    required int    senderId,
+    required String senderName,
+    String?         senderAvatar,
+    required File   image,
+  }) async {
+    await AuthService.signInAnon();
+    final fileName =
+        '${DateTime.now().millisecondsSinceEpoch}_$senderId.jpg';
+    final ref = _storage.ref().child('chat_images/$chatId/$fileName');
+    await ref.putFile(image);
+    final url = await ref.getDownloadURL();
+    await _db.collection('messages').add({
+      'conversation_id': chatId,
+      'sender_id':        senderId,
+      'sender_name':      senderName,
+      'sender_avatar':    senderAvatar,
+      'message':          null,
+      'type':             'image',
+      'attachment_url':   url,
+      'attachment_name':  fileName,
+      'read_at':          null,
+      'created_at':       FieldValue.serverTimestamp(),
     });
   }
 }
