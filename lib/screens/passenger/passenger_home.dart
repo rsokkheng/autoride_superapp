@@ -47,7 +47,7 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
 
   final List<Widget> _pages = [
     const _HomeTab(),
-    const RideBookingScreen(),
+    const RideBookingScreen(skipDestination: true),
     const ChargingStationsScreen(),
     const ChatScreen(isDriver: false),
     const _ProfileTab(),
@@ -460,7 +460,7 @@ class _HomeTabState extends State<_HomeTab> {
                     icon: Icons.electric_rickshaw,
                     title: l.bookRide,
                     color: AppTheme.accent,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RideBookingScreen())),
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RideBookingScreen(skipDestination: true))),
                   ),
                   ServiceCard(
                     icon: Icons.delivery_dining_outlined,

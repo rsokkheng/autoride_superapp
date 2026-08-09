@@ -21,7 +21,7 @@ class DirectionsResult {
 }
 
 class MapsService {
-  static const _apiKey = 'AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc';
+  static const _apiKey = 'AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8';
 
   /// Updated by main.dart whenever the user changes the in-app language.
   /// Drives the `language` / `languageCode` parameter for all API calls so

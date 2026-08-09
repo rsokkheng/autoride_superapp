@@ -38,8 +38,7 @@ class AppTheme {
   // ── Vehicle types ─────────────────────────────────────────────────────────
   static const List<VehicleTypeOption> vehicleTypes = [
     VehicleTypeOption(type: 'tuk_tuk', label: 'Tuk-Tuk', icon: Icons.electric_rickshaw, description: 'Classic tuk-tuk'),
-    VehicleTypeOption(type: 'bike',    label: 'Bike',    icon: Icons.two_wheeler,       description: 'Fast & affordable'),
-    VehicleTypeOption(type: 'van',     label: 'Van',     icon: Icons.airport_shuttle,   description: 'Groups & luggage'),
+    VehicleTypeOption(type: 'van',     label: 'Car',     icon: Icons.directions_car,    description: 'Standard, Premium & Van'),
   ];
 
   // ── Currency helpers ──────────────────────────────────────────────────────

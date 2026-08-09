@@ -12,7 +12,20 @@
           "package_name": "com.example.autorideSuperapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "302191973529-jrs88qng9v11jdl5j8am6o856smulamc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.autorideSuperapp",
+            "certificate_hash": "19ee63061b6b8fec4dbfab2de2265d51bc229619"
+          }
+        },
+        {
+          "client_id": "302191973529-durmf5bb0djfrucmvkpd96a6dichl204.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "302191973529-durmf5bb0djfrucmvkpd96a6dichl204.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "302191973529-r3ogka7krjj7tb2gg0jadloc0c9hf86o.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.autorideSuperapp"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +56,20 @@
           "package_name": "com.example.autoride_superapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "302191973529-5bbfe5q6tsu2mv9sn14di9gmurq1694r.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.autoride_superapp",
+            "certificate_hash": "19ee63061b6b8fec4dbfab2de2265d51bc229619"
+          }
+        },
+        {
+          "client_id": "302191973529-durmf5bb0djfrucmvkpd96a6dichl204.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8"
@@ -39,7 +77,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "302191973529-durmf5bb0djfrucmvkpd96a6dichl204.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "302191973529-r3ogka7krjj7tb2gg0jadloc0c9hf86o.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.autorideSuperapp"
+              }
+            }
+          ]
         }
       }
     }

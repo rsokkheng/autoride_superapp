@@ -10,7 +10,7 @@ import 'package:autoride_superapp/theme/app_theme.dart';
 
 // Android key is unrestricted for HTTP — safe to use on both platforms.
 // The iOS key (in AppDelegate.swift) is SDK-only and cannot make HTTP calls.
-const _kHttpApiKey = 'AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc';
+const _kHttpApiKey = 'AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8';
 
 const _kDefaultCenter = LatLng(11.5564, 104.9282); // Phnom Penh
 

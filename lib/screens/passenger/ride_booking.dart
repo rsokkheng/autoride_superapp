@@ -12,7 +12,7 @@ import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
-import '../../widgets/vehicle_type_selector.dart';
+import 'saved_places_screen.dart';
 
 const _kCambodiaSW = LatLng(10.4, 102.3);
 const _kCambodiaNE = LatLng(14.7, 107.6);
@@ -45,20 +45,33 @@ class _WayStop {
 class _RideType {
   final String name, serviceType, eta, desc;
   final IconData icon;
+  // Base fare from the vehicle type's pricing (GET /vehicle-types
+  // `pricing.base`) — shown for metered/no-destination rides, since the
+  // real distance-based total can't be known until the trip ends.
+  final int base;
   const _RideType({
     required this.name,
     required this.serviceType,
     required this.icon,
     required this.eta,
     required this.desc,
+    this.base = 0,
   });
 }
 
-const _kRideTypes = [
-  _RideType(name: 'Standard', serviceType: 'standard',   icon: Icons.electric_rickshaw,   eta: '4 min', desc: '4 seats'),
-  _RideType(name: 'Premium',  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '6 min', desc: 'Luxury'),
-  _RideType(name: 'Van',      serviceType: 'van',        icon: Icons.directions_bus,      eta: '6 min', desc: '6+ seats'),
+// Offline/error fallback only — mirrors GET /vehicle-types so the screen
+// still works if that call fails. The real list (with real pricing/capacity)
+// is fetched at runtime via ApiService.getVehicleTypes().
+const _kFallbackRideTypes = [
+  _RideType(name: 'Motorcycle',   serviceType: 'motorcycle', icon: Icons.two_wheeler,        eta: '', desc: '1 seat',  base: 2500),
+  _RideType(name: 'Tuk-tuk',      serviceType: 'tuk_tuk',    icon: Icons.electric_rickshaw,   eta: '', desc: '3 seats', base: 3500),
+  _RideType(name: 'Car Standard', serviceType: 'standard',   icon: Icons.directions_car,      eta: '', desc: '4 seats', base: 5000),
+  _RideType(name: 'Car Premium',  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '', desc: '4 seats', base: 8000),
+  _RideType(name: 'Shared Ride',  serviceType: 'shared',     icon: Icons.groups,              eta: '', desc: '4 seats', base: 2500),
+  _RideType(name: 'Van / XL',     serviceType: 'van',        icon: Icons.airport_shuttle,     eta: '', desc: '7 seats', base: 7000),
 ];
+
+const _kRideCategories = ['All', 'Tuk Tuk', 'Car', 'Bike'];
 
 // ─── Labeled marker (pill + numbered circle) ─────────────────────────────────
 // Returns a composite bitmap of [label pill][number circle] plus the anchor
@@ -249,6 +262,18 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   bool   _gpsLoading    = false;
   bool   _geocodingPickup = false;
 
+  // ── Pickup search (type a name instead of dragging the map) ────────────────
+  final _pickupSearchCtrl  = TextEditingController();
+  final _pickupSearchFocus = FocusNode();
+  List<PlaceResult> _pickupSearchResults = [];
+  bool   _pickupSearching  = false;
+  Timer? _pickupSearchDebounce;
+
+  // Dedicated focus node for the "Where to?" field on the unified location
+  // page — without its own explicit node it shared an implicit one that
+  // could steal focus back from the pickup field on rebuild.
+  final _destSearchFocus = FocusNode();
+
   // ── Destination search ──────────────────────────────────────────────────────
   final _searchCtrl = TextEditingController();
   List<PlaceResult> _searchResults = [];
@@ -265,6 +290,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   // Getters for backward-compat with route/booking methods
   String  get _destAddress => _stops.last.address;
   LatLng? get _destLatLng  => _stops.last.latLng;
+
+  // Unified location-search page (step 0): "Map" button switches to the
+  // interactive drag-to-set pickup map when the pickup field is focused.
+  bool _pickupMapView = false;
+
+  // Which field autofocuses when the unified location-search page is
+  // (re)entered — true when navigated here specifically to set the
+  // destination (e.g. tapping the "Where to?" row), false (default)
+  // focuses pickup instead.
+  bool _focusDestinationOnEntry = false;
 
   // ── Destination map picker ──────────────────────────────────────────────────
   bool   _choosingDestOnMap = false;
@@ -290,8 +325,64 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   BitmapDescriptor? _pickupIcon;
   List<_LabeledMarker> _stopMarkers = [];
 
-  String   _selectedRide       = 'Standard';
-  String   _selectedVehicleType = 'tuk_tuk';
+  String   _selectedRide       = 'Tuk-tuk';
+
+  // Fetched once from GET /vehicle-types — falls back to _kFallbackRideTypes
+  // if the call fails so the screen still functions.
+  List<_RideType> _visibleRideTypes = _kFallbackRideTypes;
+  bool             _rideTypesLoading = true;
+
+  // No-destination confirm screen: starts collapsed showing only the
+  // Tuk-tuk row — dragging/scrolling the sheet up reveals the full list.
+  bool _showAllRideOptions = false;
+
+  // ── Ride category filter (All / Tuk Tuk / Car / Bike) ───────────────────────
+  String _rideCategory = 'All';
+
+  static String _wheelCategory(String serviceType) {
+    switch (serviceType) {
+      case 'motorcycle': return 'Bike';
+      case 'tuk_tuk':     return 'Tuk Tuk';
+      default:            return 'Car'; // standard/premium/shared/van
+    }
+  }
+
+  List<_RideType> get _filteredRideTypes => _rideCategory == 'All'
+      ? _visibleRideTypes
+      : _visibleRideTypes
+          .where((r) => _wheelCategory(r.serviceType) == _rideCategory)
+          .toList();
+
+  Future<void> _loadVehicleTypes() async {
+    try {
+      final types = await ApiService.getVehicleTypes();
+      if (!mounted || types.isEmpty) return;
+      setState(() {
+        _visibleRideTypes = types
+            .map((v) => _RideType(
+                  name:        v.label,
+                  serviceType: v.serviceType,
+                  icon:        v.icon,
+                  eta:         '',
+                  desc:        v.seatsLabel,
+                  base:        v.pricing.base,
+                ))
+            .toList();
+        _rideTypesLoading = false;
+        // Keep selection valid: default to tuk_tuk if present, else first.
+        if (!_visibleRideTypes.any((r) => r.name == _selectedRide)) {
+          _selectedRide = _visibleRideTypes
+              .firstWhere((r) => r.serviceType == 'tuk_tuk',
+                  orElse: () => _visibleRideTypes.first)
+              .name;
+        }
+      });
+    } catch (e, s) {
+      AppLog.e('RideTypes', 'getVehicleTypes failed', e, s);
+      if (mounted) setState(() => _rideTypesLoading = false);
+    }
+  }
+
   String   _paymentMethod      = 'cash';
   bool     _isScheduled     = false;
   DateTime _scheduledTime   = DateTime.now().add(const Duration(hours: 1));
@@ -316,10 +407,12 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   void initState() {
     super.initState();
     _searchCtrl.addListener(_onSearchChanged);
+    _pickupSearchCtrl.addListener(_onPickupSearchChanged);
     appLocale.addListener(_onLocaleChanged);
     _detectGps();
     _loadSurge();
     _loadSavedPlaces();
+    _loadVehicleTypes();
     if (widget.skipDestination) _skipDestination();
     if (widget.initialDestAddress != null && widget.initialDestLatLng != null) {
       _stops[0].address = widget.initialDestAddress!;
@@ -349,7 +442,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   Future<void> _loadSavedPlaces() async {
     try {
       final places = await ApiService.getSavedPlaces();
-      if (mounted) setState(() => _savedPlaces = places.take(4).toList());
+      if (!mounted) return;
+      setState(() => _savedPlaces = places.take(4).toList());
+      // Saved places may finish loading after the GPS pickup was already
+      // reverse-geocoded — re-check now in case it's actually a match.
+      final match = _matchSavedPlace(_pickupCenter);
+      if (match != null && _pickupAddress != match.label) {
+        setState(() => _pickupAddress = match.label);
+      }
     } catch (_) {}
   }
 
@@ -357,6 +457,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   void dispose() {
     _searchCtrl.dispose();
     _searchDebounce?.cancel();
+    _pickupSearchCtrl.dispose();
+    _pickupSearchFocus.dispose();
+    _pickupSearchDebounce?.cancel();
+    _destSearchFocus.dispose();
     appLocale.removeListener(_onLocaleChanged);
     _pickupMapCtrl?.dispose();
     _destMapCtrl?.dispose();
@@ -419,7 +523,29 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     });
   }
 
+  // Distance within which the current GPS position is considered "at" a
+  // saved place (Home/Work/bookmark) — shows its friendly label instead of
+  // the raw geocoded address.
+  static const double _kSavedPlaceMatchMeters = 100;
+
+  SavedPlaceModel? _matchSavedPlace(LatLng pos) {
+    for (final place in _savedPlaces) {
+      final dist = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude, place.lat, place.lng);
+      if (dist <= _kSavedPlaceMatchMeters) return place;
+    }
+    return null;
+  }
+
   Future<void> _reverseGeocodePickup(LatLng pos) async {
+    final savedMatch = _matchSavedPlace(pos);
+    if (savedMatch != null) {
+      setState(() {
+        _pickupAddress   = savedMatch.label;
+        _geocodingPickup = false;
+      });
+      return;
+    }
     setState(() => _geocodingPickup = true);
     final address = await MapsService.reverseGeocode(pos);
     if (!mounted) return;
@@ -427,6 +553,38 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       _pickupAddress  = address ?? '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
       _geocodingPickup = false;
     });
+  }
+
+  // ── Pickup search ────────────────────────────────────────────────────────────
+
+  void _onPickupSearchChanged() {
+    _pickupSearchDebounce?.cancel();
+    final q = _pickupSearchCtrl.text.trim();
+    if (q.isEmpty) {
+      setState(() { _pickupSearchResults = []; _pickupSearching = false; });
+      return;
+    }
+    setState(() {}); // rebuild to show/hide clear button + results panel
+    _pickupSearchDebounce =
+        Timer(const Duration(milliseconds: 500), () => _searchPickupPlaces(q));
+  }
+
+  Future<void> _searchPickupPlaces(String q) async {
+    setState(() => _pickupSearching = true);
+    final results = await MapsService.searchAddress(q);
+    if (!mounted) return;
+    setState(() { _pickupSearchResults = results; _pickupSearching = false; });
+  }
+
+  void _selectPickupResult(PlaceResult r) {
+    setState(() {
+      _pickupAddress       = r.address;
+      _pickupCenter        = r.latLng;
+      _pickupSearchResults = [];
+    });
+    _pickupSearchCtrl.clear();
+    _pickupSearchFocus.unfocus();
+    _pickupMapCtrl?.animateCamera(CameraUpdate.newLatLng(r.latLng));
   }
 
   // ── Search ───────────────────────────────────────────────────────────────────
@@ -465,6 +623,69 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       _stops[_activeStopIdx].latLng  = p.latLng;
     });
     _afterStopFilled();
+  }
+
+  void _selectSavedPlace(SavedPlaceModel place) {
+    if (_activeStopIdx < 0) return;
+    setState(() {
+      _stops[_activeStopIdx].address = place.address;
+      _stops[_activeStopIdx].latLng  = LatLng(place.lat, place.lng);
+    });
+    _afterStopFilled();
+  }
+
+  SavedPlaceModel? _findSavedPlace(List<String> labelMatches) {
+    for (final p in _savedPlaces) {
+      final l = p.label.toLowerCase();
+      if (labelMatches.any((m) => l.contains(m))) return p;
+    }
+    return null;
+  }
+
+  void _showAllSavedPlaces() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.appSurface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Saved places',
+                  style: TextStyle(
+                      color: context.appTextPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+          ),
+          if (_savedPlaces.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('No saved places yet.',
+                  style: TextStyle(color: context.appTextSecondary)),
+            )
+          else
+            ..._savedPlaces.map((p) => _DestTile(
+                  icon: p.label.toLowerCase().contains('home')
+                      ? Icons.home_outlined
+                      : p.label.toLowerCase().contains('work') ||
+                              p.label.toLowerCase().contains('office')
+                          ? Icons.work_outline
+                          : Icons.bookmark_outline,
+                  iconColor: AppTheme.accent,
+                  title: p.label,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _selectSavedPlace(p);
+                  },
+                )),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
   }
 
   void _afterStopFilled() {
@@ -545,7 +766,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       setState(() => _choosingDestOnMap = false);
     } else if (_step == 1) {
       _searchCtrl.clear();
-      setState(() { _step = 0; _searchResults = []; });
+      setState(() {
+        _step = 0;
+        _searchResults = [];
+        // Clear the previously drawn route line so it doesn't linger when
+        // landing back on the default pickup screen.
+        _segmentRoutes = [];
+        _routePoints   = [];
+      });
     } else if (_step > 0) {
       Navigator.pop(context);
     }
@@ -581,9 +809,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             setLocal(() { _promoLoading = true; _promoError = null; });
             bool success = false;
             try {
-              final fare = _fareByType[_kRideTypes
+              final fare = _fareByType[_visibleRideTypes
                   .firstWhere((r) => r.name == _selectedRide,
-                      orElse: () => _kRideTypes.first)
+                      orElse: () => _visibleRideTypes.first)
                   .serviceType];
               final result = await ApiService.validatePromoCode(
                 code:        code,
@@ -819,10 +1047,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           ? _stops.sublist(0, _stops.length - 1).where((s) => s.isFilled).toList()
           : const <_WayStop>[];
       final estimate = await ApiService.estimateRide(
-        pickupLat:  _pickupCenter.latitude,
-        pickupLng:  _pickupCenter.longitude,
-        dropoffLat: dest.latitude,
-        dropoffLng: dest.longitude,
+        pickupLat:   _pickupCenter.latitude,
+        pickupLng:   _pickupCenter.longitude,
+        dropoffLat:  dest.latitude,
+        dropoffLng:  dest.longitude,
         stops: intermediateStops.isEmpty
             ? null
             : List.generate(intermediateStops.length, (i) => {
@@ -853,7 +1081,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     if (_pickupAddress.isEmpty) return;
     if (!_noDestination && (_destAddress.isEmpty || _destLatLng == null)) return;
     setState(() { _isBooking = true; _bookError = null; });
-    final type = _kRideTypes.firstWhere((r) => r.name == _selectedRide);
+    final type = _visibleRideTypes.firstWhere((r) => r.name == _selectedRide,
+        orElse: () => _visibleRideTypes.first);
     // Intermediate stops sent inline with ride creation so the backend
     // persists them atomically — a driver app that fetches the ride right
     // after creation will already see them.
@@ -870,7 +1099,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         dropoffLng:     _noDestination ? null : _destLatLng!.longitude,
         noDestination:  _noDestination,
         serviceType:    type.serviceType,
-        vehicleType:    _selectedVehicleType,
+        vehicleType:    type.serviceType,
         paymentMethod:  _paymentMethod,
         promoCode:      _promoCode,
         passengerName:  widget.forFamilyMember?.name,
@@ -961,11 +1190,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Step 0: full-screen "Where to?" landing — no top header
+    // Step 0: unified pickup + destination search landing — no top header
     if (_step == 0) {
       return Scaffold(
         backgroundColor: context.appBackground,
-        body: _buildWhereTo(),
+        body: _pickupMapView ? _buildWhereTo() : _buildLocationSearch(),
       );
     }
     // Step 2 — full-screen map, no header
@@ -987,7 +1216,444 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Step 0 — "Where to?" landing
+  // Step 0 — Unified location search (pickup + "Where to?" on one page)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildLocationSearch() {
+    if (_choosingDestOnMap) return _buildDestinationMapPicker();
+
+    final hasQuery = _searchCtrl.text.trim().isNotEmpty;
+    final pickupSearchActive = _pickupSearchFocus.hasFocus &&
+        _pickupSearchCtrl.text.trim().isNotEmpty;
+
+    // Entered via the pickup row → stays a blank "Pickup location" label
+    // ready for a fresh search. Entered via "Where to?" with a pickup
+    // already set → show the real resolved address instead of clearing it,
+    // since the user is here to edit the destination, not pickup.
+    // Listener removed for the assignment — setting `.text` here would
+    // otherwise fire it synchronously during build and call setState,
+    // which throws.
+    if (_focusDestinationOnEntry &&
+        !_pickupSearchFocus.hasFocus &&
+        _pickupAddress.isNotEmpty &&
+        _pickupAddress != 'Detecting location…' &&
+        _pickupSearchCtrl.text != _pickupAddress) {
+      _pickupSearchCtrl.removeListener(_onPickupSearchChanged);
+      _pickupSearchCtrl.text = _pickupAddress;
+      _pickupSearchCtrl.addListener(_onPickupSearchChanged);
+    }
+
+    return SafeArea(
+      child: Column(children: [
+        // ── Header: close / Cambodia / Map ──────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          child: Row(children: [
+            GestureDetector(
+              onTap: () {
+                // Reached here by editing pickup/destination from the
+                // no-destination Choose Ride screen — return there instead
+                // of leaving the flow entirely.
+                if (_noDestination) {
+                  setState(() => _step = 2);
+                  return;
+                }
+                Navigator.maybePop(context);
+              },
+              child: Icon(Icons.close, color: context.appTextPrimary, size: 24),
+            ),
+            const Spacer(),
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              const Text('🇰🇭', style: TextStyle(fontSize: 15)),
+              const SizedBox(width: 4),
+              Text('Cambodia',
+                  style: TextStyle(color: context.appTextPrimary,
+                      fontSize: 14, fontWeight: FontWeight.w600)),
+            ]),
+            const Spacer(),
+            GestureDetector(
+              onTap: () {
+                if (_pickupSearchFocus.hasFocus) {
+                  setState(() => _pickupMapView = true);
+                } else if (_activeStopIdx >= 0) {
+                  final activeStop = _stops[_activeStopIdx];
+                  setState(() {
+                    _destMapCenter     = activeStop.latLng ?? _pickupCenter;
+                    _mapPickerAddress  = activeStop.address;
+                    _choosingDestOnMap = true;
+                  });
+                }
+              },
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.location_on_outlined, color: AppTheme.accent, size: 20),
+                Text('Map', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+              ]),
+            ),
+          ]),
+        ),
+
+        // ── Body ─────────────────────────────────────────────────────────────
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+            children: [
+              // ── Pickup row (editable) ───────────────────────────────────
+              Row(key: const ValueKey('pickup_row'), crossAxisAlignment: CrossAxisAlignment.center, children: [
+                _geocodingPickup || _gpsLoading
+                    ? SizedBox(
+                        width: 12, height: 12,
+                        child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2),
+                      )
+                    : Container(
+                        width: 12, height: 12,
+                        decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                      ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    key: const ValueKey('pickup_search_field'),
+                    controller: _pickupSearchCtrl,
+                    focusNode:  _pickupSearchFocus,
+                    autofocus:  !_focusDestinationOnEntry,
+                    // Tapping in to change pickup clears the old resolved
+                    // address so the field shows the "Pickup location"
+                    // placeholder for a fresh search, instead of requiring
+                    // the old text to be manually deleted first.
+                    onTap: () {
+                      if (_pickupSearchCtrl.text == _pickupAddress) {
+                        _pickupSearchCtrl.clear();
+                      }
+                    },
+                    style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                    decoration: InputDecoration(
+                      hintText: 'Pickup location',
+                      hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      suffixIcon: pickupSearchActive
+                          ? IconButton(
+                              icon: Icon(Icons.close, size: 16, color: context.appTextSecondary),
+                              onPressed: () => _pickupSearchCtrl.clear(),
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
+              ]),
+
+              if (pickupSearchActive) ...[
+                const SizedBox(height: 6),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  child: _pickupSearching
+                      ? const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                        )
+                      : _pickupSearchResults.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text('No results found',
+                                  style: TextStyle(color: context.appTextSecondary)),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _pickupSearchResults.length,
+                              itemBuilder: (_, i) {
+                                final r = _pickupSearchResults[i];
+                                return _DestTile(
+                                  icon: Icons.location_on,
+                                  iconColor: AppTheme.accent,
+                                  title: r.address,
+                                  onTap: () => _selectPickupResult(r),
+                                );
+                              },
+                            ),
+                ),
+              ],
+
+              // ── Stop rows ────────────────────────────────────────────────
+              // Keyed by stop identity so Flutter doesn't lose this row's
+              // TextField focus/state when sibling widgets above it (e.g.
+              // the pickup results panel) toggle in and out, shifting
+              // everyone's position in this list.
+              ...List.generate(_stops.length, (i) {
+                final stop     = _stops[i];
+                final isActive = i == _activeStopIdx;
+                final isLast   = i == _stops.length - 1;
+
+                return Column(key: ValueKey('stop_row_$i'), children: [
+                  Row(children: [
+                    SizedBox(width: 6),
+                    Container(width: 2, height: 20,
+                        color: context.appCardBg.withValues(alpha: 0.8)),
+                  ]),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: isActive
+                        ? BoxDecoration(
+                            color: context.appCardBg.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+                          )
+                        : null,
+                    child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                      isLast && _stops.length == 1
+                        ? const Icon(Icons.location_on, color: AppTheme.accentOrange, size: 20)
+                        : Container(
+                            width: 20, height: 20,
+                            decoration: BoxDecoration(
+                              color: (isLast ? const Color(0xFFE53935) : AppTheme.warning)
+                                  .withValues(alpha: 0.15),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isLast ? const Color(0xFFE53935) : AppTheme.warning,
+                                width: 1.5),
+                            ),
+                            child: Center(
+                              child: Text('${i + 1}',
+                                  style: TextStyle(
+                                    color: isLast ? const Color(0xFFE53935) : AppTheme.warning,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800)),
+                            ),
+                          ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: stop.isFilled
+                          ? GestureDetector(
+                              onTap: () => setState(() {
+                                _stops[i].address = '';
+                                _stops[i].latLng  = null;
+                                _activeStopIdx    = i;
+                                _searchCtrl.clear();
+                              }),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: 9),
+                                child: Row(children: [
+                                  Expanded(
+                                    child: Text(stop.address,
+                                        style: TextStyle(color: context.appTextPrimary,
+                                            fontSize: 14, fontWeight: FontWeight.w500),
+                                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Icon(Icons.check_circle, color: AppTheme.success, size: 16),
+                                ]),
+                              ),
+                            )
+                          : isActive
+                              ? TextField(
+                                  controller: _searchCtrl,
+                                  focusNode:  i == 0 ? _destSearchFocus : null,
+                                  autofocus:  i == 0 && _focusDestinationOnEntry,
+                                  style: TextStyle(color: context.appTextPrimary, fontSize: 14),
+                                  decoration: InputDecoration(
+                                    hintText: i == 0 ? 'Where to?' : 'Stop ${i + 1}',
+                                    hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.symmetric(vertical: 7),
+                                    suffixIcon: hasQuery
+                                      ? IconButton(
+                                          icon: Icon(Icons.close, size: 16, color: context.appTextSecondary),
+                                          onPressed: () => _searchCtrl.clear(),
+                                        )
+                                      : null,
+                                  ),
+                                )
+                              : GestureDetector(
+                                  onTap: () => setState(() { _activeStopIdx = i; _searchCtrl.clear(); }),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 9),
+                                    child: Text(i == 0 ? 'Where to?' : 'Stop ${i + 1}',
+                                        style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
+                                  ),
+                                ),
+                      ),
+                      if (_stops.length > 1)
+                        GestureDetector(
+                          onTap: () => setState(() {
+                            _stops.removeAt(i);
+                            if (_activeStopIdx >= _stops.length || _activeStopIdx == i) {
+                              _activeStopIdx = _stops.every((s) => s.isFilled)
+                                  ? -1
+                                  : _stops.indexWhere((s) => !s.isFilled);
+                            }
+                          }),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                            child: Icon(Icons.close, size: 16, color: context.appTextSecondary),
+                          ),
+                        ),
+                    ]),
+                  ),
+                ]);
+              }),
+
+              // ── Add a stop ───────────────────────────────────────────────
+              if (_stops.length < 5) ...[
+                const SizedBox(height: 10),
+                GestureDetector(
+                  onTap: () {
+                    final unfilled = _stops.indexWhere((s) => !s.isFilled);
+                    if (unfilled != -1) {
+                      setState(() { _activeStopIdx = unfilled; _searchCtrl.clear(); });
+                    } else {
+                      setState(() {
+                        _stops.add(_WayStop());
+                        _activeStopIdx = _stops.length - 1;
+                        _searchCtrl.clear();
+                      });
+                    }
+                  },
+                  child: Row(children: [
+                    Container(
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.add, size: 14, color: AppTheme.accent),
+                    ),
+                    SizedBox(width: 10),
+                    Text('Add a stop',
+                        style: TextStyle(color: AppTheme.accent,
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                  ]),
+                ),
+              ],
+
+              // ── Quick-access shortcuts: Home / Office / Saved / Airport ──
+              const SizedBox(height: 16),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                _QuickPlaceButton(
+                  icon: Icons.add_home_outlined,
+                  label: 'Home',
+                  onTap: () {
+                    if (_activeStopIdx < 0) return;
+                    final home = _findSavedPlace(['home']);
+                    if (home != null) {
+                      _selectSavedPlace(home);
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const SavedPlacesScreen()));
+                    }
+                  },
+                ),
+                _QuickPlaceButton(
+                  icon: Icons.add_business_outlined,
+                  label: 'Office',
+                  onTap: () {
+                    if (_activeStopIdx < 0) return;
+                    final office = _findSavedPlace(['work', 'office']);
+                    if (office != null) {
+                      _selectSavedPlace(office);
+                    } else {
+                      Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const SavedPlacesScreen()));
+                    }
+                  },
+                ),
+                _QuickPlaceButton(
+                  icon: Icons.bookmark_border,
+                  label: 'Saved',
+                  onTap: _showAllSavedPlaces,
+                ),
+                _QuickPlaceButton(
+                  icon: Icons.flight_outlined,
+                  label: 'Airport',
+                  onTap: () {
+                    if (_activeStopIdx < 0) return;
+                    _selectPreset(_kPresets.first);
+                  },
+                ),
+              ]),
+
+              const SizedBox(height: 8),
+              Divider(height: 24, color: context.appCardBg),
+
+              // ── Set location later (metered / no destination) ────────────
+              _DestTile(
+                icon: Icons.schedule_outlined,
+                iconColor: AppTheme.accentOrange,
+                title: 'Set location later',
+                onTap: _skipDestination,
+              ),
+
+              // ── Search results / recent+suggestions ───────────────────────
+              if (hasQuery) ...[
+                if (_searching)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                  )
+                else if (_searchResults.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('No results found',
+                        style: TextStyle(color: context.appTextSecondary)),
+                  )
+                else
+                  ..._searchResults.map((r) {
+                    final isAlreadySelected = _stops.any((s) => s.address == r.address);
+                    return _DestTile(
+                      icon: Icons.location_on,
+                      iconColor: AppTheme.accent,
+                      title: r.address,
+                      trailing: isAlreadySelected
+                          ? const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
+                          : null,
+                      onTap: () => _selectResult(r),
+                    );
+                  }),
+              ] else
+                ..._kPresets.map((p) {
+                  final isAlreadySelected = _stops.any((s) => s.address == p.name);
+                  return _DestTile(
+                    icon: Icons.place_outlined,
+                    iconColor: AppTheme.accentOrange,
+                    title: p.name,
+                    trailing: isAlreadySelected
+                        ? const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
+                        : null,
+                    onTap: () => _selectPreset(p),
+                  );
+                }),
+            ],
+          ),
+        ),
+
+        // ── Confirm button (shown when all stops are filled) ─────────────────
+        if (_stops.every((s) => s.isFilled))
+          Container(
+            decoration: BoxDecoration(
+              color: context.appSurface,
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.18), blurRadius: 16, offset: const Offset(0, -4)),
+              ],
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  _noDestination = false;
+                  _goToStep(2);
+                },
+                style: AppTheme.confirmButtonStyle(),
+                child: Text(_stops.length > 1 ? 'Confirm destinations' : 'Confirm destination'),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Step 0 — "Where to?" landing (map-based pickup adjuster)
   // ═══════════════════════════════════════════════════════════════════════════
 
   Widget _buildWhereTo() {
@@ -1020,7 +1686,21 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             children: [
               _MapFab(
                 icon: Icons.arrow_back_ios_new,
-                onTap: () => Navigator.pop(context),
+                onTap: () {
+                  // Reached via the "Map" button on the unified location
+                  // search page — return there instead of leaving the flow.
+                  if (_pickupMapView) {
+                    setState(() => _pickupMapView = false);
+                    return;
+                  }
+                  // Reached from the no-destination confirm screen's pickup
+                  // row — return there instead of leaving the flow.
+                  if (_noDestination) {
+                    setState(() => _step = 2);
+                    return;
+                  }
+                  Navigator.maybePop(context);
+                },
               ),
               _MapFab(
                 icon: _gpsLoading ? Icons.hourglass_empty : Icons.my_location,
@@ -1035,155 +1715,208 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       Positioned(
         bottom: 0, left: 0, right: 0,
         child: _BottomCard(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            // Current location row
-            Row(children: [
-              Container(
-                width: 10, height: 10,
-                decoration: BoxDecoration(
-                    color: AppTheme.accent, shape: BoxShape.circle),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _geocodingPickup || _gpsLoading
-                    ? Row(children: [
-                        SizedBox(
-                          width: 14, height: 14,
-                          child: CircularProgressIndicator(
-                              color: AppTheme.accent, strokeWidth: 2),
-                        ),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(_pickupAddress,
-                              style: TextStyle(
-                                  color: context.appTextSecondary, fontSize: 13),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis),
-                        ),
-                      ])
-                    : Text(_pickupAddress,
-                        style: TextStyle(
-                            color: context.appTextPrimary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-              ),
-            ]),
-            SizedBox(height: 12),
-
-            // "Where to?" tappable pill — shows destination name when already set
-            GestureDetector(
-              onTap: () => _goToStep(1),
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: context.appCardBg,
-                  borderRadius: BorderRadius.circular(12),
-                  border: _stops.last.isFilled
-                      ? Border.all(color: AppTheme.accent.withValues(alpha: 0.4))
-                      : null,
-                ),
-                child: Row(children: [
-                  Icon(
-                    _stops.last.isFilled ? Icons.location_on : Icons.search,
-                    color: _stops.last.isFilled ? AppTheme.accentOrange : context.appTextSecondary,
-                    size: 20,
-                  ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: _stops.last.isFilled
-                        ? Text(
-                            _stops.last.address,
-                            style: TextStyle(
-                                color: context.appTextPrimary,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : Text('Where to?',
-                            style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('Now',
-                        style: TextStyle(
-                            color: AppTheme.accent,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ]),
-              ),
-            ),
-
-            // ── Confirm Booking without a destination — tell the driver later ──
-            if (!_stops.last.isFilled) ...[
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _skipDestination,
-                  style: AppTheme.confirmButtonStyle(),
-                  child: const Text('Confirm Booking'),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Center(
-                child: Text('No destination needed — tell the driver in person',
-                    style: TextStyle(color: context.appTextSecondary, fontSize: 11.5)),
-              ),
-            ],
-
-            // ── Saved places shortcuts (Home / Work / etc.) ────────────
-            if (_savedPlaces.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: _savedPlaces.map((place) {
-                    final icon = place.label.toLowerCase().contains('home')
-                        ? Icons.home_outlined
-                        : place.label.toLowerCase().contains('work')
-                            ? Icons.work_outline
-                            : Icons.bookmark_outline;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _stops[0].address = place.address;
-                          _stops[0].latLng  = LatLng(place.lat, place.lng);
-                          _activeStopIdx    = -1;
-                        });
-                        _afterStopFilled();
-                        _goToStep(1);
-                      },
-                      child: Container(
-                        margin: EdgeInsets.only(right: 8),
-                        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          child: Builder(builder: (context) {
+            final pickupSearchActive = _pickupSearchFocus.hasFocus &&
+                _pickupSearchCtrl.text.trim().isNotEmpty;
+            // Keep the search field's text synced to the resolved address
+            // whenever it's not actively being edited (GPS fix, map drag,
+            // saved-place match, etc. all flow through _pickupAddress).
+            // Listener is removed for the assignment — setting `.text`
+            // inside build() would otherwise fire _onPickupSearchChanged
+            // synchronously, which calls setState() during build and throws.
+            if (!_pickupSearchFocus.hasFocus &&
+                _pickupSearchCtrl.text != _pickupAddress) {
+              _pickupSearchCtrl.removeListener(_onPickupSearchChanged);
+              _pickupSearchCtrl.text = _pickupAddress;
+              _pickupSearchCtrl.addListener(_onPickupSearchChanged);
+            }
+            return Column(mainAxisSize: MainAxisSize.min, children: [
+              // Current location / pickup search row
+              Row(children: [
+                _geocodingPickup || _gpsLoading
+                    ? SizedBox(
+                        width: 14, height: 14,
+                        child: CircularProgressIndicator(
+                            color: AppTheme.accent, strokeWidth: 2),
+                      )
+                    : Container(
+                        width: 10, height: 10,
                         decoration: BoxDecoration(
-                          color: context.appCardBg,
-                          borderRadius: BorderRadius.circular(22),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(icon, size: 16, color: AppTheme.accent),
-                          SizedBox(width: 6),
-                          Text(place.label,
-                              style: TextStyle(
-                                  color: context.appTextPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500)),
-                        ]),
+                            color: AppTheme.accent, shape: BoxShape.circle),
                       ),
-                    );
-                  }).toList(),
+                SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _pickupSearchCtrl,
+                    focusNode:  _pickupSearchFocus,
+                    style: TextStyle(
+                        color: context.appTextPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500),
+                    decoration: InputDecoration(
+                      hintText: 'Search pickup location',
+                      hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      suffixIcon: pickupSearchActive
+                          ? IconButton(
+                              icon: Icon(Icons.close, size: 16, color: context.appTextSecondary),
+                              onPressed: () => _pickupSearchCtrl.clear(),
+                            )
+                          : null,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ]),
+              ]),
+
+              if (pickupSearchActive) ...[
+                const SizedBox(height: 8),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: _pickupSearching
+                      ? const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                        )
+                      : _pickupSearchResults.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Text('No results found',
+                                  style: TextStyle(color: context.appTextSecondary)),
+                            )
+                          : ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: _pickupSearchResults.length,
+                              itemBuilder: (_, i) {
+                                final r = _pickupSearchResults[i];
+                                return _DestTile(
+                                  icon: Icons.location_on,
+                                  iconColor: AppTheme.accent,
+                                  title: r.address,
+                                  onTap: () => _selectPickupResult(r),
+                                );
+                              },
+                            ),
+                ),
+              ] else ...[
+                SizedBox(height: 12),
+
+                // "Where to?" tappable pill — shows destination name when already set
+                GestureDetector(
+                  onTap: () => _goToStep(1),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: context.appCardBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: _stops.last.isFilled
+                          ? Border.all(color: AppTheme.accent.withValues(alpha: 0.4))
+                          : null,
+                    ),
+                    child: Row(children: [
+                      Icon(
+                        _stops.last.isFilled ? Icons.location_on : Icons.search,
+                        color: _stops.last.isFilled ? AppTheme.accentOrange : context.appTextSecondary,
+                        size: 20,
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _stops.last.isFilled
+                            ? Text(
+                                _stops.last.address,
+                                style: TextStyle(
+                                    color: context.appTextPrimary,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            : Text('Where to?',
+                                style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Now',
+                            style: TextStyle(
+                                color: AppTheme.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                    ]),
+                  ),
+                ),
+
+                // ── Confirm Booking without a destination — tell the driver later ──
+                if (!_stops.last.isFilled) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _skipDestination,
+                      style: AppTheme.confirmButtonStyle(),
+                      child: const Text('Confirm Booking'),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Center(
+                    child: Text('No destination needed — tell the driver in person',
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 11.5)),
+                  ),
+                ],
+
+                // ── Saved places shortcuts (Home / Work / etc.) ────────────
+                if (_savedPlaces.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _savedPlaces.map((place) {
+                        final icon = place.label.toLowerCase().contains('home')
+                            ? Icons.home_outlined
+                            : place.label.toLowerCase().contains('work')
+                                ? Icons.work_outline
+                                : Icons.bookmark_outline;
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _stops[0].address = place.address;
+                              _stops[0].latLng  = LatLng(place.lat, place.lng);
+                              _activeStopIdx    = -1;
+                            });
+                            _afterStopFilled();
+                            _goToStep(1);
+                          },
+                          child: Container(
+                            margin: EdgeInsets.only(right: 8),
+                            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                            decoration: BoxDecoration(
+                              color: context.appCardBg,
+                              borderRadius: BorderRadius.circular(22),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              Icon(icon, size: 16, color: AppTheme.accent),
+                              SizedBox(width: 6),
+                              Text(place.label,
+                                  style: TextStyle(
+                                      color: context.appTextPrimary,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500)),
+                            ]),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ],
+            ]);
+          }),
         ),
       ),
       const SizedBox(height: 12),
@@ -1341,7 +2074,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                _pickupAddress.isEmpty ? 'Current location' : _pickupAddress,
+                _pickupAddress.isEmpty ? 'Pickup location' : _pickupAddress,
                 style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
@@ -1514,6 +2247,49 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               ]),
             ),
           ],
+
+          // ── Quick-access shortcuts: Home / Office / Saved / Airport ─────
+          if (_activeStopIdx >= 0) ...[
+            const SizedBox(height: 14),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              _QuickPlaceButton(
+                icon: Icons.add_home_outlined,
+                label: 'Home',
+                onTap: () {
+                  final home = _findSavedPlace(['home']);
+                  if (home != null) {
+                    _selectSavedPlace(home);
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const SavedPlacesScreen()));
+                  }
+                },
+              ),
+              _QuickPlaceButton(
+                icon: Icons.add_business_outlined,
+                label: 'Office',
+                onTap: () {
+                  final office = _findSavedPlace(['work', 'office']);
+                  if (office != null) {
+                    _selectSavedPlace(office);
+                  } else {
+                    Navigator.push(context, MaterialPageRoute(
+                        builder: (_) => const SavedPlacesScreen()));
+                  }
+                },
+              ),
+              _QuickPlaceButton(
+                icon: Icons.bookmark_border,
+                label: 'Saved',
+                onTap: _showAllSavedPlaces,
+              ),
+              _QuickPlaceButton(
+                icon: Icons.flight_outlined,
+                label: 'Airport',
+                onTap: () => _selectPreset(_kPresets.first),
+              ),
+            ]),
+          ],
         ]),
       ),
 
@@ -1543,7 +2319,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           child: SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => _goToStep(2),
+              onPressed: () {
+                // A real destination is filled here — make sure the metered
+                // no-destination confirm screen doesn't stick around if the
+                // user reached this step by backing out of it earlier.
+                _noDestination = false;
+                _goToStep(2);
+              },
               style: AppTheme.confirmButtonStyle(),
               child: Text(
                 _stops.length > 1 ? 'Confirm destinations' : 'Confirm destination',
@@ -1747,30 +2529,45 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         },
         initialCameraPosition: CameraPosition(target: _pickupCenter, zoom: 16),
         style: _kDarkMapStyle,
-        markers: {
-          Marker(
-            markerId: const MarkerId('pickup'),
-            position: _pickupCenter,
-            icon: _pickupIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-            infoWindow: InfoWindow(title: '📍 Pickup', snippet: _pickupAddress),
-          ),
-        },
         myLocationEnabled:       true,
         myLocationButtonEnabled: false,
         zoomControlsEnabled:     false,
+        cameraTargetBounds: CameraTargetBounds(_kCambodiaBounds),
+        minMaxZoomPreference: const MinMaxZoomPreference(10, 20),
+        onCameraMove: (pos) => _pickupCenter = pos.target,
+        onCameraIdle: () => _reverseGeocodePickup(_pickupCenter),
       ),
+
+      // Fixed crosshair — drag the map to reposition pickup. Positioned
+      // within the visible map sliver above the bottom sheet (which covers
+      // ~55% of the screen by default), not screen-center, or it would sit
+      // hidden underneath the sheet.
+      const Align(alignment: Alignment(0, -0.55), child: _Crosshair()),
 
       // ── Floating back button ──────────────────────────────────────────────
       SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: GestureDetector(
-            onTap: () => setState(() {
-              _step          = 1;
-              _noDestination = false;
-              _searchCtrl.clear();
-              _choosingDestOnMap = false;
-            }),
+            onTap: () {
+              // Reached directly from Home (skipDestination) — there's no
+              // prior in-flow step to go back to, so go straight back to
+              // Home instead of the destination-search step.
+              if (widget.skipDestination) {
+                // Safe no-op if this instance isn't a pushed route (e.g. the
+                // bottom-nav "Book Ride" tab, which is index-swapped rather
+                // than pushed) — only pops when there's actually a route to
+                // return to, such as the Home-screen "Book Ride" tile.
+                Navigator.maybePop(context);
+                return;
+              }
+              setState(() {
+                _step          = 1;
+                _noDestination = false;
+                _searchCtrl.clear();
+                _choosingDestOnMap = false;
+              });
+            },
             child: Container(
               width: 40, height: 40,
               decoration: BoxDecoration(
@@ -1786,7 +2583,14 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       ),
 
       // ── Scrollable content — mirrors the normal Confirm screen's layout ───
-      DraggableScrollableSheet(
+      NotificationListener<DraggableScrollableNotification>(
+        onNotification: (n) {
+          if (!_showAllRideOptions && n.extent > n.initialExtent + 0.02) {
+            setState(() => _showAllRideOptions = true);
+          }
+          return false;
+        },
+        child: DraggableScrollableSheet(
         initialChildSize: 0.55,
         minChildSize:     0.2,
         maxChildSize:     0.9,
@@ -1820,31 +2624,49 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 decoration: BoxDecoration(
                     color: context.appCardBg, borderRadius: BorderRadius.circular(14)),
                 child: Column(children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                    child: Row(children: [
-                      Container(
-                        width: 10, height: 10,
-                        decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          _pickupAddress.isEmpty || _pickupAddress == 'Detecting location…'
-                              ? 'Current location'
-                              : _pickupAddress,
-                          style: TextStyle(color: context.appTextSecondary, fontSize: 13),
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                  InkWell(
+                    // Tapping pickup opens the dedicated full-screen pickup
+                    // picker (map + search + drag-to-set) instead of editing
+                    // inline here — dragging the map above still works too.
+                    onTap: () => setState(() {
+                      _focusDestinationOnEntry = false;
+                      _step = 0;
+                    }),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                      child: Row(children: [
+                        _geocodingPickup || _gpsLoading
+                            ? SizedBox(
+                                width: 10, height: 10,
+                                child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2),
+                              )
+                            : Container(
+                                width: 10, height: 10,
+                                decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+                              ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            _pickupAddress.isEmpty || _pickupAddress == 'Detecting location…'
+                                ? 'Pickup location'
+                                : _pickupAddress,
+                            style: TextStyle(color: context.appTextSecondary, fontSize: 13),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ]),
+                        Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
+                      ]),
+                    ),
                   ),
                   Divider(height: 1, indent: 40, color: context.appSurface.withValues(alpha: 0.8)),
                   InkWell(
-                    onTap: () {
-                      setState(() => _noDestination = false);
-                      _goToStep(1);
-                    },
+                    // Same unified location-search page as tapping pickup,
+                    // not the old separate destination-only screen —
+                    // autofocuses "Where to?" instead of pickup.
+                    onTap: () => setState(() {
+                      _focusDestinationOnEntry = true;
+                      _step = 0;
+                    }),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                       child: Row(children: [
@@ -1886,27 +2708,46 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       fontSize: 15, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
 
-              // Vehicle type selector (car / bike / tuk-tuk / van)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text('Vehicle Type',
-                    style: TextStyle(
-                        color: context.appTextSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
-              ),
-              VehicleTypeSelector(
-                selected: _selectedVehicleType,
-                onChanged: (t) => setState(() => _selectedVehicleType = t),
-              ),
-              const SizedBox(height: 12),
+              if (!_rideTypesLoading) ...[
+                _RideCategoryTabs(
+                  selected: _rideCategory,
+                  onChanged: (c) => setState(() => _rideCategory = c),
+                ),
+                const SizedBox(height: 10),
+              ],
 
-              ..._kRideTypes.map((r) => _RideTypeCard(
-                    type:     r,
-                    selected: _selectedRide == r.name,
-                    metered:  true,
-                    onTap:    () => setState(() => _selectedRide = r.name),
-                  )),
+              if (_rideTypesLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                )
+              else ...[
+                ...(_showAllRideOptions
+                        ? _filteredRideTypes
+                        : [
+                            _filteredRideTypes.firstWhere(
+                                (r) => r.serviceType == 'tuk_tuk',
+                                orElse: () => _filteredRideTypes.first),
+                          ])
+                    .map((r) => _RideTypeCard(
+                          type:     r,
+                          selected: _selectedRide == r.name,
+                          metered:  true,
+                          onTap:    () => setState(() => _selectedRide = r.name),
+                        )),
+                if (!_showAllRideOptions && _filteredRideTypes.length > 1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Center(
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.keyboard_arrow_up, size: 16, color: context.appTextSecondary),
+                        const SizedBox(width: 4),
+                        Text('Scroll up for more ride options',
+                            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                      ]),
+                    ),
+                  ),
+              ],
               const SizedBox(height: 4),
 
               // Promo code
@@ -2023,6 +2864,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         );
         },
       ),
+      ),
 
       // ── Fixed confirm button (footer) ─────────────────────────────────────
       Positioned(
@@ -2074,9 +2916,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
 
     final dest = _destLatLng;
-    final type = _kRideTypes.firstWhere(
+    final type = _visibleRideTypes.firstWhere(
       (r) => r.name == _selectedRide,
-      orElse: () => _kRideTypes[0],  // Default to first ride type if not found
+      orElse: () => _visibleRideTypes[0],  // Default to first ride type if not found
     );
 
     final markers = <Marker>{
@@ -2262,7 +3104,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               _RouteSummary(
                 pickupAddress: _pickupAddress.isEmpty ||
                         _pickupAddress == 'Detecting location…'
-                    ? 'Current location'
+                    ? 'Pickup location'
                     : _pickupAddress,
                 stops: _stops,
                 onEditPickup: () => setState(() {
@@ -2339,29 +3181,29 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     )),
                   ]),
                 ),
-              // Vehicle type selector (car / bike / tuk-tuk / van)
-              Padding(
-                padding: EdgeInsets.only(left: 16, bottom: 8, top: 4),
-                child: Text('Vehicle Type',
-                    style: TextStyle(
-                        color: context.appTextSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700)),
-              ),
-              VehicleTypeSelector(
-                selected: _selectedVehicleType,
-                onChanged: (t) => setState(() => _selectedVehicleType = t),
-              ),
-              SizedBox(height: 12),
+              if (!_rideTypesLoading) ...[
+                _RideCategoryTabs(
+                  selected: _rideCategory,
+                  onChanged: (c) => setState(() => _rideCategory = c),
+                ),
+                const SizedBox(height: 10),
+              ],
 
-              ..._kRideTypes.map((r) => _RideTypeCard(
-                    type:        r,
-                    selected:    _selectedRide == r.name,
-                    onTap:       () => setState(() => _selectedRide = r.name),
-                    fareInfo:    _fareByType[r.serviceType],
-                    fareLoading: _fareLoading,
-                    surgeMultiplier: _surgeInfo?.surgeActive == true ? _surgeInfo!.multiplier : 1.0,
-                  )),
+              if (_rideTypesLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+                )
+              else
+                ..._filteredRideTypes.map((r) => _RideTypeCard(
+                      type:        r,
+                      selected:    _selectedRide == r.name,
+                      onTap:       () => setState(() => _selectedRide = r.name),
+                      fareInfo:    _fareByType[r.serviceType],
+                      fareLoading: _fareLoading,
+                      surgeMultiplier: _surgeInfo?.surgeActive == true ? _surgeInfo!.multiplier : 1.0,
+                      etaMinutes:  _etaMinutes,
+                    )),
               SizedBox(height: 14),
 
               // Promo code
@@ -2708,6 +3550,74 @@ class _TabChip extends StatelessWidget {
   }
 }
 
+class _RideCategoryTabs extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+  const _RideCategoryTabs({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: context.appCardBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: _kRideCategories.map((c) {
+          final isSelected = c == selected;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(c),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isSelected ? context.appSurface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(9),
+                  boxShadow: isSelected
+                      ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)]
+                      : null,
+                ),
+                child: Text(c,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: isSelected ? AppTheme.accent : context.appTextSecondary,
+                        fontSize: 12.5,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500)),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+class _QuickPlaceButton extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final VoidCallback onTap;
+  const _QuickPlaceButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 22, color: AppTheme.accent),
+        const SizedBox(height: 6),
+        Text(label,
+            style: TextStyle(color: context.appTextPrimary, fontSize: 12.5, fontWeight: FontWeight.w500)),
+      ]),
+    );
+  }
+}
+
 class _DestTile extends StatelessWidget {
   final IconData icon;
   final Color    iconColor;
@@ -2895,6 +3805,7 @@ class _RideTypeCard extends StatelessWidget {
   final bool         fareLoading;
   final bool         metered;
   final double       surgeMultiplier;
+  final int          etaMinutes;
   const _RideTypeCard({
     required this.type,
     required this.selected,
@@ -2903,13 +3814,17 @@ class _RideTypeCard extends StatelessWidget {
     this.fareLoading = false,
     this.metered = false,
     this.surgeMultiplier = 1.0,
+    this.etaMinutes = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     String priceText;
     if (metered) {
-      priceText = 'Metered fare';
+      // No drop-off yet, so the real distance-based fare isn't known —
+      // show the vehicle type's base fare (GET /vehicle-types `pricing.base`)
+      // as a starting-price indicator instead of a generic label.
+      priceText = type.base > 0 ? 'From ${AppTheme.khr(type.base)}' : 'Metered fare';
     } else if (fareInfo != null) {
       if (surgeMultiplier > 1.0) {
         final surgedTotal = (fareInfo!.total * surgeMultiplier).round();
@@ -2945,12 +3860,19 @@ class _RideTypeCard extends StatelessWidget {
                 color: selected ? AppTheme.accent : context.appTextSecondary, size: 22),
           ),
           SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(type.name,
-                style: TextStyle(
-                    color: context.appTextPrimary, fontWeight: FontWeight.w600)),
-            Text(type.desc,
-                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          Expanded(child: Row(children: [
+            Flexible(
+              child: Text(type.name,
+                  style: TextStyle(
+                      color: context.appTextPrimary, fontWeight: FontWeight.w600),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            if (RegExp(r'^(\d+)').firstMatch(type.desc)?.group(1) case final seats?) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.person, size: 13, color: context.appTextSecondary),
+              Text(seats,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+            ],
           ])),
           Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
             Row(mainAxisSize: MainAxisSize.min, children: [
@@ -2972,8 +3894,9 @@ class _RideTypeCard extends StatelessWidget {
                       color: selected ? AppTheme.accent : context.appTextPrimary,
                       fontWeight: FontWeight.w700)),
             ]),
-            Text(type.eta,
-                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+            if (etaMinutes > 0)
+              Text('$etaMinutes min',
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ]),
           SizedBox(width: 8),
           Icon(selected ? Icons.radio_button_checked : Icons.radio_button_off,

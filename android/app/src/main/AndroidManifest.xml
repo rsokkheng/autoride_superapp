@@ -17,7 +17,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBzMVRTpOLoEI5y1S6zDq5icp1llS0fYkc"/>
+            android:value="AIzaSyDdZwBODjZrztUHv-3aocywA8kpdULu5E8"/>
 
         <!-- Status bar must show a monochrome silhouette, not the full-color
              app icon (Android tints it white, but a solid raster launcher

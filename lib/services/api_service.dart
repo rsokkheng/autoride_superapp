@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_log.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
+import '../models/vehicle_type_model.dart';
 import '../models/ride_model.dart';
 import '../models/driver_status_model.dart';
 import '../models/driver_stats_model.dart';
@@ -1049,6 +1050,33 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  // ── Vehicle types ─────────────────────────────────────────────────────────
+
+  /// Public catalogue of ride vehicle types and their pricing rules
+  /// (motorcycle/tuk_tuk/standard/premium/shared/van) — no auth required.
+  static Future<List<VehicleTypeModel>> getVehicleTypes() async {
+    final raw = await _rawGet('/vehicle-types');
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data  = (body['data'] as Map<String, dynamic>?) ?? body;
+      final list  = data['vehicle_types'] as List<dynamic>? ?? [];
+      return list
+          .map((v) => VehicleTypeModel.fromJson(v as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ?? body['error'] as String? ??
+        'Failed to fetch vehicle types (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
   // ── Estimate ride ─────────────────────────────────────────────────────────
 
   static Future<RideEstimate> estimateRide({
@@ -1064,6 +1092,10 @@ class ApiService {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
 
+    // Deliberately does NOT send a vehicle-type filter — the backend prices
+    // every service type (motorcycle/tuk_tuk/standard/premium/shared/van)
+    // from its own /vehicle-types pricing rule and returns all of them in
+    // one `fares` map, which the Choose Ride screen renders as a flat list.
     final raw = await _rawPost('/rides/estimate', {
       'pickup_lat':  pickupLat,
       'pickup_lng':  pickupLng,

@@ -1117,7 +1117,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           },
           initialCameraPosition: CameraPosition(
               target: LatLng(midLat, midLng), zoom: 13),
-          style: _kDarkMapStyle,
+          style: Theme.of(context).brightness == Brightness.dark
+              ? _kDarkMapStyle
+              : _kLightMapStyle,
           cameraTargetBounds: CameraTargetBounds(_kCambodiaBounds),
           minMaxZoomPreference: const MinMaxZoomPreference(6, 20),
           markers:   _markers,
@@ -1552,3 +1554,14 @@ const String _kDarkMapStyle =
     '{"featureType":"water","elementType":"geometry","stylers":[{"color":"#0f3460"}]},'
     '{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#16213e"}]},'
     '{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#0f3460"}]}]';
+
+// White/light background for light mode — plain geometry, no dark tinting.
+const String _kLightMapStyle =
+    '[{"elementType":"geometry","stylers":[{"color":"#ffffff"}]},'
+    '{"elementType":"labels.text.fill","stylers":[{"color":"#616161"}]},'
+    '{"elementType":"labels.text.stroke","stylers":[{"color":"#ffffff"}]},'
+    '{"featureType":"road","elementType":"geometry","stylers":[{"color":"#f2f2f2"}]},'
+    '{"featureType":"road.highway","elementType":"geometry","stylers":[{"color":"#e8e8e8"}]},'
+    '{"featureType":"water","elementType":"geometry","stylers":[{"color":"#d7ebfa"}]},'
+    '{"featureType":"poi","elementType":"geometry","stylers":[{"color":"#f2f2f2"}]},'
+    '{"featureType":"administrative","elementType":"geometry.stroke","stylers":[{"color":"#e0e0e0"}]}]';

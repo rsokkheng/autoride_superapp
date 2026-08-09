@@ -46,6 +46,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   String   _paymentMethod        = 'cash';
   DateTime _scheduledTime        = DateTime.now().add(const Duration(hours: 2));
 
+  static _DropItem<String> _deliveryVehicleDropItem(VehicleTypeOption v) {
+    final isTukTuk = v.type == 'tuk_tuk';
+    return _DropItem(
+      value:    isTukTuk ? 'tuk_tuk' : 'car', // delivery API expects 'car', not the ride side's 'van'
+      label:    isTukTuk ? 'Tuk Tuk — តុកតុក' : 'Car — ឡាន',
+      subtitle: isTukTuk ? 'Up to 100 kg  •  Affordable' : 'Up to 200 kg  •  Comfortable',
+      icon:     isTukTuk ? Icons.electric_rickshaw_outlined : Icons.directions_car_outlined,
+    );
+  }
+
   // ── Moving fields ────────────────────────────────────────────────────────
   final _moveFromCtrl  = TextEditingController();
   final _moveToCtrl    = TextEditingController();
@@ -548,15 +558,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       SizedBox(height: 12),
 
-      // Delivery vehicle
+      // Delivery vehicle — derived from the app's shared vehicle-type list
+      // (AppTheme.vehicleTypes) so it always matches what's offered
+      // elsewhere in the app, translated into delivery-specific
+      // value/label/subtitle (the delivery API expects 'car', not the ride
+      // side's internal 'van' type string).
       _AppDropdown<String>(
         label: 'Delivery Vehicle',
         icon: Icons.directions_car_outlined,
         value: _deliveryVehicleType,
-        items: const [
-          _DropItem(value: 'car',     label: 'Car — ឡាន',       subtitle: 'Up to 200 kg  •  Comfortable', icon: Icons.directions_car_outlined),
-          _DropItem(value: 'tuk_tuk', label: 'Tuk Tuk — តុកតុក', subtitle: 'Up to 100 kg  •  Affordable',  icon: Icons.electric_rickshaw_outlined),
-        ],
+        items: AppTheme.vehicleTypes.map(_deliveryVehicleDropItem).toList(),
         onChanged: (v) => setState(() => _deliveryVehicleType = v),
       ),
       SizedBox(height: 12),
