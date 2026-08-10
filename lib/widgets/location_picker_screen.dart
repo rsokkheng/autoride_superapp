@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/maps_service.dart';
+import '../utils/location_display.dart';
 
 /// Result of picking a location: a human-readable address plus coordinates.
 class LocationPickResult {
@@ -65,8 +66,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   }
 
   void _selectResult(PlaceResult r) {
-    _searchCtrl.text = r.address;
-    setState(() { _center = r.latLng; _address = r.address; _results = []; });
+    final display = getDisplayLocation(name: r.name, address: r.address);
+    _searchCtrl.text = display;
+    setState(() { _center = r.latLng; _address = display; _results = []; });
     _mapCtrl?.animateCamera(CameraUpdate.newLatLngZoom(r.latLng, 16));
   }
 
@@ -75,7 +77,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     try {
       final a = await MapsService.reverseGeocode(_center);
       if (mounted) setState(() {
-        _address  = a ?? '${_center.latitude.toStringAsFixed(4)}, ${_center.longitude.toStringAsFixed(4)}';
+        _address  = a != null
+            ? getDisplayLocation(name: '', address: a)
+            : '${_center.latitude.toStringAsFixed(4)}, ${_center.longitude.toStringAsFixed(4)}';
         _geocoding = false;
       });
     } catch (_) {

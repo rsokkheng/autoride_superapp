@@ -23,6 +23,7 @@ import '../passenger/passenger_home.dart';
 import '../passenger/wallet_screen.dart';
 import '../shared/chat_screen.dart';
 import '../passenger/safety_screen.dart';
+import '../passenger/charging_stations.dart';
 import 'driver_active_trip_screen.dart';
 import 'driver_delivery_active_screen.dart';
 import 'driver_missions_screen.dart';
@@ -252,7 +253,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       ),
       _DriverEarnings(onWalletChanged: _loadGoOnlineGate),
       const DriverMissionsScreen(),
-      const ChatScreen(isDriver: true),
+      ChargingStationsScreen(isDriver: true, onBack: () => setState(() => _tab = 0)),
       _DriverProfile(onGoToEarnings: () => setState(() => _tab = 1),
           onWalletChanged: _loadGoOnlineGate),
     ];
@@ -272,7 +273,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 Expanded(child: _NavItem(icon: Icons.dashboard_outlined,           label: 'Home',     index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(icon: Icons.account_balance_wallet_outlined, label: AppLocalizations.of(context).earnings, index: 1, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(icon: Icons.rocket_launch_outlined,       label: 'Missions', index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.chat_bubble_outline,          label: AppLocalizations.of(context).chat,     index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.ev_station_outlined,          label: 'Charging', index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(icon: Icons.person_outline,               label: AppLocalizations.of(context).profile,  index: 4, current: _tab, onTap: (i) => setState(() => _tab = i))),
               ],
             ),
@@ -2732,6 +2733,7 @@ class _DriverProfileState extends State<_DriverProfile> {
             final l = AppLocalizations.of(context);
             return Column(children: [
               ...([
+                (l.chat,            Icons.chat_bubble_outline,      () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(isDriver: true))), false),
                 (l.bankPayouts,     Icons.account_balance_outlined, () => widget.onGoToEarnings(), false),
                 ('My Earnings',     Icons.account_balance_wallet_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverEarningsScreen())), false),
                 ('Top Up Wallet',   Icons.add_circle_outline,       () async {

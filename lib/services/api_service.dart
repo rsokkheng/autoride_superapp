@@ -1,6 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../main.dart' show navigatorKey;
+import '../screens/auth/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -48,6 +51,13 @@ class ApiService {
         AppLog.w('API', 'Silent token refresh failed, clearing session: $e');
         AppLog.e('API', 'refresh stack', e, s);
         await clearSession();
+        // Otherwise the app is left stranded on whatever screen it was on,
+        // silently failing every subsequent API call with 401s — kick the
+        // user back to login instead, same as IdleTimeoutWrapper does.
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (_) => false,
+        );
         rethrow;
       } finally {
         _refreshingFuture = null;

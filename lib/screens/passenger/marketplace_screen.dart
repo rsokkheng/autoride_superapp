@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'car_rental_screen.dart';
+import 'my_rentals_screen.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -127,7 +128,10 @@ class _NetImage extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════════════════════
 
 class MarketplaceScreen extends StatefulWidget {
-  const MarketplaceScreen({super.key});
+  // 0 = Browse, 1 = My Orders — lets a successful purchase/order land
+  // straight on the orders list instead of always defaulting to Browse.
+  final int initialTab;
+  const MarketplaceScreen({super.key, this.initialTab = 0});
   @override
   State<MarketplaceScreen> createState() => _MarketplaceScreenState();
 }
@@ -137,7 +141,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
   late TabController _tab;
 
   @override
-  void initState() { super.initState(); _tab = TabController(length: 2, vsync: this); }
+  void initState() {
+    super.initState();
+    _tab = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
+  }
   @override
   void dispose() { _tab.dispose(); super.dispose(); }
 
@@ -350,11 +357,8 @@ class _BrowseTabState extends State<_BrowseTab> {
                               fontSize: 11, fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(height: 10),
-                    const Text('Find the best deals',
+                    const Text('Find the best deal',
                         style: TextStyle(color: _white, fontWeight: FontWeight.w800, fontSize: 22)),
-                    const SizedBox(height: 4),
-                    Text('Buy · Rent · Sell in one place',
-                        style: TextStyle(color: _white.withValues(alpha: 0.8), fontSize: 13)),
                     const Spacer(),
                     GestureDetector(
                       onTap: () => Navigator.push(context,
@@ -411,10 +415,6 @@ class _BrowseTabState extends State<_BrowseTab> {
                       const Text('Rental Vehicle',
                           style: TextStyle(color: _white, fontSize: 16,
                               fontWeight: FontWeight.w800)),
-                      const SizedBox(height: 3),
-                      Text('Sedan · SUV · Van · Electric',
-                          style: TextStyle(color: _white.withValues(alpha: 0.78),
-                              fontSize: 12)),
                     ]),
                   ),
                   Container(
@@ -1436,9 +1436,11 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
-                Navigator.pop(context);
-                Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                      builder: (_) => const MarketplaceScreen(initialTab: 1)),
+                  (route) => route.isFirst,
+                );
               },
               style: ElevatedButton.styleFrom(
                   backgroundColor: _green,
@@ -2769,7 +2771,14 @@ class _OrderScreenState extends State<_OrderScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Order placed successfully!'), backgroundColor: _green));
-      Navigator.pop(context);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => _isVehicleRental
+              ? const MyRentalsScreen()
+              : const MarketplaceScreen(initialTab: 1),
+        ),
+        (route) => route.isFirst,
+      );
     } on ApiException catch (e) {
       if (mounted) setState(() { _err = e.message; _busy = false; });
     } catch (e) {
@@ -3106,11 +3115,8 @@ class _OrderScreenState extends State<_OrderScreen> {
                   Expanded(child: Center(
                       child: Text('$_qty', style: TextStyle(
                           color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)))),
-                  _QtyBtn(Icons.add_rounded, _qty < p.quantity, _color,
-                      () { if (_qty < p.quantity) setState(() => _qty++); }),
-                  const SizedBox(width: 10),
-                  Text('of ${p.quantity}',
-                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  _QtyBtn(Icons.add_rounded, _qty < 99, _color,
+                      () { if (_qty < 99) setState(() => _qty++); }),
                 ]),
               ),
               const SizedBox(height: 16),
@@ -3848,7 +3854,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
   final _price    = TextEditingController();
   final _rent     = TextEditingController();
   final _location = TextEditingController();
-  final _qty      = TextEditingController(text: '1');
+  final _qty      = TextEditingController(text: '99');
 
   String _type   = 'sale';
   String _cond   = 'used';

@@ -199,7 +199,7 @@ class AppLocalizations {
       'dailyBreakdown': 'ការបែងចែកប្រចាំថ្ងៃ',
       'withdrawEarnings': 'ដកប្រាក់ចំណូល',
       'evCarsAvailable': 'រថយន្ត EV\nមានឥឡូវ!',
-      'evCarsSubtitle': 'ជួល ឬ ទិញរថយន្តអគ្គីសនី\nនៅជិតអ្នក',
+      'evCarsSubtitle': 'ជួល ឬ ទិញយានជំនិះអគ្គីសនី\nនៅជិតអ្នក',
       'explore': 'ស្វែងរកយានជំនិះ',
       'completed': 'បានបញ្ចប់',
       'eta': 'ពេលវេលាប៉ាន់ស្មាន',

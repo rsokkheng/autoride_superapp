@@ -36,10 +36,9 @@ class DriverTripSummaryScreen extends StatelessWidget {
 
   String get _serviceLabel {
     switch (ride.serviceType) {
-      case 'premium': return 'Premium';
-      case 'xl':      return 'ROTEH XL';
-      case 'ev':      return 'EV Ride';
-      default:        return 'Standard';
+      case 'motorcycle': return 'Bike';
+      case 'tuk_tuk':     return 'Tuk Tuk';
+      default:            return 'Car'; // standard/premium/shared/van
     }
   }
 
@@ -119,48 +118,36 @@ class DriverTripSummaryScreen extends StatelessWidget {
                 ])),
                 SizedBox(height: 12),
 
-                // ── Route card ──────────────────────────────────────────────
-                _Card(child: Column(children: [
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Column(children: [
-                      SizedBox(height: 2),
-                      Container(
-                        width: 10, height: 10,
-                        decoration: BoxDecoration(color: _kGreen, shape: BoxShape.circle),
+                // ── Route card — same layout as the passenger receipt's
+                // "Trip Details" card (trip_receipt_screen.dart) ────────────
+                _Card(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Trip Details',
+                        style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
+                    SizedBox(height: 14),
+                    _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: 'Pickup', address: ride.pickupAddress),
+                    for (int i = 0; i < wayStops.length; i++) ...[
+                      Padding(
+                        padding: EdgeInsets.only(left: 9),
+                        child: Container(width: 2, height: 20, color: context.appCardBg),
                       ),
-                      Container(
-                          width: 1.5,
-                          height: wayStops.isEmpty ? 36 : 20 + 22.0 * wayStops.length,
-                          color: Theme.of(context).dividerColor),
-                      Icon(Icons.location_on, color: Colors.red, size: 14),
-                    ]),
-                    SizedBox(width: 12),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Pickup', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
-                      SizedBox(height: 2),
-                      Text(ride.pickupAddress,
-                          style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
-                          maxLines: 2, overflow: TextOverflow.ellipsis),
-                      for (int i = 0; i < wayStops.length; i++) ...[
-                        SizedBox(height: 14),
-                        Text('Stop ${i + 1}', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
-                        SizedBox(height: 2),
-                        Text(wayStops[i],
-                            style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
-                            maxLines: 2, overflow: TextOverflow.ellipsis),
-                      ],
-                      SizedBox(height: 16),
-                      Text('Destination', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
-                      SizedBox(height: 2),
-                      Text(
-                          ride.dropoffAddress.isNotEmpty
-                              ? ride.dropoffAddress
-                              : (ride.noDestination ? 'No destination — told in person' : '--'),
-                          style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600),
-                          maxLines: 2, overflow: TextOverflow.ellipsis),
-                    ])),
-                  ]),
-                ])),
+                      _TripAddressRow(icon: Icons.location_on, color: AppTheme.warning, label: 'Stop ${i + 1}', address: wayStops[i]),
+                    ],
+                    Padding(
+                      padding: EdgeInsets.only(left: 9),
+                      child: Container(width: 2, height: 20, color: context.appCardBg),
+                    ),
+                    _TripAddressRow(
+                      icon: Icons.location_on,
+                      color: AppTheme.danger,
+                      label: 'Dropoff',
+                      address: ride.dropoffAddress.isNotEmpty
+                          ? ride.dropoffAddress
+                          : (ride.noDestination ? 'No destination — told in person' : '--'),
+                    ),
+                  ],
+                )),
                 const SizedBox(height: 12),
 
                 // ── Trip stats ──────────────────────────────────────────────
@@ -266,12 +253,49 @@ class _Card extends StatelessWidget {
     width: double.infinity,
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: context.appSurface,
       borderRadius: BorderRadius.circular(16),
       boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
     ),
     child: child,
   );
+}
+
+class _TripAddressRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final String address;
+
+  const _TripAddressRow({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.address,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, color: color, size: 20),
+        SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w500)),
+              Text(address,
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _StatItem extends StatelessWidget {

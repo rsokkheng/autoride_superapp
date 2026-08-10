@@ -18,6 +18,7 @@ import '../../models/driver_marker_model.dart';
 import 'rate_driver_screen.dart';
 import '../shared/ride_chat_screen.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/location_display.dart';
 import '../../main.dart' show appLocale;
 
 const _kGreen = Color(0xFF00B14F);
@@ -861,7 +862,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                 color: _kGreen, shape: BoxShape.circle)),
                         SizedBox(width: 12),
                         Expanded(
-                            child: Text('My location',
+                            child: Text(
+                                getDisplayLocation(name: '', address: widget.from),
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                     color: context.appTextPrimary,
                                     fontSize: 14,
@@ -945,6 +948,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500)),
                         ),
+                        Text('Dropoff',
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600)),
                       ]),
                     ),
                   ],
@@ -1195,27 +1203,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
                       // Buttons row
                       Row(children: [
-                        if (_canCancel)
-                          GestureDetector(
-                            onTap: _cancelling ? null : _cancelRide,
-                            child: Container(
-                              width: 48, height: 48,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: _cancelling
-                                    ? Colors.grey[300]
-                                    : Colors.red,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: _cancelling
-                                  ? const Padding(
-                                      padding: EdgeInsets.all(14),
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : const Icon(Icons.cancel_outlined,
-                                      color: Colors.white, size: 26),
-                            ),
-                          ),
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () async {

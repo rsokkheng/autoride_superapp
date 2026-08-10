@@ -9,11 +9,24 @@ import '../../services/api_service.dart';
 import '../../utils/phone_utils.dart';
 import '../../models/delivery_model.dart' show MovingEstimateModel;
 import '../../services/maps_service.dart';
+import '../../services/location_service.dart';
+import '../../utils/app_log.dart';
+import '../../utils/location_display.dart';
 import 'delivery_tracking_screen.dart';
 
 const _kPickerSW     = LatLng(10.4, 102.3);
 const _kPickerNE     = LatLng(14.7, 107.6);
 final  _kPickerBounds = LatLngBounds(southwest: _kPickerSW, northeast: _kPickerNE);
+
+bool _inDeliveryPickerBounds(LatLng p) =>
+    p.latitude  >= _kPickerSW.latitude  && p.latitude  <= _kPickerNE.latitude &&
+    p.longitude >= _kPickerSW.longitude && p.longitude <= _kPickerNE.longitude;
+
+// Fallback pickup point when the device's real GPS fix is unavailable or
+// outside Cambodia (e.g. a simulator with no custom location set, which
+// defaults to Apple's Cupertino/SF coordinates) — gives the pickup field a
+// real, editable starting address instead of staying blank.
+const _kDeliveryFallbackPickup = LatLng(11.5563738, 104.9282099); // Phnom Penh
 
 class DeliveryScreen extends StatefulWidget {
   const DeliveryScreen({super.key});
@@ -41,20 +54,19 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   bool     _isScheduled          = false;
   String   _packageSize          = 'small';
   String   _deliveryServiceOption = 'normal'; // 'normal' | 'express'
-  String   _deliveryVehicleType  = 'car'; // 'car'|'tuk_tuk'
+  String   _deliveryVehicleType  = 'tuk_tuk'; // 'car'|'tuk_tuk'
   String   _paymentBy            = 'sender';
   String   _paymentMethod        = 'cash';
   DateTime _scheduledTime        = DateTime.now().add(const Duration(hours: 2));
 
-  static _DropItem<String> _deliveryVehicleDropItem(VehicleTypeOption v) {
-    final isTukTuk = v.type == 'tuk_tuk';
-    return _DropItem(
-      value:    isTukTuk ? 'tuk_tuk' : 'car', // delivery API expects 'car', not the ride side's 'van'
-      label:    isTukTuk ? 'Tuk Tuk — តុកតុក' : 'Car — ឡាន',
-      subtitle: isTukTuk ? 'Up to 100 kg  •  Affordable' : 'Up to 200 kg  •  Comfortable',
-      icon:     isTukTuk ? Icons.electric_rickshaw_outlined : Icons.directions_car_outlined,
-    );
-  }
+  // Delivery has its own vehicle lineup (includes Bike, unlike the ride
+  // side's AppTheme.vehicleTypes) since small-package bike delivery is a
+  // distinct, commonly-offered option here.
+  static const _kDeliveryVehicles = [
+    _DropItem(value: 'bike',    label: 'Bike —ម៉ូតូ',      subtitle: 'Up to 20 kg   •  Fastest',     icon: Icons.two_wheeler_outlined),
+    _DropItem(value: 'tuk_tuk', label: 'Tuk Tuk — តុកតុក', subtitle: 'Up to 100 kg  •  Affordable',  icon: Icons.electric_rickshaw_outlined),
+    _DropItem(value: 'car',     label: 'Car — ឡាន',        subtitle: 'Up to 200 kg  •  Comfortable', icon: Icons.directions_car_outlined),
+  ];
 
   // ── Moving fields ────────────────────────────────────────────────────────
   final _moveFromCtrl  = TextEditingController();
@@ -88,6 +100,64 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   // ── Shared ───────────────────────────────────────────────────────────────
   bool    _submitting = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefillSenderInfo();
+    _detectPickupGps();
+  }
+
+  // Sender name/phone default to the logged-in passenger's own profile —
+  // cached locally (no network call), so it's instant and works offline.
+  Future<void> _prefillSenderInfo() async {
+    final user = await ApiService.getSavedUser();
+    if (!mounted || user == null) return;
+    setState(() {
+      if (user.name.isNotEmpty)  _senderNameCtrl.text  = user.name;
+      if (user.phone.isNotEmpty) _senderPhoneCtrl.text = user.phone;
+    });
+  }
+
+  // Sender pickup location defaults to the device's current GPS position,
+  // same pattern as ride_booking.dart's _detectGps().
+  Future<void> _detectPickupGps() async {
+    var latLng = _kDeliveryFallbackPickup;
+    try {
+      final granted = await LocationService.instance.requestPermission();
+      if (!granted) {
+        AppLog.w('Delivery', 'GPS pickup detection: permission denied — using Phnom Penh fallback');
+      } else if (!mounted) {
+        return;
+      } else {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        ).timeout(const Duration(seconds: 15));
+        if (!mounted) return;
+        final gpsLatLng = LatLng(pos.latitude, pos.longitude);
+        if (_inDeliveryPickerBounds(gpsLatLng)) {
+          latLng = gpsLatLng;
+        } else {
+          // Expected on a simulator with no custom location set (defaults
+          // to Apple's Cupertino/SF coordinates, outside Cambodia bounds)
+          // — fall back to Phnom Penh so the field still gets a real,
+          // editable address instead of staying blank.
+          AppLog.w('Delivery',
+              'GPS pickup detection: position outside Cambodia bounds (${gpsLatLng.latitude}, ${gpsLatLng.longitude}) — using Phnom Penh fallback');
+        }
+      }
+
+      setState(() => _pickupLatLng = latLng);
+      final address = await MapsService.reverseGeocode(latLng);
+      if (!mounted || address == null) return;
+      // Don't overwrite anything the user already typed while we waited.
+      if (_pickupCtrl.text.trim().isEmpty) {
+        setState(() => _pickupCtrl.text = getDisplayLocation(name: '', address: address));
+      }
+    } catch (e, s) {
+      AppLog.e('Delivery', 'GPS pickup detection failed', e, s);
+    }
+  }
 
   @override
   void dispose() {
@@ -558,16 +628,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       SizedBox(height: 12),
 
-      // Delivery vehicle — derived from the app's shared vehicle-type list
-      // (AppTheme.vehicleTypes) so it always matches what's offered
-      // elsewhere in the app, translated into delivery-specific
-      // value/label/subtitle (the delivery API expects 'car', not the ride
-      // side's internal 'van' type string).
+      // Delivery vehicle — Bike / Tuk Tuk / Car
       _AppDropdown<String>(
         label: 'Delivery Vehicle',
         icon: Icons.directions_car_outlined,
         value: _deliveryVehicleType,
-        items: AppTheme.vehicleTypes.map(_deliveryVehicleDropItem).toList(),
+        items: _kDeliveryVehicles,
         onChanged: (v) => setState(() => _deliveryVehicleType = v),
       ),
       SizedBox(height: 12),
@@ -1694,9 +1760,10 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
     final addr = await MapsService.reverseGeocode(_center);
     if (!mounted) return;
     setState(() {
-      _address  = addr ??
-          '${_center.latitude.toStringAsFixed(4)}, '
-          '${_center.longitude.toStringAsFixed(4)}';
+      _address  = addr != null
+          ? getDisplayLocation(name: '', address: addr)
+          : '${_center.latitude.toStringAsFixed(4)}, '
+            '${_center.longitude.toStringAsFixed(4)}';
       _geocoding = false;
     });
   }

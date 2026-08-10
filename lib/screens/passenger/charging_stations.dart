@@ -7,6 +7,7 @@ import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/maps_service.dart';
 import '../../services/locale_service.dart';
+import '../../utils/location_display.dart';
 import 'ride_booking.dart';
 
 // Restrict the map to Cambodia only.
@@ -173,7 +174,16 @@ const _kLightMapStyle = '''
 const _kFilters = ['All', 'Fast Charging', 'Available', 'Favorites'];
 
 class ChargingStationsScreen extends StatefulWidget {
-  const ChargingStationsScreen({super.key});
+  // Drivers only browse station locations on the map — they don't book
+  // rides to them, so tapping a station just centers the map instead of
+  // pushing the passenger ride-booking flow.
+  final bool isDriver;
+  // When this screen is embedded as a bottom-nav tab body (driver mode)
+  // rather than pushed with Navigator.push, popping the Navigator would
+  // pop the screen underneath it (leaving a black screen) instead of just
+  // switching tabs — so the caller supplies this to switch tabs instead.
+  final VoidCallback? onBack;
+  const ChargingStationsScreen({super.key, this.isDriver = false, this.onBack});
 
   @override
   State<ChargingStationsScreen> createState() => _ChargingStationsScreenState();
@@ -190,8 +200,22 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
   final _searchCtrl = TextEditingController();
   final Set<int> _favorites = {};
 
+  // Driver mode only: when set, the list panel is hidden so the map takes
+  // the full screen, focused on this station.
+  ChargingStationModel? _focusedStation;
+  String?   _currentLocationName;
+  Set<Polyline> _routePolylines = {};
+  bool      _routeLoading = false;
+  BitmapDescriptor? _focusedPinIcon;
+
   GoogleMapController? _mapController;
   final Map<int, BitmapDescriptor> _pinIcons = {};
+  final Map<int, BitmapDescriptor> _labelIcons = {};
+  final Map<int, Offset> _labelAnchors = {};
+
+  // Canvas-space total heights of the pin bitmaps below (headR*2 + tail) —
+  // used to compute how far above each pin its name-label bubble sits.
+  static const _kPinCanvasH = 46.0 * 3.0;
 
   String? _prevMapsLanguage;
 
@@ -313,8 +337,59 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
       final n = i + 1;
       if (_pinIcons.containsKey(n)) continue;
       _pinIcons[n] = await _paintNumberedPin(n);
+      final (labelIcon, labelAnchor) =
+          await _paintNameLabel(_stations[i].name, _kPinCanvasH);
+      _labelIcons[n]   = labelIcon;
+      _labelAnchors[n] = labelAnchor;
     }
     if (mounted) setState(() {});
+  }
+
+  // White rounded-pill name label shown above each station pin — mimics
+  // Google Maps' place-name labels. Positioned via `anchor`, which offsets
+  // the bitmap upward (as a fraction of its OWN height) so its bottom edge
+  // sits just above the pin's head rather than overlapping it.
+  static Future<(BitmapDescriptor, Offset)> _paintNameLabel(
+      String name, double pinCanvasH) async {
+    const scale = 3.0;
+    final text = name.length > 22 ? '${name.substring(0, 21)}…' : name;
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+            color: Colors.white, fontSize: 11 * scale, fontWeight: FontWeight.w700),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+    )..layout();
+
+    const padH = 8.0 * scale;
+    const padV = 5.0 * scale;
+    final labelW = tp.width + padH * 2;
+    final labelH = tp.height + padV * 2;
+
+    final recorder = ui.PictureRecorder();
+    final canvas    = Canvas(recorder);
+    final rrect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(0, 0, labelW, labelH), Radius.circular(labelH / 2));
+
+    canvas.drawRRect(
+      rrect.shift(const Offset(0, 2)),
+      Paint()..color = Colors.black.withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawRRect(rrect, Paint()..color = AppTheme.accent);
+    tp.paint(canvas, Offset(padH, padV));
+
+    final picture = recorder.endRecording();
+    final img     = await picture.toImage(labelW.ceil(), labelH.ceil());
+    final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+    img.dispose();
+    final icon = BitmapDescriptor.bytes(bytes!.buffer.asUint8List(), imagePixelRatio: scale);
+
+    const gap = 6.0 * scale;
+    final anchor = Offset(0.5, 1 + (pinCanvasH + gap) / labelH);
+    return (icon, anchor);
   }
 
   static Future<BitmapDescriptor> _paintNumberedPin(int number) async {
@@ -344,11 +419,17 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
     );
     canvas.drawPath(path, Paint()..color = AppTheme.accent);
 
-    // Bolt glyph in the pin head.
+    // Bolt glyph in the pin head — a real vector icon rather than an emoji,
+    // for consistent rendering across devices.
     final boltTp = TextPainter(
-      text: const TextSpan(
-        text: '⚡',
-        style: TextStyle(color: Colors.white, fontSize: headR * 1.1),
+      text: TextSpan(
+        text: String.fromCharCode(Icons.electric_bolt.codePoint),
+        style: TextStyle(
+          fontFamily: Icons.electric_bolt.fontFamily,
+          package:    Icons.electric_bolt.fontPackage,
+          color:      Colors.white,
+          fontSize:   headR * 1.15,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
@@ -371,6 +452,56 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
     )..layout();
     numTp.paint(canvas,
         badgeCenter - Offset(numTp.width / 2, numTp.height / 2));
+
+    final picture = recorder.endRecording();
+    final img     = await picture.toImage(w.ceil(), h.ceil());
+    final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+    img.dispose();
+    return BitmapDescriptor.bytes(bytes!.buffer.asUint8List(), imagePixelRatio: scale);
+  }
+
+  // Red teardrop pin with a bolt glyph — used for the focused destination
+  // marker (driver mode) instead of the plain default red Google marker.
+  static Future<BitmapDescriptor> _paintFocusedPin() async {
+    const scale  = 3.0;
+    const headR  = 16.0 * scale;
+    const w      = headR * 2 + 10 * scale;
+    const h      = headR * 2 + 18 * scale;
+    final headCx = w / 2;
+    final headCy = headR + 4 * scale;
+
+    final recorder = ui.PictureRecorder();
+    final canvas    = Canvas(recorder);
+
+    final path = Path()
+      ..moveTo(headCx, h)
+      ..quadraticBezierTo(headCx - headR, headCy + headR * 0.7, headCx - headR, headCy)
+      ..arcToPoint(Offset(headCx + headR, headCy),
+          radius: Radius.circular(headR), clockwise: true)
+      ..quadraticBezierTo(headCx + headR, headCy + headR * 0.7, headCx, h)
+      ..close();
+
+    canvas.drawPath(
+      path.shift(const Offset(0, 3)),
+      Paint()..color = Colors.black.withValues(alpha: 0.35)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawPath(path, Paint()..color = const Color(0xFFE53935));
+
+    final boltTp = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(Icons.electric_bolt.codePoint),
+        style: TextStyle(
+          fontFamily: Icons.electric_bolt.fontFamily,
+          package:    Icons.electric_bolt.fontPackage,
+          color:      Colors.white,
+          fontSize:   headR * 1.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    boltTp.paint(canvas,
+        Offset(headCx - boltTp.width / 2, headCy - boltTp.height / 2));
 
     final picture = recorder.endRecording();
     final img     = await picture.toImage(w.ceil(), h.ceil());
@@ -409,10 +540,15 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
     } catch (_) {}
   }
 
-  // Tapping a station now opens the normal ride-booking confirm screen
+  // Tapping a station opens the normal ride-booking confirm screen
   // (My Location → this EV station as the destination) — the same flow
-  // used everywhere else in the app to book a ride.
+  // used everywhere else in the app to book a ride. Drivers can't book
+  // rides, so for them this just centers the map on the station instead.
   void _bookRideTo(ChargingStationModel station) {
+    if (widget.isDriver) {
+      _focusStation(station);
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -421,6 +557,86 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
           initialDestLatLng:  LatLng(station.lat, station.lng),
         ),
       ),
+    );
+  }
+
+  // Back button: if a station is currently focused (full-map mode), the
+  // first tap returns to the nearby-stations list instead of leaving the
+  // screen entirely.
+  void _handleBack() {
+    if (_focusedStation != null) {
+      setState(() {
+        _focusedStation      = null;
+        _routePolylines      = {};
+        _currentLocationName = null;
+      });
+      return;
+    }
+    widget.onBack != null ? widget.onBack!() : Navigator.of(context).pop();
+  }
+
+  // Driver mode: full-map focus on a station — shows the driver's current
+  // location name and draws a route line from there to the station.
+  Future<void> _focusStation(ChargingStationModel station) async {
+    _focusedPinIcon ??= await _paintFocusedPin();
+    if (!mounted) return;
+    setState(() {
+      _focusedStation   = station;
+      _routePolylines   = {};
+      _routeLoading     = true;
+    });
+    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
+        LatLng(station.lat, station.lng), 15));
+
+    // Fall back to the Phnom Penh reference point when GPS is unavailable
+    // (denied permission, simulator, etc.) so the route line still draws
+    // instead of silently disappearing.
+    final origin = _position != null
+        ? LatLng(_position!.latitude, _position!.longitude)
+        : _kPhnomPenh;
+    final dest = LatLng(station.lat, station.lng);
+
+    final results = await Future.wait([
+      MapsService.reverseGeocode(origin),
+      MapsService.getRoute(origin: origin, destination: dest),
+    ]);
+    if (!mounted) return;
+
+    final address = results[0] as String?;
+    final route   = results[1] as DirectionsResult?;
+
+    setState(() {
+      _currentLocationName = address != null
+          ? getDisplayLocation(name: '', address: address)
+          : 'My location';
+      _routeLoading = false;
+      if (route != null) {
+        _routePolylines = {
+          Polyline(
+            polylineId: const PolylineId('driver_to_station'),
+            points: route.points,
+            color: const Color(0xFF1FA855),
+            width: 6,
+            startCap: Cap.roundCap,
+            endCap: Cap.roundCap,
+            jointType: JointType.round,
+          ),
+        };
+        final bounds = _boundsFor([origin, dest, ...route.points]);
+        _mapController?.animateCamera(
+            CameraUpdate.newLatLngBounds(bounds, 60));
+      }
+    });
+  }
+
+  LatLngBounds _boundsFor(List<LatLng> points) {
+    final lats = points.map((p) => p.latitude);
+    final lngs = points.map((p) => p.longitude);
+    return LatLngBounds(
+      southwest: LatLng(lats.reduce((a, b) => a < b ? a : b),
+                         lngs.reduce((a, b) => a < b ? a : b)),
+      northeast: LatLng(lats.reduce((a, b) => a > b ? a : b),
+                         lngs.reduce((a, b) => a > b ? a : b)),
     );
   }
 
@@ -483,12 +699,38 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                 Marker(
                   markerId: MarkerId('station_${_stations[i].id}'),
                   position: LatLng(_stations[i].lat, _stations[i].lng),
-                  icon: _pinIcons[i + 1]!,
+                  icon: (_focusedStation?.id == _stations[i].id && _focusedPinIcon != null)
+                      ? _focusedPinIcon!
+                      : _pinIcons[i + 1]!,
                   anchor: const Offset(0.5, 1.0),
                   infoWindow: InfoWindow(title: _stations[i].name, snippet: _stations[i].address),
                   onTap: () => _bookRideTo(_stations[i]),
                 ),
+            // Station name label, floating just above each pin.
+            for (int i = 0; i < _stations.length; i++)
+              if (_labelIcons.containsKey(i + 1))
+                Marker(
+                  markerId: MarkerId('station_label_${_stations[i].id}'),
+                  position: LatLng(_stations[i].lat, _stations[i].lng),
+                  icon:   _labelIcons[i + 1]!,
+                  anchor: _labelAnchors[i + 1]!,
+                  zIndexInt: 1,
+                  onTap: () => _bookRideTo(_stations[i]),
+                ),
+            // Driver's current (or fallback) location, shown only while a
+            // station is focused with a route drawn to it.
+            if (_focusedStation != null)
+              Marker(
+                markerId: const MarkerId('driver_origin'),
+                position: _position != null
+                    ? LatLng(_position!.latitude, _position!.longitude)
+                    : _kPhnomPenh,
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+                anchor: const Offset(0.5, 0.5),
+                zIndexInt: 2,
+              ),
           },
+          polylines: _routePolylines,
         ),
 
         // ── Top search bar + filter chips ─────────────────────────────────
@@ -498,7 +740,7 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
             child: Column(children: [
               Row(children: [
                 GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
+                  onTap: _handleBack,
                   child: Container(
                     width: 46, height: 46,
                     decoration: const BoxDecoration(
@@ -629,7 +871,72 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
           ),
         ),
 
+        // ── Focused-station full map mode (driver only) ─────────────────────
+        if (_focusedStation != null)
+          Positioned(
+            left: 0, right: 0, bottom: 0,
+            child: SafeArea(
+              top: false,
+              child: Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _kCard,
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 16)],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    // Route dots + connecting line
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Column(children: [
+                        Container(width: 9, height: 9,
+                            decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle)),
+                        Container(width: 1.5, height: 28, color: _kChip),
+                        const Icon(Icons.ev_station, color: AppTheme.accent, size: 14),
+                      ]),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(
+                          _routeLoading
+                              ? 'Finding your location…'
+                              : (_currentLocationName ?? 'My location unavailable'),
+                          style: const TextStyle(color: _kTextPri, fontWeight: FontWeight.w600, fontSize: 13),
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 22),
+                        Text(_focusedStation!.name,
+                            style: const TextStyle(color: _kTextPri, fontWeight: FontWeight.w700, fontSize: 14),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        if (_focusedStation!.address.isNotEmpty)
+                          Text(_focusedStation!.address,
+                              style: const TextStyle(color: _kTextSec, fontSize: 12),
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ]),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _focusedStation      = null;
+                        _routePolylines      = {};
+                        _currentLocationName = null;
+                      }),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: _kChip, shape: BoxShape.circle),
+                        child: const Icon(Icons.close, color: _kTextPri, size: 16),
+                      ),
+                    ),
+                  ]),
+                ]),
+              ),
+            ),
+          ),
+
         // ── Bottom "Nearby Charging Stations" panel ─────────────────────────
+        if (_focusedStation == null)
         Positioned(
           left: 0, right: 0, bottom: 0,
           child: SafeArea(

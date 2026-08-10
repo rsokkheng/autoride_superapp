@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../utils/app_log.dart';
+import '../../utils/location_display.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../services/location_service.dart';
@@ -544,6 +545,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         _pickupAddress   = savedMatch.label;
         _geocodingPickup = false;
       });
+      // Pickup moved — re-fetch route/fare if a destination is already
+      // set, otherwise the estimate keeps reflecting the old pickup point.
+      _fetchRoute();
       return;
     }
     setState(() => _geocodingPickup = true);
@@ -553,6 +557,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       _pickupAddress  = address ?? '${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)}';
       _geocodingPickup = false;
     });
+    _fetchRoute();
   }
 
   // ── Pickup search ────────────────────────────────────────────────────────────
@@ -585,6 +590,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _pickupSearchCtrl.clear();
     _pickupSearchFocus.unfocus();
     _pickupMapCtrl?.animateCamera(CameraUpdate.newLatLng(r.latLng));
+    // Pickup moved — re-fetch route/fare if a destination is already set,
+    // otherwise the estimate keeps reflecting the old pickup point.
+    _fetchRoute();
   }
 
   // ── Search ───────────────────────────────────────────────────────────────────
@@ -1226,20 +1234,19 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     final pickupSearchActive = _pickupSearchFocus.hasFocus &&
         _pickupSearchCtrl.text.trim().isNotEmpty;
 
-    // Entered via the pickup row → stays a blank "Pickup location" label
-    // ready for a fresh search. Entered via "Where to?" with a pickup
-    // already set → show the real resolved address instead of clearing it,
-    // since the user is here to edit the destination, not pickup.
-    // Listener removed for the assignment — setting `.text` here would
-    // otherwise fire it synchronously during build and call setState,
-    // which throws.
-    if (_focusDestinationOnEntry &&
-        !_pickupSearchFocus.hasFocus &&
+    // Shows the real resolved current location whenever the field isn't
+    // actively being edited — tapping directly into the field is what
+    // clears it for a fresh search (see the field's onTap below); just
+    // navigating here (e.g. tapping the pickup row elsewhere) does not
+    // autofocus this field, so there's no race with this sync. Listener
+    // removed for the assignment — setting `.text` here would otherwise
+    // fire it synchronously during build and call setState, which throws.
+    if (!_pickupSearchFocus.hasFocus &&
         _pickupAddress.isNotEmpty &&
         _pickupAddress != 'Detecting location…' &&
-        _pickupSearchCtrl.text != _pickupAddress) {
+        _pickupSearchCtrl.text != getDisplayLocation(name: '', address: _pickupAddress)) {
       _pickupSearchCtrl.removeListener(_onPickupSearchChanged);
-      _pickupSearchCtrl.text = _pickupAddress;
+      _pickupSearchCtrl.text = getDisplayLocation(name: '', address: _pickupAddress);
       _pickupSearchCtrl.addListener(_onPickupSearchChanged);
     }
 
@@ -1314,13 +1321,16 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     key: const ValueKey('pickup_search_field'),
                     controller: _pickupSearchCtrl,
                     focusNode:  _pickupSearchFocus,
-                    autofocus:  !_focusDestinationOnEntry,
+                    // Never autofocuses — arriving here (e.g. via the
+                    // pickup row) should just display the current value;
+                    // only an explicit tap on the field opens the keyboard
+                    // and clears it for a fresh search (see onTap below).
                     // Tapping in to change pickup clears the old resolved
                     // address so the field shows the "Pickup location"
                     // placeholder for a fresh search, instead of requiring
                     // the old text to be manually deleted first.
                     onTap: () {
-                      if (_pickupSearchCtrl.text == _pickupAddress) {
+                      if (_pickupSearchCtrl.text == getDisplayLocation(name: '', address: _pickupAddress)) {
                         _pickupSearchCtrl.clear();
                       }
                     },
@@ -1366,7 +1376,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                 return _DestTile(
                                   icon: Icons.location_on,
                                   iconColor: AppTheme.accent,
-                                  title: r.address,
+                                  title: getDisplayLocation(name: r.name, address: r.address),
                                   onTap: () => _selectPickupResult(r),
                                 );
                               },
@@ -1434,7 +1444,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                 padding: EdgeInsets.symmetric(vertical: 9),
                                 child: Row(children: [
                                   Expanded(
-                                    child: Text(stop.address,
+                                    child: Text(getDisplayLocation(name: '', address: stop.address),
                                         style: TextStyle(color: context.appTextPrimary,
                                             fontSize: 14, fontWeight: FontWeight.w500),
                                         maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -1602,7 +1612,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     return _DestTile(
                       icon: Icons.location_on,
                       iconColor: AppTheme.accent,
-                      title: r.address,
+                      title: getDisplayLocation(name: r.name, address: r.address),
                       trailing: isAlreadySelected
                           ? const Icon(Icons.check_circle, color: AppTheme.success, size: 20)
                           : null,
@@ -1725,9 +1735,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             // inside build() would otherwise fire _onPickupSearchChanged
             // synchronously, which calls setState() during build and throws.
             if (!_pickupSearchFocus.hasFocus &&
-                _pickupSearchCtrl.text != _pickupAddress) {
+                _pickupSearchCtrl.text != getDisplayLocation(name: '', address: _pickupAddress)) {
               _pickupSearchCtrl.removeListener(_onPickupSearchChanged);
-              _pickupSearchCtrl.text = _pickupAddress;
+              _pickupSearchCtrl.text = getDisplayLocation(name: '', address: _pickupAddress);
               _pickupSearchCtrl.addListener(_onPickupSearchChanged);
             }
             return Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1794,7 +1804,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                 return _DestTile(
                                   icon: Icons.location_on,
                                   iconColor: AppTheme.accent,
-                                  title: r.address,
+                                  title: getDisplayLocation(name: r.name, address: r.address),
                                   onTap: () => _selectPickupResult(r),
                                 );
                               },
@@ -1825,7 +1835,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       Expanded(
                         child: _stops.last.isFilled
                             ? Text(
-                                _stops.last.address,
+                                getDisplayLocation(name: '', address: _stops.last.address),
                                 style: TextStyle(
                                     color: context.appTextPrimary,
                                     fontSize: 15,
@@ -2034,7 +2044,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                               return _DestTile(
                                 icon: Icons.location_on,
                                 iconColor: AppTheme.accent,
-                                title: r.address,
+                                title: getDisplayLocation(name: r.name, address: r.address),
                                 trailing: isAlreadySelected
                                     ? const Icon(Icons.check_circle,
                                         color: AppTheme.success, size: 20)
@@ -2074,7 +2084,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                _pickupAddress.isEmpty ? 'Pickup location' : _pickupAddress,
+                _pickupAddress.isEmpty ? 'Pickup location' : getDisplayLocation(name: '', address: _pickupAddress),
                 style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
@@ -2148,7 +2158,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                             padding: EdgeInsets.symmetric(vertical: 9),
                             child: Row(children: [
                               Expanded(
-                                child: Text(stop.address,
+                                child: Text(getDisplayLocation(name: '', address: stop.address),
                                     style: TextStyle(color: context.appTextPrimary,
                                         fontSize: 14, fontWeight: FontWeight.w500),
                                     maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -2628,10 +2638,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     // Tapping pickup opens the dedicated full-screen pickup
                     // picker (map + search + drag-to-set) instead of editing
                     // inline here — dragging the map above still works too.
-                    onTap: () => setState(() {
-                      _focusDestinationOnEntry = false;
-                      _step = 0;
-                    }),
+                    onTap: () {
+                      // Clear any stale focus from a prior visit — autofocus
+                      // only applies if nothing in the scope already has
+                      // focus, so a leftover focused field would silently
+                      // block it.
+                      _destSearchFocus.unfocus();
+                      setState(() {
+                        _focusDestinationOnEntry = false;
+                        _step = 0;
+                      });
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                       child: Row(children: [
@@ -2649,7 +2666,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           child: Text(
                             _pickupAddress.isEmpty || _pickupAddress == 'Detecting location…'
                                 ? 'Pickup location'
-                                : _pickupAddress,
+                                : getDisplayLocation(name: '', address: _pickupAddress),
                             style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                             maxLines: 1, overflow: TextOverflow.ellipsis,
                           ),
@@ -2663,10 +2680,18 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     // Same unified location-search page as tapping pickup,
                     // not the old separate destination-only screen —
                     // autofocuses "Where to?" instead of pickup.
-                    onTap: () => setState(() {
-                      _focusDestinationOnEntry = true;
-                      _step = 0;
-                    }),
+                    onTap: () {
+                      // Clear any stale pickup focus from a prior visit —
+                      // autofocus only applies if nothing in the scope
+                      // already has focus, so a leftover focused pickup
+                      // field would silently block "Where to?" from
+                      // getting it.
+                      _pickupSearchFocus.unfocus();
+                      setState(() {
+                        _focusDestinationOnEntry = true;
+                        _step = 0;
+                      });
+                    },
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
                       child: Row(children: [
@@ -3641,7 +3666,7 @@ class _DestTile extends StatelessWidget {
             color: iconColor.withValues(alpha: 0.12), shape: BoxShape.circle),
         child: Icon(icon, color: iconColor, size: 18),
       ),
-      title: Text(title,
+      title: Text(getDisplayLocation(name: '', address: title),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(color: context.appTextPrimary, fontSize: 13)),
@@ -3691,7 +3716,7 @@ class _RouteSummary extends StatelessWidget {
                 SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    pickupAddress,
+                    getDisplayLocation(name: '', address: pickupAddress),
                     style: TextStyle(
                         color: context.appTextSecondary, fontSize: 13),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -3739,7 +3764,7 @@ class _RouteSummary extends StatelessWidget {
                     child: GestureDetector(
                       onTap: () => onEditStop(i),
                       child: Text(
-                        stops[i].address,
+                        getDisplayLocation(name: '', address: stops[i].address),
                         style: TextStyle(
                             color: context.appTextPrimary,
                             fontSize: 13,
@@ -3824,7 +3849,7 @@ class _RideTypeCard extends StatelessWidget {
       // No drop-off yet, so the real distance-based fare isn't known —
       // show the vehicle type's base fare (GET /vehicle-types `pricing.base`)
       // as a starting-price indicator instead of a generic label.
-      priceText = type.base > 0 ? 'From ${AppTheme.khr(type.base)}' : 'Metered fare';
+      priceText = type.base > 0 ? ' ${AppTheme.khr(type.base)}' : 'Metered fare';
     } else if (fareInfo != null) {
       if (surgeMultiplier > 1.0) {
         final surgedTotal = (fareInfo!.total * surgeMultiplier).round();

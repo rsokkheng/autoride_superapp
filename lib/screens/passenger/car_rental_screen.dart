@@ -8,6 +8,7 @@ import '../../services/maps_service.dart';
 import '../../widgets/roteh_location_map.dart';
 import '../../widgets/guest_fields.dart';
 import '../../widgets/location_picker_screen.dart';
+import 'my_rentals_screen.dart';
 import '../../models/marketplace_model.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -468,8 +469,10 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 width: double.infinity, height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(context); // close sheet
-                    Navigator.pop(context); // close rental screen
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const MyRentalsScreen()),
+                      (route) => route.isFirst,
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.accent,

@@ -6,7 +6,11 @@ import '../utils/app_log.dart';
 class PlaceResult {
   final String address;
   final LatLng latLng;
-  const PlaceResult({required this.address, required this.latLng});
+  // Place Details' `name` field (e.g. "National Payment Certification
+  // Agency (NPCA)") — empty when the result is a plain address with no
+  // named establishment.
+  final String name;
+  const PlaceResult({required this.address, required this.latLng, this.name = ''});
 }
 
 class DirectionsResult {
@@ -262,7 +266,7 @@ class MapsService {
             '/maps/api/place/details/json',
             {
               'place_id': placeId,
-              'fields': 'formatted_address,geometry',
+              'fields': 'formatted_address,geometry,name',
               'key': _apiKey,
               'language': language,
             },
@@ -284,11 +288,20 @@ class MapsService {
 
           final lat = (location['lat'] as num?)?.toDouble();
           final lng = (location['lng'] as num?)?.toDouble();
-          final formattedAddress = result['formatted_address'] as String? ?? description;
+          // Full address — kept intact (not shortened) since this is what's
+          // actually sent to the backend/driver for navigation. Prefer the
+          // autocomplete prediction's `description` since it already
+          // includes the place NAME, whereas Place Details'
+          // `formatted_address` is just the bare street address.
+          final formattedAddress = description.isNotEmpty
+              ? description
+              : (result['formatted_address'] as String? ?? '');
+          final placeName = result['name'] as String? ?? '';
 
           if (lat == null || lng == null) return null;
           return PlaceResult(
             address: formattedAddress,
+            name: placeName,
             latLng: LatLng(lat, lng),
           );
         } catch (e, s) {

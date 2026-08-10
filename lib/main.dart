@@ -22,6 +22,10 @@ import 'widgets/idle_timeout_wrapper.dart';
 // Resolved after WidgetsFlutterBinding.ensureInitialized() in main()
 final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
 
+// Top-level so ApiService can also trigger a redirect to LoginScreen (e.g.
+// when a refresh token turns out to be invalid), not just IdleTimeoutWrapper.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 /// Returns the locale matching the device system language.
 /// Falls back to English if the device language is not supported.
 Locale _resolveDeviceLocale() {
@@ -67,9 +71,18 @@ void main() async {
 
   await dotenv.load(fileName: '.env');
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } on FirebaseException catch (e) {
+    // Benign on hot restart: the native process (and its Firebase app
+    // instance) survives a Dart-only restart — `Firebase.apps` is a
+    // Dart-side cache that resets even though the native app is still
+    // registered, so checking it first doesn't help; the native call
+    // itself throws "[core/duplicate-app] ... already exists" instead.
+    if (e.code != 'duplicate-app') rethrow;
+  }
 
   await NotificationService.instance.initialize();
 
@@ -96,8 +109,6 @@ class AutoRideApp extends StatefulWidget {
 }
 
 class _AutoRideAppState extends State<AutoRideApp> {
-  final navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   void initState() {
     super.initState();
