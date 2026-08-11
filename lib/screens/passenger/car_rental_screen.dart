@@ -1160,11 +1160,13 @@ class _SummaryRow extends StatelessWidget {
   final String label, value;
   const _SummaryRow(this.label, this.value);
   @override
-  Widget build(BuildContext context) => Row(children: [
+  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
-    const Spacer(),
-    Text(value, style: TextStyle(color: context.appTextPrimary,
-        fontWeight: FontWeight.w600, fontSize: 14)),
+    const SizedBox(width: 12),
+    Expanded(
+      child: Text(value, textAlign: TextAlign.right, style: TextStyle(color: context.appTextPrimary,
+          fontWeight: FontWeight.w600, fontSize: 14)),
+    ),
   ]);
 }
 

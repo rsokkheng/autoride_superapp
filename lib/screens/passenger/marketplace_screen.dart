@@ -3402,10 +3402,13 @@ class _SumRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-      Text(amount, style: TextStyle(
-          color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Text(amount, textAlign: TextAlign.right, style: TextStyle(
+            color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+      ),
     ]),
   );
 }
