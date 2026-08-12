@@ -17,10 +17,28 @@ class DirectionsResult {
   final List<LatLng> points;
   final int    etaMinutes;
   final double distanceKm;
+  // Turn-by-turn steps — only populated when getRoute is called with
+  // includeSteps: true (Grab-style navigation banner).
+  final List<RouteStep> steps;
   const DirectionsResult({
     required this.points,
     required this.etaMinutes,
     required this.distanceKm,
+    this.steps = const [],
+  });
+}
+
+/// A single turn-by-turn maneuver, e.g. "turn left onto Boon Tat St".
+class RouteStep {
+  final String maneuver;      // e.g. 'turn-left', 'straight', 'turn-right'
+  final String instruction;   // raw HTML-stripped instruction from Google
+  final double distanceMeters;
+  final LatLng endLocation;
+  const RouteStep({
+    required this.maneuver,
+    required this.instruction,
+    required this.distanceMeters,
+    required this.endLocation,
   });
 }
 
@@ -41,6 +59,7 @@ class MapsService {
   static Future<DirectionsResult?> getRoute({
     required LatLng origin,
     required LatLng destination,
+    bool includeSteps = false,
   }) async {
     final url = Uri.parse(
         'https://routes.googleapis.com/directions/v2:computeRoutes');
@@ -76,8 +95,11 @@ class MapsService {
           'Content-Type':      'application/json',
           'X-Goog-Api-Key':    _apiKey,
           // Only request the fields we use — avoids being billed for extras
-          'X-Goog-FieldMask':
-              'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline',
+          'X-Goog-FieldMask': includeSteps
+              ? 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,'
+                'routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters,'
+                'routes.legs.steps.endLocation'
+              : 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline',
         },
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 10));
@@ -107,10 +129,36 @@ class MapsService {
         return null;
       }
 
+      var steps = <RouteStep>[];
+      if (includeSteps) {
+        final legs = route['legs'] as List<dynamic>?;
+        final rawSteps = legs != null && legs.isNotEmpty
+            ? (legs.first as Map<String, dynamic>)['steps'] as List<dynamic>?
+            : null;
+        if (rawSteps != null) {
+          steps = rawSteps.map((s) {
+            final step  = s as Map<String, dynamic>;
+            final nav   = step['navigationInstruction'] as Map<String, dynamic>?;
+            final endLl = (step['endLocation'] as Map<String, dynamic>?)?
+                ['latLng'] as Map<String, dynamic>?;
+            return RouteStep(
+              maneuver:      (nav?['maneuver'] as String? ?? 'STRAIGHT'),
+              instruction:   nav?['instructions'] as String? ?? '',
+              distanceMeters: (step['distanceMeters'] as num?)?.toDouble() ?? 0.0,
+              endLocation:   LatLng(
+                (endLl?['latitude']  as num?)?.toDouble() ?? destination.latitude,
+                (endLl?['longitude'] as num?)?.toDouble() ?? destination.longitude,
+              ),
+            );
+          }).toList();
+        }
+      }
+
       return DirectionsResult(
         points:     _decodePolyline(encoded),
         etaMinutes: (durSec / 60).ceil(),
         distanceKm: distMeters / 1000,
+        steps:      steps,
       );
     } catch (e, s) {
       AppLog.e('Maps', 'getRoute failed', e, s);

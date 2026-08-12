@@ -11,6 +11,8 @@ class VehicleModel {
   final String status;
   final int    capacity;
   final String details;
+  final String color;
+  final String vehicleUrl;
   final UserModel? driver;
 
   const VehicleModel({
@@ -24,6 +26,8 @@ class VehicleModel {
     required this.status,
     required this.capacity,
     required this.details,
+    this.color = '',
+    this.vehicleUrl = '',
     this.driver,
   });
 
@@ -34,7 +38,9 @@ class VehicleModel {
     return VehicleModel(
       id:           _int(json['id']),
       userId:       _int(json['user_id']),
-      licensePlate: _str(json['license_plate']),
+      // Backend sometimes sends the bare `plate` key (e.g. the ride-accept
+      // response's driver_info.vehicle) instead of `license_plate`.
+      licensePlate: _str(json['license_plate'] ?? json['plate']),
       make:         _str(json['make']),
       model:        _str(json['model']),
       year:         _int(json['year']),
@@ -42,6 +48,8 @@ class VehicleModel {
       status:       _str(json['status']),
       capacity:     _int(json['capacity']),
       details:      _str(json['details']),
+      color:        _str(json['color']),
+      vehicleUrl:   _str(json['vehicle_url']),
       driver: json['driver'] != null
           ? UserModel.fromJson(json['driver'] as Map<String, dynamic>)
           : null,

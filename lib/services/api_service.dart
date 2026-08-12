@@ -945,8 +945,23 @@ class ApiService {
 
     if (raw.statusCode == 200) {
       final data    = (body['data'] as Map<String, dynamic>?) ?? body;
-      final rideJson = data['ride'] ?? data;
-      return RideModel.fromJson(rideJson as Map<String, dynamic>);
+      final rideMap = Map<String, dynamic>.from(
+          (data['ride'] as Map<String, dynamic>?) ?? data);
+      _mergeDriverInfo(data, rideMap);
+      // RideModel.fromJson only reads a plain 'stops' list — if the
+      // backend nests it under a different key (e.g. 'way_stops',
+      // 'ride_stops'), this call would silently look like "no stops".
+      final rawStops = rideMap['stops'];
+      if (rawStops == null || (rawStops is List && rawStops.isEmpty)) {
+        final otherStopKeys = rideMap.keys
+            .where((k) => k.toLowerCase().contains('stop'))
+            .toList();
+        if (otherStopKeys.isNotEmpty && otherStopKeys.first != 'stops') {
+          AppLog.w('API',
+              'getRide($id): stops empty but found other stop-like key(s): $otherStopKeys');
+        }
+      }
+      return RideModel.fromJson(rideMap);
     }
 
     final message = body['message'] as String? ?? body['error'] as String? ??
@@ -1614,7 +1629,58 @@ class ApiService {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw = await _rawPost('/rides/$id/accept', {}, token: token);
-    return _parseRideResponse(raw);
+
+    // The accept response nests the driver/vehicle details in a sibling
+    // `driver_info` object rather than inside `ride.driver`/`ride.vehicle`
+    // (the shape RideModel.fromJson expects) — merge them in before
+    // parsing so this data isn't silently dropped. Falls back to the
+    // shared parser (and its error handling) for anything unexpected.
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      return _parseRideResponse(raw);
+    }
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      return _parseRideResponse(raw);
+    }
+
+    final outer = (body['data'] as Map<String, dynamic>?) ?? body;
+    final rideJson = Map<String, dynamic>.from(
+        (outer['ride'] as Map<String, dynamic>?) ?? outer);
+    _mergeDriverInfo(outer, rideJson);
+    return RideModel.fromJson(rideJson);
+  }
+
+  // The `driver_info` sibling object (seen on both the accept response and
+  // plain GET /rides/{id}) carries vehicle/driver details that
+  // RideModel.fromJson doesn't look for on its own (it only reads
+  // ride.driver / ride.vehicle) — merge them in-place so they aren't lost.
+  // Uses ??= so real ride.driver/ride.vehicle data (when present) wins.
+  static void _mergeDriverInfo(
+      Map<String, dynamic> outer, Map<String, dynamic> rideJson) {
+    final driverInfo = outer['driver_info'] as Map<String, dynamic>?;
+    if (driverInfo == null) return;
+    rideJson['driver'] ??= {
+      'name':       driverInfo['name'],
+      'phone':      driverInfo['phone'],
+      'avatar_url': driverInfo['avatar_url'],
+      'rating':     driverInfo['rating'],
+    };
+    final vehicleInfo = driverInfo['vehicle'] as Map<String, dynamic>?;
+    if (vehicleInfo != null &&
+        (rideJson['vehicle'] == null ||
+            (rideJson['vehicle'] as Map).isEmpty)) {
+      rideJson['vehicle'] = {
+        'license_plate': vehicleInfo['plate'],
+        'make':          vehicleInfo['make'],
+        'model':         vehicleInfo['model'],
+        'type':          vehicleInfo['type'],
+        'year':          vehicleInfo['year'],
+        'color':         vehicleInfo['color'],
+        'vehicle_url':   vehicleInfo['vehicle_url'],
+      };
+    }
   }
 
   static Future<RideModel> completeRide(
@@ -3309,6 +3375,13 @@ class ApiService {
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
       final list = _extractStopsList(body['data']);
+      if (list.isEmpty) {
+        // Log the raw shape so a genuine backend data/shape mismatch is
+        // distinguishable from "this ride really has no stops" — this
+        // response has been observed coming back empty for rides that
+        // should have stops.
+        AppLog.w('API', 'getRideStops($rideId): empty after 200 — raw body: ${raw.body}');
+      }
       return list.whereType<Map<String, dynamic>>().map(RideStopModel.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);

@@ -80,7 +80,28 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
         automaticallyImplyLeading: false,
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+            onPressed: () => Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TripReceiptScreen(
+                  rideId:           widget.rideId,
+                  from:             widget.from.isNotEmpty ? widget.from : '--',
+                  to:               widget.to.isNotEmpty   ? widget.to   : '--',
+                  stops:            widget.stops,
+                  driverName:       widget.driverName,
+                  starsGiven:       0,
+                  fareTotal:        widget.fare,
+                  baseFareKhr:      widget.baseFareKhr ?? 0,
+                  distanceFeeKhr:   widget.distanceFeeKhr ?? 0,
+                  surgeKhr:         0,
+                  promoDiscountKhr: 0,
+                  distanceKm:       widget.distanceKm,
+                  durationMin:      widget.durationMin,
+                  paymentMethod:    widget.paymentMethod,
+                  tripDate:         DateTime.now(),
+                ),
+              ),
+            ),
             child: Text('Skip', style: TextStyle(color: context.appTextSecondary)),
           ),
         ],

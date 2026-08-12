@@ -59,6 +59,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   double _distanceKm    = 0.0;
   DateTime? _lastRouteFetch;
 
+  // Turn-by-turn navigation banner (Grab-style)
+  List<RouteStep> _navSteps = [];
+  int    _currentStepIndex = 0;
+  double _speedKmh = 0.0;
+  bool   _navBannerDismissed = false;
+
   // Client-side trip distance/duration fallback when API doesn't return them
   double?   _tripDistanceKm;
   DateTime? _tripStartTime;
@@ -127,6 +133,27 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       : widget.fare;
 
   String get _driverId => widget.ride?.driverId?.toString() ?? 'unknown';
+
+  String get _serviceLabel {
+    switch (widget.ride?.serviceType) {
+      case 'motorcycle': return 'Bike';
+      case 'tuk_tuk':     return 'Tuk-Tuk';
+      default:            return 'Car';
+    }
+  }
+
+  String get _paymentLabel {
+    switch (widget.ride?.paymentMethod) {
+      case 'aba':    return 'ABA Pay';
+      case 'wing':   return 'Wing';
+      case 'wallet': return 'ROTEH Pay';
+      default:       return 'Cash';
+    }
+  }
+
+  String get _distanceLabel => _distanceKm < 1
+      ? '${(_distanceKm * 1000).round()} m'
+      : '${_distanceKm.toStringAsFixed(1)} km';
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────────
 
@@ -413,6 +440,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       ..reset()
       ..forward();
 
+    // position.speed is m/s — clamp negatives (GPS noise when stationary).
+    _speedKmh = (position.speed * 3.6).clamp(0, 999);
+    _advanceNavStep(pos);
+
     // Auto-detect arrival at pickup (within 80 m → advance phase automatically)
     if (_phase == _TripPhase.headingToPickup) {
       final distToPickup = _distanceMetres(pos, _pickupLatLng);
@@ -443,6 +474,56 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       _lastRouteFetch = now;
       _fetchLiveRoute(pos);
     }
+  }
+
+  // Advance the turn-by-turn banner to the next maneuver once the driver
+  // gets close to the current step's end point.
+  void _advanceNavStep(LatLng pos) {
+    while (_currentStepIndex < _navSteps.length - 1 &&
+        _distanceMetres(pos, _navSteps[_currentStepIndex].endLocation) <= 30) {
+      _currentStepIndex++;
+    }
+  }
+
+  // ── Turn-by-turn banner helpers ──────────────────────────────────────────
+
+  static IconData _maneuverIcon(String maneuver) {
+    switch (maneuver) {
+      case 'TURN_SHARP_LEFT':
+      case 'TURN_LEFT':          return Icons.turn_left_rounded;
+      case 'TURN_SLIGHT_LEFT':   return Icons.turn_slight_left_rounded;
+      case 'TURN_SHARP_RIGHT':
+      case 'TURN_RIGHT':         return Icons.turn_right_rounded;
+      case 'TURN_SLIGHT_RIGHT':  return Icons.turn_slight_right_rounded;
+      case 'UTURN_LEFT':
+      case 'UTURN_RIGHT':        return Icons.u_turn_left_rounded;
+      case 'RAMP_LEFT':
+      case 'FORK_LEFT':          return Icons.fork_left_rounded;
+      case 'RAMP_RIGHT':
+      case 'FORK_RIGHT':         return Icons.fork_right_rounded;
+      case 'ROUNDABOUT_LEFT':
+      case 'ROUNDABOUT_RIGHT':   return Icons.roundabout_left_rounded;
+      case 'MERGE':              return Icons.merge_rounded;
+      default:                   return Icons.straight_rounded;
+    }
+  }
+
+  // "Turn left onto Boon Tat St" → "Boon Tat St"; falls back to the full
+  // instruction when there's no "onto"/"toward" clause to isolate.
+  static String _navStreetName(RouteStep step) {
+    final text = step.instruction;
+    final match = RegExp(r'onto (.+)$', caseSensitive: false).firstMatch(text);
+    return match?.group(1) ?? (text.isEmpty ? 'Continue straight' : text);
+  }
+
+  String _navDistanceLabel(RouteStep step) {
+    final pos = _driverLatLng;
+    final meters = pos != null
+        ? _distanceMetres(pos, step.endLocation)
+        : step.distanceMeters;
+    return meters >= 1000
+        ? '${(meters / 1000).toStringAsFixed(1)} km'
+        : '${meters.round()} m';
   }
 
   void _autoArriveAtPickup() {
@@ -479,14 +560,17 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     if (destination == null) return;
 
     final result = await MapsService.getRoute(
-      origin:      driverPos,
-      destination: destination,
+      origin:       driverPos,
+      destination:  destination,
+      includeSteps: true,
     );
     if (!mounted || result == null) return;
 
     setState(() {
       _etaMinutes = result.etaMinutes;
       _distanceKm = result.distanceKm;
+      _navSteps = result.steps;
+      _currentStepIndex = 0;
       _polylines
         ..removeWhere((p) => p.polylineId.value == 'live_route')
         ..add(Polyline(
@@ -1128,6 +1212,47 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           zoomControlsEnabled: false,
         ),
 
+        // ── Turn-by-turn navigation banner (Grab-style) ────────────────────────
+        if (!_navBannerDismissed && !isCompleted && _navSteps.isNotEmpty &&
+            _currentStepIndex < _navSteps.length &&
+            (_phase == _TripPhase.headingToPickup || _phase == _TripPhase.inProgress))
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: Container(
+              color: const Color(0xFF10151F),
+              padding: EdgeInsets.only(
+                top:    MediaQuery.of(context).padding.top + 10,
+                left:   16, right: 8, bottom: 14,
+              ),
+              child: Row(children: [
+                Icon(_maneuverIcon(_navSteps[_currentStepIndex].maneuver),
+                    color: Colors.white, size: 36),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(_navDistanceLabel(_navSteps[_currentStepIndex]),
+                        style: const TextStyle(color: Colors.white60,
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(_navStreetName(_navSteps[_currentStepIndex]),
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white,
+                            fontSize: 19, fontWeight: FontWeight.w800)),
+                  ]),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _navBannerDismissed = true),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                        color: Colors.white24, shape: BoxShape.circle),
+                    child: const Icon(Icons.close, color: Colors.white, size: 16),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+
         // ── Top bar ───────────────────────────────────────────────────────────
         SafeArea(
           child: Column(children: [
@@ -1229,6 +1354,32 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
               ),
             ]),
             ),
+
+            // Live speed readout (Grab-style) — only while en-route.
+            if (!isCompleted &&
+                (_phase == _TripPhase.headingToPickup || _phase == _TripPhase.inProgress))
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 16, top: 4),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: context.appSurface,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                    ),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Text('${_speedKmh.round()}',
+                          style: TextStyle(color: context.appTextPrimary,
+                              fontSize: 20, fontWeight: FontWeight.w900)),
+                      Text('km/h',
+                          style: TextStyle(color: context.appTextSecondary,
+                              fontSize: 10, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
+              ),
           ]),
         ),
 
@@ -1271,10 +1422,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           ),
 
         // ── Bottom sheet ──────────────────────────────────────────────────────
+        // The CTA button floats fixed at the bottom (via Stack) while the
+        // content column scrolls its full height behind/under it, instead
+        // of the button pushing down and shrinking the scrollable area.
         Positioned(
           bottom: 0, left: 0, right: 0,
           child: Container(
-            padding: EdgeInsets.fromLTRB(20, 16, 20, 32),
             decoration: BoxDecoration(
               color: context.appSurface,
               borderRadius:
@@ -1285,70 +1438,104 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     blurRadius: 20)
               ],
             ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Handle
-              Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: context.appCardBg,
-                      borderRadius: BorderRadius.circular(2))),
-              SizedBox(height: 14),
+            child: Stack(children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  // Handle
+                  Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: context.appCardBg,
+                          borderRadius: BorderRadius.circular(2))),
+                  SizedBox(height: 14),
+
+                  // Everything scrolls together as one area — the compact
+                  // card is just first, so it's what shows by default
+                  // before any scrolling, capped to 50% of screen height.
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                        maxHeight: MediaQuery.of(context).size.height * 0.5),
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 76),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
 
               if (!isCompleted) ...[
-                // Passenger info row
-                Row(children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppTheme.accent.withValues(alpha: 0.2),
-                    child: Text(_passengerName[0],
-                        style: TextStyle(
-                            color: AppTheme.accent,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 16)),
+                // Compact Grab-style trip card — status pill + distance/ETA,
+                // next-address subtitle, payment/fare row with quick actions.
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: context.appCardBg,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_passengerName,
-                            style: TextStyle(
-                                color: context.appTextPrimary,
-                                fontWeight: FontWeight.w700)),
-                        Row(children: [
-                          Icon(Icons.star,
-                              color: AppTheme.gold, size: 13),
-                          SizedBox(width: 3),
-                          Text(widget.passengerRating,
-                              style: TextStyle(
-                                  color: context.appTextSecondary,
-                                  fontSize: 12)),
-                        ]),
-                      ],
-                    ),
-                  ),
-                  Text(_isMetered ? 'Metered' : _fare,
-                      style: TextStyle(
-                          color: AppTheme.accent,
-                          fontSize: _isMetered ? 14 : 20,
-                          fontWeight: FontWeight.w800)),
-                  SizedBox(width: 12),
-                  _ActionBtn(
-                      icon: Icons.call_outlined,
-                      color: AppTheme.success,
-                      label: 'Call',
-                      onTap: _callPassenger),
-                  SizedBox(width: 8),
-                  _ActionBtn(
-                      icon: Icons.chat_bubble_outline,
-                      color: AppTheme.accent,
-                      label: 'Chat',
-                      onTap: _openRideChat),
-                ]),
-                SizedBox(height: 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: _phaseColor, borderRadius: BorderRadius.circular(20)),
+                        child: Text(_serviceLabel,
+                            style: const TextStyle(color: Colors.white,
+                                fontSize: 11, fontWeight: FontWeight.w800)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_phaseLabel,
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.appTextPrimary,
+                                fontWeight: FontWeight.w700, fontSize: 14)),
+                      ),
+                      if (_etaMinutes > 0)
+                        Text('$_distanceLabel  |  $_etaMinutes min',
+                            style: TextStyle(color: _phaseColor,
+                                fontWeight: FontWeight.w800, fontSize: 13)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text(_phase == _TripPhase.inProgress ? _destAddr : _pickupAddr,
+                        maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                    Divider(height: 22, color: context.appSurface),
+                    Row(children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                            color: context.appTextPrimary, borderRadius: BorderRadius.circular(6)),
+                        child: Text(_paymentLabel,
+                            style: TextStyle(color: context.appSurface,
+                                fontSize: 10, fontWeight: FontWeight.w700)),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(_isMetered ? 'Metered' : _fare,
+                            style: TextStyle(color: context.appTextPrimary,
+                                fontWeight: FontWeight.w800, fontSize: 15)),
+                      ),
+                      GestureDetector(
+                        onTap: _openRideChat,
+                        child: Icon(Icons.chat_bubble_outline,
+                            size: 20, color: context.appTextSecondary),
+                      ),
+                      const SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: _callPassenger,
+                        child: Icon(Icons.call_outlined,
+                            size: 20, color: context.appTextSecondary),
+                      ),
+                      const SizedBox(width: 16),
+                      GestureDetector(
+                        onTap: _showSOS,
+                        child: Icon(Icons.more_horiz,
+                            size: 22, color: context.appTextSecondary),
+                      ),
+                    ]),
+                  ]),
+                ),
 
-                // Route card
                 Container(
                   padding: EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1443,8 +1630,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     ]),
                   ]),
                 ),
-                SizedBox(height: 14),
-              ] else ...[
+                const SizedBox(height: 14),
+              ],
+
+              if (isCompleted) ...[
                 Container(
                   padding: EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -1466,29 +1655,39 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                 ),
                 const SizedBox(height: 14),
               ],
-
-              // CTA button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _completing ? null : _advancePhase,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        isCompleted ? AppTheme.success : _phaseColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
+                      ]),
+                    ),
                   ),
-                  child: _completing
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5))
-                      : Text(_ctaLabel,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w800, fontSize: 14)),
+                ]),
+              ),
+
+              // CTA button — floats fixed at the bottom, over the
+              // scrollable content above.
+              Positioned(
+                left: 20, right: 20, bottom: 20,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _completing ? null : _advancePhase,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          isCompleted ? AppTheme.success : _phaseColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(28)),
+                      elevation: 4,
+                    ),
+                    child: _completing
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2.5))
+                        : Text(_ctaLabel,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w800, fontSize: 14)),
+                  ),
                 ),
               ),
             ]),
@@ -1516,33 +1715,6 @@ class _SummaryStat extends StatelessWidget {
       Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
     ]);
   }
-}
-
-class _ActionBtn extends StatelessWidget {
-  final IconData     icon;
-  final Color        color;
-  final VoidCallback onTap;
-  final String?      label;
-  const _ActionBtn(
-      {required this.icon, required this.color, required this.onTap, this.label});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          if (label != null) ...[
-            const SizedBox(height: 4),
-            Text(label!,
-                style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-          ],
-        ]),
-      );
 }
 
 const String _kDarkMapStyle =

@@ -1135,6 +1135,12 @@ class _RideRequestCardState extends State<_RideRequestCard> {
     _timer?.cancel();
     setState(() => _acting = true);
     try {
+      // The accept response's `driver_info` just echoes the accepting
+      // driver's own profile (name/vehicle) — not needed here since the
+      // driver already has that locally. Keep using widget.ride, which
+      // carries the full pickup/dropoff coordinates from the original
+      // ride-request payload (the accept response's `ride` object omits
+      // them per the backend spec).
       await ApiService.acceptRide(widget.ride.id);
       if (!mounted) return;
       // Delegate all state changes and navigation to the parent dashboard.

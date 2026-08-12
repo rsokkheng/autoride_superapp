@@ -15,7 +15,9 @@ import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
 import '../../services/marker_icon_service.dart';
 import '../../models/driver_marker_model.dart';
+import '../../models/ride_model.dart';
 import 'rate_driver_screen.dart';
+import 'safety_screen.dart';
 import '../shared/ride_chat_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/location_display.dart';
@@ -91,6 +93,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   final Set<Marker>   _markers   = {};
   final Set<Polyline> _polylines = {};
 
+  // Route detail card starts collapsed to a small chevron (Grab-style) —
+  // tap to expand the full pickup/stops/dropoff breakdown.
+  bool _routeCardExpanded = false;
+
   // Pulse animation controller — reserved for a future "searching" ripple UI
   late AnimationController _pulseController;
 
@@ -130,6 +136,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   late String _plate;
   String  _currentDriverId = '';
   String? _driverAvatarUrl;
+  String? _vehiclePhotoUrl;
   Timer? _ridePollTimer;
 
   // One-shot guard so the "driver is arriving" alert fires only once per
@@ -233,9 +240,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _polylines.add(Polyline(
       polylineId: const PolylineId('full_route'),
       points:     [_pickupPoint, _destPoint],
-      color:      const Color(0x55888888),
-      width:      4,
-      patterns:   [PatternItem.dash(16), PatternItem.gap(8)],
+      color:      _kGreen,
+      width:      5,
+      startCap:   Cap.roundCap,
+      endCap:     Cap.roundCap,
+      jointType:  JointType.round,
     ));
   }
 
@@ -259,9 +268,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         ..add(Polyline(
           polylineId: const PolylineId('full_route'),
           points:     routedPoints,
-          color:      const Color(0x55888888),
-          width:      4,
-          patterns:   [PatternItem.dash(16), PatternItem.gap(8)],
+          color:      _kGreen,
+          width:      5,
+          startCap:   Cap.roundCap,
+          endCap:     Cap.roundCap,
+          jointType:  JointType.round,
         ));
     });
   }
@@ -309,12 +320,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         flat:       true, // marker rotates with map bearing
       ));
     });
-
-    // Camera: fit driver + next waypoint so both are always visible
-    final waypoint = _driverAssigned && _lastUpdate?.status == TripStatus.inProgress
-        ? _destPoint
-        : _pickupPoint;
-    _fitCamera(pos, waypoint);
   }
 
   void _fitCamera(LatLng a, LatLng b) {
@@ -366,6 +371,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
     _checkArrivingSoon(pos);
     _checkArrivingAtDestination(pos);
+
+    // Camera: fit driver + next waypoint so both are always visible — once
+    // per real GPS update, not every animation frame (was previously
+    // called from the 60fps marker-lerp tick, thrashing the camera).
+    final waypoint = _driverAssigned && _lastUpdate?.status == TripStatus.inProgress
+        ? _destPoint
+        : _pickupPoint;
+    _fitCamera(pos, waypoint);
 
     // Throttle Routes API calls — at most once every 15 s
     final now = DateTime.now();
@@ -638,16 +651,102 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     }
   }
 
+  bool _navigatingToRating = false;
+
+  // Central place _rideStatus gets updated from (Firestore + REST poll) —
+  // auto-navigates to the rating screen once the trip is actually
+  // completed, instead of relying on a manual button (previously mislabeled
+  // "I'm here" and wired to fire on driver-arrived-at-pickup, not
+  // trip completion).
+  void _setRideStatus(String status) {
+    if (!mounted) return;
+    setState(() => _rideStatus = status);
+    if (status == 'completed') {
+      _navigateToRating();
+    }
+    if (status == 'completed' || status == 'cancelled') {
+      _ridePollTimer?.cancel();
+      _ridePollTimer = null;
+    }
+  }
+
+  Future<void> _navigateToRating() async {
+    if (_navigatingToRating) return;
+    _navigatingToRating = true;
+
+    // Fetch final ride to get server-confirmed distance/duration/addresses
+    double? distKm;
+    int?    durMin;
+    String  fromAddr = widget.from;
+    String  toAddr   = widget.to;
+    String  payMethod    = 'cash';
+    int?    baseFareKhr;
+    int?    distFeeKhr;
+    // Was set once at booking time — for a metered (no-destination) ride
+    // the real fare isn't known until completion, so this starts as a
+    // placeholder. Overwritten below once the fresh fare comes back.
+    String  fareText = widget.fare;
+    if (widget.rideId != null) {
+      try {
+        final r = await ApiService.getRide(widget.rideId!);
+        distKm = r.distanceKm;
+        durMin = r.durationMin;
+        if (r.pickupAddress.isNotEmpty)  fromAddr = r.pickupAddress;
+        if (r.dropoffAddress.isNotEmpty) toAddr   = r.dropoffAddress;
+        if (r.paymentMethod != null && r.paymentMethod!.isNotEmpty) {
+          payMethod = r.paymentMethod!;
+        }
+        // Derive base fare and distance fee from total. Base fare is ~40%
+        // of total; distance fee is the remainder (both pre-surge).
+        final totalKhr = r.fareKhr;
+        if (totalKhr > 0) {
+          fareText = AppTheme.khr(totalKhr);
+          final surge = r.surgeMultiplier ?? 1.0;
+          final preSurge = (totalKhr / surge).round();
+          baseFareKhr = (preSurge * 0.4).round();
+          distFeeKhr  = totalKhr - baseFareKhr;
+        }
+      } catch (_) {}
+    }
+    // Fall back to live-tracked distance if the server didn't return one.
+    if ((distKm == null || distKm <= 0) && _distanceKm > 0) {
+      distKm = _distanceKm;
+    }
+    if (!mounted) return;
+    // Dispose map before replacing route to avoid iOS
+    // "recreating_view" PlatformException.
+    _mapController?.dispose();
+    _mapController = null;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+          builder: (_) => RateDriverScreen(
+                rideId:         widget.rideId,
+                driverName:     _driverName,
+                fare:           fareText,
+                distanceKm:     distKm,
+                durationMin:    durMin,
+                from:           fromAddr,
+                to:             toAddr,
+                stops:          widget.wayStops.map((s) => s.address).toList(),
+                paymentMethod:  payMethod,
+                baseFareKhr:    baseFareKhr,
+                distanceFeeKhr: distFeeKhr,
+              )),
+    );
+  }
+
   void _onFirestoreRideStatus(Map<String, dynamic> data) {
     final status   = data['status']    as String? ?? '';
     final driverId = data['driver_id'] as String? ?? '';
 
-    // Cancel the polling timer once Firestore is delivering status
-    _ridePollTimer?.cancel();
-    _ridePollTimer = null;
+    // Deliberately NOT cancelling _ridePollTimer here — Firestore firing
+    // once doesn't guarantee it'll fire again for later transitions (e.g.
+    // "completed"), so the REST poll stays as the reliable fallback for
+    // the whole trip.
 
     if (status.isNotEmpty && mounted) {
-      setState(() => _rideStatus = status);
+      _setRideStatus(status);
     }
 
     if (status == 'accepted' && driverId.isNotEmpty &&
@@ -659,6 +758,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _firestoreSub = LocationService.instance
           .listenDriver(driverId)
           .listen(_onDriverMarker);
+      // Firestore's driver-location doc doesn't include name/vehicle/plate
+      // — fetch those separately.
+      _fetchDriverDetails();
     }
   }
 
@@ -696,10 +798,16 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     super.dispose();
   }
 
-  // ── Ride poll (detects when driver is assigned) ────────────────────────────
+  // ── Ride poll ──────────────────────────────────────────────────────────────
+  // Detects driver assignment AND keeps syncing ride status for the whole
+  // trip — Firestore's rides_live doc isn't reliably written by every
+  // backend path, so this REST fallback is what actually guarantees the
+  // passenger learns about status changes (e.g. "completed") even if
+  // Firestore never fires. Only stops once the ride reaches a terminal
+  // status (see _setRideStatus) or the screen is disposed.
 
   void _startRidePoll() {
-    if (widget.rideId == null || _currentDriverId.isNotEmpty) return;
+    if (widget.rideId == null) return;
     _ridePollTimer =
         Timer.periodic(const Duration(seconds: 5), (_) => _pollRide());
   }
@@ -710,49 +818,82 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       final ride = await ApiService.getRide(widget.rideId!);
       if (!mounted) return;
       // Always sync server status
-      if (ride.status.isNotEmpty) setState(() => _rideStatus = ride.status);
+      if (ride.status.isNotEmpty) _setRideStatus(ride.status);
       if (ride.driverId == null) return;
       final newId = ride.driverId.toString();
       if (newId == _currentDriverId) return;
       setState(() {
         _currentDriverId = newId;
         _arrivingAlertShown = false;
-        _driverName      = ride.driver?.name ?? 'Driver #${ride.driverId}';
-        _driverAvatarUrl = ride.driver?.photoUrl;
-        _driverRating    = ride.driver?.rating != null
-            ? ride.driver!.rating!.toStringAsFixed(1)
-            : '--';
-        _driverTrips     = ride.driver?.totalTrips != null
-            ? ride.driver!.totalTrips!.toString()
-            : '--';
-        _vehicle      = ride.vehicle != null
-            ? '${ride.vehicle!.make} ${ride.vehicle!.model} ${ride.vehicle!.year}'
-            : '--';
-        _vehicleColor = '';
-        _plate        = ride.vehicle?.licensePlate ?? '--';
-        if (ride.vehicle?.type != null) {
-          final newType = DriverMarkerModel.normalise(ride.vehicle!.type);
-          if (newType != _vehicleType) _vehicleType = newType;
-        }
+        _applyDriverDetails(ride);
       });
-      if (ride.vehicle?.type != null) {
-        MarkerIconService.forType(
-            DriverMarkerModel.normalise(ride.vehicle!.type)).then((icon) {
-          if (mounted) setState(() => _driverIcon = icon);
-        });
-      }
+      _afterDriverDetailsApplied(ride);
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
           .listen(_onDriverMarker);
-      _ridePollTimer?.cancel();
-      // Fetch masked phone number for the Call button
-      if (widget.rideId != null) {
-        try {
-          final phone = await ApiService.getMaskedPhone(widget.rideId!);
-          if (mounted) setState(() => _driverPhone = phone);
-        } catch (_) {}
-      }
+    } catch (_) {}
+  }
+
+  // Populates driver/vehicle display fields from a fetched RideModel.
+  // Shared by the REST poll fallback and the Firestore status listener, so
+  // plate/vehicle/name/rating get filled in regardless of which path
+  // detects the driver assignment first.
+  void _applyDriverDetails(RideModel ride) {
+    _driverName      = ride.driver?.name ?? 'Driver #${ride.driverId}';
+    _driverAvatarUrl = ride.driver?.photoUrl;
+    _driverRating    = ride.driver?.rating != null
+        ? ride.driver!.rating!.toStringAsFixed(1)
+        : '--';
+    _driverTrips     = ride.driver?.totalTrips != null
+        ? ride.driver!.totalTrips!.toString()
+        : '--';
+    // Skip the model when it's identical to the make (e.g. tuk-tuks where
+    // both are literally "Tuk Tuk") — avoids "Tuk Tuk Tuk Tuk". No year,
+    // to match the "Color • Make Model" reference style.
+    _vehicle      = ride.vehicle != null
+        ? (ride.vehicle!.make.trim().toLowerCase() ==
+                ride.vehicle!.model.trim().toLowerCase()
+            ? ride.vehicle!.make
+            : '${ride.vehicle!.make} ${ride.vehicle!.model}')
+        : '--';
+    _vehicleColor = ride.vehicle?.color ?? '';
+    _vehiclePhotoUrl = (ride.vehicle?.vehicleUrl.isNotEmpty ?? false)
+        ? ride.vehicle!.vehicleUrl
+        : null;
+    _plate        = ride.vehicle?.licensePlate ?? '--';
+    if (ride.vehicle?.type != null) {
+      final newType = DriverMarkerModel.normalise(ride.vehicle!.type);
+      if (newType != _vehicleType) _vehicleType = newType;
+    }
+  }
+
+  // Side effects that follow applying driver details — marker icon reload
+  // and the masked phone number for the Call button.
+  void _afterDriverDetailsApplied(RideModel ride) {
+    if (ride.vehicle?.type != null) {
+      MarkerIconService.forType(
+          DriverMarkerModel.normalise(ride.vehicle!.type)).then((icon) {
+        if (mounted) setState(() => _driverIcon = icon);
+      });
+    }
+    if (widget.rideId != null) {
+      ApiService.getMaskedPhone(widget.rideId!).then((phone) {
+        if (mounted) setState(() => _driverPhone = phone);
+      }).catchError((_) {});
+    }
+  }
+
+  // Firestore reports a driver assignment faster than the REST poll, but
+  // (unlike _pollRide) doesn't carry name/vehicle/plate/rating — fetch the
+  // full ride once so those fields don't stay stuck at their placeholders.
+  Future<void> _fetchDriverDetails() async {
+    if (widget.rideId == null) return;
+    try {
+      final ride = await ApiService.getRide(widget.rideId!);
+      if (!mounted) return;
+      setState(() => _applyDriverDetails(ride));
+      _afterDriverDetailsApplied(ride);
     } catch (_) {}
   }
 
@@ -835,11 +976,46 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
             mapType: MapType.normal,
           ),
 
-          // ── Route card (top) ───────────────────────────────────────────
+          // ── Route card (top) — collapses to a chevron, Grab-style ──────
           SafeArea(
             child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              child: Container(
+              child: !_routeCardExpanded
+                  ? GestureDetector(
+                      onTap: () => setState(() => _routeCardExpanded = true),
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: context.appSurface,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 10, offset: Offset(0, 4))
+                          ],
+                        ),
+                        child: Icon(Icons.keyboard_arrow_down_rounded,
+                            color: context.appTextPrimary, size: 22),
+                      ),
+                    )
+                  : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                GestureDetector(
+                  onTap: () => setState(() => _routeCardExpanded = false),
+                  child: Container(
+                    width: 40, height: 40,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: context.appSurface,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 10, offset: Offset(0, 4))
+                      ],
+                    ),
+                    child: Icon(Icons.keyboard_arrow_up_rounded,
+                        color: context.appTextPrimary, size: 22),
+                  ),
+                ),
+                Container(
                 decoration: BoxDecoration(
                   color: context.appSurface,
                   borderRadius: BorderRadius.circular(14),
@@ -958,6 +1134,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                   ],
                 ),
               ),
+              ]),
             ),
           ),
 
@@ -1006,6 +1183,31 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
             ]),
           ),
 
+          // ── Safety Centre pill ──────────────────────────────────────────
+          Positioned(
+            left: 14,
+            bottom: 302,
+            child: GestureDetector(
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const SafetyScreen())),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: context.appSurface,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 8)],
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.shield_outlined, color: _kGreen, size: 16),
+                  const SizedBox(width: 6),
+                  Text('SAFETY CENTRE',
+                      style: TextStyle(color: _kGreen,
+                          fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+                ]),
+              ),
+            ),
+          ),
+
           // ── Bottom sheet ──────────────────────────────────────────────
           Positioned(
             bottom: 0, left: 0, right: 0,
@@ -1037,131 +1239,177 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                         ),
                       ),
 
-                      // Status
-                      Text(_statusTitle,
-                          style: TextStyle(
-                              color: context.appTextPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700)),
-                      SizedBox(height: 4),
-                      if (_driverAssigned) ...[
-                        RichText(
-                          text: TextSpan(
-                            style: TextStyle(fontSize: 13, color: context.appTextSecondary),
-                            children: [
-                              TextSpan(
-                                text: _hasWayStops &&
+                      // Status card — Grab-style: title + ETA on the right,
+                      // next-address subtitle below.
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: context.appCardBg,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            Expanded(
+                              child: Text(_statusTitle,
+                                  style: TextStyle(
+                                      color: context.appTextPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800)),
+                            ),
+                            if (_driverAssigned)
+                              Text(_isArrived ? 'Now' : '$eta min',
+                                  style: TextStyle(
+                                      color: context.appTextPrimary,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800)),
+                          ]),
+                          const SizedBox(height: 4),
+                          Text(
+                            !_driverAssigned
+                                ? 'Looking for a nearby driver…'
+                                : (_hasWayStops &&
                                         _rideStatus == 'in_progress' &&
                                         _nextStopIndex < widget.wayStops.length
-                                    ? 'Stop ${_nextStopIndex + 1} in '
-                                    : 'Arriving in ',
-                              ),
-                              TextSpan(
-                                text: _isArrived ? 'Now' : _etaCountdownText,
-                                style: TextStyle(
-                                    color: _kGreen, fontWeight: FontWeight.w700),
-                              ),
-                              if (!_isArrived) TextSpan(text: ' · $dist km'),
-                            ],
+                                    ? 'Stop ${_nextStopIndex + 1} · $dist km'
+                                    : (_rideStatus == 'in_progress' ? widget.to : widget.from)),
+                            style: TextStyle(fontSize: 13, color: context.appTextSecondary),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                        // Per-stop ETA list (shown only during in_progress with stops)
-                        if (_hasWayStops && _rideStatus == 'in_progress' &&
-                            _stopEtas.isNotEmpty) ...[
-                          SizedBox(height: 10),
-                          _StopEtaList(
-                            wayStops:       widget.wayStops,
-                            destination:    widget.to,
-                            nextStopIndex:  _nextStopIndex,
-                            stopEtas:       _stopEtas,
-                          ),
-                        ],
-                      ] else
-                        Text('Looking for a nearby driver…',
-                            style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
-                      SizedBox(height: 8),
+                          // Per-stop ETA list (shown only during in_progress with stops)
+                          if (_driverAssigned && _hasWayStops && _rideStatus == 'in_progress' &&
+                              _stopEtas.isNotEmpty) ...[
+                            SizedBox(height: 10),
+                            _StopEtaList(
+                              wayStops:       widget.wayStops,
+                              destination:    widget.to,
+                              nextStopIndex:  _nextStopIndex,
+                              stopEtas:       _stopEtas,
+                            ),
+                          ],
+                          // Fare — only shown when the ride has a set
+                          // destination; a metered (no-destination) ride's
+                          // final fare isn't known until it's completed.
+                          if (widget.destLatLng != null) ...[
+                            SizedBox(height: 8),
+                            Row(children: [
+                              Text('Fare',
+                                  style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
+                              const Spacer(),
+                              Text(widget.fare,
+                                  style: TextStyle(color: _kGreen,
+                                      fontSize: 15, fontWeight: FontWeight.w800)),
+                            ]),
+                          ],
+                        ]),
+                      ),
+                      SizedBox(height: 12),
 
-                      // Driver + Car
-                      Row(children: [
-                        CircleAvatar(
-                          radius: 22,
-                          backgroundColor: context.appCardBg,
-                          foregroundImage: _driverAvatarUrl != null
-                              ? CachedNetworkImageProvider(_driverAvatarUrl!)
-                              : null,
-                          child: Text(
-                            _driverName.isNotEmpty
-                                ? _driverName[0].toUpperCase()
-                                : 'D',
-                            style: TextStyle(
-                                color: context.appTextPrimary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700),
+                      // Driver card (avatar/plate/rating + chat/call) — only
+                      // once a driver is actually assigned; nothing to show
+                      // while still searching.
+                      if (_driverAssigned) ...[
+                      // Vehicle photo — full-width banner above the driver card.
+                      if (_vehiclePhotoUrl != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(14),
+                          child: CachedNetworkImage(
+                            imageUrl: _vehiclePhotoUrl!,
+                            width: double.infinity,
+                            height: 140,
+                            fit: BoxFit.cover,
+                            errorWidget: (_, __, ___) => const SizedBox.shrink(),
                           ),
                         ),
-                        SizedBox(width: 12),
+                        const SizedBox(height: 12),
+                      ],
+                      // Driver + Car (Grab-style: plate/vehicle up top, name+rating below)
+                      Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Stack(clipBehavior: Clip.none, children: [
+                          CircleAvatar(
+                            radius: 27,
+                            backgroundColor: context.appCardBg,
+                            foregroundImage: _driverAvatarUrl != null
+                                ? CachedNetworkImageProvider(_driverAvatarUrl!)
+                                : null,
+                            child: Text(
+                              _driverName.isNotEmpty
+                                  ? _driverName[0].toUpperCase()
+                                  : 'D',
+                              style: TextStyle(
+                                  color: context.appTextPrimary,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          Positioned(
+                            right: -4, bottom: -4,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: _kGreen,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: context.appSurface, width: 2),
+                              ),
+                              child: Icon(_vehicleTypeIcon(_vehicleType),
+                                  size: 13, color: Colors.white),
+                            ),
+                          ),
+                        ]),
+                        SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(_driverName,
+                              Text(_plate,
                                   style: TextStyle(
                                       color: context.appTextPrimary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15)),
-                              SizedBox(height: 4),
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 17)),
+                              Text(
+                                _vehicleColor.isNotEmpty
+                                    ? '$_vehicleColor · $_vehicle'
+                                    : _vehicle,
+                                style: TextStyle(
+                                    color: context.appTextSecondary, fontSize: 12),
+                                maxLines: 1, overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: 6),
                               Row(children: [
+                                Expanded(
+                                  child: Text(_driverName,
+                                      style: TextStyle(
+                                          color: context.appTextPrimary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14),
+                                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ),
                                 Icon(Icons.star,
-                                    color: Color(0xFFFFA000), size: 15),
+                                    color: Color(0xFFFFA000), size: 14),
                                 SizedBox(width: 3),
                                 Text(_driverRating,
                                     style: TextStyle(
                                         color: context.appTextSecondary, fontSize: 13)),
-                                if (_driverTrips != '--') ...[
-                                  SizedBox(width: 8),
-                                  Text('$_driverTrips trips',
-                                      style: TextStyle(
-                                          color: context.appTextSecondary, fontSize: 13)),
-                                ],
                               ]),
                             ],
                           ),
                         ),
-                        // Car info
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Icon(_vehicleTypeIcon(_vehicleType),
-                                size: 30, color: context.appTextSecondary),
-                            Text(_plate,
-                                style: TextStyle(
-                                    color: context.appTextPrimary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 13)),
-                            Text(
-                              _vehicleColor.isNotEmpty
-                                  ? '$_vehicle · $_vehicleColor'
-                                  : _vehicle,
-                              style: TextStyle(
-                                  color: context.appTextSecondary, fontSize: 11),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
                       ]),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
+                      ],
 
-                      // Action buttons
+                      // Call, Chat, Share, Cancel — all on one row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           _ActionBtn(
-                            icon: Icons.call_outlined,
+                            icon:  Icons.call_outlined,
                             label: 'Call',
                             onTap: _driverAssigned ? _callDriver : () {},
+                            disabled: !_driverAssigned,
                           ),
                           _ActionBtn(
-                            icon: Icons.chat_bubble_outline,
+                            icon:  Icons.chat_bubble_outline,
                             label: 'Chat',
                             onTap: _openRideChat,
                           ),
@@ -1199,106 +1447,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                             ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-
-                      // Buttons row
-                      Row(children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () async {
-                              if (_isArrived) {
-                                // Fetch final ride to get server-confirmed distance/duration/addresses
-                                double? distKm;
-                                int?    durMin;
-                                String  fromAddr = widget.from;
-                                String  toAddr   = widget.to;
-                                String  payMethod    = 'cash';
-                                int?    baseFareKhr;
-                                int?    distFeeKhr;
-                                // Was set once at booking time — for a metered
-                                // (no-destination) ride the real fare isn't known
-                                // until completion, so this starts as '0'/a
-                                // placeholder. Overwritten below once the fresh
-                                // fare comes back from the server.
-                                String  fareText = widget.fare;
-                                if (widget.rideId != null) {
-                                  try {
-                                    final r = await ApiService.getRide(widget.rideId!);
-                                    distKm = r.distanceKm;
-                                    durMin = r.durationMin;
-                                    if (r.pickupAddress.isNotEmpty)  fromAddr = r.pickupAddress;
-                                    if (r.dropoffAddress.isNotEmpty) toAddr   = r.dropoffAddress;
-                                    if (r.paymentMethod != null && r.paymentMethod!.isNotEmpty) {
-                                      payMethod = r.paymentMethod!;
-                                    }
-                                    // Derive base fare and distance fee from total.
-                                    // Base fare is ~40% of total; distance fee is the remainder
-                                    // (both pre-surge). If surgeMultiplier is present we account
-                                    // for it so the two parts still sum to the displayed total.
-                                    final totalKhr = r.fareKhr;
-                                    if (totalKhr > 0) {
-                                      fareText = AppTheme.khr(totalKhr);
-                                      final surge = r.surgeMultiplier ?? 1.0;
-                                      final preSurge = (totalKhr / surge).round();
-                                      baseFareKhr = (preSurge * 0.4).round();
-                                      distFeeKhr  = totalKhr - baseFareKhr;
-                                    }
-                                  } catch (_) {}
-                                }
-                                // Fall back to live-tracked distance if the server
-                                // didn't return one — checking for a real 0 too,
-                                // since the backend has been observed returning
-                                // that (not null) for a completed metered ride.
-                                if ((distKm == null || distKm <= 0) && _distanceKm > 0) {
-                                  distKm = _distanceKm;
-                                }
-                                if (!mounted) return;
-                                // Dispose map before replacing route to avoid
-                                // iOS "recreating_view" PlatformException.
-                                _mapController?.dispose();
-                                _mapController = null;
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => RateDriverScreen(
-                                            rideId:         widget.rideId,
-                                            driverName:     _driverName,
-                                            fare:           fareText,
-                                            distanceKm:     distKm,
-                                            durationMin:    durMin,
-                                            from:           fromAddr,
-                                            to:             toAddr,
-                                            stops:          widget.wayStops.map((s) => s.address).toList(),
-                                            paymentMethod:  payMethod,
-                                            baseFareKhr:    baseFareKhr,
-                                            distanceFeeKhr: distFeeKhr,
-                                          )),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(const SnackBar(
-                                  content:
-                                      Text('Waiting for driver to arrive...'),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: Duration(seconds: 2),
-                                ));
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.confirmBlue,
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                              elevation: 0,
-                            ),
-                            child: const Text("I'm here",
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700)),
-                          ),
-                        ),
-                      ]),
                     ],
                   ),
                 ),

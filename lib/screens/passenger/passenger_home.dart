@@ -232,7 +232,10 @@ class _HomeTabState extends State<_HomeTab> {
         driverId:     ride.driverId?.toString() ?? '',
         driverName:   ride.driver?.name ?? 'Finding driver...',
         vehicle:      ride.vehicle != null
-            ? '${ride.vehicle!.make} ${ride.vehicle!.model} ${ride.vehicle!.year}'
+            ? (ride.vehicle!.make.trim().toLowerCase() ==
+                    ride.vehicle!.model.trim().toLowerCase()
+                ? ride.vehicle!.make
+                : '${ride.vehicle!.make} ${ride.vehicle!.model}')
             : '--',
         vehicleType:  ride.vehicle?.type ?? 'motorbike',
         plate:        ride.vehicle?.licensePlate ?? '--',
