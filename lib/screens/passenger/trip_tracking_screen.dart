@@ -447,6 +447,25 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   /// Notifies the passenger once when the driver first comes within 50m of
   /// the pickup point, while still en route to pick them up.
+  // "Driver found" alert (sound + notification) — this used to only fire
+  // from the legacy WebSocket TripUpdate stream, which isn't a reliable
+  // signal (same gap as the ride-status one fixed elsewhere in this file).
+  // Now triggered from the same reliable paths (Firestore listener + REST
+  // poll) that already detect a new driver assignment.
+  bool _driverFoundAlertShown = false;
+  void _notifyDriverFound() {
+    if (_driverFoundAlertShown) return;
+    _driverFoundAlertShown = true;
+    // Body deliberately doesn't include the driver's name — this fires
+    // before _fetchDriverDetails()/_applyDriverDetails() resolve, so
+    // _driverName may still be the "Finding driver..." placeholder here.
+    NotificationService.instance.showTripUpdate(
+      title: '🚗 Driver found!',
+      body:  'Your driver is on the way to pick you up.',
+      payload: 'picking_up',
+    );
+  }
+
   void _checkArrivingSoon(LatLng driverPos) {
     if (!_isApproachingPickup || _arrivingAlertShown) return;
     final dist = Geolocator.distanceBetween(
@@ -567,6 +586,38 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     }
   }
 
+  bool _serverCancellationHandled = false;
+
+  // The ride was cancelled by something other than this screen's own
+  // _cancelRide() flow (that path already pops immediately, so by the time
+  // this fires the ride was cancelled server-side — no driver found within
+  // the dispatch window, or the driver cancelled after accepting).
+  void _handleServerCancellation(String? reason) {
+    if (_serverCancellationHandled || !mounted) return;
+    _serverCancellationHandled = true;
+
+    final message = reason == 'no_driver_available'
+        ? 'No driver was available for this ride. Please try booking again.'
+        : 'This ride was cancelled.';
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ride Cancelled'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    ).then((_) {
+      if (mounted) _disposeMapAndPop();
+    });
+  }
+
   // Dispose map controller before pop to avoid iOS "recreating_view" error.
   // The platform view is released asynchronously on UIKit; waiting one frame
   // gives it enough time before the next screen's GoogleMap is created.
@@ -621,7 +672,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       }
 
       if (update.status == TripStatus.pickingUp &&
-          prevStatus == TripStatus.searching) {
+          prevStatus == TripStatus.searching &&
+          !_driverFoundAlertShown) {
+        // Dedup with _notifyDriverFound(), which now reliably covers this
+        // same "driver found" moment via Firestore/poll — this legacy
+        // WebSocket path is kept as a fallback but shouldn't double-alert.
+        _driverFoundAlertShown = true;
         await NotificationService.instance.showTripUpdate(
           title: '🚗 Driver on the way',
           body: '$_driverName is $_etaMinutes min away',
@@ -749,6 +805,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _setRideStatus(status);
     }
 
+    if (status == 'cancelled') {
+      // Firestore's rides_live doc doesn't carry cancellation_reason — poll
+      // immediately rather than waiting up to 5s for the next timer tick.
+      _pollRide();
+    }
+
     if (status == 'accepted' && driverId.isNotEmpty &&
         driverId != _currentDriverId) {
       // New driver assigned — re-subscribe to their live position
@@ -758,6 +820,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _firestoreSub = LocationService.instance
           .listenDriver(driverId)
           .listen(_onDriverMarker);
+      _notifyDriverFound();
       // Firestore's driver-location doc doesn't include name/vehicle/plate
       // — fetch those separately.
       _fetchDriverDetails();
@@ -819,6 +882,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (!mounted) return;
       // Always sync server status
       if (ride.status.isNotEmpty) _setRideStatus(ride.status);
+      if (ride.status == 'cancelled') {
+        _handleServerCancellation(ride.cancellationReason);
+        return;
+      }
       if (ride.driverId == null) return;
       final newId = ride.driverId.toString();
       if (newId == _currentDriverId) return;
@@ -828,6 +895,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         _applyDriverDetails(ride);
       });
       _afterDriverDetailsApplied(ride);
+      _notifyDriverFound();
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)

@@ -61,6 +61,7 @@ class RideModel {
   final String? acceptedAt;
   final String? startedAt;
   final String? completedAt;
+  final String? cancellationReason;
   // "Book Without Destination" — passenger tells the driver in person and
   // the fare is metered/GPS-calculated at trip end.
   final bool noDestination;
@@ -97,6 +98,7 @@ class RideModel {
     this.acceptedAt,
     this.startedAt,
     this.completedAt,
+    this.cancellationReason,
     this.noDestination = false,
     this.stops = const [],
     this.passenger,
@@ -148,6 +150,7 @@ class RideModel {
       acceptedAt:     json['accepted_at']?.toString(),
       startedAt:      json['started_at']?.toString(),
       completedAt:    json['completed_at']?.toString(),
+      cancellationReason: json['cancellation_reason']?.toString(),
       noDestination:  json['no_destination'] as bool? ??
           (json['dropoff_address'] == null && json['dropoff_lat'] == null),
       stops: ((json['stops'] as List<dynamic>?) ?? const [])

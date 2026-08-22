@@ -24,6 +24,7 @@ dependencies:
   web_socket_channel: ^3.0.1
   # Push notifications
   flutter_local_notifications: ^17.2.2
+  audioplayers: ^6.1.0
   # Permissions
   permission_handler: ^11.3.1
   # Media
@@ -69,3 +70,13 @@ flutter:
   assets:
     - .env
     - assets/library/icon_fa.png
+    - assets/Delivery.png
+    - assets/EVStation.png
+    - assets/Family.png
+    - assets/Rental.png
+    - assets/ride.png
+    - assets/MarketPlace.png
+    - assets/sounds/booking.wav
+    - assets/sounds/accepted.wav
+
+

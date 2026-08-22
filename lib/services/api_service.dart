@@ -403,12 +403,23 @@ class ApiService {
 
   // ── FCM device token ─────────────────────────────────────────────────────
 
-  static Future<void> saveFcmToken(String fcmToken) async {
+  // Single endpoint for all roles — the backend now auto-inserts into the
+  // driver_devices multi-device registry when the caller is a driver, so
+  // there's no separate driver-specific call needed on the client side.
+  static Future<void> saveFcmToken(String fcmToken, {required String platform}) async {
     final token = await getToken();
     if (token == null) return;
     try {
-      await _rawPost('/auth/fcm-token', {'fcm_token': fcmToken}, token: token);
-    } catch (_) {}
+      final raw = await _rawPost('/auth/fcm-token', {
+        'fcm_token': fcmToken,
+        'platform':  platform,
+      }, token: token);
+      if (raw.statusCode != 200 && raw.statusCode != 201) {
+        AppLog.w('FCM', 'saveFcmToken failed: HTTP ${raw.statusCode} ${raw.body}');
+      }
+    } catch (e, s) {
+      AppLog.e('FCM', 'saveFcmToken failed', e, s);
+    }
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
@@ -3603,6 +3614,44 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
+  // ── Driver ride history (with earnings summary) ────────────────────────────
+
+  static Future<DriverRideHistoryResult> getDriverRideHistory({
+    String? status,
+    String? from,
+    String? to,
+    int page = 1,
+    int perPage = 15,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final uri = Uri(path: '/driver/rides', queryParameters: {
+      'page':     '$page',
+      'per_page': '$perPage',
+      if (status != null) 'status': status,
+      if (from   != null) 'from':   from,
+      if (to     != null) 'to':     to,
+    });
+    final raw = await _rawGet(uri.toString(), token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data       = (body['data'] as Map<String, dynamic>?) ?? body;
+      final summaryJson = (data['summary'] as Map<String, dynamic>?) ?? const {};
+      final ridesJson   = (data['rides'] as List<dynamic>?) ?? const [];
+      final pageJson    = (data['pagination'] as Map<String, dynamic>?) ?? const {};
+      return DriverRideHistoryResult(
+        summary: DriverRideSummary.fromJson(summaryJson),
+        rides: ridesJson
+            .whereType<Map<String, dynamic>>()
+            .map(RideModel.fromJson)
+            .toList(),
+        currentPage: (pageJson['current_page'] as num?)?.toInt() ?? page,
+        lastPage:    (pageJson['last_page']    as num?)?.toInt() ?? page,
+      );
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load ride history.', raw.statusCode);
+  }
+
   // ── Driver cancellation status ────────────────────────────────────────────
 
   static Future<Map<String, dynamic>> getDriverCancellationStatus() async {
@@ -5822,6 +5871,45 @@ class DriverEarningsHistoryItem {
 
   static int _toInt(dynamic v) =>
       v is int ? v : int.tryParse(v?.toString() ?? '') ?? 0;
+}
+
+// ── Driver ride history ───────────────────────────────────────────────────────
+
+class DriverRideHistoryResult {
+  final DriverRideSummary summary;
+  final List<RideModel>   rides;
+  final int currentPage;
+  final int lastPage;
+  const DriverRideHistoryResult({
+    required this.summary,
+    required this.rides,
+    required this.currentPage,
+    required this.lastPage,
+  });
+}
+
+class DriverRideSummary {
+  final int    totalCompleted;
+  final int    totalEarnedKhr;
+  final double totalKm;
+  final int    totalMinutes;
+  final int    avgFareKhr;
+
+  const DriverRideSummary({
+    required this.totalCompleted,
+    required this.totalEarnedKhr,
+    required this.totalKm,
+    required this.totalMinutes,
+    required this.avgFareKhr,
+  });
+
+  factory DriverRideSummary.fromJson(Map<String, dynamic> j) => DriverRideSummary(
+    totalCompleted: (j['total_completed'] as num?)?.toInt() ?? 0,
+    totalEarnedKhr: (j['total_earned']    as num?)?.toInt() ?? 0,
+    totalKm:        (j['total_km']        as num?)?.toDouble() ?? 0,
+    totalMinutes:   (j['total_minutes']   as num?)?.toInt() ?? 0,
+    avgFareKhr:     (j['avg_fare']        as num?)?.toInt() ?? 0,
+  );
 }
 
 // ── Driver incentive model ────────────────────────────────────────────────────

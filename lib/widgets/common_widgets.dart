@@ -37,6 +37,8 @@ class ServiceCard extends StatelessWidget {
   final String title;
   final Color color;
   final VoidCallback onTap;
+  // When set, renders this PNG (from assets/) instead of the Material icon.
+  final String? imagePath;
 
   const ServiceCard({
     super.key,
@@ -44,6 +46,7 @@ class ServiceCard extends StatelessWidget {
     required this.title,
     required this.color,
     required this.onTap,
+    this.imagePath,
   });
 
   @override
@@ -68,14 +71,16 @@ class ServiceCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 59,
+              height: 59,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 26),
+              child: imagePath != null
+                  ? Image.asset(imagePath!, width: 49, height: 49, fit: BoxFit.contain)
+                  : Icon(icon, color: color, size: 26),
             ),
             const SizedBox(height: 8),
             Text(title,

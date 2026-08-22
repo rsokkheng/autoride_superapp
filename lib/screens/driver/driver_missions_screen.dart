@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/delivery_model.dart';
+import '../../models/ride_model.dart';
 import '../../services/api_service.dart';
 import 'driver_delivery_active_screen.dart';
 
@@ -22,9 +23,9 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
   String? _errorDeliveries;
   String? _errorMovings;
 
-  List<DriverIncentiveModel> _incentives = [];
-  bool    _loadingIncentives = true;
-  String? _errorIncentives;
+  DriverRideHistoryResult? _rideHistory;
+  bool    _loadingRides = true;
+  String? _errorRides;
 
   @override
   void initState() {
@@ -32,18 +33,18 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     _tabController = TabController(length: 3, vsync: this);
     _loadDeliveries();
     _loadMovings();
-    _loadIncentives();
+    _loadRideHistory();
   }
 
-  Future<void> _loadIncentives() async {
-    setState(() { _loadingIncentives = true; _errorIncentives = null; });
+  Future<void> _loadRideHistory() async {
+    setState(() { _loadingRides = true; _errorRides = null; });
     try {
-      final list = await ApiService.getDriverIncentives();
-      if (mounted) setState(() { _incentives = list; _loadingIncentives = false; });
+      final result = await ApiService.getDriverRideHistory();
+      if (mounted) setState(() { _rideHistory = result; _loadingRides = false; });
     } on ApiException catch (e) {
-      if (mounted) setState(() { _errorIncentives = e.message; _loadingIncentives = false; });
+      if (mounted) setState(() { _errorRides = e.message; _loadingRides = false; });
     } catch (_) {
-      if (mounted) setState(() { _errorIncentives = 'Failed to load rental missions.'; _loadingIncentives = false; });
+      if (mounted) setState(() { _errorRides = 'Failed to load ride history.'; _loadingRides = false; });
     }
   }
 
@@ -117,6 +118,9 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
           labelColor: AppTheme.accentOrange,
           unselectedLabelColor: context.appTextSecondary,
           tabs: [
+            const Tab(
+              child: _TabLabel(icon: Icons.electric_rickshaw, label: 'Ride', count: 0),
+            ),
             Tab(
               child: _TabLabel(
                 icon: Icons.delivery_dining_outlined,
@@ -131,13 +135,19 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
                 count: _activeMovings.length,
               ),
             ),
-            const Tab(icon: Icon(Icons.car_rental_outlined), text: 'Rental'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
+          // ── Ride tab ───────────────────────────────────────────────────
+          _RideHistoryTab(
+            loading:  _loadingRides,
+            error:    _errorRides,
+            result:   _rideHistory,
+            onRefresh: _loadRideHistory,
+          ),
           // ── Delivery tab ───────────────────────────────────────────────
           _MissionList(
             loading:  _loadingDeliveries,
@@ -153,13 +163,6 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
             items:    _movings,
             type:     _MissionType.moving,
             onRefresh: _loadMovings,
-          ),
-          // ── Rental tab ─────────────────────────────────────────────────
-          _IncentiveList(
-            loading:  _loadingIncentives,
-            error:    _errorIncentives,
-            items:    _incentives,
-            onRefresh: _loadIncentives,
           ),
         ],
       ),
@@ -689,18 +692,18 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-// ─── Rental vehicle incentives tab ─────────────────────────────────────────────
+// ─── Ride history tab (summary + completed/cancelled rides) ────────────────────
 
-class _IncentiveList extends StatelessWidget {
-  final bool                        loading;
-  final String?                     error;
-  final List<DriverIncentiveModel>  items;
-  final Future<void> Function()     onRefresh;
+class _RideHistoryTab extends StatelessWidget {
+  final bool                     loading;
+  final String?                  error;
+  final DriverRideHistoryResult? result;
+  final Future<void> Function()  onRefresh;
 
-  const _IncentiveList({
+  const _RideHistoryTab({
     required this.loading,
     required this.error,
-    required this.items,
+    required this.result,
     required this.onRefresh,
   });
 
@@ -727,100 +730,142 @@ class _IncentiveList extends StatelessWidget {
       ]));
     }
 
-    if (items.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: onRefresh,
-        color: AppTheme.accentOrange,
-        child: ListView(padding: EdgeInsets.all(32), children: [
-          Icon(Icons.car_rental_outlined, color: context.appTextSecondary, size: 56),
-          SizedBox(height: 16),
-          Text('No rental vehicle missions right now',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
-          SizedBox(height: 8),
-          Text('Check back later for new incentives.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
-        ]),
-      );
-    }
+    final rides   = result?.rides ?? const [];
+    final summary = result?.summary;
 
     return RefreshIndicator(
       onRefresh: onRefresh,
       color: AppTheme.accentOrange,
-      child: ListView.builder(
+      child: ListView(
         padding: EdgeInsets.all(16),
-        itemCount: items.length,
-        itemBuilder: (context, i) => _IncentiveCard(incentive: items[i]),
+        children: [
+          if (summary != null) _RideSummaryCard(summary: summary),
+          SizedBox(height: 16),
+          if (rides.isEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: 48),
+              child: Column(children: [
+                Icon(Icons.electric_rickshaw, color: context.appTextSecondary, size: 56),
+                SizedBox(height: 16),
+                Text('No rides yet',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+              ]),
+            )
+          else
+            ...rides.map((r) => _RideHistoryCard(ride: r)),
+        ],
       ),
     );
   }
 }
 
-class _IncentiveCard extends StatelessWidget {
-  final DriverIncentiveModel incentive;
-  const _IncentiveCard({required this.incentive});
+class _RideSummaryCard extends StatelessWidget {
+  final DriverRideSummary summary;
+  const _RideSummaryCard({required this.summary});
 
   @override
   Widget build(BuildContext context) {
-    final complete = incentive.status == 'completed' || incentive.progress >= 1.0;
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(children: [
+        _SummaryStat(icon: Icons.check_circle_outline,
+            label: 'Completed', value: '${summary.totalCompleted}'),
+        _SummaryStat(icon: Icons.account_balance_wallet_outlined,
+            label: 'Earned', value: AppTheme.khr(summary.totalEarnedKhr)),
+        _SummaryStat(icon: Icons.route_outlined,
+            label: 'Distance', value: '${summary.totalKm.toStringAsFixed(1)} km'),
+        _SummaryStat(icon: Icons.payments_outlined,
+            label: 'Avg fare', value: AppTheme.khr(summary.avgFareKhr)),
+      ]),
+    );
+  }
+}
+
+class _RideHistoryCard extends StatelessWidget {
+  final RideModel ride;
+  const _RideHistoryCard({required this.ride});
+
+  Color get _statusColor => switch (ride.status) {
+    'completed'  => AppTheme.success,
+    'cancelled'  => AppTheme.danger,
+    _            => AppTheme.accentOrange,
+  };
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       padding: EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-            color: complete
-                ? AppTheme.success.withValues(alpha: 0.4)
-                : context.appCardBg),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
             padding: EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: (complete ? AppTheme.success : AppTheme.accentOrange).withValues(alpha: 0.12),
+              color: _statusColor.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              complete ? Icons.check_circle : Icons.car_rental_outlined,
-              color: complete ? AppTheme.success : AppTheme.accentOrange,
-              size: 20,
-            ),
+            child: Icon(Icons.electric_rickshaw, color: _statusColor, size: 20),
           ),
           SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(incentive.title,
+            Text(ride.passenger?.name ?? 'Passenger #${ride.passengerId}',
                 style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-            if (incentive.description.isNotEmpty) ...[
-              SizedBox(height: 2),
-              Text(incentive.description,
+            SizedBox(height: 2),
+            Text('${ride.pickupAddress} → ${ride.dropoffAddress}',
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          ])),
+          Text(AppTheme.khr(ride.fareKhr),
+              style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w800, fontSize: 14)),
+        ]),
+        SizedBox(height: 10),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Row(children: [
+            if (ride.distanceKm != null) ...[
+              Icon(Icons.route_outlined, size: 13, color: context.appTextSecondary),
+              SizedBox(width: 3),
+              Text('${ride.distanceKm!.toStringAsFixed(1)} km',
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+              SizedBox(width: 10),
+            ],
+            if (ride.durationMin != null) ...[
+              Icon(Icons.timer_outlined, size: 13, color: context.appTextSecondary),
+              SizedBox(width: 3),
+              Text('${ride.durationMin} min',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
             ],
-          ])),
-          if (incentive.reward > 0)
-            Text(AppTheme.khr(incentive.reward),
-                style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w800, fontSize: 14)),
+          ]),
+          Text(ride.status[0].toUpperCase() + ride.status.substring(1),
+              style: TextStyle(color: _statusColor, fontWeight: FontWeight.w600, fontSize: 12)),
         ]),
-        SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: LinearProgressIndicator(
-            value: incentive.progress,
-            minHeight: 6,
-            backgroundColor: context.appCardBg,
-            valueColor: AlwaysStoppedAnimation(complete ? AppTheme.success : AppTheme.accentOrange),
-          ),
-        ),
-        SizedBox(height: 6),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('${incentive.current.toStringAsFixed(0)} / ${incentive.target.toStringAsFixed(0)}',
-              style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-          if (incentive.expiresAt != null)
-            Text('Expires ${incentive.expiresAt!.month}/${incentive.expiresAt!.day}',
-                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-        ]),
+      ]),
+    );
+  }
+}
+
+class _SummaryStat extends StatelessWidget {
+  final IconData icon;
+  final String   label;
+  final String   value;
+  const _SummaryStat({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(children: [
+        Icon(icon, color: AppTheme.accentOrange, size: 18),
+        SizedBox(height: 4),
+        Text(value, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+        Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ]),
     );
   }

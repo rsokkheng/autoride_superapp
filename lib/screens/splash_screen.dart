@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'auth/login_screen.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'passenger/passenger_home.dart';
@@ -51,6 +52,12 @@ class _SplashScreenState extends State<SplashScreen>
     } else {
       final seenOnboarding = await OnboardingScreen.hasSeenOnboarding();
       destination = seenOnboarding ? const LoginScreen() : const OnboardingScreen();
+    }
+
+    // Register this device for push notifications if a session already
+    // exists — fire-and-forget, shouldn't block navigation.
+    if (role == 'admin' || role == 'driver' || role == 'passenger') {
+      NotificationService.instance.initFcm();
     }
 
     Navigator.of(context).pushReplacement(

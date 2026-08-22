@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/notification_service.dart';
 import '../../utils/phone_utils.dart';
 import '../../models/user_model.dart';
 import '../../providers/biometric_provider.dart';
@@ -158,6 +159,10 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         destination = const PassengerHomeScreen();
       }
+
+      // Register this device for push notifications now that we're
+      // authenticated — fire-and-forget, shouldn't block navigation.
+      NotificationService.instance.initFcm();
 
       if (!mounted) return;
       Navigator.pushReplacement(
@@ -415,9 +420,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   _DemoTile(
                     label: 'Passenger',
-                    email: 'passenger@example.com',
+                    email: 'sokkhnegry168@gmail.com',
                     onTap: () => setState(() {
-                      _emailCtrl.text = 'passenger@example.com';
+                      _emailCtrl.text = 'sokkhnegry168@gmail.com';
                       _passwordCtrl.text = 'password';
                     }),
                   ),

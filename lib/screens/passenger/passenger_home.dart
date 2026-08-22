@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
+import 'package:autoride_superapp/widgets/skeleton_loader.dart';
+import 'package:autoride_superapp/widgets/slow_connection_banner.dart';
 import 'package:autoride_superapp/widgets/banner_carousel.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/screens/auth/login_screen.dart';
@@ -146,11 +149,24 @@ class _HomeTabState extends State<_HomeTab> {
   SurgeInfo? _surgeInfo;
   int _gridColumns = 3;
 
+  // Initial-load skeleton + "slow connection" nudge — shown while _load()
+  // is in flight, with the banner appearing only if it's taking unusually
+  // long (not on every normal load).
+  bool  _loading = true;
+  bool  _showSlowBanner = false;
+  Timer? _slowBannerTimer;
+
   @override
   void initState() {
     super.initState();
     _load();
     _loadGridColumns();
+  }
+
+  @override
+  void dispose() {
+    _slowBannerTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadGridColumns() async {
@@ -168,6 +184,12 @@ class _HomeTabState extends State<_HomeTab> {
   }
 
   Future<void> _load() async {
+    setState(() => _showSlowBanner = false);
+    _slowBannerTimer?.cancel();
+    _slowBannerTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _showSlowBanner = true);
+    });
+
     final saved = await ApiService.getSavedUser();
     if (!mounted) return;
     final name = saved?.name ?? '';
@@ -179,6 +201,9 @@ class _HomeTabState extends State<_HomeTab> {
       _loadActiveRide(),
       _loadSurge(),
     ]);
+
+    _slowBannerTimer?.cancel();
+    if (mounted) setState(() { _loading = false; _showSlowBanner = false; });
   }
 
   Future<void> _loadRecentRides() async {
@@ -254,12 +279,23 @@ class _HomeTabState extends State<_HomeTab> {
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return _HomeSkeleton(showSlowBanner: _showSlowBanner);
+    }
     return SafeArea(
-      child: SingleChildScrollView(
+      child: RefreshIndicator(
+        onRefresh: _load,
+        color: AppTheme.accent,
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_showSlowBanner) ...[
+              const SlowConnectionBanner(),
+              const SizedBox(height: 16),
+            ],
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -461,36 +497,42 @@ class _HomeTabState extends State<_HomeTab> {
                 children: [
                   ServiceCard(
                     icon: Icons.electric_rickshaw,
+                    imagePath: 'assets/ride.png',
                     title: l.bookRide,
                     color: AppTheme.accent,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RideBookingScreen(skipDestination: true))),
                   ),
                   ServiceCard(
                     icon: Icons.delivery_dining_outlined,
+                    imagePath: 'assets/Delivery.png',
                     title: l.delivery,
                     color: AppTheme.accentOrange,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DeliveryScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.store_outlined,
+                    imagePath: 'assets/MarketPlace.png',
                     title: l.marketplace,
                     color: const Color(0xFF9C27B0),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.ev_station_outlined,
+                    imagePath: 'assets/EVStation.png',
                     title: l.evStations,
                     color: AppTheme.warning,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChargingStationsScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.handshake,
+                    imagePath: 'assets/Rental.png',
                     title: 'Rental',
                     color: const Color(0xFF1565C0),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.family_restroom_rounded,
+                    imagePath: 'assets/Family.png',
                     title: 'Family',
                     color: AppTheme.accentOrange,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
@@ -545,6 +587,66 @@ class _HomeTabState extends State<_HomeTab> {
               )),
           ],
         ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton loading state for the Home tab ───────────────────────────────────
+
+class _HomeSkeleton extends StatelessWidget {
+  final bool showSlowBanner;
+  const _HomeSkeleton({required this.showSlowBanner});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (showSlowBanner) const SlowConnectionBanner(),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Greeting row
+              Row(children: [
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                    SkeletonBox(width: 100, height: 12),
+                    SizedBox(height: 8),
+                    SkeletonBox(width: 160, height: 20),
+                  ]),
+                ),
+                const SkeletonBox(width: 44, height: 44, radius: 22),
+              ]),
+              const SizedBox(height: 24),
+              // Quick-access row (3 cards)
+              Row(children: List.generate(3, (i) => Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: i < 2 ? 12 : 0),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                    SkeletonBox(height: 90, radius: 14),
+                    SizedBox(height: 8),
+                    SkeletonBox(width: 60, height: 10),
+                  ]),
+                ),
+              ))),
+              const SizedBox(height: 24),
+              // Banner
+              const SkeletonBox(height: 150, radius: 18),
+              const SizedBox(height: 24),
+              // Section header + card
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: const [
+                SkeletonBox(width: 120, height: 16),
+                SkeletonBox(width: 50, height: 12),
+              ]),
+              const SizedBox(height: 14),
+              const SkeletonCard(),
+              const SkeletonCard(),
+            ]),
+          ),
+        ]),
       ),
     );
   }
