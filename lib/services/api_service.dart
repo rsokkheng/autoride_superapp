@@ -23,6 +23,7 @@ import '../models/chat_message_model.dart';
 import '../models/wallet_model.dart';
 import '../models/marketplace_model.dart';
 import '../models/trip_model.dart';
+import '../models/promo_event_model.dart';
 
 class ApiService {
   static String get _baseUrl =>
@@ -1441,6 +1442,70 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  /// GET /drivers/nearby — includes lat/lng (unlike getNearbyDrivers() above,
+  /// which hits the delivery-only endpoint with no coordinates) so callers
+  /// can actually place a marker per driver on the map, Grab/PassApp-style.
+  static Future<List<NearbyMapDriverModel>> getNearbyMapDrivers({
+    required double lat,
+    required double lng,
+    String type = 'rides',
+    double? radius,
+    int limit = 20,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final qs = StringBuffer('lat=$lat&lng=$lng&type=$type&limit=$limit');
+    if (radius != null) qs.write('&radius=$radius');
+
+    final raw = await _rawGet('/drivers/nearby?$qs', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return (data['drivers'] as List<dynamic>? ?? [])
+          .map((e) => NearbyMapDriverModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ?? 'Failed to fetch nearby drivers (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
+  /// GET /events — in-app feed of active promo events for the caller's role
+  /// (driver or passenger), server-side filtered. Used in place of "Recent
+  /// Trips" on the home screens.
+  static Future<List<PromoEventModel>> getPromoEvents() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawGet('/events', token: token);
+
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data   = (body['data'] as Map<String, dynamic>?) ?? body;
+      final events = (data['events'] as Map<String, dynamic>?) ?? data;
+      return (events['data'] as List<dynamic>? ?? [])
+          .map((e) => PromoEventModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    final message = body['message'] as String? ?? 'Failed to fetch events (${raw.statusCode}).';
+    throw ApiException(message, raw.statusCode);
+  }
+
   static Future<DeliveryEstimateModel> estimateDelivery({
     required double pickupLat,
     required double pickupLng,
@@ -2389,17 +2454,23 @@ class ApiService {
     String? condition,    // new | used | refurbished
     double? minPrice,
     double? maxPrice,
+    int?    vehicleTypeId,
+    int?    vehicleColorId,
+    int?    vehicleSizeId,
     int     page = 1,
   }) async {
     final token = await getToken();
     final params = <String, String>{'page': '$page'};
-    if (search      != null) params['search']      = search;
-    if (categoryId  != null) params['category_id'] = '$categoryId';
-    if (sellerId    != null) params['seller_id']   = '$sellerId';
-    if (listingType != null) params['listing_type'] = listingType;
-    if (condition   != null) params['condition']   = condition;
-    if (minPrice    != null) params['min_price']   = '$minPrice';
-    if (maxPrice    != null) params['max_price']   = '$maxPrice';
+    if (search         != null) params['search']      = search;
+    if (categoryId     != null) params['category_id'] = '$categoryId';
+    if (sellerId       != null) params['seller_id']   = '$sellerId';
+    if (listingType    != null) params['listing_type'] = listingType;
+    if (condition      != null) params['condition']   = condition;
+    if (minPrice       != null) params['min_price']   = '$minPrice';
+    if (maxPrice       != null) params['max_price']   = '$maxPrice';
+    if (vehicleTypeId  != null) params['marketplace_vehicle_type_id']  = '$vehicleTypeId';
+    if (vehicleColorId != null) params['marketplace_vehicle_color_id'] = '$vehicleColorId';
+    if (vehicleSizeId  != null) params['marketplace_vehicle_size_id']  = '$vehicleSizeId';
     final query = '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
     final raw = await _rawGet('/marketplace$query', token: token);
     if (raw.statusCode != 200) {
@@ -2407,6 +2478,60 @@ class ApiService {
       throw ApiException(body['message'] as String? ?? 'Failed to load products.', raw.statusCode);
     }
     return _parseProductsPage(raw.body);
+  }
+
+  static Future<List<MarketplaceVehicleTypeModel>> getMarketplaceVehicleTypes() async {
+    final token = await getToken();
+    final raw = await _rawGet('/marketplace/vehicle-types', token: token);
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode == 200) {
+      return _extractList(body)
+          .whereType<Map<String, dynamic>>()
+          .map(MarketplaceVehicleTypeModel.fromJson)
+          .toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load vehicle types.', raw.statusCode);
+  }
+
+  static Future<List<MarketplaceVehicleColorModel>> getMarketplaceVehicleColors() async {
+    final token = await getToken();
+    final raw = await _rawGet('/marketplace/vehicle-colors', token: token);
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode == 200) {
+      return _extractList(body)
+          .whereType<Map<String, dynamic>>()
+          .map(MarketplaceVehicleColorModel.fromJson)
+          .toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load vehicle colors.', raw.statusCode);
+  }
+
+  static Future<List<MarketplaceVehicleSizeModel>> getMarketplaceVehicleSizes() async {
+    final token = await getToken();
+    final raw = await _rawGet('/marketplace/vehicle-sizes', token: token);
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode == 200) {
+      return _extractList(body)
+          .whereType<Map<String, dynamic>>()
+          .map(MarketplaceVehicleSizeModel.fromJson)
+          .toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load vehicle sizes.', raw.statusCode);
   }
 
   static MarketplaceProductsPage _parseProductsPage(String body) {
@@ -2463,6 +2588,9 @@ class ApiService {
     String? expiresAt,
     int?    categoryId,
     int?    vehicleId,
+    int?    vehicleTypeId,
+    int?    vehicleColorId,
+    int?    vehicleSizeId,
     int     quantity        = 1,
     double? rentPricePerDay,
     List<File> images       = const [],  // max 10 files, 5 MB each
@@ -2493,6 +2621,9 @@ class ApiService {
     if (expiresAt       != null) request.fields['expires_at']         = expiresAt;
     if (categoryId      != null) request.fields['category_id']        = '$categoryId';
     if (vehicleId       != null) request.fields['vehicle_id']         = '$vehicleId';
+    if (vehicleTypeId   != null) request.fields['marketplace_vehicle_type_id']  = '$vehicleTypeId';
+    if (vehicleColorId  != null) request.fields['marketplace_vehicle_color_id'] = '$vehicleColorId';
+    if (vehicleSizeId   != null) request.fields['marketplace_vehicle_size_id']  = '$vehicleSizeId';
     if (rentPricePerDay != null) request.fields['rent_price_per_day'] = '$rentPricePerDay';
 
     for (final file in images) {
@@ -2512,6 +2643,9 @@ class ApiService {
     String? description,
     int?    categoryId,
     int?    vehicleId,
+    int?    vehicleTypeId,
+    int?    vehicleColorId,
+    int?    vehicleSizeId,
     String? condition,
     String? listingType,
     double? price,
@@ -2530,6 +2664,9 @@ class ApiService {
       if (description     != null) 'description':        description,
       if (categoryId      != null) 'category_id':        categoryId,
       if (vehicleId       != null) 'vehicle_id':         vehicleId,
+      if (vehicleTypeId   != null) 'marketplace_vehicle_type_id':  vehicleTypeId,
+      if (vehicleColorId  != null) 'marketplace_vehicle_color_id': vehicleColorId,
+      if (vehicleSizeId   != null) 'marketplace_vehicle_size_id':  vehicleSizeId,
       if (condition       != null) 'condition':          condition,
       if (listingType     != null) 'listing_type':       listingType,
       if (price           != null) 'price':              price,
@@ -2593,6 +2730,7 @@ class ApiService {
     String? notes,
     String? rentStartDate,
     String? rentEndDate,
+    String? promoCode,
   }) async {
     final token = await getToken();
     final body = <String, dynamic>{
@@ -2602,6 +2740,7 @@ class ApiService {
       if (notes         != null) 'notes':           notes,
       if (rentStartDate != null) 'rent_start_date': rentStartDate,
       if (rentEndDate   != null) 'rent_end_date':   rentEndDate,
+      if (promoCode     != null) 'promo_code':      promoCode,
     };
     final raw = await _rawPost('/marketplace/$productId/order', body, token: token);
     final Map<String, dynamic> decoded;
@@ -2617,6 +2756,40 @@ class ApiService {
       return MarketplaceOrderModel.fromJson(order);
     }
     throw ApiException(decoded['message'] as String? ?? 'Failed to place order.', raw.statusCode);
+  }
+
+  /// POST /marketplace/checkout — atomic multi-item order (all-or-nothing;
+  /// 0 orders created if any item fails). Replaces firing placeMarketplaceOrder()
+  /// once per item, which could partially succeed and leave a half-placed cart.
+  static Future<List<MarketplaceOrderModel>> checkoutMarketplaceCart({
+    required List<MarketplaceCheckoutItem> items,
+    String  paymentMethod = 'cash',
+    String? notes,
+    String? promoCode,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final body = <String, dynamic>{
+      'items': items.map((i) => i.toJson()).toList(),
+      'payment_method': paymentMethod,
+      if (notes     != null) 'notes':      notes,
+      if (promoCode != null) 'promo_code': promoCode,
+    };
+    final raw = await _rawPost('/marketplace/checkout', body, token: token);
+    final Map<String, dynamic> decoded;
+    try {
+      decoded = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data = decoded['data'] as Map<String, dynamic>? ?? decoded;
+      return _extractList(data)
+          .whereType<Map<String, dynamic>>()
+          .map(MarketplaceOrderModel.fromJson)
+          .toList();
+    }
+    throw ApiException(decoded['message'] as String? ?? 'Checkout failed.', raw.statusCode);
   }
 
   static Future<List<MarketplaceOrderModel>> getMyMarketplaceOrders({

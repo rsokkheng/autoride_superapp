@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
 import '../../utils/app_log.dart';
 import '../../utils/location_display.dart';
@@ -11,6 +12,8 @@ import '../../services/maps_service.dart';
 import '../../main.dart' show appLocale;
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
+import '../../models/ride_model.dart' show NearbyMapDriverModel;
+import '../../l10n/app_localizations.dart';
 import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
 import 'saved_places_screen.dart';
@@ -230,6 +233,83 @@ Future<BitmapDescriptor> _buildPickupMarker({double logical = 26.0}) async {
       bytes.buffer.asUint8List(), imagePixelRatio: scale);
 }
 
+// Vector Material icon per vehicle type — deliberately not an emoji glyph:
+// emoji rendered through a raw Canvas/TextPainter (as opposed to a normal
+// widget tree) came out upside-down/mangled on some Android devices,
+// depending on the system emoji font. Material icons are a bundled vector
+// font, so they render identically (and right-side up) everywhere.
+IconData _vehicleIconData(String vehicleType) => switch (vehicleType) {
+      'tuk_tuk'    => Icons.electric_rickshaw,
+      'motorcycle' => Icons.two_wheeler,
+      'van'        => Icons.airport_shuttle,
+      _            => Icons.local_taxi,
+    };
+
+/// Nearby-driver marker, scattered on the pre-booking map (Grab/PassApp-style)
+/// to show real driver supply near the pickup point. Cached per vehicle type
+/// since the icon is identical for every driver of that type — no need to
+/// redraw per marker.
+final Map<String, Future<BitmapDescriptor>> _vehicleMarkerCache = {};
+
+Future<BitmapDescriptor> _buildVehicleMarker(String vehicleType) {
+  return _vehicleMarkerCache.putIfAbsent(vehicleType, () async {
+    if (vehicleType == 'tuk_tuk') return _loadTukTukAssetMarker();
+
+    const scale   = 3.0;
+    const logical = 44.0;
+    final size    = logical * scale;
+
+    final recorder = ui.PictureRecorder();
+    final canvas   = Canvas(recorder);
+    _paintVehicleGlyph(canvas, size, _vehicleIconData(vehicleType));
+
+    final picture = recorder.endRecording();
+    final img     = await picture.toImage(size.ceil(), size.ceil());
+    final bytes   = await img.toByteData(format: ui.ImageByteFormat.png);
+    if (bytes == null) return BitmapDescriptor.defaultMarker;
+    return BitmapDescriptor.bytes(
+        bytes.buffer.asUint8List(), imagePixelRatio: scale);
+  });
+}
+
+// assets/ride.png is a pre-made 512×454 tuk-tuk illustration (teal, with a
+// location pin above it) — used as-is rather than hand-drawn, per request.
+// imagePixelRatio scales it down from its native pixel size to a sane
+// on-map display width.
+Future<BitmapDescriptor> _loadTukTukAssetMarker() async {
+  final data = await rootBundle.load('assets/ride.png');
+  const displayWidthDp = 48.0;
+  const nativeWidthPx  = 512.0;
+  return BitmapDescriptor.bytes(
+    data.buffer.asUint8List(),
+    imagePixelRatio: nativeWidthPx / displayWidthDp,
+  );
+}
+
+void _paintVehicleGlyph(Canvas canvas, double size, IconData iconData) {
+  final center = Offset(size / 2, size / 2);
+  final tp = TextPainter(
+    text: TextSpan(
+      text: String.fromCharCode(iconData.codePoint),
+      style: TextStyle(
+        fontSize: size * 0.9,
+        fontFamily: iconData.fontFamily,
+        package: iconData.fontPackage,
+        color: AppTheme.accent,
+        shadows: [
+          Shadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: size * 0.02,
+            offset: Offset(0, size * 0.01),
+          ),
+        ],
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
+}
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 // step 0 = "Where to?" landing   step 1 = destination search   step 2 = confirm
 
@@ -311,6 +391,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
   // ── Step-1 mini-map ─────────────────────────────────────────────────────────
   GoogleMapController? _step1MapCtrl;
+
+  // ── Nearby drivers (map markers, Grab/PassApp-style) ────────────────────────
+  List<NearbyMapDriverModel> _nearbyDrivers = [];
+  Map<int, BitmapDescriptor> _nearbyDriverIcons = {};
+  Timer? _nearbyDriversTimer;
 
   // ── Confirm ─────────────────────────────────────────────────────────────────
   GoogleMapController? _confirmMapCtrl;
@@ -467,7 +552,44 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _destMapCtrl?.dispose();
     _step1MapCtrl?.dispose();
     _confirmMapCtrl?.dispose();
+    _nearbyDriversTimer?.cancel();
     super.dispose();
+  }
+
+  // ── Nearby drivers ───────────────────────────────────────────────────────────
+  // Fetched once entering step 1 (pickup is known by then) and refreshed
+  // periodically while the rider is still choosing a destination — mirrors
+  // Grab/PassApp showing live driver supply around the pickup point before
+  // the ride is ever booked.
+
+  void _startNearbyDriversPolling() {
+    _loadNearbyDrivers();
+    _nearbyDriversTimer?.cancel();
+    _nearbyDriversTimer =
+        Timer.periodic(const Duration(seconds: 15), (_) => _loadNearbyDrivers());
+  }
+
+  Future<void> _loadNearbyDrivers() async {
+    try {
+      final drivers = await ApiService.getNearbyMapDrivers(
+        lat: _pickupCenter.latitude,
+        lng: _pickupCenter.longitude,
+      );
+      if (!mounted) return;
+      final located = drivers.where((d) => d.hasLocation).toList();
+      final icons = <int, BitmapDescriptor>{};
+      for (final d in located) {
+        icons[d.id] = await _buildVehicleMarker(d.vehicleType);
+      }
+      if (!mounted) return;
+      setState(() {
+        _nearbyDrivers     = located;
+        _nearbyDriverIcons = icons;
+      });
+    } catch (_) {
+      // Best-effort supply display — leave whatever markers were already
+      // showing rather than clearing them on a transient network error.
+    }
   }
 
   // ── GPS ──────────────────────────────────────────────────────────────────────
@@ -662,7 +784,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 4),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Saved places',
+              child: Text(AppLocalizations.of(context).savedPlaces,
                   style: TextStyle(
                       color: context.appTextPrimary,
                       fontSize: 16,
@@ -672,7 +794,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           if (_savedPlaces.isEmpty)
             Padding(
               padding: const EdgeInsets.all(20),
-              child: Text('No saved places yet.',
+              child: Text(AppLocalizations.of(context).noSavedPlacesYet,
                   style: TextStyle(color: context.appTextSecondary)),
             )
           else
@@ -715,6 +837,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       _step = s;
       if (s != 1) _choosingDestOnMap = false;
     });
+    if (s == 1 || (s == 2 && _noDestination)) {
+      _startNearbyDriversPolling();
+    } else {
+      _nearbyDriversTimer?.cancel();
+    }
     if (s == 2) {
       if (_noDestination) {
         _buildPickupOnlyMarker();
@@ -856,7 +983,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     borderRadius: BorderRadius.circular(2)),
               )),
               SizedBox(height: 16),
-              Text('Promo Code',
+              Text(AppLocalizations.of(context).promoCodeTitle,
                   style: TextStyle(color: context.appTextPrimary,
                       fontWeight: FontWeight.w800, fontSize: 17)),
               SizedBox(height: 14),
@@ -897,7 +1024,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       ? const SizedBox(width: 18, height: 18,
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2))
-                      : const Text('Apply',
+                      : Text(AppLocalizations.of(context).apply,
                           style: TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ]),
@@ -915,7 +1042,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       MaterialPageRoute(
                           builder: (_) => const PromoScreen()));
                 },
-                child: const Text('Browse available vouchers →',
+                child: Text(AppLocalizations.of(context).browseVouchers,
                     style: TextStyle(
                         color: AppTheme.accent,
                         fontWeight: FontWeight.w600, fontSize: 13)),
@@ -945,7 +1072,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Payment Method',
+              child: Text(AppLocalizations.of(context).paymentMethod,
                   style: TextStyle(color: context.appTextPrimary,
                       fontSize: 16, fontWeight: FontWeight.w700)),
             ),
@@ -1273,7 +1400,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             Row(mainAxisSize: MainAxisSize.min, children: [
               const Text('🇰🇭', style: TextStyle(fontSize: 15)),
               const SizedBox(width: 4),
-              Text('Cambodia',
+              Text(AppLocalizations.of(context).cambodia,
                   style: TextStyle(color: context.appTextPrimary,
                       fontSize: 14, fontWeight: FontWeight.w600)),
             ]),
@@ -1293,7 +1420,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               },
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.location_on_outlined, color: AppTheme.accent, size: 20),
-                Text('Map', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                Text(AppLocalizations.of(context).mapLabel, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
               ]),
             ),
           ]),
@@ -1364,7 +1491,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       : _pickupSearchResults.isEmpty
                           ? Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Text('No results found',
+                              child: Text(AppLocalizations.of(context).noResultsFound,
                                   style: TextStyle(color: context.appTextSecondary)),
                             )
                           : ListView.builder(
@@ -1529,7 +1656,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       child: Icon(Icons.add, size: 14, color: AppTheme.accent),
                     ),
                     SizedBox(width: 10),
-                    Text('Add a stop',
+                    Text(AppLocalizations.of(context).addAStop,
                         style: TextStyle(color: AppTheme.accent,
                             fontSize: 14, fontWeight: FontWeight.w500)),
                   ]),
@@ -1603,7 +1730,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 else if (_searchResults.isEmpty)
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text('No results found',
+                    child: Text(AppLocalizations.of(context).noResultsFound,
                         style: TextStyle(color: context.appTextSecondary)),
                   )
                 else
@@ -1792,7 +1919,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       : _pickupSearchResults.isEmpty
                           ? Padding(
                               padding: const EdgeInsets.all(16),
-                              child: Text('No results found',
+                              child: Text(AppLocalizations.of(context).noResultsFound,
                                   style: TextStyle(color: context.appTextSecondary)),
                             )
                           : ListView.builder(
@@ -1843,7 +1970,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               )
-                            : Text('Where to?',
+                            : Text(AppLocalizations.of(context).whereTo,
                                 style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
                       ),
                       Container(
@@ -1852,7 +1979,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           color: AppTheme.accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('Now',
+                        child: Text(AppLocalizations.of(context).now,
                             style: TextStyle(
                                 color: AppTheme.accent,
                                 fontSize: 12,
@@ -1870,12 +1997,12 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     child: ElevatedButton(
                       onPressed: _skipDestination,
                       style: AppTheme.confirmButtonStyle(),
-                      child: const Text('Confirm Booking'),
+                      child: Text(AppLocalizations.of(context).confirmBooking),
                     ),
                   ),
                   const SizedBox(height: 2),
                   Center(
-                    child: Text('No destination needed — tell the driver in person',
+                    child: Text(AppLocalizations.of(context).noDestinationNeeded,
                         style: TextStyle(color: context.appTextSecondary, fontSize: 11.5)),
                   ),
                 ],
@@ -1960,9 +2087,24 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 ? _stopMarkers[i].anchor
                 : const Offset(0.5, 1.0),
           ),
+      ..._nearbyDriverMarkers,
     };
     return set;
   }
+
+  // Nearby-driver markers only — reused by both the destination-search map
+  // (_step1Markers, above) and the no-destination confirm map, which has no
+  // pickup/stop pins of its own (pickup is shown via the fixed crosshair
+  // instead).
+  Set<Marker> get _nearbyDriverMarkers => {
+        for (final d in _nearbyDrivers)
+          Marker(
+            markerId: MarkerId('nearby_driver_${d.id}'),
+            position: LatLng(d.lat!, d.lng!),
+            icon: _nearbyDriverIcons[d.id] ?? BitmapDescriptor.defaultMarker,
+            anchor: const Offset(0.5, 0.5),
+          ),
+      };
 
   void _fitStep1Camera() {
     if (_step1MapCtrl == null) return;
@@ -2033,7 +2175,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     child: CircularProgressIndicator(color: AppTheme.accent))
                 : hasQuery && _searchResults.isEmpty
                     ? Center(
-                        child: Text('No results found',
+                        child: Text(AppLocalizations.of(context).noResultsFound,
                             style: TextStyle(color: context.appTextSecondary)))
                     : hasQuery
                         ? ListView(
@@ -2067,7 +2209,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             alignment: Alignment.centerLeft,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Text('Where To?',
+              child: Text(AppLocalizations.of(context).whereToTitle,
                   style: TextStyle(
                       color: context.appTextPrimary,
                       fontWeight: FontWeight.w700,
@@ -2251,7 +2393,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   child: Icon(Icons.add, size: 14, color: AppTheme.accent),
                 ),
                 SizedBox(width: 10),
-                Text('Add a stop',
+                Text(AppLocalizations.of(context).addAStop,
                     style: TextStyle(color: AppTheme.accent,
                         fontSize: 14, fontWeight: FontWeight.w500)),
               ]),
@@ -2389,7 +2531,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.history, color: context.appTextSecondary, size: 40),
             SizedBox(height: 12),
-            Text('No recent trips',
+            Text(AppLocalizations.of(context).noRecentTrips,
                 style: TextStyle(color: context.appTextSecondary)),
           ]),
         );
@@ -2416,7 +2558,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.bookmark_border, color: context.appTextSecondary, size: 40),
             SizedBox(height: 12),
-            Text('No saved places',
+            Text(AppLocalizations.of(context).noSavedPlaces,
                 style: TextStyle(color: context.appTextSecondary)),
           ]),
         );
@@ -2481,7 +2623,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                 color: AppTheme.accent, strokeWidth: 2),
                           ),
                           SizedBox(width: 10),
-                          Text('Finding address…',
+                          Text(AppLocalizations.of(context).findingAddress,
                               style: TextStyle(
                                   color: context.appTextSecondary, fontSize: 13)),
                         ])
@@ -2513,7 +2655,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           _afterStopFilled();
                         },
                   style: AppTheme.confirmButtonStyle(),
-                  child: const Text('Confirm Destination'),
+                  child: Text(AppLocalizations.of(context).confirmDestination),
                 ),
               ),
             ]),
@@ -2539,6 +2681,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         },
         initialCameraPosition: CameraPosition(target: _pickupCenter, zoom: 16),
         style: _kDarkMapStyle,
+        markers: _nearbyDriverMarkers,
         myLocationEnabled:       true,
         myLocationButtonEnabled: false,
         zoomControlsEnabled:     false,
@@ -2698,7 +2841,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                         const Icon(Icons.location_on_outlined, color: AppTheme.accentOrange, size: 18),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text('Where to? (optional)',
+                          child: Text(AppLocalizations.of(context).whereToOptional,
                               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                         ),
                         Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
@@ -2728,7 +2871,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               ],
 
               // Choose Ride
-              Text('Choose Ride',
+              Text(AppLocalizations.of(context).chooseRideTitle,
                   style: TextStyle(color: context.appTextPrimary,
                       fontSize: 15, fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),
@@ -2767,7 +2910,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(Icons.keyboard_arrow_up, size: 16, color: context.appTextSecondary),
                         const SizedBox(width: 4),
-                        Text('Scroll up for more ride options',
+                        Text(AppLocalizations.of(context).scrollUpForMore,
                             style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                       ]),
                     ),
@@ -2802,10 +2945,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                               Text(_promoCode!, style: const TextStyle(
                                   color: AppTheme.success, fontWeight: FontWeight.w700, letterSpacing: 1)),
                               if (_promoDiscount != null)
-                                Text('− ${AppTheme.khr(_promoDiscount!)} discount',
+                                Text('− ${AppTheme.khr(_promoDiscount!)} ${AppLocalizations.of(context).discountSuffix}',
                                     style: TextStyle(color: AppTheme.success, fontSize: 12)),
                             ])
-                          : Text('Add promo code',
+                          : Text(AppLocalizations.of(context).promoCode,
                               style: TextStyle(color: context.appTextSecondary)),
                     ),
                     GestureDetector(
@@ -2847,7 +2990,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
                 child: Column(children: [
                   Row(children: [
-                    Text('Schedule for later',
+                    Text(AppLocalizations.of(context).scheduleForLater,
                         style: TextStyle(color: context.appTextPrimary,
                             fontSize: 14, fontWeight: FontWeight.w600)),
                     const Spacer(),
@@ -2913,7 +3056,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               child: _isBooking
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Confirm Booking'),
+                  : Text(AppLocalizations.of(context).confirmBooking),
             ),
           );
         }),
@@ -2930,11 +3073,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     if (_stops.isEmpty || _destLatLng == null || _stops.last.address.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('No destination selected', style: TextStyle(color: context.appTextSecondary)),
+          Text(AppLocalizations.of(context).noDestinationSelected, style: TextStyle(color: context.appTextSecondary)),
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () => _goToStep(1),
-            child: const Text('Select Destination'),
+            child: Text(AppLocalizations.of(context).selectDestination),
           ),
         ]),
       );
@@ -3080,13 +3223,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   const Icon(Icons.straighten, color: AppTheme.accent, size: 14),
                   const SizedBox(width: 4),
-                  Text('${_distanceKm.toStringAsFixed(1)} km',
+                  Text('${_distanceKm.toStringAsFixed(1)} ${AppLocalizations.of(context).km}',
                       style: TextStyle(color: context.appTextPrimary,
                           fontSize: 13, fontWeight: FontWeight.w600)),
                   SizedBox(width: 12),
                   Icon(Icons.access_time_outlined, color: AppTheme.accent, size: 14),
                   SizedBox(width: 4),
-                  Text('~$_etaMinutes min',
+                  Text('~$_etaMinutes ${AppLocalizations.of(context).min}',
                       style: TextStyle(color: context.appTextPrimary,
                           fontSize: 13, fontWeight: FontWeight.w600)),
                 ]),
@@ -3178,7 +3321,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
               // Choose Ride
               Row(children: [
-                Text('Choose Ride',
+                Text(AppLocalizations.of(context).chooseRideTitle,
                     style: TextStyle(color: context.appTextPrimary,
                         fontSize: 15, fontWeight: FontWeight.w700)),
                 if (_fareLoading) ...[
@@ -3258,10 +3401,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                               Text(_promoCode!, style: const TextStyle(
                                   color: AppTheme.success, fontWeight: FontWeight.w700, letterSpacing: 1)),
                               if (_promoDiscount != null)
-                                Text('− ${AppTheme.khr(_promoDiscount!)} discount',
+                                Text('− ${AppTheme.khr(_promoDiscount!)} ${AppLocalizations.of(context).discountSuffix}',
                                     style: TextStyle(color: AppTheme.success, fontSize: 12)),
                             ])
-                          : Text('Add promo code',
+                          : Text(AppLocalizations.of(context).promoCode,
                               style: TextStyle(color: context.appTextSecondary)),
                     ),
                     GestureDetector(
@@ -3303,7 +3446,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
                 child: Column(children: [
                   Row(children: [
-                    Text('Schedule for later',
+                    Text(AppLocalizations.of(context).scheduleForLater,
                         style: TextStyle(color: context.appTextPrimary,
                             fontSize: 14, fontWeight: FontWeight.w600)),
                     const Spacer(),
@@ -3805,7 +3948,7 @@ class _RouteSummary extends StatelessWidget {
                     child: const Icon(Icons.add, size: 14, color: AppTheme.accent),
                   ),
                   const SizedBox(width: 14),
-                  const Text('Add a stop',
+                  Text(AppLocalizations.of(context).addAStop,
                       style: TextStyle(
                           color: AppTheme.accent,
                           fontSize: 13,
@@ -3920,7 +4063,7 @@ class _RideTypeCard extends StatelessWidget {
                       fontWeight: FontWeight.w700)),
             ]),
             if (etaMinutes > 0)
-              Text('$etaMinutes min',
+              Text('$etaMinutes ${AppLocalizations.of(context).min}',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ]),
           SizedBox(width: 8),

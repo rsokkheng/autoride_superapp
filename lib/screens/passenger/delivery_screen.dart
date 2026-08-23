@@ -6,6 +6,7 @@ import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/phone_utils.dart';
 import '../../models/delivery_model.dart' show MovingEstimateModel;
 import '../../services/maps_service.dart';
@@ -373,7 +374,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       if (mounted) {
         setState(() { _estimateLoading = false; });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Could not fetch estimate: ${e is ApiException ? e.message : e.toString()}'),
+          content: Text('${AppLocalizations.of(context).couldNotFetchEstimate}: ${e is ApiException ? e.message : e.toString()}'),
           backgroundColor: AppTheme.danger,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -473,7 +474,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDelivery = _mode == 'delivery';
     return Scaffold(
-      appBar: AppBar(title: const Text('Delivery & Moving')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).deliveryAndMoving)),
       body: Column(
         children: [
           Expanded(
@@ -546,10 +547,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         colors: const [Color(0xFF00C48C), Color(0xFF00A37A)],
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Send anything,\nanywhere fast!',
+            Text(AppLocalizations.of(context).sendAnything,
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
             SizedBox(height: 6),
-            Text('Average delivery: 25 min',
+            Text(AppLocalizations.of(context).avgDelivery,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
           ])),
           Icon(Icons.delivery_dining, color: Colors.white, size: 56),
@@ -669,7 +670,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Schedule toggle
       Row(children: [
-        Text('Schedule delivery',
+        Text(AppLocalizations.of(context).scheduleDelivery,
             style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
         const Spacer(),
         Switch(
@@ -701,10 +702,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         colors: const [Color(0xFF00C48C), Color(0xFF00A37A)],
         child: Row(children: [
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Move with ease,\nwe handle the rest!',
+            Text(AppLocalizations.of(context).moveWithEase,
                 style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 6),
-            Text('Professional moving service',
+            Text(AppLocalizations.of(context).professionalMovingService,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13)),
           ])),
           const Icon(Icons.local_shipping, color: Colors.white, size: 56),
@@ -901,7 +902,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       // ── Moving date ───────────────────────────────────────────────────────
       SizedBox(height: 14),
       Row(children: [
-        Text('Schedule moving date',
+        Text(AppLocalizations.of(context).scheduleMovingDate,
             style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
         Spacer(),
         Switch(
@@ -930,7 +931,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 18),
             SizedBox(width: 10),
             Expanded(
-              child: Text('Select pickup and dropoff locations to see fare estimate',
+              child: Text(AppLocalizations.of(context).selectLocationsForFare,
                   style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
             ),
           ]),
@@ -946,7 +947,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             SizedBox(width: 18, height: 18,
                 child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent)),
             SizedBox(width: 12),
-            Text('Calculating fare…',
+            Text(AppLocalizations.of(context).calculatingFare,
                 style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           ]),
         )
@@ -1057,7 +1058,7 @@ class _BoolToggleRow extends StatelessWidget {
                 color: value ? AppTheme.accent : context.appCardBg,
                 borderRadius: BorderRadius.horizontal(left: Radius.circular(8)),
               ),
-              child: Text('Yes', style: TextStyle(
+              child: Text(AppLocalizations.of(context).yes, style: TextStyle(
                   color: value ? Colors.white : context.appTextSecondary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
             ),
@@ -1070,7 +1071,7 @@ class _BoolToggleRow extends StatelessWidget {
                 color: !value ? AppTheme.danger.withValues(alpha: 0.15) : context.appCardBg,
                 borderRadius: BorderRadius.horizontal(right: Radius.circular(8)),
               ),
-              child: Text('No', style: TextStyle(
+              child: Text(AppLocalizations.of(context).no, style: TextStyle(
                   color: !value ? AppTheme.danger : context.appTextSecondary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
             ),
@@ -1101,8 +1102,8 @@ class _HelperCountRow extends StatelessWidget {
         Icon(Icons.people_outline, color: AppTheme.accent, size: 20),
         SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Helpers needed', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-          Text('1–4 persons for carrying', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+          Text(AppLocalizations.of(context).helpersNeeded, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+          Text(AppLocalizations.of(context).personsForCarrying, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
         ])),
         Row(children: List.generate(4, (i) {
           final n = i + 1;
@@ -1151,7 +1152,7 @@ class _MovingFareBreakdown extends StatelessWidget {
         Row(children: [
           Icon(Icons.receipt_long_outlined, color: AppTheme.accent, size: 18),
           SizedBox(width: 6),
-          Text('Fare Estimate', style: TextStyle(
+          Text(AppLocalizations.of(context).fareEstimate, style: TextStyle(
               color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
         ]),
         SizedBox(height: 12),
@@ -1164,14 +1165,14 @@ class _MovingFareBreakdown extends StatelessWidget {
           _PriceRow(label: 'Floor fee',    value: AppTheme.khr(estimate.floorFee)),
         Divider(height: 16, color: context.appCardBg),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('Total estimate',
+          Text(AppLocalizations.of(context).totalEstimate,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
           Text(AppTheme.khr(estimate.total),
               style: TextStyle(
                   color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 18)),
         ]),
         SizedBox(height: 4),
-        Text('Final price confirmed after booking',
+        Text(AppLocalizations.of(context).finalPriceConfirmed,
             style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ]),
     );
@@ -1530,7 +1531,7 @@ class _DateTimeTile extends StatelessWidget {
             style: TextStyle(color: context.appTextPrimary),
           ),
           const Spacer(),
-          Text('Change', style: TextStyle(color: color, fontSize: 13)),
+          Text(AppLocalizations.of(context).change, style: TextStyle(color: color, fontSize: 13)),
         ]),
       ),
     );
@@ -1983,7 +1984,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: AppTheme.accent)),
                           SizedBox(width: 8),
-                          Text('Finding address…',
+                          Text(AppLocalizations.of(context).findingAddress,
                               style: TextStyle(
                                   color: context.appTextSecondary, fontSize: 13)),
                         ])
@@ -2016,7 +2017,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                             _LocationResult(_address, _center),
                           ),
                   style: AppTheme.confirmButtonStyle(),
-                  child: const Text('Confirm Location'),
+                  child: Text(AppLocalizations.of(context).confirmLocation),
                 ),
               ),
             ]),
@@ -2146,7 +2147,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
             child: Column(children: [
               Icon(Icons.delivery_dining_outlined, color: Colors.white, size: 32),
               SizedBox(height: 6),
-              Text('Confirm Delivery Booking',
+              Text(AppLocalizations.of(context).confirmDeliveryBooking,
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -2267,7 +2268,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text('No, Cancel',
+                  child: Text(AppLocalizations.of(context).noCancel,
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
@@ -2276,7 +2277,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
                   style: AppTheme.confirmButtonStyle(background: const Color(0xFF1976D2)),
-                  child: const Text('Yes, Send Now'),
+                  child: Text(AppLocalizations.of(context).yesSendNow),
                 ),
               ),
             ]),
@@ -2346,7 +2347,7 @@ class _MovingConfirmDialog extends StatelessWidget {
             child: Column(children: [
               Icon(Icons.local_shipping_outlined, color: Colors.white, size: 32),
               SizedBox(height: 6),
-              Text('Confirm Moving Booking',
+              Text(AppLocalizations.of(context).confirmMovingBooking,
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -2435,7 +2436,7 @@ class _MovingConfirmDialog extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Estimated Fare',
+                    Text(AppLocalizations.of(context).estimatedFare,
                         style: TextStyle(
                             color: context.appTextSecondary, fontSize: 13)),
                     Text(AppTheme.khr(estimate!.total),
@@ -2466,7 +2467,7 @@ class _MovingConfirmDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text('No, Cancel',
+                  child: Text(AppLocalizations.of(context).noCancel,
                       style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
@@ -2482,8 +2483,8 @@ class _MovingConfirmDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  child: const Text('Yes, Book Now',
-                      style: TextStyle(fontWeight: FontWeight.w800)),
+                  child: Text(AppLocalizations.of(context).yesBookNow,
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
                 ),
               ),
             ]),

@@ -36,6 +36,85 @@ class MarketplaceCategoryModel {
   }
 }
 
+// ─── Vehicle type / color (marketplace filters) ───────────────────────────────
+// GET /marketplace/vehicle-types and /marketplace/vehicle-colors.
+
+class MarketplaceVehicleTypeModel {
+  final int    id;
+  final String nameEn;
+  final String nameKm;
+  final String slug;
+  // Only populated when fetched via GET /marketplace/vehicle-types (which
+  // eager-loads them) — the sizes valid for this specific vehicle type, per
+  // the marketplace_vehicle_type_size pivot. Used to scope the size picker
+  // once a type is chosen, since the backend 422s on a mismatched pairing.
+  final List<MarketplaceVehicleSizeModel> sizes;
+
+  const MarketplaceVehicleTypeModel({
+    required this.id,
+    required this.nameEn,
+    required this.nameKm,
+    required this.slug,
+    this.sizes = const [],
+  });
+
+  String name(String languageCode) => languageCode == 'km' ? nameKm : nameEn;
+
+  factory MarketplaceVehicleTypeModel.fromJson(Map<String, dynamic> json) => MarketplaceVehicleTypeModel(
+    id:     (json['id'] as num?)?.toInt() ?? 0,
+    nameEn: json['name_en'] as String? ?? '',
+    nameKm: json['name_km'] as String? ?? '',
+    slug:   json['slug'] as String? ?? '',
+    sizes: (json['sizes'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(MarketplaceVehicleSizeModel.fromJson)
+        .toList(),
+  );
+}
+
+class MarketplaceVehicleColorModel {
+  final int    id;
+  final String nameEn;
+  final String nameKm;
+  final String code; // e.g. 'black' | 'red' | 'blue' | 'gray' — maps to a swatch color client-side
+
+  const MarketplaceVehicleColorModel({
+    required this.id,
+    required this.nameEn,
+    required this.nameKm,
+    required this.code,
+  });
+
+  String name(String languageCode) => languageCode == 'km' ? nameKm : nameEn;
+
+  factory MarketplaceVehicleColorModel.fromJson(Map<String, dynamic> json) => MarketplaceVehicleColorModel(
+    id:     (json['id'] as num?)?.toInt() ?? 0,
+    nameEn: json['name_en'] as String? ?? '',
+    nameKm: json['name_km'] as String? ?? '',
+    code:   json['code'] as String? ?? '',
+  );
+}
+
+class MarketplaceVehicleSizeModel {
+  final int    id;
+  final String label;   // e.g. "1.4M"
+  final double valueMeters;
+
+  const MarketplaceVehicleSizeModel({
+    required this.id,
+    required this.label,
+    required this.valueMeters,
+  });
+
+  factory MarketplaceVehicleSizeModel.fromJson(Map<String, dynamic> json) => MarketplaceVehicleSizeModel(
+    id:          (json['id'] as num?)?.toInt() ?? 0,
+    label:       json['label'] as String? ?? '',
+    // Laravel's `decimal:2` cast serializes to a JSON string (e.g. "1.40"),
+    // not a number — parse defensively regardless of which it sends.
+    valueMeters: num.tryParse(json['value_meters']?.toString() ?? '')?.toDouble() ?? 0,
+  );
+}
+
 class MarketplaceProductModel {
   final int id;
   final String title;
@@ -53,6 +132,9 @@ class MarketplaceProductModel {
   final double? locationLng;
   final String? expiresAt;
   final int? vehicleId;
+  final int? vehicleTypeId;
+  final int? vehicleColorId;
+  final int? vehicleSizeId;
   final int? sellerId;
   final String? sellerName;
   final List<String> images;
@@ -76,6 +158,9 @@ class MarketplaceProductModel {
     this.locationLng,
     this.expiresAt,
     this.vehicleId,
+    this.vehicleTypeId,
+    this.vehicleColorId,
+    this.vehicleSizeId,
     this.sellerId,
     this.sellerName,
     required this.images,
@@ -117,6 +202,9 @@ class MarketplaceProductModel {
       locationLng:    (json['location_lng'] as num?)?.toDouble(),
       expiresAt:      json['expires_at']   as String?,
       vehicleId:      (json['vehicle_id']  as num?)?.toInt(),
+      vehicleTypeId:  (json['marketplace_vehicle_type_id']  as num?)?.toInt(),
+      vehicleColorId: (json['marketplace_vehicle_color_id'] as num?)?.toInt(),
+      vehicleSizeId:  (json['marketplace_vehicle_size_id']  as num?)?.toInt(),
       sellerId:       (seller?['id']       as num?)?.toInt(),
       sellerName:     seller?['name']      as String?,
       images:         images,
@@ -124,6 +212,33 @@ class MarketplaceProductModel {
       createdAt:      json['created_at']   as String? ?? '',
     );
   }
+}
+
+// One line of a POST /marketplace/checkout request. product_id must be
+// unique across the items list (bump quantity instead of repeating a line —
+// the backend rejects duplicates).
+class MarketplaceCheckoutItem {
+  final int    productId;
+  final int    quantity;
+  final String orderType; // purchase | rent
+  final String? rentStartDate; // yyyy-MM-dd, required when orderType == rent
+  final String? rentEndDate;
+
+  const MarketplaceCheckoutItem({
+    required this.productId,
+    required this.quantity,
+    this.orderType = 'purchase',
+    this.rentStartDate,
+    this.rentEndDate,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'product_id':  productId,
+    'quantity':    quantity,
+    'order_type':  orderType,
+    if (rentStartDate != null) 'rent_start_date': rentStartDate,
+    if (rentEndDate   != null) 'rent_end_date':   rentEndDate,
+  };
 }
 
 class MarketplaceOrderModel {

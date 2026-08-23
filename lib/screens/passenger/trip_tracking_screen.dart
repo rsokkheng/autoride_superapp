@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:math' show min, max, sin, cos, atan2, pi;
+import 'dart:math' show min, max, cos, pi, sqrt;
 import 'dart:ui' show lerpDouble;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +16,7 @@ import '../../services/maps_service.dart';
 import '../../services/marker_icon_service.dart';
 import '../../models/driver_marker_model.dart';
 import '../../models/ride_model.dart';
+import '../../l10n/app_localizations.dart';
 import 'rate_driver_screen.dart';
 import 'safety_screen.dart';
 import '../shared/ride_chat_screen.dart';
@@ -148,7 +149,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   // Dynamic vehicle icon — loaded async; null means use default pin
   BitmapDescriptor? _driverIcon;
-  double _driverHeading = 0.0;
 
   // Multi-stop: index into wayStops + destination.
   // 0..wayStops.length-1 = intermediate stops; wayStops.length = final destination.
@@ -286,26 +286,72 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final t   = _markerAnimCtrl.value;
     final lat = lerpDouble(prev.latitude,  target.latitude,  t)!;
     final lng = lerpDouble(prev.longitude, target.longitude, t)!;
-    _setDriverMarker(LatLng(lat, lng));
+    _setDriverMarker(_snapToRoute(LatLng(lat, lng)));
   }
 
-  // ── Heading: bearing from previous → current position ────────────────────────
+  // ── Snap-to-road ─────────────────────────────────────────────────────────────
+  // Raw GPS pings are noisy (multipath off buildings, etc.) and the straight
+  // lerp between two pings cuts corners wherever the real road bends — both
+  // make the marker visibly drift off the drawn route. Since we already have
+  // the actual road-following polyline from Directions API, project the
+  // marker onto the nearest point of it instead of trusting the raw fix.
+  // Only for display — ETA/distance calculations still use the raw position.
+  LatLng _snapToRoute(LatLng point) {
+    final route = _polylines
+        .firstWhere((p) => p.polylineId.value == 'live_route',
+            orElse: () => _polylines.firstWhere(
+                (p) => p.polylineId.value == 'full_route',
+                orElse: () => const Polyline(polylineId: PolylineId('none'))))
+        .points;
+    if (route.length < 2) return point;
 
-  static double _bearing(LatLng from, LatLng to) {
-    final lat1 = from.latitude  * pi / 180;
-    final lat2 = to.latitude    * pi / 180;
-    final dLng = (to.longitude - from.longitude) * pi / 180;
-    final y    = sin(dLng) * cos(lat2);
-    final x    = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng);
-    return (atan2(y, x) * 180 / pi + 360) % 360;
+    // Only snap when reasonably close to the route already — a big jump
+    // (stale/wrong polyline, or the driver genuinely off-route) should show
+    // the real position rather than snapping somewhere misleading.
+    const maxSnapDistanceMeters = 80.0;
+
+    LatLng? closest;
+    double bestDistSq = double.infinity;
+    for (int i = 0; i < route.length - 1; i++) {
+      final proj = _projectOntoSegment(point, route[i], route[i + 1]);
+      final dLat = proj.latitude  - point.latitude;
+      final dLng = proj.longitude - point.longitude;
+      final distSq = dLat * dLat + dLng * dLng;
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq;
+        closest = proj;
+      }
+    }
+    if (closest == null) return point;
+
+    final distMeters = _approxMeters(point, closest);
+    return distMeters <= maxSnapDistanceMeters ? closest : point;
+  }
+
+  // Projects [p] onto the segment [a]→[b] using an equirectangular
+  // approximation — plenty accurate at the scale of one road segment.
+  static LatLng _projectOntoSegment(LatLng p, LatLng a, LatLng b) {
+    final abLat = b.latitude  - a.latitude;
+    final abLng = b.longitude - a.longitude;
+    final abLenSq = abLat * abLat + abLng * abLng;
+    if (abLenSq == 0) return a;
+    final t = (((p.latitude - a.latitude) * abLat) +
+            ((p.longitude - a.longitude) * abLng)) /
+        abLenSq;
+    final tc = t.clamp(0.0, 1.0);
+    return LatLng(a.latitude + abLat * tc, a.longitude + abLng * tc);
+  }
+
+  static double _approxMeters(LatLng a, LatLng b) {
+    const metersPerDegLat = 111320.0;
+    final metersPerDegLng = 111320.0 * cos(a.latitude * pi / 180);
+    final dLat = (b.latitude  - a.latitude)  * metersPerDegLat;
+    final dLng = (b.longitude - a.longitude) * metersPerDegLng;
+    return sqrt(dLat * dLat + dLng * dLng);
   }
 
   void _setDriverMarker(LatLng pos) {
     if (!mounted) return;
-
-    if (_prevDriverPos != null && _prevDriverPos != pos) {
-      _driverHeading = _bearing(_prevDriverPos!, pos);
-    }
 
     setState(() {
       _markers.removeWhere((m) => m.markerId.value == 'driver');
@@ -315,9 +361,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         icon:       _driverIcon ?? BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueAzure),
         infoWindow: InfoWindow(title: _driverName, snippet: _vehicle),
-        rotation:   _driverHeading,
+        // No rotation: ride.png is a fixed-orientation illustration (pin +
+        // side-view tuk-tuk), not a top-down sprite meant to spin with GPS
+        // bearing — rotating it made the tuk-tuk render upside-down/sideways
+        // depending on travel direction.
         anchor:     const Offset(0.5, 0.5),
-        flat:       true, // marker rotates with map bearing
       ));
     });
   }
@@ -349,9 +397,6 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   void _onDriverMarker(DriverMarkerModel model) {
     final pos = model.position;
     if (!_inCambodia(pos)) return;
-
-    // Apply heading from the Firestore doc (driver's GPS bearing)
-    _driverHeading = model.heading;
 
     // Reload icon if vehicle type changed (e.g. driver switched vehicles)
     final newType = DriverMarkerModel.normalise(model.vehicleType);
@@ -604,12 +649,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        title: const Text('Ride Cancelled'),
+        title: Text(AppLocalizations.of(context).rideCancelled),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
+            child: Text(AppLocalizations.of(context).ok),
           ),
         ],
       ),
@@ -656,15 +701,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         });
       }
 
-      // Animate driver marker from WebSocket position when Firestore isn't live
-      if (_currentDriverId.isEmpty) {
-        _onDriverMarker(DriverMarkerModel(
-          driverId:    '',
-          position:    update.driverPosition,
-          heading:     update.heading,
-          vehicleType: update.vehicleType,
-        ));
-      }
+      // NOTE: WebSocketService is a hardcoded route simulator (see its
+      // source) — it always reports TripStatus.pickingUp immediately, with
+      // no real connection to whether a driver has actually accepted this
+      // ride. It must never be used to place the driver marker: doing so
+      // showed a "driver en route" marker on a fake fixed route before any
+      // real driver had even accepted. Real driver position comes only from
+      // Firestore (_onFirestoreRideStatus/_onDriverMarker) and the REST poll
+      // fallback below, both of which wait for status == 'accepted'.
 
       // Advance to next wayStop when driver arrives within 80 m during trip
       if (update.status == TripStatus.inProgress) {
@@ -1162,7 +1206,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                         : null,
                                     fontWeight: FontWeight.w500)),
                           ),
-                          Text('Stop ${i + 1}',
+                          Text('${AppLocalizations.of(context).stop} ${i + 1}',
                               style: TextStyle(
                                   color: i == _nextStopIndex
                                       ? Colors.orange
@@ -1192,7 +1236,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500)),
                         ),
-                        Text('Dropoff',
+                        Text(AppLocalizations.of(context).dropoff,
                             style: TextStyle(
                                 color: Colors.red,
                                 fontSize: 11,
@@ -1268,7 +1312,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.shield_outlined, color: _kGreen, size: 16),
                   const SizedBox(width: 6),
-                  Text('SAFETY CENTRE',
+                  Text(AppLocalizations.of(context).safetyCentre,
                       style: TextStyle(color: _kGreen,
                           fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.3)),
                 ]),
@@ -1361,7 +1405,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           if (widget.destLatLng != null) ...[
                             SizedBox(height: 8),
                             Row(children: [
-                              Text('Fare',
+                              Text(AppLocalizations.of(context).fare,
                                   style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
                               const Spacer(),
                               Text(widget.fare,
@@ -1559,18 +1603,18 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('🆘 Send SOS?',
+        title: Text(AppLocalizations.of(context).sendSOSQuestion,
             style: TextStyle(color: Colors.red, fontWeight: FontWeight.w800)),
         content: const Text(
             'An SOS alert will be sent to all your emergency contacts immediately.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context).cancel)),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: AppTheme.confirmButtonStyle(background: Colors.red),
-            child: const Text('Send SOS'),
+            child: Text(AppLocalizations.of(context).sendSOS),
           ),
         ],
       ),
@@ -1598,7 +1642,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('SOS failed: $e'),
+          content: Text('${AppLocalizations.of(context).sosFailed}: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ));
@@ -1630,8 +1674,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final phone = _driverPhone;
     if (phone == null || phone.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Driver phone not available yet.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).driverPhoneNotAvailable),
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -1642,7 +1686,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       await launchUrl(uri);
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Cannot dial $phone on this device.'),
+        content: Text('${AppLocalizations.of(context).cannotDialPrefix} $phone ${AppLocalizations.of(context).onThisDevice}'),
         behavior: SnackBarBehavior.floating,
       ));
     }
@@ -1677,7 +1721,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (mounted) {
         setState(() => _sharing = false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Could not generate share link: $e'),
+          content: Text('${AppLocalizations.of(context).couldNotGenerateShareLink}: $e'),
           behavior: SnackBarBehavior.floating,
         ));
       }
@@ -1799,7 +1843,7 @@ class _StopEtaList extends StatelessWidget {
                         ? _kGreen.withValues(alpha: 0.1)
                         : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(20)),
-                child: Text('${r.etaMinutes} min',
+                child: Text('${r.etaMinutes} ${AppLocalizations.of(context).min}',
                     style: TextStyle(
                         color: r.isCurrent ? _kGreen : context.appTextSecondary,
                         fontSize: 11,
@@ -1943,8 +1987,8 @@ class _TripShareSheet extends StatelessWidget {
 
   void _copy(BuildContext ctx) {
     Clipboard.setData(ClipboardData(text: url));
-    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-      content: Text('Link copied to clipboard'),
+    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(AppLocalizations.of(ctx).linkCopied),
       behavior: SnackBarBehavior.floating,
       duration: Duration(seconds: 2),
     ));
@@ -2001,9 +2045,9 @@ class _TripShareSheet extends StatelessWidget {
             ),
             SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Share Trip', style: TextStyle(
+              Text(AppLocalizations.of(context).shareTrip, style: TextStyle(
                 fontSize: 17, fontWeight: FontWeight.w700, color: context.appTextPrimary)),
-              Text('Friends & family can track your ride live',
+              Text(AppLocalizations.of(context).friendsCanTrack,
                   style: TextStyle(fontSize: 12, color: context.appTextSecondary)),
             ])),
           ]),
@@ -2042,12 +2086,12 @@ class _TripShareSheet extends StatelessWidget {
               Row(children: [
                 Icon(Icons.person_outline, color: context.appTextSecondary, size: 14),
                 SizedBox(width: 6),
-                Text('Driver: $driverName',
+                Text('${AppLocalizations.of(context).driverLabel}: $driverName',
                     style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                 Spacer(),
                 Icon(Icons.timer_outlined, color: context.appTextSecondary, size: 14),
                 SizedBox(width: 4),
-                Text('ETA $etaMinutes min',
+                Text('${AppLocalizations.of(context).eta} $etaMinutes ${AppLocalizations.of(context).min}',
                     style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ]),
             ]),
@@ -2084,7 +2128,7 @@ class _TripShareSheet extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () => _copy(context),
                 icon: const Icon(Icons.copy_rounded, size: 16),
-                label: const Text('Copy link'),
+                label: Text(AppLocalizations.of(context).copyLink),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _kGreen,
                   side: const BorderSide(color: _kGreen),
@@ -2099,7 +2143,7 @@ class _TripShareSheet extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () => _shareNative(context),
                 icon: const Icon(Icons.share_rounded, size: 16),
-                label: const Text('Share via...'),
+                label: Text(AppLocalizations.of(context).shareVia),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGreen,
                   foregroundColor: Colors.white,
@@ -2120,7 +2164,7 @@ class _TripShareSheet extends StatelessWidget {
               foregroundColor: Colors.red,
               minimumSize: const Size(double.infinity, 44),
             ),
-            child: const Text('Stop sharing location',
+            child: Text(AppLocalizations.of(context).stopSharingLocation,
                 style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
@@ -2163,7 +2207,7 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Cancel Ride',
+          Text(AppLocalizations.of(context).cancelRide,
               style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
           SizedBox(height: 4),
           Text(
@@ -2189,7 +2233,7 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Keep Ride',
+          child: Text(AppLocalizations.of(context).keepRide,
               style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600)),
         ),
         ElevatedButton(

@@ -69,9 +69,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   double?   _tripDistanceKm;
   DateTime? _tripStartTime;
 
-  // Driver position — plain fields; updated in GPS callback without setState
+  // Driver position — plain field; updated in GPS callback without setState
   LatLng? _driverLatLng;
-  double  _driverHeading = 0.0;
 
   // Smooth lerp animation (same pattern as passenger tracking screen)
   late AnimationController _markerAnimCtrl;
@@ -381,15 +380,6 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     return r * 2 * atan2(sqrt(x), sqrt(1 - x));
   }
 
-  static double _bearing(LatLng from, LatLng to) {
-    final lat1 = from.latitude  * pi / 180;
-    final lat2 = to.latitude    * pi / 180;
-    final dLng = (to.longitude - from.longitude) * pi / 180;
-    final y    = sin(dLng) * cos(lat2);
-    final x    = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(dLng);
-    return (atan2(y, x) * 180 / pi + 360) % 360;
-  }
-
   // ── Smooth lerp animation ─────────────────────────────────────────────────
 
   void _onMarkerAnimTick() {
@@ -399,7 +389,62 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     final t   = _markerAnimCtrl.value;
     final lat = lerpDouble(prev.latitude,  target.latitude,  t)!;
     final lng = lerpDouble(prev.longitude, target.longitude, t)!;
-    _updateDriverMarker(LatLng(lat, lng));
+    _updateDriverMarker(_snapToRoute(LatLng(lat, lng)));
+  }
+
+  // ── Snap-to-road ─────────────────────────────────────────────────────────────
+  // Raw GPS pings are noisy and the straight lerp between two pings cuts
+  // corners wherever the real road bends — both make the marker visibly
+  // drift off the drawn route. Since we already have the actual
+  // road-following polyline from Directions API, project the marker onto
+  // the nearest point of it instead of trusting the raw fix. Display only —
+  // ETA/distance calculations still use the raw position.
+  LatLng _snapToRoute(LatLng point) {
+    final route = _polylines
+        .firstWhere((p) => p.polylineId.value == 'live_route',
+            orElse: () => _polylines.firstWhere(
+                (p) => p.polylineId.value == 'full_route',
+                orElse: () => const Polyline(polylineId: PolylineId('none'))))
+        .points;
+    if (route.length < 2) return point;
+
+    const maxSnapDistanceMeters = 80.0;
+    LatLng? closest;
+    double bestDistSq = double.infinity;
+    for (int i = 0; i < route.length - 1; i++) {
+      final proj = _projectOntoSegment(point, route[i], route[i + 1]);
+      final dLat = proj.latitude  - point.latitude;
+      final dLng = proj.longitude - point.longitude;
+      final distSq = dLat * dLat + dLng * dLng;
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq;
+        closest = proj;
+      }
+    }
+    if (closest == null) return point;
+
+    final distMeters = _approxMeters(point, closest);
+    return distMeters <= maxSnapDistanceMeters ? closest : point;
+  }
+
+  static LatLng _projectOntoSegment(LatLng p, LatLng a, LatLng b) {
+    final abLat = b.latitude  - a.latitude;
+    final abLng = b.longitude - a.longitude;
+    final abLenSq = abLat * abLat + abLng * abLng;
+    if (abLenSq == 0) return a;
+    final t = (((p.latitude - a.latitude) * abLat) +
+            ((p.longitude - a.longitude) * abLng)) /
+        abLenSq;
+    final tc = t.clamp(0.0, 1.0);
+    return LatLng(a.latitude + abLat * tc, a.longitude + abLng * tc);
+  }
+
+  static double _approxMeters(LatLng a, LatLng b) {
+    const metersPerDegLat = 111320.0;
+    final metersPerDegLng = 111320.0 * cos(a.latitude * pi / 180);
+    final dLat = (b.latitude  - a.latitude)  * metersPerDegLat;
+    final dLng = (b.longitude - a.longitude) * metersPerDegLng;
+    return sqrt(dLat * dLat + dLng * dLng);
   }
 
   void _updateDriverMarker(LatLng pos) {
@@ -412,9 +457,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         icon:       _driverIcon ?? BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueOrange),
         infoWindow: const InfoWindow(title: 'You'),
-        rotation:   _driverHeading,
+        // No rotation: ride.png is a fixed-orientation illustration (pin +
+        // side-view tuk-tuk), not a top-down sprite meant to spin with GPS
+        // bearing — rotating it made the tuk-tuk render upside-down/sideways
+        // depending on travel direction.
         anchor:     const Offset(0.5, 0.5),
-        flat:       true, // marker rotates with map compass bearing
       ));
     });
   }
@@ -425,12 +472,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     if (!mounted) return;
     if (!_inCambodia(position.latitude, position.longitude)) return;
 
-    final pos     = LatLng(position.latitude, position.longitude);
-    final prevPos = _driverLatLng;
-
-    _driverHeading = (prevPos != null && prevPos != pos)
-        ? _bearing(prevPos, pos)
-        : position.heading;
+    final pos = LatLng(position.latitude, position.longitude);
 
     // Animate smoothly from previous to current GPS ping
     _prevDriverPos   = _targetDriverPos ?? pos;

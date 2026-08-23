@@ -1,5 +1,8 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
+import 'package:autoride_superapp/models/promo_event_model.dart';
+import 'package:autoride_superapp/services/api_service.dart';
 
 class GradientCard extends StatelessWidget {
   final Widget child;
@@ -75,14 +78,16 @@ class ServiceCard extends StatelessWidget {
               height: 59,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
+                // An asset image already carries its own artwork/background —
+                // a tinted square behind it just looks like a boxy halo, so
+                // only icon-based cards get the color tint.
+                color: imagePath != null ? Colors.transparent : color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: imagePath != null
                   ? Image.asset(imagePath!, width: 49, height: 49, fit: BoxFit.contain)
                   : Icon(icon, color: color, size: 26),
             ),
-            const SizedBox(height: 8),
             Text(title,
                 textAlign: TextAlign.center,
                 maxLines: 1,
@@ -90,7 +95,7 @@ class ServiceCard extends StatelessWidget {
                 style: TextStyle(
                     color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+                    fontSize: 12)),
           ],
         ),
       ),
@@ -201,6 +206,156 @@ class SectionHeader extends StatelessWidget {
                 style: const TextStyle(color: AppTheme.accent, fontSize: 13)),
           ),
       ],
+    );
+  }
+}
+
+// ─── Promo events (shown in place of "Recent Trips" on the home screens) ──────
+
+/// Hero-banner style promo card — gradient background, headline + body on
+/// the left, the event's own image bleeding off the right edge, and a pill
+/// CTA. Matches the "Special Offers" banner look (green gradient, bold
+/// discount headline, product photo, "Shop Now" pill) rather than a plain
+/// list-item card, since a promo is meant to grab attention like an ad.
+class PromoEventCard extends StatelessWidget {
+  final PromoEventModel event;
+  final VoidCallback? onTap;
+  const PromoEventCard({super.key, required this.event, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppTheme.accent, Color(0xFF00863B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+                color: AppTheme.accent.withValues(alpha: 0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 4)),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(children: [
+          // Decorative circles, same treatment as the marketplace hero banner.
+          Positioned(right: -30, top: -40,
+            child: Container(width: 140, height: 140,
+                decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle))),
+          Positioned(right: 40, bottom: -60,
+            child: Container(width: 110, height: 110,
+                decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle))),
+
+          // Event photo, bleeding off the right edge.
+          if (event.imageUrl != null)
+            Positioned(
+              right: -10, top: 0, bottom: 0, width: 150,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
+                child: CachedNetworkImage(
+                  imageUrl: event.imageUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) => const SizedBox.shrink(),
+                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(event.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15)),
+                  const SizedBox(height: 6),
+                  Text(event.body,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500)),
+                ]),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text('View',
+                      style: TextStyle(
+                          color: AppTheme.accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Self-fetching promo-events list — drop-in replacement for a screen's old
+/// "recent trips" block. Fetches once on mount; shows nothing (not even an
+/// empty-state card) when there are no active events, so it doesn't clutter
+/// the home screen when marketing has nothing running.
+class PromoEventsSection extends StatefulWidget {
+  const PromoEventsSection({super.key});
+
+  @override
+  State<PromoEventsSection> createState() => _PromoEventsSectionState();
+}
+
+class _PromoEventsSectionState extends State<PromoEventsSection> {
+  List<PromoEventModel> _events = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final events = await ApiService.getPromoEvents();
+      if (!mounted) return;
+      setState(() { _events = events; _loading = false; });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading || _events.isEmpty) return const SizedBox.shrink();
+    return Column(
+      children: _events
+          .map((e) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: PromoEventCard(event: e),
+              ))
+          .toList(),
     );
   }
 }

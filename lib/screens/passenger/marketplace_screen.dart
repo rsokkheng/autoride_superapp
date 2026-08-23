@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../models/marketplace_model.dart';
+import '../../l10n/app_localizations.dart';
+import '../../main.dart' show appLocale;
 import '../../services/api_service.dart';
 import '../../services/maps_service.dart';
 import '../../theme/app_theme.dart';
@@ -43,19 +45,6 @@ Color _statusColor(String s) => switch (s) {
   'cancelled' => Colors.red,
   _           => Colors.grey,
 };
-
-const _catIcons = <String, IconData>{
-  'Vehicles':    Icons.directions_car_rounded,
-  'Electronics': Icons.devices_rounded,
-  'Clothing':    Icons.checkroom_rounded,
-  'Furniture':   Icons.chair_rounded,
-  'Sports':      Icons.sports_basketball_rounded,
-  'Books':       Icons.menu_book_rounded,
-  'Tools':       Icons.build_rounded,
-  'Food':        Icons.restaurant_rounded,
-  'Beauty':      Icons.face_retouching_natural,
-};
-IconData _catIcon(String n) => _catIcons[n] ?? Icons.category_rounded;
 
 // ── Shared widgets ─────────────────────────────────────────────────────────
 
@@ -94,10 +83,10 @@ class _SectionTitle extends StatelessWidget {
       if (onSeeAll != null)
         GestureDetector(
           onTap: onSeeAll,
-          child: const Row(children: [
-            Text('See All', style: TextStyle(
+          child: Row(children: [
+            Text(AppLocalizations.of(context).seeAll, style: const TextStyle(
                 color: _green, fontWeight: FontWeight.w600, fontSize: 13)),
-            Icon(Icons.chevron_right_rounded, color: _green, size: 18),
+            const Icon(Icons.chevron_right_rounded, color: _green, size: 18),
           ]),
         ),
     ]),
@@ -181,7 +170,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
             child: const Icon(Icons.storefront_rounded, color: _green, size: 20),
           ),
           const SizedBox(width: 10),
-          Text('Marketplace', style: TextStyle(
+          Text(AppLocalizations.of(context).marketplace, style: TextStyle(
               color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
         ]),
         actions: const [],
@@ -218,7 +207,6 @@ class _BrowseTab extends StatefulWidget {
 }
 
 class _BrowseTabState extends State<_BrowseTab> {
-  List<MarketplaceCategoryModel> _cats  = [];
   List<MarketplaceProductModel>  _prods = [];
   int  _totalCount = 0;
   bool _loading    = true;
@@ -231,14 +219,9 @@ class _BrowseTabState extends State<_BrowseTab> {
     if (!mounted) return;
     setState(() { _loading = true; _error = null; });
     try {
-      final results = await Future.wait([
-        if (_cats.isEmpty) ApiService.getMarketplaceCategories(),
-        ApiService.getMarketplaceProducts(),
-      ]);
+      final page = await ApiService.getMarketplaceProducts();
       if (!mounted) return;
-      final page = results.last as MarketplaceProductsPage;
       setState(() {
-        if (_cats.isEmpty) _cats = results[0] as List<MarketplaceCategoryModel>;
         _prods       = page.products;
         _totalCount  = page.total;
         _loading     = false;
@@ -270,7 +253,8 @@ class _BrowseTabState extends State<_BrowseTab> {
       color: _green,
       child: ListView(
         children: [
-          // Search bar
+          // Filters — single entry point into All Listings (which has the
+          // real search box + filter sheet).
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: GestureDetector(
@@ -293,24 +277,12 @@ class _BrowseTabState extends State<_BrowseTab> {
                       color: _green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.search_rounded, color: _green, size: 18),
+                    child: const Icon(Icons.tune_rounded, color: _green, size: 18),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text('Search products…',
-                      style: TextStyle(color: Colors.grey.shade400, fontSize: 14))),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: context.appCardBg,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.tune_rounded, color: Colors.grey, size: 14),
-                      const SizedBox(width: 4),
-                      Text('Filter', style: TextStyle(
-                          color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
+                  Expanded(child: Text(AppLocalizations.of(context).filter,
+                      style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w600))),
+                  Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
                 ]),
               ),
             ),
@@ -352,12 +324,12 @@ class _BrowseTabState extends State<_BrowseTab> {
                         color: _white.withValues(alpha: 0.18),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text('$_totalCount listings available',
+                      child: Text('$_totalCount ${AppLocalizations.of(context).listingsAvailable}',
                           style: TextStyle(color: _white.withValues(alpha: 0.95),
                               fontSize: 11, fontWeight: FontWeight.w600)),
                     ),
                     const SizedBox(height: 10),
-                    const Text('Find the best deal',
+                    Text(AppLocalizations.of(context).findBestDeal,
                         style: TextStyle(color: _white, fontWeight: FontWeight.w800, fontSize: 22)),
                     const Spacer(),
                     GestureDetector(
@@ -367,12 +339,12 @@ class _BrowseTabState extends State<_BrowseTab> {
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
                         decoration: BoxDecoration(
                             color: context.appSurface, borderRadius: BorderRadius.circular(10)),
-                        child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text('Browse All',
-                              style: TextStyle(color: _green,
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Text(AppLocalizations.of(context).browseAll,
+                              style: const TextStyle(color: _green,
                                   fontWeight: FontWeight.w700, fontSize: 13)),
-                          SizedBox(width: 4),
-                          Icon(Icons.arrow_forward_rounded, color: _green, size: 14),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_rounded, color: _green, size: 14),
                         ]),
                       ),
                     ),
@@ -412,7 +384,7 @@ class _BrowseTabState extends State<_BrowseTab> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Rental Vehicle',
+                      Text(AppLocalizations.of(context).rentalVehicle,
                           style: TextStyle(color: _white, fontSize: 16,
                               fontWeight: FontWeight.w800)),
                     ]),
@@ -429,48 +401,6 @@ class _BrowseTabState extends State<_BrowseTab> {
               ),
             ),
           ),
-
-          // Categories
-          if (_cats.isNotEmpty) ...[
-            _SectionTitle('Categories'),
-            SizedBox(
-              height: 90,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: _cats.length,
-                itemBuilder: (_, i) {
-                  final cat = _cats[i];
-                  return GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => _AllListingsScreen(
-                            categoryId: cat.id, categoryName: cat.name))),
-                    child: Container(
-                      width: 72, margin: const EdgeInsets.only(right: 12),
-                      child: Column(children: [
-                        Container(
-                          width: 56, height: 56,
-                          decoration: BoxDecoration(
-                            color: context.appSurface,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 8, offset: const Offset(0, 2))],
-                          ),
-                          child: Icon(_catIcon(cat.name), color: _green, size: 26),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(cat.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: context.appTextPrimary, fontSize: 11,
-                                fontWeight: FontWeight.w600)),
-                      ]),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
 
           // Featured grid
           if (featured.isNotEmpty) ...[
@@ -668,7 +598,7 @@ class _ErrorState extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh_rounded, size: 16),
-          label: const Text('Try Again'),
+          label: Text(AppLocalizations.of(context).tryAgain),
           style: ElevatedButton.styleFrom(backgroundColor: _green,
               foregroundColor: _white, elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
@@ -692,9 +622,11 @@ class _AllListingsScreen extends StatefulWidget {
 }
 
 class _AllListingsScreenState extends State<_AllListingsScreen> {
-  final _search     = TextEditingController();
   final _scrollCtrl = ScrollController();
-  List<MarketplaceCategoryModel> _cats  = [];
+  List<MarketplaceCategoryModel>     _cats    = [];
+  List<MarketplaceVehicleTypeModel>  _vTypes  = [];
+  List<MarketplaceVehicleColorModel> _vColors = [];
+  List<MarketplaceVehicleSizeModel>  _vSizes  = [];
   List<MarketplaceProductModel>  _prods = [];
   bool    _loading     = true;
   bool    _loadingMore = false;
@@ -705,14 +637,19 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
   int?    _selCat;
   String? _type;
   String? _cond;
-  DateTime? _lastSearch;
+  int?    _vTypeId;
+  int?    _vColorId;
+  int?    _vSizeId;
+
+  bool get _hasActiveFilters =>
+      _selCat != null || _type != null || _cond != null ||
+      _vTypeId != null || _vColorId != null || _vSizeId != null;
 
   @override
   void initState() {
     super.initState();
     _selCat = widget.categoryId;
     _load();
-    _search.addListener(_debounce);
     _scrollCtrl.addListener(_onScroll);
   }
 
@@ -723,34 +660,35 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
     }
   }
 
-  void _debounce() {
-    _lastSearch = DateTime.now();
-    Future.delayed(const Duration(milliseconds: 450), () {
-      if (_lastSearch != null &&
-          DateTime.now().difference(_lastSearch!) >= const Duration(milliseconds: 440)) {
-        _load();
-      }
-    });
-  }
-
   Future<void> _load() async {
     if (!mounted) return;
     setState(() { _loading = true; _error = null; _page = 1; });
     try {
+      final needsRefData = _cats.isEmpty;
       final futures = await Future.wait([
-        if (_cats.isEmpty) ApiService.getMarketplaceCategories(),
+        if (needsRefData) ApiService.getMarketplaceCategories(),
+        if (needsRefData) ApiService.getMarketplaceVehicleTypes(),
+        if (needsRefData) ApiService.getMarketplaceVehicleColors(),
+        if (needsRefData) ApiService.getMarketplaceVehicleSizes(),
         ApiService.getMarketplaceProducts(
-          search:      _search.text.trim().isEmpty ? null : _search.text.trim(),
-          categoryId:  _selCat,
-          listingType: _type,
-          condition:   _cond,
-          page:        1,
+          categoryId:     _selCat,
+          listingType:    _type,
+          condition:      _cond,
+          vehicleTypeId:  _vTypeId,
+          vehicleColorId: _vColorId,
+          vehicleSizeId:  _vSizeId,
+          page:           1,
         ),
       ]);
       if (!mounted) return;
       final pageResult = futures.last as MarketplaceProductsPage;
       setState(() {
-        if (_cats.isEmpty) _cats = futures[0] as List<MarketplaceCategoryModel>;
+        if (needsRefData) {
+          _cats    = futures[0] as List<MarketplaceCategoryModel>;
+          _vTypes  = futures[1] as List<MarketplaceVehicleTypeModel>;
+          _vColors = futures[2] as List<MarketplaceVehicleColorModel>;
+          _vSizes  = futures[3] as List<MarketplaceVehicleSizeModel>;
+        }
         _prods   = pageResult.products;
         _hasMore = pageResult.hasMore;
         _loading = false;
@@ -767,11 +705,13 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
     setState(() => _loadingMore = true);
     try {
       final pageResult = await ApiService.getMarketplaceProducts(
-        search:      _search.text.trim().isEmpty ? null : _search.text.trim(),
-        categoryId:  _selCat,
-        listingType: _type,
-        condition:   _cond,
-        page:        _page + 1,
+        categoryId:     _selCat,
+        listingType:    _type,
+        condition:      _cond,
+        vehicleTypeId:  _vTypeId,
+        vehicleColorId: _vColorId,
+        vehicleSizeId:  _vSizeId,
+        page:           _page + 1,
       );
       if (!mounted) return;
       setState(() {
@@ -787,9 +727,35 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
 
   @override
   void dispose() {
-    _search.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _openFilterSheet() async {
+    final result = await showModalBottomSheet<_FilterSelection>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FilterSheet(
+        vehicleTypes: _vTypes,
+        vehicleSizes: _vSizes,
+        vehicleColors: _vColors,
+        initial: _FilterSelection(
+          categoryId: _selCat, listingType: _type, condition: _cond,
+          vehicleTypeId: _vTypeId, vehicleSizeId: _vSizeId, vehicleColorId: _vColorId,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _selCat   = result.categoryId;
+      _type     = result.listingType;
+      _cond     = result.condition;
+      _vTypeId  = result.vehicleTypeId;
+      _vSizeId  = result.vehicleSizeId;
+      _vColorId = result.vehicleColorId;
+    });
+    _load();
   }
 
   @override
@@ -806,6 +772,15 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
         actions: [
           IconButton(
+            onPressed: _openFilterSheet,
+            icon: Badge(
+              isLabelVisible: _hasActiveFilters,
+              smallSize: 8,
+              backgroundColor: _green,
+              child: Icon(Icons.tune_rounded, color: context.appTextPrimary, size: 22),
+            ),
+          ),
+          IconButton(
             onPressed: () => setState(() => _grid = !_grid),
             icon: Icon(_grid ? Icons.view_list_rounded : Icons.grid_view_rounded,
                 color: context.appTextPrimary, size: 22),
@@ -813,73 +788,93 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
         ],
       ),
       body: Column(children: [
-        // Search
-        Container(
-          color: context.appSurface,
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-          child: TextField(
-            controller: _search,
-            style: TextStyle(color: context.appTextPrimary, fontSize: 14),
-            decoration: InputDecoration(
-              hintText: 'Search listings…',
-              hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
-              suffixIcon: _search.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.grey, size: 18),
-                      onPressed: () { _search.clear(); _load(); })
-                  : null,
-              filled: true, fillColor: context.appCardBg,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.symmetric(vertical: 10),
-            ),
-          ),
-        ),
-        // Filter chips
-        Container(
-          color: context.appSurface,
-          child: Column(children: [
-            const Divider(height: 1, color: Color(0xFFF0F0F0)),
-            SingleChildScrollView(
+        // Vehicle-type pills — always-visible shortcut for the two real
+        // vehicle types, on top of the fuller filter sheet.
+        if (_vTypes.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+            child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: Row(children: [
-                _ChipBtn(label: 'All',
-                    active: _selCat == null && _type == null && _cond == null,
-                    onTap: () { setState(() { _selCat = null; _type = null; _cond = null; }); _load(); }),
+                _VehicleTypePill(
+                  label: 'All',
+                  active: _vTypeId == null,
+                  onTap: () { setState(() => _vTypeId = null); _load(); },
+                ),
                 const SizedBox(width: 8),
-                for (final t in [('sale', 'For Sale'), ('rent', 'For Rent')]) ...[
-                  _ChipBtn(label: t.$2, active: _type == t.$1,
-                      onTap: () { setState(() => _type = _type == t.$1 ? null : t.$1); _load(); }),
-                  const SizedBox(width: 8),
-                ],
-                for (final c in [('new', 'New'), ('used', 'Used'), ('refurbished', 'Refurb')]) ...[
-                  _ChipBtn(label: c.$2, active: _cond == c.$1,
-                      onTap: () { setState(() => _cond = _cond == c.$1 ? null : c.$1); _load(); }),
-                  const SizedBox(width: 8),
-                ],
-                for (final cat in _cats) ...[
-                  _ChipBtn(label: cat.name, active: _selCat == cat.id,
-                      onTap: () {
-                        setState(() => _selCat = _selCat == cat.id ? null : cat.id);
-                        _load();
-                      }),
+                for (final vt in _vTypes) ...[
+                  _VehicleTypePill(
+                    label: vt.name(appLocale.value.languageCode),
+                    active: _vTypeId == vt.id,
+                    onTap: () { setState(() => _vTypeId = _vTypeId == vt.id ? null : vt.id); _load(); },
+                  ),
                   const SizedBox(width: 8),
                 ],
               ]),
             ),
+          ),
+        // Active-filter summary (only shown once something is applied) +
+        // result count — the actual filter selection lives in the sheet
+        // opened via the appBar's tune icon.
+        Container(
+          color: context.appSurface,
+          child: Column(children: [
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            if (_hasActiveFilters)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Row(children: [
+                  if (_selCat != null)
+                    _ActiveFilterChip(
+                        label: _cats.firstWhere((c) => c.id == _selCat, orElse: () => const MarketplaceCategoryModel(id: 0, name: '')).name,
+                        onClear: () { setState(() => _selCat = null); _load(); }),
+                  if (_type != null)
+                    _ActiveFilterChip(
+                        label: _type == 'rent' ? 'For Rent' : 'For Sale',
+                        onClear: () { setState(() => _type = null); _load(); }),
+                  if (_cond != null)
+                    _ActiveFilterChip(
+                        label: _cond![0].toUpperCase() + _cond!.substring(1),
+                        onClear: () { setState(() => _cond = null); _load(); }),
+                  if (_vTypeId != null)
+                    _ActiveFilterChip(
+                        label: _vTypes.firstWhere((t) => t.id == _vTypeId).name(appLocale.value.languageCode),
+                        onClear: () { setState(() => _vTypeId = null); _load(); }),
+                  if (_vSizeId != null)
+                    _ActiveFilterChip(
+                        label: _vSizes.firstWhere((s) => s.id == _vSizeId).label,
+                        onClear: () { setState(() => _vSizeId = null); _load(); }),
+                  if (_vColorId != null)
+                    _ActiveFilterChip(
+                        label: _vColors.firstWhere((c) => c.id == _vColorId).name(appLocale.value.languageCode),
+                        onClear: () { setState(() => _vColorId = null); _load(); }),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selCat = null; _type = null; _cond = null;
+                        _vTypeId = null; _vColorId = null; _vSizeId = null;
+                      });
+                      _load();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      child: Text(AppLocalizations.of(context).clearAll,
+                          style: const TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
+                    ),
+                  ),
+                ]),
+              ),
+            if (!_loading && _error == null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                child: Row(children: [
+                  Text('${_prods.length} ${AppLocalizations.of(context).results}',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ]),
+              ),
           ]),
         ),
-        // Count
-        if (!_loading && _error == null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
-            child: Row(children: [
-              Text('${_prods.length} result${_prods.length == 1 ? '' : 's'}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ]),
-          ),
         // Body
         Expanded(child: _buildBody()),
       ]),
@@ -896,10 +891,10 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
             decoration: BoxDecoration(color: context.appCardBg, shape: BoxShape.circle),
             child: const Icon(Icons.search_off_rounded, color: Colors.grey, size: 44)),
         const SizedBox(height: 16),
-        Text('No listings found',
+        Text(AppLocalizations.of(context).noListingsFound,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
         const SizedBox(height: 6),
-        const Text('Try different filters',
+        Text(AppLocalizations.of(context).tryDifferentFilters,
             style: TextStyle(color: Colors.grey, fontSize: 13)),
       ]),
     );
@@ -943,11 +938,14 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
   }
 }
 
-class _ChipBtn extends StatelessWidget {
+// Small removable chip shown in the active-filters summary row.
+// Icon-over-label tab for the vehicle-type quick filter row (All / one per
+// real vehicle type) — matches the icon-tab reference style requested.
+class _VehicleTypePill extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
-  const _ChipBtn({required this.label, required this.active, required this.onTap});
+  const _VehicleTypePill({required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -956,14 +954,273 @@ class _ChipBtn extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: active ? _green : context.appSurface,
+        color: active ? _green.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-            color: active ? _green : const Color(0xFFE0E0E0), width: 1.5),
+        border: Border.all(color: active ? _green : const Color(0xFFE0E0E0), width: 1.5),
       ),
       child: Text(label,
-          style: TextStyle(color: active ? _white : Colors.grey.shade600,
+          style: TextStyle(color: active ? _green : Colors.grey.shade600,
               fontWeight: FontWeight.w600, fontSize: 12)),
+    ),
+  );
+}
+
+class _ActiveFilterChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onClear;
+  const _ActiveFilterChip({required this.label, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(right: 8),
+    child: Container(
+      padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
+      decoration: BoxDecoration(
+        color: _green.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _green.withValues(alpha: 0.4)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(label, style: const TextStyle(color: _green, fontSize: 12, fontWeight: FontWeight.w600)),
+        GestureDetector(
+          onTap: onClear,
+          child: const Padding(
+            padding: EdgeInsets.all(4),
+            child: Icon(Icons.close_rounded, size: 14, color: _green),
+          ),
+        ),
+      ]),
+    ),
+  );
+}
+
+// ── Filter bottom sheet ─────────────────────────────────────────────────────
+// Draft selection returned to the caller only when "Apply" is tapped — avoids
+// firing a network request on every single checkbox tap inside the sheet.
+class _FilterSelection {
+  final int?    categoryId;
+  final String? listingType;
+  final String? condition;
+  final int?    vehicleTypeId;
+  final int?    vehicleSizeId;
+  final int?    vehicleColorId;
+  const _FilterSelection({
+    this.categoryId, this.listingType, this.condition,
+    this.vehicleTypeId, this.vehicleSizeId, this.vehicleColorId,
+  });
+}
+
+class _FilterSheet extends StatefulWidget {
+  final List<MarketplaceVehicleTypeModel>  vehicleTypes;
+  final List<MarketplaceVehicleSizeModel>  vehicleSizes;
+  final List<MarketplaceVehicleColorModel> vehicleColors;
+  final _FilterSelection initial;
+  const _FilterSheet({
+    required this.vehicleTypes,
+    required this.vehicleSizes, required this.vehicleColors,
+    required this.initial,
+  });
+
+  @override
+  State<_FilterSheet> createState() => _FilterSheetState();
+}
+
+class _FilterSheetState extends State<_FilterSheet> {
+  int?    _cat;
+  String? _type;
+  String? _cond;
+  int?    _vType;
+  int?    _vSize;
+  int?    _vColor;
+
+  @override
+  void initState() {
+    super.initState();
+    _cat    = widget.initial.categoryId;
+    _type   = widget.initial.listingType;
+    _cond   = widget.initial.condition;
+    _vType  = widget.initial.vehicleTypeId;
+    _vSize  = widget.initial.vehicleSizeId;
+    _vColor = widget.initial.vehicleColorId;
+  }
+
+  // Single-select "radio" behaviour rendered as a checkbox row, per request —
+  // every filter here maps to one backend id, so multi-select isn't meaningful.
+  Widget _checkboxRow(String label, bool checked, VoidCallback onTap) => InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Checkbox(
+          value: checked,
+          activeColor: _green,
+          onChanged: (_) => onTap(),
+        ),
+        Expanded(child: Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 14))),
+      ]),
+    ),
+  );
+
+  Widget _sectionTitle(String text) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 4),
+    child: Text(text, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (context, scrollCtrl) => Container(
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(l.filter, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+              GestureDetector(
+                onTap: () => setState(() {
+                  _cat = null; _type = null; _cond = null;
+                  _vType = null; _vSize = null; _vColor = null;
+                }),
+                child: Text(l.clearAll, style: const TextStyle(color: _green, fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ),
+          const Divider(height: 20),
+          Expanded(
+            child: ListView(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                _sectionTitle('Listing Type'),
+                _checkboxRow('For Sale', _type == 'sale', () => setState(() => _type = _type == 'sale' ? null : 'sale')),
+                _checkboxRow('For Rent', _type == 'rent', () => setState(() => _type = _type == 'rent' ? null : 'rent')),
+
+                _sectionTitle('Condition'),
+                for (final c in [('new', 'New'), ('used', 'Used'), ('refurbished', 'Refurbished')])
+                  _checkboxRow(c.$2, _cond == c.$1, () => setState(() => _cond = _cond == c.$1 ? null : c.$1)),
+
+                if (widget.vehicleTypes.isNotEmpty) ...[
+                  _sectionTitle(l.vehicleType),
+                  for (final vt in widget.vehicleTypes)
+                    _checkboxRow(vt.name(appLocale.value.languageCode), _vType == vt.id,
+                        () => setState(() => _vType = _vType == vt.id ? null : vt.id)),
+                ],
+
+                if (widget.vehicleSizes.isNotEmpty) ...[
+                  _sectionTitle(l.size),
+                  for (final vs in widget.vehicleSizes)
+                    _checkboxRow(vs.label, _vSize == vs.id,
+                        () => setState(() => _vSize = _vSize == vs.id ? null : vs.id)),
+                ],
+
+                if (widget.vehicleColors.isNotEmpty) ...[
+                  _sectionTitle(l.color),
+                  Wrap(spacing: 14, runSpacing: 10, children: [
+                    for (final vc in widget.vehicleColors)
+                      _ColorChip(
+                        color: _swatchFor(vc.code),
+                        label: vc.name(appLocale.value.languageCode),
+                        active: _vColor == vc.id,
+                        onTap: () => setState(() => _vColor = _vColor == vc.id ? null : vc.id),
+                      ),
+                  ]),
+                ],
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _green, foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(context, _FilterSelection(
+                    categoryId: _cat, listingType: _type, condition: _cond,
+                    vehicleTypeId: _vType, vehicleSizeId: _vSize, vehicleColorId: _vColor,
+                  )),
+                  child: Text(l.apply, style: const TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// Maps the backend's vehicle-color `code` (a plain slug like 'black'/'red',
+// not a hex value) to an actual swatch color. Unknown codes fall back to a
+// neutral grey rather than breaking the filter row.
+Color _swatchFor(String code) => switch (code) {
+      'black' => const Color(0xFF1A1A1A),
+      'white' => const Color(0xFFF5F5F5),
+      'red'   => const Color(0xFFE53935),
+      'blue'  => const Color(0xFF1976D2),
+      'gray' || 'grey' => const Color(0xFF9E9E9E),
+      'green' => const Color(0xFF43A047),
+      'yellow' => const Color(0xFFFDD835),
+      'orange' => const Color(0xFFFB8C00),
+      'silver' => const Color(0xFFC0C0C0),
+      'brown' => const Color(0xFF6D4C41),
+      _       => const Color(0xFF9E9E9E),
+    };
+
+class _ColorChip extends StatelessWidget {
+  final Color color;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _ColorChip({required this.color, required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: Tooltip(
+      message: label,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          width: 26, height: 26,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+                color: active ? _green : const Color(0xFFE0E0E0),
+                width: active ? 2.5 : 1),
+            boxShadow: active
+                ? [BoxShadow(color: _green.withValues(alpha: 0.3), blurRadius: 4)]
+                : null,
+          ),
+          child: active
+              ? Icon(Icons.check,
+                  size: 14,
+                  color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white)
+              : null,
+        ),
+      ]),
     ),
   );
 }
@@ -1176,7 +1433,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                     Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
                       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         if (canSell) ...[
-                          const Text('Sale Price',
+                          Text(AppLocalizations.of(context).salePrice,
                               style: TextStyle(color: Colors.grey, fontSize: 11)),
                           Text(_usd(_p.price),
                               style: const TextStyle(color: _green,
@@ -1184,7 +1441,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         ],
                         if (canRent && _p.rentPricePerDay != null) ...[
                           const SizedBox(height: 4),
-                          const Text('Rent / day',
+                          Text(AppLocalizations.of(context).rentPerDay,
                               style: TextStyle(color: Colors.grey, fontSize: 11)),
                           Text(_usd(_p.rentPricePerDay!),
                               style: const TextStyle(
@@ -1198,7 +1455,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                               color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
-                          child: Text('Qty: ${_p.quantity}',
+                          child: Text('${AppLocalizations.of(context).qty}: ${_p.quantity}',
                               style: TextStyle(color: context.appTextPrimary,
                                   fontWeight: FontWeight.w600, fontSize: 12)),
                         ),
@@ -1223,7 +1480,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                         Row(children: [
                           const Icon(Icons.verified_rounded, color: _green, size: 13),
                           const SizedBox(width: 3),
-                          const Text('Verified Seller',
+                          Text(AppLocalizations.of(context).verifiedSeller,
                               style: TextStyle(color: Colors.grey, fontSize: 11)),
                         ]),
                       ]),
@@ -1278,7 +1535,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: const Text('Edit Listing',
+                    label: Text(AppLocalizations.of(context).editListing,
                         style: TextStyle(fontWeight: FontWeight.w700)),
                     onPressed: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => _PostProductScreen(existing: _p))),
@@ -1397,7 +1654,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
     final needsName    = _isGuest && _guestNameCtrl.text.trim().isEmpty;
     if (needsAddress || needsPhone || needsName) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all required fields'),
+        SnackBar(content: Text(AppLocalizations.of(context).fillRequiredFields),
             backgroundColor: Colors.red));
       return;
     }
@@ -1425,10 +1682,10 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
             child: const Icon(Icons.check_rounded, color: _green, size: 36),
           ),
           const SizedBox(height: 16),
-          Text('Order Placed!',
+          Text(AppLocalizations.of(context).orderPlaced,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
           const SizedBox(height: 8),
-          Text('Your purchase request has been sent to the seller.',
+          Text(AppLocalizations.of(context).purchaseRequestSent,
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
           const SizedBox(height: 20),
@@ -1447,7 +1704,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                   foregroundColor: _white,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12))),
-              child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(AppLocalizations.of(context).done, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ),
         ]),
@@ -1467,7 +1724,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: context.appTextPrimary, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Purchase Product',
+        title: Text(AppLocalizations.of(context).purchaseProduct,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 17)),
         centerTitle: true,
       ),
@@ -1635,7 +1892,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
               ),
 
               // Coupon code
-              Text('Coupon Code', style: TextStyle(
+              Text(AppLocalizations.of(context).couponCode, style: TextStyle(
                   color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
               const SizedBox(height: 6),
@@ -1653,7 +1910,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                 const SizedBox(height: 12),
               ] else ...[
                 // Phone number for logged-in users
-                Text('Phone Number', style: TextStyle(
+                Text(AppLocalizations.of(context).phoneNumber, style: TextStyle(
                     color: context.appTextPrimary,
                     fontWeight: FontWeight.w600, fontSize: 13)),
                 const SizedBox(height: 6),
@@ -1679,12 +1936,11 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                   const SizedBox(width: 10),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    const Text('Confirm Information',
+                    Text(AppLocalizations.of(context).confirmInformation,
                         style: TextStyle(color: _green, fontWeight: FontWeight.w700,
                             fontSize: 13)),
                     const SizedBox(height: 4),
-                    Text('Please verify all addresses and contact details before '
-                        'proceeding. The seller will be notified once your order is placed.',
+                    Text(AppLocalizations.of(context).verifyAddressesNote,
                         style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                   ])),
                 ]),
@@ -1720,7 +1976,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(
                           color: _white, strokeWidth: 2.5))
-                  : const Text('Purchase Now',
+                  : Text(AppLocalizations.of(context).purchaseNow,
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
             ),
           ),
@@ -2074,7 +2330,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                                 color: _green, strokeWidth: 2),
                           ),
                           const SizedBox(width: 10),
-                          Text('Finding address…',
+                          Text(AppLocalizations.of(context).findingAddress,
                               style: TextStyle(
                                   color: context.appTextSecondary, fontSize: 13)),
                         ])
@@ -2473,6 +2729,154 @@ extension _LocTypeX on _LocType {
       : 'Set Delivery Location';
 }
 
+// Bottom-sheet picker for adding another product to the current order.
+// Purchase-only (sale/both listings), excludes whatever's already in the order.
+class _AddItemSheet extends StatefulWidget {
+  final Set<int> excludeIds;
+  // Set from the inline filter row on the main Buy Item page — the sheet
+  // just shows results matching whatever was picked there, no filter UI of
+  // its own.
+  final int? vehicleTypeId;
+  final int? vehicleColorId;
+  final int? vehicleSizeId;
+  const _AddItemSheet({
+    required this.excludeIds,
+    this.vehicleTypeId,
+    this.vehicleColorId,
+    this.vehicleSizeId,
+  });
+
+  @override
+  State<_AddItemSheet> createState() => _AddItemSheetState();
+}
+
+class _AddItemSheetState extends State<_AddItemSheet> {
+  final _search = TextEditingController();
+  Timer? _debounce;
+  bool _loading = true;
+  String? _error;
+  List<MarketplaceProductModel> _results = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    _search.addListener(() {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 400), _load);
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _search.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    if (!mounted) return;
+    setState(() { _loading = true; _error = null; });
+    try {
+      final page = await ApiService.getMarketplaceProducts(
+        search:         _search.text.trim().isEmpty ? null : _search.text.trim(),
+        listingType:    'sale',
+        vehicleTypeId:  widget.vehicleTypeId,
+        vehicleColorId: widget.vehicleColorId,
+        vehicleSizeId:  widget.vehicleSizeId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _results = page.products.where((p) => !widget.excludeIds.contains(p.id)).toList();
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (context, scrollCtrl) => Container(
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text('Add Item', style: TextStyle(
+                color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: TextField(
+              controller: _search,
+              style: TextStyle(color: context.appTextPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Search listings…',
+                hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
+                filled: true, fillColor: context.appCardBg,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+                contentPadding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2))
+                : _error != null
+                    ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                    : _results.isEmpty
+                        ? Center(child: Text('No other listings found',
+                            style: TextStyle(color: context.appTextSecondary)))
+                        : ListView.builder(
+                            controller: scrollCtrl,
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                            itemCount: _results.length,
+                            itemBuilder: (_, i) {
+                              final p = _results[i];
+                              return ListTile(
+                                onTap: () => Navigator.pop(context, p),
+                                contentPadding: EdgeInsets.zero,
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: p.images.isNotEmpty
+                                      ? Image.network(p.images.first, width: 52, height: 52, fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => Container(width: 52, height: 52, color: context.appCardBg))
+                                      : Container(width: 52, height: 52, color: context.appCardBg,
+                                          child: const Icon(Icons.image_outlined, color: Colors.grey)),
+                                ),
+                                title: Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
+                                subtitle: Text('\$${p.price.toStringAsFixed(p.price % 1 == 0 ? 0 : 2)}',
+                                    style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 13)),
+                                trailing: const Icon(Icons.add_circle_outline, color: _green),
+                              );
+                            },
+                          ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
 class _OrderScreen extends StatefulWidget {
   final MarketplaceProductModel product;
   final String orderType;
@@ -2503,6 +2907,98 @@ class _OrderScreenState extends State<_OrderScreen> {
   String    _manualPickupAddress = '';
   LatLng?   _manualPickupLatLng;
 
+  // Extra items added to this same order beyond widget.product — purchase
+  // orders only (a rental books exactly one vehicle through /rentals, which
+  // has no concept of multiple items). Each entry keeps its own quantity;
+  // the backend has no multi-item order endpoint, so submit fires one
+  // POST /marketplace/{id}/order per line, sequentially.
+  final List<MarketplaceProductModel> _extraItems = [];
+  final Map<int, int> _extraQty = {};
+
+  // Inline vehicle-type/size/color filter, shown right under the item card.
+  // Selecting one both narrows "Add Another Item" AND swaps the main item
+  // itself to the best match — so filtering is a way to change what you're
+  // buying, not just a search-in-a-popup refinement.
+  List<MarketplaceVehicleTypeModel>  _vTypes  = [];
+  List<MarketplaceVehicleColorModel> _vColors = [];
+  List<MarketplaceVehicleSizeModel>  _vSizes  = [];
+  bool _refLoading = true;
+  int? _filterVTypeId;
+  int? _filterVColorId;
+  int? _filterVSizeId;
+
+  // Sizes are only meaningful per vehicle type (e.g. Cargo has different
+  // sizes than Passenger, via the marketplace_vehicle_type_size pivot) — the
+  // vehicle-types endpoint already nests each type's valid sizes, so once a
+  // type is picked, show only those instead of every size in the catalogue.
+  List<MarketplaceVehicleSizeModel> get _sizesForFilter {
+    if (_filterVTypeId == null) return _vSizes;
+    for (final t in _vTypes) {
+      if (t.id == _filterVTypeId) return t.sizes;
+    }
+    return _vSizes;
+  }
+
+  // Mutable "main item" — starts as whatever was tapped into from the
+  // listings screen, but a filter selection can swap it to a matching
+  // product. Everything pricing/order-related reads this, not widget.product.
+  late MarketplaceProductModel _currentProduct = widget.product;
+  bool _swappingProduct = false;
+  String? _filterNoMatch;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_isVehicleRental) _loadFilterRefData();
+  }
+
+  Future<void> _loadFilterRefData() async {
+    try {
+      final results = await Future.wait([
+        ApiService.getMarketplaceVehicleTypes(),
+        ApiService.getMarketplaceVehicleColors(),
+        ApiService.getMarketplaceVehicleSizes(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _vTypes  = results[0] as List<MarketplaceVehicleTypeModel>;
+        _vColors = results[1] as List<MarketplaceVehicleColorModel>;
+        _vSizes  = results[2] as List<MarketplaceVehicleSizeModel>;
+        _refLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _refLoading = false);
+    }
+  }
+
+  // Called whenever a filter chip is tapped — re-fetches with the new
+  // filter combo and, if anything matches, swaps the displayed item to the
+  // top result. Falls back to keeping the current item (with a small notice)
+  // if nothing matches that combination.
+  Future<void> _applyFilterToCurrentItem() async {
+    setState(() { _swappingProduct = true; _filterNoMatch = null; });
+    try {
+      final page = await ApiService.getMarketplaceProducts(
+        listingType:    'sale',
+        vehicleTypeId:  _filterVTypeId,
+        vehicleColorId: _filterVColorId,
+        vehicleSizeId:  _filterVSizeId,
+      );
+      if (!mounted) return;
+      final match = page.products.where((p) => p.id != _currentProduct.id).toList();
+      setState(() {
+        if (page.products.isNotEmpty) {
+          _currentProduct = match.isNotEmpty ? match.first : page.products.first;
+        } else {
+          _filterNoMatch = 'No listing matches that filter — showing your original pick.';
+        }
+        _swappingProduct = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _swappingProduct = false);
+    }
+  }
+
   bool get _isRent  => widget.orderType == 'rent';
   // Every "rent" listing in this marketplace is a vehicle, so rent orders
   // always book through the car-rental system (POST /rentals) instead of a
@@ -2512,12 +3008,15 @@ class _OrderScreenState extends State<_OrderScreen> {
   bool get _datesOk => !_isRent || _start != null;
   DateTime? get _end => _start?.add(Duration(days: _duration.days));
   int  get _days    => _isRent ? _duration.days : 0;
-  double get _subtotal  {
-    if (_isRent && widget.product.rentPricePerDay != null && _datesOk) {
-      return widget.product.rentPricePerDay! * _days * _qty;
+  double get _mainItemTotal {
+    if (_isRent && _currentProduct.rentPricePerDay != null && _datesOk) {
+      return _currentProduct.rentPricePerDay! * _days * _qty;
     }
-    return widget.product.price * _qty;
+    return _currentProduct.price * _qty;
   }
+  double get _extraItemsTotal => _extraItems.fold(
+      0.0, (sum, p) => sum + p.price * (_extraQty[p.id] ?? 1));
+  double get _subtotal => _mainItemTotal + _extraItemsTotal;
   double get _discountUsd => _discountKhr / 4100.0;
   double get _total => (_subtotal - _discountUsd).clamp(0.0, _subtotal);
   // Rentals book through the same /rentals system as the Car Rental page,
@@ -2563,6 +3062,38 @@ class _OrderScreenState extends State<_OrderScreen> {
     _appliedCode = null;
     _couponError = null;
   });
+
+  Future<void> _openAddItemPicker() async {
+    final picked = await showModalBottomSheet<MarketplaceProductModel>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddItemSheet(
+        excludeIds: {_currentProduct.id, ..._extraItems.map((p) => p.id)},
+        vehicleTypeId:  _filterVTypeId,
+        vehicleColorId: _filterVColorId,
+        vehicleSizeId:  _filterVSizeId,
+      ),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _extraItems.add(picked);
+      _extraQty[picked.id] = 1;
+    });
+  }
+
+  void _bumpExtraQty(int productId, int delta) {
+    final current = _extraQty[productId] ?? 1;
+    final next = (current + delta).clamp(1, 99);
+    setState(() => _extraQty[productId] = next);
+  }
+
+  void _removeExtraItem(int productId) {
+    setState(() {
+      _extraItems.removeWhere((p) => p.id == productId);
+      _extraQty.remove(productId);
+    });
+  }
 
   Future<void> _pickStartDate() async {
     final now = DateTime.now();
@@ -2619,7 +3150,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Location Type', style: TextStyle(
+              child: Text(AppLocalizations.of(context).locationType, style: TextStyle(
                   color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -2683,7 +3214,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Rental Duration', style: TextStyle(
+              child: Text(AppLocalizations.of(context).rentalDuration, style: TextStyle(
                   color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -2758,19 +3289,58 @@ class _OrderScreenState extends State<_OrderScreen> {
           paymentMethod:  _pay,
           notes:          _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         );
-      } else {
-        await ApiService.placeMarketplaceOrder(widget.product.id,
+      } else if (_extraItems.isEmpty) {
+        await ApiService.placeMarketplaceOrder(_currentProduct.id,
           orderType:     widget.orderType,
           quantity:      _qty,
           paymentMethod: _pay,
           notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
           rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_start!) : null,
           rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end!)   : null,
+          promoCode:     _appliedCode,
         );
+      } else {
+        // Multiple items — atomic checkout: all orders succeed together or
+        // none are created, instead of firing one request per item and
+        // risking a half-placed cart if a later item fails.
+        try {
+          await ApiService.checkoutMarketplaceCart(
+            items: [
+              MarketplaceCheckoutItem(productId: _currentProduct.id, quantity: _qty),
+              for (final item in _extraItems)
+                MarketplaceCheckoutItem(productId: item.id, quantity: _extraQty[item.id] ?? 1),
+            ],
+            paymentMethod: _pay,
+            notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+            promoCode:     _appliedCode,
+          );
+        } on ApiException catch (e) {
+          // TEMPORARY: /marketplace/checkout isn't deployed on the live
+          // server yet (404/405 — route not registered there, though it
+          // exists in the backend repo). Fall back to placing one order per
+          // item so multi-item purchases still work until that ships.
+          // Remove this catch once checkout is confirmed live in production.
+          if (e.statusCode != 404 && e.statusCode != 405) rethrow;
+          await ApiService.placeMarketplaceOrder(_currentProduct.id,
+            orderType:     widget.orderType,
+            quantity:      _qty,
+            paymentMethod: _pay,
+            notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+            promoCode:     _appliedCode,
+          );
+          for (final item in _extraItems) {
+            await ApiService.placeMarketplaceOrder(item.id,
+              orderType:     'purchase',
+              quantity:      _extraQty[item.id] ?? 1,
+              paymentMethod: _pay,
+              notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+            );
+          }
+        }
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Order placed successfully!'), backgroundColor: _green));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).orderPlacedSuccess), backgroundColor: _green));
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (_) => _isVehicleRental
@@ -2806,7 +3376,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Payment Method', style: TextStyle(
+              child: Text(AppLocalizations.of(context).paymentMethod, style: TextStyle(
                   color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -2854,7 +3424,7 @@ class _OrderScreenState extends State<_OrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.product;
+    final p = _currentProduct;
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
@@ -2909,6 +3479,87 @@ class _OrderScreenState extends State<_OrderScreen> {
                 ])),
               ]),
             ),
+
+            // Inline filter — right under the item. Picking one both swaps
+            // the main item to a matching listing and narrows "Add Another
+            // Item". Purchase orders only. Type/Size/Color get their own
+            // labeled rows rather than one combined scrolling line, so
+            // color swatches aren't hidden off-screen behind the type chips.
+            if (!_isVehicleRental && !_refLoading &&
+                (_vTypes.isNotEmpty || _vColors.isNotEmpty || _vSizes.isNotEmpty)) ...[
+              if (_vTypes.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text('Type', style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final vt in _vTypes)
+                    _SelChip(vt.name(appLocale.value.languageCode), _filterVTypeId == vt.id, _green,
+                        () {
+                          setState(() {
+                            final newTypeId = _filterVTypeId == vt.id ? null : vt.id;
+                            _filterVTypeId = newTypeId;
+                            // Drop the size pick if it doesn't belong to the
+                            // newly-selected type's size list.
+                            if (_filterVSizeId != null &&
+                                !_sizesForFilter.any((s) => s.id == _filterVSizeId)) {
+                              _filterVSizeId = null;
+                            }
+                          });
+                          _applyFilterToCurrentItem();
+                        }),
+                ]),
+              ],
+              if (_sizesForFilter.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text('Size', style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final vs in _sizesForFilter)
+                    _SelChip(vs.label, _filterVSizeId == vs.id, _green,
+                        () { setState(() => _filterVSizeId = _filterVSizeId == vs.id ? null : vs.id); _applyFilterToCurrentItem(); }),
+                ]),
+              ],
+              if (_vColors.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Text('Color', style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Wrap(spacing: 12, runSpacing: 10, children: [
+                  for (final vc in _vColors)
+                    GestureDetector(
+                      onTap: () { setState(() => _filterVColorId = _filterVColorId == vc.id ? null : vc.id); _applyFilterToCurrentItem(); },
+                      child: Tooltip(
+                        message: vc.name(appLocale.value.languageCode),
+                        child: Container(
+                          width: 28, height: 28,
+                          decoration: BoxDecoration(
+                            color: _swatchFor(vc.code),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: _filterVColorId == vc.id ? _green : const Color(0xFFE0E0E0),
+                                width: _filterVColorId == vc.id ? 2.5 : 1),
+                          ),
+                          child: _filterVColorId == vc.id
+                              ? Icon(Icons.check, size: 14,
+                                  color: _swatchFor(vc.code).computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                              : null,
+                        ),
+                      ),
+                    ),
+                ]),
+              ],
+              if (_swappingProduct) ...[
+                const SizedBox(height: 8),
+                Row(children: [
+                  const SizedBox(width: 14, height: 14,
+                      child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
+                  const SizedBox(width: 8),
+                  Text('Finding a match…', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                ]),
+              ] else if (_filterNoMatch != null) ...[
+                const SizedBox(height: 8),
+                Text(_filterNoMatch!, style: const TextStyle(color: Colors.orange, fontSize: 12)),
+              ],
+            ],
             const SizedBox(height: 16),
 
             // Location (vehicle rentals only — books via /rentals), matching
@@ -3040,7 +3691,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Start Date', style: TextStyle(
+                          Text(AppLocalizations.of(context).startDate, style: TextStyle(
                               color: context.appTextSecondary,
                               fontSize: 10, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 4),
@@ -3067,7 +3718,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                         border: Border.all(color: _color.withValues(alpha: 0.18)),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('End Date (auto)', style: TextStyle(
+                        Text(AppLocalizations.of(context).endDateAuto, style: TextStyle(
                             color: _color, fontSize: 10, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
                         Row(children: [
@@ -3089,7 +3740,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                       decoration: BoxDecoration(
                           color: Colors.red.withValues(alpha: 0.07),
                           borderRadius: BorderRadius.circular(10)),
-                      child: const Text('Select a start date',
+                      child: Text(AppLocalizations.of(context).selectStartDate,
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Colors.red,
                               fontWeight: FontWeight.w700, fontSize: 13)),
@@ -3118,6 +3769,60 @@ class _OrderScreenState extends State<_OrderScreen> {
                   _QtyBtn(Icons.add_rounded, _qty < 99, _color,
                       () { if (_qty < 99) setState(() => _qty++); }),
                 ]),
+              ),
+              const SizedBox(height: 16),
+
+              // Other items added to this same order.
+              for (final item in _extraItems) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)]),
+                  child: Row(children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: item.images.isNotEmpty
+                          ? Image.network(item.images.first, width: 44, height: 44, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(width: 44, height: 44, color: context.appCardBg))
+                          : Container(width: 44, height: 44, color: context.appCardBg,
+                              child: const Icon(Icons.image_outlined, color: Colors.grey, size: 18)),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
+                      Text(_usd(item.price), style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 12)),
+                    ])),
+                    _QtyBtn(Icons.remove_rounded, (_extraQty[item.id] ?? 1) > 1, _color,
+                        () => _bumpExtraQty(item.id, -1)),
+                    SizedBox(width: 28, child: Center(child: Text('${_extraQty[item.id] ?? 1}',
+                        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)))),
+                    _QtyBtn(Icons.add_rounded, (_extraQty[item.id] ?? 1) < 99, _color,
+                        () => _bumpExtraQty(item.id, 1)),
+                    IconButton(
+                      onPressed: () => _removeExtraItem(item.id),
+                      icon: const Icon(Icons.close_rounded, color: Colors.red, size: 18),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 10),
+              ],
+              GestureDetector(
+                onTap: _openAddItemPicker,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _color.withValues(alpha: 0.4), width: 1.5),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.add_rounded, color: _color, size: 18),
+                    const SizedBox(width: 6),
+                    Text('Add Another Item', style: TextStyle(color: _color, fontWeight: FontWeight.w700, fontSize: 13)),
+                  ]),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -3172,7 +3877,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(_appliedCode!, style: TextStyle(
                           color: _color, fontWeight: FontWeight.w700, fontSize: 14)),
-                      Text('- ${_usd(_discountUsd)} discount applied',
+                      Text('- ${_usd(_discountUsd)} ${AppLocalizations.of(context).discountApplied}',
                           style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     ])),
                     GestureDetector(
@@ -3226,7 +3931,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                       child: _applyingCoupon
                           ? const SizedBox(width: 18, height: 18,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                          : Text(AppLocalizations.of(context).apply, style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ]),
@@ -3256,8 +3961,11 @@ class _OrderScreenState extends State<_OrderScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (!_isRent) ...[
-                  _SumRow('Unit price', _usd(p.price)),
-                  if (_qty > 1) _SumRow('× $_qty items', _usd(p.price * _qty)),
+                  _SumRow(_qty > 1 ? '${p.title} × $_qty' : p.title, _usd(_mainItemTotal)),
+                  for (final item in _extraItems)
+                    _SumRow(
+                        (_extraQty[item.id] ?? 1) > 1 ? '${item.title} × ${_extraQty[item.id]}' : item.title,
+                        _usd(item.price * (_extraQty[item.id] ?? 1))),
                 ] else ...[
                   // Matches the Car Rental page's summary rows exactly.
                   _SumRow('Vehicle', p.title),
@@ -3289,7 +3997,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                 ],
                 Divider(color: context.appCardBg, height: 20, thickness: 1.5),
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Total', style: TextStyle(
+                  Text(AppLocalizations.of(context).total, style: TextStyle(
                       color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
                   Text(_usd(_total), style: TextStyle(
                       color: _color, fontSize: 22, fontWeight: FontWeight.w800)),
@@ -3448,15 +4156,15 @@ class _MyListingsTabState extends State<_MyListingsTab> {
       builder: (_) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Delete listing?',
+        title: Text(AppLocalizations.of(context).deleteListing,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('${p.title} will be permanently removed.',
+        content: Text('${p.title} ${AppLocalizations.of(context).willBePermanentlyRemoved}',
             style: const TextStyle(color: Colors.grey)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.grey))),
+              child: Text(AppLocalizations.of(context).cancel, style: const TextStyle(color: Colors.grey))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete',
+              child: Text(AppLocalizations.of(context).delete,
                   style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700))),
         ],
       ),
@@ -3495,7 +4203,7 @@ class _MyListingsTabState extends State<_MyListingsTab> {
               MaterialPageRoute(builder: (_) => const _PostProductScreen()))
               .then((_) => _load()),
           icon: const Icon(Icons.add_rounded),
-          label: const Text('Post a Listing',
+          label: Text(AppLocalizations.of(context).postAListing,
               style: TextStyle(fontWeight: FontWeight.w700)),
           style: ElevatedButton.styleFrom(
               backgroundColor: _green, foregroundColor: _white, elevation: 0,
@@ -3661,11 +4369,11 @@ class _OrderList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (orders.isEmpty) return const Center(
+    if (orders.isEmpty) return Center(
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 48),
-        SizedBox(height: 12),
-        Text('No orders yet', style: TextStyle(color: Colors.grey, fontSize: 15)),
+        const Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 48),
+        const SizedBox(height: 12),
+        Text(AppLocalizations.of(context).noOrdersYet, style: const TextStyle(color: Colors.grey, fontSize: 15)),
       ]),
     );
     return RefreshIndicator(
@@ -3750,7 +4458,7 @@ class _OrderCard extends StatelessWidget {
                       style: TextStyle(color: typeClr, fontSize: 10, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: 8),
-                Text('Order #${o.id}',
+                Text('${AppLocalizations.of(context).order} #${o.id}',
                     style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
               ]),
               if (o.rentStartDate != null) ...[
@@ -3767,7 +4475,7 @@ class _OrderCard extends StatelessWidget {
                 Row(children: [
                   Icon(Icons.inventory_2_rounded, color: context.appTextSecondary, size: 12),
                   const SizedBox(width: 4),
-                  Text('Qty: ${o.quantity}',
+                  Text('${AppLocalizations.of(context).qty}: ${o.quantity}',
                       style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                 ]),
               ],
@@ -3780,7 +4488,7 @@ class _OrderCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: Row(children: [
             Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Total', style: TextStyle(
+              Text(AppLocalizations.of(context).total, style: TextStyle(
                   color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
               const SizedBox(height: 2),
               Text(_usd(o.totalPriceUsd), style: const TextStyle(
@@ -3868,20 +4576,67 @@ class _PostProductScreenState extends State<_PostProductScreen> {
   String? _err;
   bool get _isEdit => widget.existing != null;
 
+  List<MarketplaceCategoryModel>     _cats    = [];
+  List<MarketplaceVehicleTypeModel>  _vTypes  = [];
+  List<MarketplaceVehicleColorModel> _vColors = [];
+  bool _refLoading = true;
+  int? _categoryId;
+  int? _vehicleTypeId;
+  int? _vehicleColorId;
+  int? _vehicleSizeId;
+  // Category/vehicle-type/size are all vehicle body-style attributes — they
+  // don't apply to a non-vehicle listing (helmet, spare part, accessory…).
+  // Set correctly in initState() below once widget.existing is known.
+  bool _isVehicleProduct = false;
+
+  // Sizes are scoped to the selected vehicle type — the backend 422s on a
+  // mismatched pairing (e.g. a cargo-only size picked under Passenger).
+  List<MarketplaceVehicleSizeModel> get _sizesForSelectedType {
+    if (_vehicleTypeId == null) return const [];
+    return _vTypes.firstWhere((t) => t.id == _vehicleTypeId,
+        orElse: () => const MarketplaceVehicleTypeModel(id: 0, nameEn: '', nameKm: '', slug: '')).sizes;
+  }
+
   @override
   void initState() {
     super.initState();
     final e = widget.existing;
     if (e != null) {
-      _title.text    = e.title;
-      _desc.text     = e.description ?? '';
-      _price.text    = '${e.price}';
-      _rent.text     = e.rentPricePerDay != null ? '${e.rentPricePerDay}' : '';
-      _location.text = e.locationText ?? '';
-      _qty.text      = '${e.quantity}';
-      _type          = e.listingType;
-      _cond          = e.condition ?? 'used';
-      _status        = e.status;
+      _title.text     = e.title;
+      _desc.text      = e.description ?? '';
+      _price.text     = '${e.price}';
+      _rent.text      = e.rentPricePerDay != null ? '${e.rentPricePerDay}' : '';
+      _location.text  = e.locationText ?? '';
+      _qty.text       = '${e.quantity}';
+      _type           = e.listingType;
+      _cond           = e.condition ?? 'used';
+      _status         = e.status;
+      _categoryId     = e.categoryId;
+      _vehicleTypeId  = e.vehicleTypeId;
+      _vehicleColorId = e.vehicleColorId;
+      _vehicleSizeId  = e.vehicleSizeId;
+      _isVehicleProduct = e.categoryId != null || e.vehicleTypeId != null ||
+          e.vehicleColorId != null || e.vehicleSizeId != null;
+    }
+    _loadRefData();
+  }
+
+  Future<void> _loadRefData() async {
+    try {
+      final results = await Future.wait([
+        ApiService.getMarketplaceCategories(),
+        ApiService.getMarketplaceVehicleTypes(),
+        ApiService.getMarketplaceVehicleColors(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _cats    = results[0] as List<MarketplaceCategoryModel>;
+        _vTypes  = results[1] as List<MarketplaceVehicleTypeModel>;
+        _vColors = results[2] as List<MarketplaceVehicleColorModel>;
+        _refLoading = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _refLoading = false);
     }
   }
 
@@ -3922,13 +4677,17 @@ class _PostProductScreenState extends State<_PostProductScreen> {
             title: t, description: _desc.text.trim().isEmpty ? null : _desc.text.trim(),
             listingType: _type, condition: _cond, price: p, rentPricePerDay: r,
             quantity: int.tryParse(_qty.text.trim()) ?? 1, status: _status,
-            locationText: _location.text.trim().isEmpty ? null : _location.text.trim());
+            locationText: _location.text.trim().isEmpty ? null : _location.text.trim(),
+            categoryId: _categoryId, vehicleTypeId: _vehicleTypeId,
+            vehicleColorId: _vehicleColorId, vehicleSizeId: _vehicleSizeId);
       } else {
         await ApiService.createMarketplaceProduct(
             title: t, price: p, condition: _cond, listingType: _type, status: _status,
             description: _desc.text.trim().isEmpty ? null : _desc.text.trim(),
             locationText: _location.text.trim().isEmpty ? null : _location.text.trim(),
-            quantity: int.tryParse(_qty.text.trim()) ?? 1, rentPricePerDay: r, images: _imgs);
+            quantity: int.tryParse(_qty.text.trim()) ?? 1, rentPricePerDay: r, images: _imgs,
+            categoryId: _categoryId, vehicleTypeId: _vehicleTypeId,
+            vehicleColorId: _vehicleColorId, vehicleSizeId: _vehicleSizeId);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -4004,7 +4763,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
                           const Icon(Icons.add_photo_alternate_outlined,
                               color: _green, size: 26),
                           const SizedBox(height: 4),
-                          Text('${5 - _imgs.length} left',
+                          Text('${5 - _imgs.length} ${AppLocalizations.of(context).left}',
                               style: const TextStyle(color: _green, fontSize: 9,
                                   fontWeight: FontWeight.w600)),
                         ]),
@@ -4019,6 +4778,76 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               _FF(ctrl: _desc, label: 'Description',
                   hint: 'Describe your product…', maxLines: 3),
             ])),
+
+            _Card(title: 'What are you listing?', child: Row(children: [
+              Expanded(child: _SelBtn('Vehicle (tuk-tuk, cargo…)', _isVehicleProduct, _green,
+                  () => setState(() => _isVehicleProduct = true))),
+              const SizedBox(width: 10),
+              Expanded(child: _SelBtn('Accessory / Other', !_isVehicleProduct, _green,
+                  () => setState(() {
+                    _isVehicleProduct = false;
+                    _categoryId = null; _vehicleTypeId = null;
+                    _vehicleColorId = null; _vehicleSizeId = null;
+                  }))),
+            ])),
+
+            if (_isVehicleProduct && !_refLoading && _cats.isNotEmpty)
+              _Card(title: 'Category', subtitle: 'Optional',
+                child: Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final cat in _cats)
+                    _SelChip(cat.name, _categoryId == cat.id, _green,
+                        () => setState(() => _categoryId = _categoryId == cat.id ? null : cat.id)),
+                ]),
+              ),
+
+            if (_isVehicleProduct && !_refLoading && _vTypes.isNotEmpty)
+              _Card(title: 'Vehicle Type', subtitle: 'Optional',
+                child: Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final vt in _vTypes)
+                    _SelChip(vt.name(appLocale.value.languageCode), _vehicleTypeId == vt.id, _green,
+                        () => setState(() {
+                          _vehicleTypeId = _vehicleTypeId == vt.id ? null : vt.id;
+                          // Selected size is only valid for the previous type.
+                          _vehicleSizeId = null;
+                        })),
+                ]),
+              ),
+
+            if (_isVehicleProduct && !_refLoading && _sizesForSelectedType.isNotEmpty)
+              _Card(title: 'Size', subtitle: 'Optional',
+                child: Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final vs in _sizesForSelectedType)
+                    _SelChip(vs.label, _vehicleSizeId == vs.id, _green,
+                        () => setState(() => _vehicleSizeId = _vehicleSizeId == vs.id ? null : vs.id)),
+                ]),
+              ),
+
+            if (_isVehicleProduct && !_refLoading && _vColors.isNotEmpty)
+              _Card(title: 'Color', subtitle: 'Optional',
+                child: Wrap(spacing: 14, runSpacing: 10, children: [
+                  for (final vc in _vColors)
+                    GestureDetector(
+                      onTap: () => setState(() => _vehicleColorId = _vehicleColorId == vc.id ? null : vc.id),
+                      child: Tooltip(
+                        message: vc.name(appLocale.value.languageCode),
+                        child: Container(
+                          width: 30, height: 30,
+                          decoration: BoxDecoration(
+                            color: _swatchFor(vc.code),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: _vehicleColorId == vc.id ? _green : const Color(0xFFE0E0E0),
+                                width: _vehicleColorId == vc.id ? 2.5 : 1),
+                          ),
+                          child: _vehicleColorId == vc.id
+                              ? Icon(Icons.check, size: 16,
+                                  color: _swatchFor(vc.code).computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                              : null,
+                        ),
+                      ),
+                    ),
+                ]),
+              ),
 
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: _Card(title: 'Type',
@@ -4113,6 +4942,33 @@ class _Card extends StatelessWidget {
       const SizedBox(height: 14),
       child,
     ]),
+  );
+}
+
+// Wrap-friendly chip variant of _SelBtn — for option groups with more than
+// two or three choices (category, vehicle type, size) where a full-width
+// stacked block would waste too much vertical space.
+class _SelChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final Color color;
+  final VoidCallback onTap;
+  const _SelChip(this.label, this.active, this.color, this.onTap);
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: active ? color : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: active ? color : const Color(0xFFE0E0E0), width: 1.5),
+      ),
+      child: Text(label, style: TextStyle(
+          color: active ? _white : Colors.grey.shade600,
+          fontWeight: FontWeight.w600, fontSize: 12)),
+    ),
   );
 }
 

@@ -176,3 +176,39 @@ class RideModel {
   bool get isPending    => status == 'pending'     || status == 'requested';
   bool get isInProgress => status == 'in_progress' || status == 'accepted';
 }
+
+// ─── Nearby driver (for GET /drivers/nearby — map display) ───────────────────
+// Distinct from delivery_model.dart's NearbyDriverModel: that one (for
+// GET /deliveries/nearby-drivers) has no lat/lng, so it can't place a map
+// marker. This one mirrors DriverController::nearby's actual response shape.
+class NearbyMapDriverModel {
+  final int     id;
+  final double? lat;
+  final double? lng;
+  final double  distanceKm;
+  final int?    etaMinutes;
+  final String  vehicleType;
+
+  const NearbyMapDriverModel({
+    required this.id,
+    this.lat,
+    this.lng,
+    required this.distanceKm,
+    this.etaMinutes,
+    required this.vehicleType,
+  });
+
+  bool get hasLocation => lat != null && lng != null;
+
+  factory NearbyMapDriverModel.fromJson(Map<String, dynamic> json) {
+    final vehicle = json['vehicle'] as Map<String, dynamic>?;
+    return NearbyMapDriverModel(
+      id:          RideModel._toInt(json['id']),
+      lat:         (json['lat'] as num?)?.toDouble(),
+      lng:         (json['lng'] as num?)?.toDouble(),
+      distanceKm:  (json['distance_km'] as num?)?.toDouble() ?? 0.0,
+      etaMinutes:  RideModel._toIntOrNull(json['eta_minutes']),
+      vehicleType: vehicle?['type']?.toString() ?? 'standard',
+    );
+  }
+}

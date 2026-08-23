@@ -12,7 +12,6 @@ import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/screens/auth/login_screen.dart';
 import 'package:autoride_superapp/screens/driver/driver_home.dart';
 import 'package:autoride_superapp/services/api_service.dart';
-import 'package:autoride_superapp/utils/app_log.dart';
 import 'package:autoride_superapp/models/ride_model.dart';
 import 'ride_booking.dart';
 import 'delivery_screen.dart';
@@ -144,7 +143,6 @@ class _HomeTabState extends State<_HomeTab> {
   static const _gridColumnsPrefKey = 'home_services_grid_columns';
 
   String     _firstName  = '';
-  List<RideModel> _recentRides = [];
   RideModel? _activeRide;
   SurgeInfo? _surgeInfo;
   int _gridColumns = 3;
@@ -195,25 +193,14 @@ class _HomeTabState extends State<_HomeTab> {
     final name = saved?.name ?? '';
     setState(() => _firstName = name.split(' ').first);
 
-    // Run all three fetches in parallel
+    // Run both fetches in parallel
     await Future.wait([
-      _loadRecentRides(),
       _loadActiveRide(),
       _loadSurge(),
     ]);
 
     _slowBannerTimer?.cancel();
     if (mounted) setState(() { _loading = false; _showSlowBanner = false; });
-  }
-
-  Future<void> _loadRecentRides() async {
-    try {
-      final rides = await ApiService.getRides(status: 'completed');
-      if (!mounted) return;
-      setState(() => _recentRides = rides.take(5).toList());
-    } catch (e, s) {
-      AppLog.e('Home', 'loadRecentRides failed', e, s);
-    }
   }
 
   Future<void> _loadActiveRide() async {
@@ -365,7 +352,7 @@ class _HomeTabState extends State<_HomeTab> {
                     Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                      const Text('Active ride in progress',
+                      Text(AppLocalizations.of(context).activeRideInProgress,
                           style: TextStyle(color: AppTheme.success,
                               fontWeight: FontWeight.w700, fontSize: 13)),
                       Text(
@@ -547,16 +534,16 @@ class _HomeTabState extends State<_HomeTab> {
                 SectionHeader(title: l.quickActions),
                 const SizedBox(height: 14),
                 Row(children: [
-                  Expanded(child: _QuickAction(icon: Icons.account_balance_wallet_outlined, label: 'Wallet', color: AppTheme.accent,
+                  Expanded(child: _QuickAction(icon: Icons.account_balance_wallet_outlined, imagePath: 'assets/Wallet.png', label: 'Wallet', color: AppTheme.accent,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())))),
                   const SizedBox(width: 12),
-                  Expanded(child: _QuickAction(icon: Icons.star_outline, label: 'Rewards', color: AppTheme.gold,
+                  Expanded(child: _QuickAction(icon: Icons.star_outline, imagePath: 'assets/Rewards.png', label: 'Rewards', color: AppTheme.gold,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen())))),
                   const SizedBox(width: 12),
-                  Expanded(child: _QuickAction(icon: Icons.card_giftcard_outlined, label: 'Refer', color: AppTheme.success,
+                  Expanded(child: _QuickAction(icon: Icons.card_giftcard_outlined, imagePath: 'assets/Refer.png', label: 'Refer', color: AppTheme.success,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen())))),
                   const SizedBox(width: 12),
-                  Expanded(child: _QuickAction(icon: Icons.shield_outlined, label: l.safety, color: AppTheme.danger,
+                  Expanded(child: _QuickAction(icon: Icons.shield_outlined, imagePath: 'assets/Safety.png', label: l.safety, color: AppTheme.danger,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())))),
                 ]),
               ]);
@@ -564,27 +551,10 @@ class _HomeTabState extends State<_HomeTab> {
             const SizedBox(height: 24),
             Builder(builder: (context) {
               final l = AppLocalizations.of(context);
-              return SectionHeader(title: l.recentTrips, action: l.seeAll,
-                  onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen())));
+              return SectionHeader(title: l.promotions);
             }),
             SizedBox(height: 14),
-            if (_recentRides.isEmpty)
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-                child: Center(child: Text('No recent trips', style: TextStyle(color: context.appTextSecondary))),
-              )
-            else
-              ..._recentRides.map((r) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _TripCard(
-                  from: r.pickupAddress,
-                  to: r.dropoffAddress,
-                  price: AppTheme.khr(r.fareKhr),
-                  status: r.status[0].toUpperCase() + r.status.substring(1),
-                  date: r.createdAt.length >= 16 ? r.createdAt.substring(0, 16) : r.createdAt,
-                ),
-              )),
+            const PromoEventsSection(),
           ],
         ),
         ),
@@ -706,8 +676,11 @@ class _QuickAction extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
+  // When set, renders this PNG (from assets/) instead of the Material icon —
+  // same convention as ServiceCard.
+  final String? imagePath;
 
-  const _QuickAction({required this.icon, required this.label, required this.color, required this.onTap});
+  const _QuickAction({required this.icon, required this.label, required this.color, required this.onTap, this.imagePath});
 
   @override
   Widget build(BuildContext context) {
@@ -728,14 +701,19 @@ class _QuickAction extends StatelessWidget {
         child: Column(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: imagePath != null ? 60 : 38,
+              height: imagePath != null ? 60 : 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
+                // An asset image already carries its own artwork — a tinted
+                // circle behind it just looks like a halo, so only icon-based
+                // actions get the color tint (matches ServiceCard).
+                color: imagePath != null ? Colors.transparent : color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 19),
+              child: imagePath != null
+                  ? Image.asset(imagePath!, width: 54, height: 54, fit: BoxFit.contain)
+                  : Icon(icon, color: color, size: 19),
             ),
             const SizedBox(height: 8),
             Text(label, style: TextStyle(
@@ -744,53 +722,6 @@ class _QuickAction extends StatelessWidget {
                 fontWeight: FontWeight.w600)),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _TripCard extends StatelessWidget {
-  final String from, to, price, status, date;
-  const _TripCard({required this.from, required this.to, required this.price, required this.status, required this.date});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(padding: EdgeInsets.all(10), decoration: BoxDecoration(color: AppTheme.accent.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: Icon(Icons.route, color: AppTheme.accent, size: 20)),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$from → $to', style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-                SizedBox(height: 4),
-                Text(date, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(price, style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              StatusBadge(label: status, color: AppTheme.success),
-            ],
-          ),
-        ],
       ),
     );
   }
@@ -876,7 +807,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             Builder(builder: (context) {
               final l = AppLocalizations.of(context);
               return Column(children: [
-                _ProfileMenuItem(icon: Icons.edit_outlined, label: 'Edit Profile',
+                _ProfileMenuItem(icon: Icons.edit_outlined, label: l.editProfile,
                     onTap: () async {
                       await Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const EditProfileScreen()));
@@ -884,35 +815,35 @@ class _ProfileTabState extends State<_ProfileTab> {
                       // profile data would otherwise stay stale after a save.
                       _loadProfile();
                     }),
-                _ProfileMenuItem(icon: Icons.account_balance_wallet_outlined, label: 'ROTEH Pay',
+                _ProfileMenuItem(icon: Icons.account_balance_wallet_outlined, label: l.rotehPay,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
-                _ProfileMenuItem(icon: Icons.qr_code_outlined, label: 'QR Payment',
+                _ProfileMenuItem(icon: Icons.qr_code_outlined, label: l.qrPayment,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrPaymentScreen()))),
-                _ProfileMenuItem(icon: Icons.local_offer_outlined, label: 'Promos & Vouchers',
+                _ProfileMenuItem(icon: Icons.local_offer_outlined, label: l.promosVouchers,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen()))),
-                _ProfileMenuItem(icon: Icons.calendar_month_outlined, label: 'Scheduled Rides',
+                _ProfileMenuItem(icon: Icons.calendar_month_outlined, label: l.scheduledRides,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduledRidesScreen()))),
-                _ProfileMenuItem(icon: Icons.workspace_premium_rounded, label: 'Subscription Plans',
+                _ProfileMenuItem(icon: Icons.workspace_premium_rounded, label: l.subscriptionPlans,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionScreen()))),
-                _ProfileMenuItem(icon: Icons.star_outline, label: 'ROTEH Rewards',
+                _ProfileMenuItem(icon: Icons.star_outline, label: l.rotehRewards,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen()))),
-                _ProfileMenuItem(icon: Icons.card_giftcard_outlined, label: 'Refer & Earn',
+                _ProfileMenuItem(icon: Icons.card_giftcard_outlined, label: l.referEarn,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen()))),
                 _ProfileMenuItem(icon: Icons.payment_outlined, label: l.paymentMethods,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PaymentMethodsScreen()))),
                 _ProfileMenuItem(icon: Icons.history_outlined, label: l.tripHistory,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TripHistoryScreen()))),
-                _ProfileMenuItem(icon: Icons.directions_car_outlined, label: 'My Rentals',
+                _ProfileMenuItem(icon: Icons.directions_car_outlined, label: l.myRentals,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyRentalsScreen()))),
-                _ProfileMenuItem(icon: Icons.bookmark_outline, label: 'Saved Places',
+                _ProfileMenuItem(icon: Icons.bookmark_outline, label: l.savedPlaces,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SavedPlacesScreen()))),
                 _ProfileMenuItem(icon: Icons.help_outline, label: l.helpSupport,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()))),
-                _ProfileMenuItem(icon: Icons.settings_outlined, label: 'Settings',
+                _ProfileMenuItem(icon: Icons.settings_outlined, label: l.settings,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
                 _ProfileMenuItem(
                   icon: Icons.drive_eta_outlined,
-                  label: 'Switch to Driver Mode',
+                  label: l.switchToDriverMode,
                   color: AppTheme.accentOrange,
                   onTap: () => Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const DriverHomeScreen()),

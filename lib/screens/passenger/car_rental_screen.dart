@@ -10,6 +10,7 @@ import '../../widgets/guest_fields.dart';
 import '../../widgets/location_picker_screen.dart';
 import 'my_rentals_screen.dart';
 import '../../models/marketplace_model.dart';
+import '../../main.dart' show appLocale;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Duration options  (1M · 2M · 3M · 6M · 1Y · 2Y)
@@ -1188,6 +1189,14 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
   List<MarketplaceProductModel> _products = [];
   MarketplaceProductModel? _selected;
 
+  List<MarketplaceVehicleTypeModel>  _vTypes  = [];
+  List<MarketplaceVehicleColorModel> _vColors = [];
+  List<MarketplaceVehicleSizeModel>  _vSizes  = [];
+  int? _vTypeId;
+  int? _vColorId;
+  int? _vSizeId;
+  bool get _hasActiveFilters => _vTypeId != null || _vColorId != null || _vSizeId != null;
+
   // Map vehicle_type keyword from title/condition to icon
   IconData _iconFor(MarketplaceProductModel p) {
     final t = '${p.title} ${p.description ?? ''}'.toLowerCase();
@@ -1209,9 +1218,26 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final page = await ApiService.getMarketplaceProducts(listingType: 'rent');
+      final needsRefData = _vTypes.isEmpty;
+      final results = await Future.wait([
+        if (needsRefData) ApiService.getMarketplaceVehicleTypes(),
+        if (needsRefData) ApiService.getMarketplaceVehicleColors(),
+        if (needsRefData) ApiService.getMarketplaceVehicleSizes(),
+        ApiService.getMarketplaceProducts(
+          listingType:    'rent',
+          vehicleTypeId:  _vTypeId,
+          vehicleColorId: _vColorId,
+          vehicleSizeId:  _vSizeId,
+        ),
+      ]);
       if (!mounted) return;
+      final page = results.last as MarketplaceProductsPage;
       setState(() {
+        if (needsRefData) {
+          _vTypes  = results[0] as List<MarketplaceVehicleTypeModel>;
+          _vColors = results[1] as List<MarketplaceVehicleColorModel>;
+          _vSizes  = results[2] as List<MarketplaceVehicleSizeModel>;
+        }
         _products = page.products;
         _selected = widget.selectedId == null ? null
             : page.products.cast<MarketplaceProductModel?>()
@@ -1222,6 +1248,29 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
       if (!mounted) return;
       setState(() { _error = e.toString(); _loading = false; });
     }
+  }
+
+  Future<void> _openFilterSheet() async {
+    final result = await showModalBottomSheet<_RentalFilterSelection>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RentalFilterSheet(
+        vehicleTypes: _vTypes,
+        vehicleSizes: _vSizes,
+        vehicleColors: _vColors,
+        initial: _RentalFilterSelection(
+          vehicleTypeId: _vTypeId, vehicleSizeId: _vSizeId, vehicleColorId: _vColorId,
+        ),
+      ),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _vTypeId  = result.vehicleTypeId;
+      _vSizeId  = result.vehicleSizeId;
+      _vColorId = result.vehicleColorId;
+    });
+    _load();
   }
 
   // Convert a marketplace product → _RentalCar for the booking flow
@@ -1260,8 +1309,75 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
         shadowColor: Colors.black12,
         title: const Text('Vehicle for Rent',
             style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        actions: [
+          IconButton(
+            onPressed: _openFilterSheet,
+            icon: Badge(
+              isLabelVisible: _hasActiveFilters,
+              smallSize: 8,
+              backgroundColor: AppTheme.accent,
+              child: Icon(Icons.tune_rounded, color: context.appTextPrimary, size: 22),
+            ),
+          ),
+        ],
       ),
       body: Column(children: [
+        if (_vTypes.isNotEmpty)
+          Container(
+            width: double.infinity,
+            color: context.appSurface,
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                _VehicleTypePill(
+                  label: 'All',
+                  active: _vTypeId == null,
+                  onTap: () { setState(() => _vTypeId = null); _load(); },
+                ),
+                const SizedBox(width: 8),
+                for (final vt in _vTypes) ...[
+                  _VehicleTypePill(
+                    label: vt.name(appLocale.value.languageCode),
+                    active: _vTypeId == vt.id,
+                    onTap: () { setState(() => _vTypeId = _vTypeId == vt.id ? null : vt.id); _load(); },
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ]),
+            ),
+          ),
+        if (_hasActiveFilters)
+          Container(
+            width: double.infinity,
+            color: context.appSurface,
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+            child: Wrap(spacing: 8, runSpacing: 8, children: [
+              if (_vTypeId != null)
+                _RentalFilterChip(
+                  label: _vTypes.firstWhere((t) => t.id == _vTypeId).name(appLocale.value.languageCode),
+                  onClear: () { setState(() => _vTypeId = null); _load(); }),
+              if (_vSizeId != null)
+                _RentalFilterChip(
+                  label: _vSizes.firstWhere((s) => s.id == _vSizeId).label,
+                  onClear: () { setState(() => _vSizeId = null); _load(); }),
+              if (_vColorId != null)
+                _RentalFilterChip(
+                  label: _vColors.firstWhere((c) => c.id == _vColorId).name(appLocale.value.languageCode),
+                  onClear: () { setState(() => _vColorId = null); _load(); }),
+              GestureDetector(
+                onTap: () {
+                  setState(() { _vTypeId = null; _vSizeId = null; _vColorId = null; });
+                  _load();
+                },
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 6),
+                  child: Text('Clear all',
+                      style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
+                ),
+              ),
+            ]),
+          ),
         Expanded(child: _buildBody(context)),
         Container(
           padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
@@ -1431,7 +1547,228 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
       );
 }
 
+// Maps the backend's vehicle-color `code` (a plain slug like 'black'/'red',
+// not a hex value) to an actual swatch color.
+Color _rentalSwatchFor(String code) => switch (code) {
+      'black' => const Color(0xFF1A1A1A),
+      'white' => const Color(0xFFF5F5F5),
+      'red'   => const Color(0xFFE53935),
+      'blue'  => const Color(0xFF1976D2),
+      'gray' || 'grey' => const Color(0xFF9E9E9E),
+      'green' => const Color(0xFF43A047),
+      'yellow' => const Color(0xFFFDD835),
+      'orange' => const Color(0xFFFB8C00),
+      'silver' => const Color(0xFFC0C0C0),
+      'brown' => const Color(0xFF6D4C41),
+      _       => const Color(0xFF9E9E9E),
+    };
 
+// Icon-over-label tab for the vehicle-type quick filter row — matches the
+// same style used on the Marketplace listings screen.
+// Matches the same pill style used on the Marketplace listings screen.
+class _VehicleTypePill extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+  const _VehicleTypePill({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: active ? AppTheme.accent.withValues(alpha: 0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: active ? AppTheme.accent : const Color(0xFFE0E0E0), width: 1.5),
+      ),
+      child: Text(label,
+          style: TextStyle(color: active ? AppTheme.accent : Colors.grey.shade600,
+              fontWeight: FontWeight.w600, fontSize: 12)),
+    ),
+  );
+}
+
+class _RentalFilterChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onClear;
+  const _RentalFilterChip({required this.label, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
+    decoration: BoxDecoration(
+      color: AppTheme.accent.withValues(alpha: 0.1),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: const TextStyle(color: AppTheme.accent, fontSize: 12, fontWeight: FontWeight.w600)),
+      GestureDetector(
+        onTap: onClear,
+        child: const Padding(
+          padding: EdgeInsets.all(4),
+          child: Icon(Icons.close_rounded, size: 14, color: AppTheme.accent),
+        ),
+      ),
+    ]),
+  );
+}
+
+class _RentalFilterSelection {
+  final int? vehicleTypeId;
+  final int? vehicleSizeId;
+  final int? vehicleColorId;
+  const _RentalFilterSelection({this.vehicleTypeId, this.vehicleSizeId, this.vehicleColorId});
+}
+
+class _RentalFilterSheet extends StatefulWidget {
+  final List<MarketplaceVehicleTypeModel>  vehicleTypes;
+  final List<MarketplaceVehicleSizeModel>  vehicleSizes;
+  final List<MarketplaceVehicleColorModel> vehicleColors;
+  final _RentalFilterSelection initial;
+  const _RentalFilterSheet({
+    required this.vehicleTypes, required this.vehicleSizes,
+    required this.vehicleColors, required this.initial,
+  });
+
+  @override
+  State<_RentalFilterSheet> createState() => _RentalFilterSheetState();
+}
+
+class _RentalFilterSheetState extends State<_RentalFilterSheet> {
+  int? _vType;
+  int? _vSize;
+  int? _vColor;
+
+  @override
+  void initState() {
+    super.initState();
+    _vType  = widget.initial.vehicleTypeId;
+    _vSize  = widget.initial.vehicleSizeId;
+    _vColor = widget.initial.vehicleColorId;
+  }
+
+  Widget _checkboxRow(String label, bool checked, VoidCallback onTap) => InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Checkbox(value: checked, activeColor: AppTheme.accent, onChanged: (_) => onTap()),
+        Expanded(child: Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 14))),
+      ]),
+    ),
+  );
+
+  Widget _sectionTitle(String text) => Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 4),
+    child: Text(text, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.65,
+      minChildSize: 0.35,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (context, scrollCtrl) => Container(
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 40, height: 4,
+              decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('Filter', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+              GestureDetector(
+                onTap: () => setState(() { _vType = null; _vSize = null; _vColor = null; }),
+                child: const Text('Clear all', style: TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          ),
+          const Divider(height: 20),
+          Expanded(
+            child: ListView(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                if (widget.vehicleTypes.isNotEmpty) ...[
+                  _sectionTitle('Vehicle Type'),
+                  for (final vt in widget.vehicleTypes)
+                    _checkboxRow(vt.name(appLocale.value.languageCode), _vType == vt.id,
+                        () => setState(() => _vType = _vType == vt.id ? null : vt.id)),
+                ],
+                if (widget.vehicleSizes.isNotEmpty) ...[
+                  _sectionTitle('Size'),
+                  for (final vs in widget.vehicleSizes)
+                    _checkboxRow(vs.label, _vSize == vs.id,
+                        () => setState(() => _vSize = _vSize == vs.id ? null : vs.id)),
+                ],
+                if (widget.vehicleColors.isNotEmpty) ...[
+                  _sectionTitle('Color'),
+                  Wrap(spacing: 14, runSpacing: 10, children: [
+                    for (final vc in widget.vehicleColors)
+                      GestureDetector(
+                        onTap: () => setState(() => _vColor = _vColor == vc.id ? null : vc.id),
+                        child: Tooltip(
+                          message: vc.name(appLocale.value.languageCode),
+                          child: Container(
+                            width: 26, height: 26,
+                            decoration: BoxDecoration(
+                              color: _rentalSwatchFor(vc.code),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                  color: _vColor == vc.id ? AppTheme.accent : const Color(0xFFE0E0E0),
+                                  width: _vColor == vc.id ? 2.5 : 1),
+                            ),
+                            child: _vColor == vc.id
+                                ? Icon(Icons.check, size: 14,
+                                    color: _rentalSwatchFor(vc.code).computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                                : null,
+                          ),
+                        ),
+                      ),
+                  ]),
+                ],
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accent, foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () => Navigator.pop(context, _RentalFilterSelection(
+                    vehicleTypeId: _vType, vehicleSizeId: _vSize, vehicleColorId: _vColor,
+                  )),
+                  child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
 
 class _ConfRow extends StatelessWidget {
   final String label, value;

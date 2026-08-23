@@ -116,6 +116,207 @@ class AppLocalizations {
       'eta': 'ETA',
       'min': 'min',
       'km': 'km',
+      'activeRideInProgress': 'Active ride in progress',
+      'noRecentTrips': 'No recent trips',
+      'searchProductsHint': 'Search products…',
+      'filter': 'Filter',
+      'listingsAvailable': 'listings available',
+      'findBestDeal': 'Find the best deal',
+      'browseAll': 'Browse All',
+      'rentalVehicle': 'Rental Vehicle',
+      'tryAgain': 'Try Again',
+      'results': 'results',
+      'noListingsFound': 'No listings found',
+      'tryDifferentFilters': 'Try different filters',
+      'salePrice': 'Sale Price',
+      'rentPerDay': 'Rent / day',
+      'qty': 'Qty',
+      'verifiedSeller': 'Verified Seller',
+      'editListing': 'Edit Listing',
+      'fillRequiredFields': 'Please fill in all required fields',
+      'orderPlaced': 'Order Placed!',
+      'purchaseRequestSent': 'Your purchase request has been sent to the seller.',
+      'done': 'Done',
+      'purchaseProduct': 'Purchase Product',
+      'couponCode': 'Coupon Code',
+      'phoneNumber': 'Phone Number',
+      'confirmInformation': 'Confirm Information',
+      'verifyAddressesNote': 'Please verify all addresses and contact details before '
+          'proceeding. The seller will be notified once your order is placed.',
+      'purchaseNow': 'Purchase Now',
+      'findingAddress': 'Finding address…',
+      'locationType': 'Location Type',
+      'rentalDuration': 'Rental Duration',
+      'orderPlacedSuccess': 'Order placed successfully!',
+      'paymentMethod': 'Payment Method',
+      'startDate': 'Start Date',
+      'endDateAuto': 'End Date (auto)',
+      'selectStartDate': 'Select a start date',
+      'discountApplied': 'discount applied',
+      'apply': 'Apply',
+      'total': 'Total',
+      'deleteListing': 'Delete listing?',
+      'willBePermanentlyRemoved': 'will be permanently removed.',
+      'cancel': 'Cancel',
+      'delete': 'Delete',
+      'postAListing': 'Post a Listing',
+      'noOrdersYet': 'No orders yet',
+      'order': 'Order',
+      'left': 'left',
+      'savedPlaces': 'Saved places',
+      'noSavedPlacesYet': 'No saved places yet.',
+      'promoCodeTitle': 'Promo Code',
+      'browseVouchers': 'Browse available vouchers →',
+      'cambodia': 'Cambodia',
+      'mapLabel': 'Map',
+      'noResultsFound': 'No results found',
+      'addAStop': 'Add a stop',
+      'whereTo': 'Where to?',
+      'now': 'Now',
+      'confirmBooking': 'Confirm Booking',
+      'noDestinationNeeded': 'No destination needed — tell the driver in person',
+      'whereToTitle': 'Where To?',
+      'noSavedPlaces': 'No saved places',
+      'confirmDestination': 'Confirm Destination',
+      'whereToOptional': 'Where to? (optional)',
+      'chooseRideTitle': 'Choose Ride',
+      'scrollUpForMore': 'Scroll up for more ride options',
+      'discountSuffix': 'discount',
+      'noDestinationSelected': 'No destination selected',
+      'selectDestination': 'Select Destination',
+      'deliveryAndMoving': 'Delivery & Moving',
+      'moveWithEase': 'Move with ease,\nwe handle the rest!',
+      'professionalMovingService': 'Professional moving service',
+      'scheduleMovingDate': 'Schedule moving date',
+      'selectLocationsForFare': 'Select pickup and dropoff locations to see fare estimate',
+      'calculatingFare': 'Calculating fare…',
+      'yes': 'Yes',
+      'no': 'No',
+      'helpersNeeded': 'Helpers needed',
+      'personsForCarrying': '1–4 persons for carrying',
+      'fareEstimate': 'Fare Estimate',
+      'totalEstimate': 'Total estimate',
+      'finalPriceConfirmed': 'Final price confirmed after booking',
+      'change': 'Change',
+      'confirmLocation': 'Confirm Location',
+      'confirmDeliveryBooking': 'Confirm Delivery Booking',
+      'noCancel': 'No, Cancel',
+      'yesSendNow': 'Yes, Send Now',
+      'confirmMovingBooking': 'Confirm Moving Booking',
+      'estimatedFare': 'Estimated Fare',
+      'yesBookNow': 'Yes, Book Now',
+      'couldNotFetchEstimate': 'Could not fetch estimate',
+      'rideCancelled': 'Ride Cancelled',
+      'ok': 'OK',
+      'stop': 'Stop',
+      'dropoff': 'Dropoff',
+      'safetyCentre': 'SAFETY CENTRE',
+      'fare': 'Fare',
+      'sendSOSQuestion': '🆘 Send SOS?',
+      'sendSOS': 'Send SOS',
+      'sosFailed': 'SOS failed',
+      'driverPhoneNotAvailable': 'Driver phone not available yet.',
+      'cannotDialPrefix': 'Cannot dial',
+      'onThisDevice': 'on this device.',
+      'couldNotGenerateShareLink': 'Could not generate share link',
+      'linkCopied': 'Link copied to clipboard',
+      'shareTrip': 'Share Trip',
+      'friendsCanTrack': 'Friends & family can track your ride live',
+      'driverLabel': 'Driver',
+      'copyLink': 'Copy link',
+      'shareVia': 'Share via...',
+      'stopSharingLocation': 'Stop sharing location',
+      'cancelRide': 'Cancel Ride',
+      'keepRide': 'Keep Ride',
+      'businessAccount': 'Business Account',
+      'noBusinessAccount': 'No Business Account',
+      'registerOrJoinBusiness': 'Register your company or join an existing business account.',
+      'enterInviteCode': 'Enter the invite code your company admin shared with you.',
+      'fillSampleData': 'Fill sample data',
+      'leaveBusinessQuestion': 'Leave Business?',
+      'loseBusinessAccess': 'You will no longer have access to business features.',
+      'leave': 'Leave',
+      'edit': 'Edit',
+      'active': 'Active',
+      'removeMemberQuestion': 'Remove Member?',
+      'remove': 'Remove',
+      'noMembersYet': 'No members yet.',
+      'noBusinessTripsYet': 'No business trips yet.',
+      'refresh': 'Refresh',
+      'retry': 'Retry',
+      'businessRegistered': 'Business Registered!',
+      'shareInviteCodeNote': 'Share this invite code with your employees so they can join.',
+      'inviteCodeCopied': 'Invite code copied!',
+      'copyCode': 'Copy Code',
+      'member': 'Member',
+      'removeMemberPrefix': 'Remove',
+      'thisMember': 'this member',
+      'fromBusinessAccountSuffix': 'from the business account?',
+      'refLabel': 'Ref',
+      'promotions': 'Promotions',
+      'editProfile': 'Edit Profile',
+      'rotehPay': 'ROTEH Pay',
+      'qrPayment': 'QR Payment',
+      'promosVouchers': 'Promos & Vouchers',
+      'scheduledRides': 'Scheduled Rides',
+      'subscriptionPlans': 'Subscription Plans',
+      'rotehRewards': 'ROTEH Rewards',
+      'referEarn': 'Refer & Earn',
+      'myRentals': 'My Rentals',
+      'switchToDriverMode': 'Switch to Driver Mode',
+      'settings': 'Settings',
+      'missions': 'Missions',
+      'myEarnings': 'My Earnings',
+      'topUpWallet': 'Top Up Wallet',
+      'helmetCheck': 'Helmet Check',
+      'switchToPassengerMode': 'Switch to Passenger Mode',
+      'darkMode': 'Dark Mode',
+      'rideLabel': 'Ride',
+      'rental': 'Rental',
+      'accepted': 'Accepted',
+      'hoursOnline': 'Hours Online',
+      'acceptanceRate': 'Acceptance Rate',
+      'verified': 'Verified',
+      'trips': 'Trips',
+      'bonuses': 'Bonuses',
+      'fees': 'Fees',
+      'topUps': 'Top-ups',
+      'heavyItems': '⚠ Heavy items',
+      'packing': '📦 Packing',
+      'management': 'Management',
+      'users': 'Users',
+      'drivers': 'Drivers',
+      'ridesAdmin': 'Rides',
+      'deliveriesAdmin': 'Deliveries',
+      'withdrawalsAdmin': 'Withdrawals',
+      'supportAdmin': 'Support',
+      'transactionsAdmin': 'Transactions',
+      'fareRules': 'Fare Rules',
+      'surgeZones': 'Surge Zones',
+      'pricingAdmin': 'Pricing',
+      'bannersAdmin': 'Banners',
+      'safetyAdmin': 'Safety',
+      'passengersStat': 'Passengers',
+      'driversTotal': 'Drivers Total',
+      'onlineDrivers': 'Online Drivers',
+      'pendingDrivers': 'Pending Drivers',
+      'ridesToday': 'Rides Today',
+      'activeRides': 'Active Rides',
+      'deliveriesToday': 'Deliveries Today',
+      'revenueToday': 'Revenue Today',
+      'revenueWeek': 'Revenue Week',
+      'growth': 'Growth',
+      'openTickets': 'Open Tickets',
+      'safetyIncidents': 'Safety Incidents',
+      'driverApprovalsSuffix': 'Driver Approvals',
+      'ticketsSuffix': 'Tickets',
+      'serviceModes': 'Service Modes',
+      'overview': 'Overview',
+      'pendingActionsSuffix': 'pending actions',
+      'clearAll': 'Clear all',
+      'size': 'Size',
+      'vehicleType': 'Vehicle Type',
+      'color': 'Color',
     },
     'km': {
       'appName': 'រទេះ',
@@ -205,6 +406,207 @@ class AppLocalizations {
       'eta': 'ពេលវេលាប៉ាន់ស្មាន',
       'min': 'នាទី',
       'km': 'គ.ម',
+      'activeRideInProgress': 'ដំណើរកំពុងបន្ត',
+      'noRecentTrips': 'មិនទាន់មានដំណើរថ្មីៗទេ',
+      'searchProductsHint': 'ស្វែងរកទំនិញ…',
+      'filter': 'តម្រង',
+      'listingsAvailable': 'បញ្ជីទំនិញដែលមាន',
+      'findBestDeal': 'ស្វែងរកតម្លៃល្អបំផុត',
+      'browseAll': 'មើលទាំងអស់',
+      'rentalVehicle': 'យានជំនិះជួល',
+      'tryAgain': 'ព្យាយាមម្តងទៀត',
+      'results': 'លទ្ធផល',
+      'noListingsFound': 'រកមិនឃើញទំនិញទេ',
+      'tryDifferentFilters': 'សូមសាកល្បងតម្រងផ្សេង',
+      'salePrice': 'តម្លៃលក់',
+      'rentPerDay': 'តម្លៃជួល / ថ្ងៃ',
+      'qty': 'ចំនួន',
+      'verifiedSeller': 'អ្នកលក់ដែលបានផ្ទៀងផ្ទាត់',
+      'editListing': 'កែសម្រួលការផ្សាយ',
+      'fillRequiredFields': 'សូមបំពេញព័ត៌មានទាំងអស់ដែលត្រូវការ',
+      'orderPlaced': 'បញ្ជាទិញបានជោគជ័យ!',
+      'purchaseRequestSent': 'សំណើទិញរបស់អ្នកត្រូវបានផ្ញើទៅអ្នកលក់។',
+      'done': 'រួចរាល់',
+      'purchaseProduct': 'ទិញផលិតផល',
+      'couponCode': 'កូដបញ្ចុះតម្លៃ',
+      'phoneNumber': 'លេខទូរស័ព្ទ',
+      'confirmInformation': 'បញ្ជាក់ព័ត៌មាន',
+      'verifyAddressesNote': 'សូមផ្ទៀងផ្ទាត់អាសយដ្ឋាន និងព័ត៌មានទំនាក់ទំនងទាំងអស់មុននឹង'
+          'បន្ត។ អ្នកលក់នឹងទទួលបានការជូនដំណឹងនៅពេលការបញ្ជាទិញរបស់អ្នកបានបញ្ជូន។',
+      'purchaseNow': 'ទិញឥឡូវនេះ',
+      'findingAddress': 'កំពុងស្វែងរកអាសយដ្ឋាន…',
+      'locationType': 'ប្រភេទទីតាំង',
+      'rentalDuration': 'រយៈពេលជួល',
+      'orderPlacedSuccess': 'បញ្ជាទិញបានជោគជ័យ!',
+      'paymentMethod': 'វិធីបង់ប្រាក់',
+      'startDate': 'ថ្ងៃចាប់ផ្តើម',
+      'endDateAuto': 'ថ្ងៃបញ្ចប់ (ស្វ័យប្រវត្តិ)',
+      'selectStartDate': 'ជ្រើសរើសថ្ងៃចាប់ផ្តើម',
+      'discountApplied': 'បញ្ចុះតម្លៃត្រូវបានអនុវត្ត',
+      'apply': 'អនុវត្ត',
+      'total': 'សរុប',
+      'deleteListing': 'លុបការផ្សាយនេះ?',
+      'willBePermanentlyRemoved': 'នឹងត្រូវបានលុបជាអចិន្ត្រៃយ៍។',
+      'cancel': 'បោះបង់',
+      'delete': 'លុប',
+      'postAListing': 'ផ្សាយលក់',
+      'noOrdersYet': 'មិនទាន់មានការបញ្ជាទិញទេ',
+      'order': 'ការបញ្ជាទិញ',
+      'left': 'នៅសល់',
+      'savedPlaces': 'ទីតាំងដែលបានរក្សាទុក',
+      'noSavedPlacesYet': 'មិនទាន់មានទីតាំងដែលបានរក្សាទុកទេ។',
+      'promoCodeTitle': 'កូដប្រូម៉ូសិន',
+      'browseVouchers': 'មើលប័ណ្ណបញ្ចុះតម្លៃ →',
+      'cambodia': 'កម្ពុជា',
+      'mapLabel': 'ផែនទី',
+      'noResultsFound': 'រកមិនឃើញលទ្ធផលទេ',
+      'addAStop': 'បន្ថែមចំណតឈប់',
+      'whereTo': 'ទៅណា?',
+      'now': 'ឥឡូវនេះ',
+      'confirmBooking': 'បញ្ជាក់ការកក់',
+      'noDestinationNeeded': 'មិនចាំបាច់មានទីតាំងទេ — ប្រាប់អ្នកបើកបរដោយផ្ទាល់',
+      'whereToTitle': 'ទៅណា?',
+      'noSavedPlaces': 'គ្មានទីតាំងដែលបានរក្សាទុក',
+      'confirmDestination': 'បញ្ជាក់ទីតាំងទៅ',
+      'whereToOptional': 'ទៅណា? (មិនចាំបាច់)',
+      'chooseRideTitle': 'ជ្រើសរើសរថយន្ត',
+      'scrollUpForMore': 'អូសឡើងលើដើម្បីមើលជម្រើសរថយន្តបន្ថែម',
+      'discountSuffix': 'បញ្ចុះតម្លៃ',
+      'noDestinationSelected': 'មិនទាន់បានជ្រើសរើសទីតាំងទេ',
+      'selectDestination': 'ជ្រើសរើសទីតាំង',
+      'deliveryAndMoving': 'ដឹកជញ្ជូន និងដឹកផ្ទុះ',
+      'moveWithEase': 'ផ្លាស់ប្តូរដោយងាយស្រួល\nយើងខ្ញុំគ្រប់គ្រងឲ្យអ្នក!',
+      'professionalMovingService': 'សេវាកម្មដឹកផ្ទុះជាមួយអ្នកជំនាញ',
+      'scheduleMovingDate': 'កំណត់ថ្ងៃដឹកផ្ទុះ',
+      'selectLocationsForFare': 'ជ្រើសរើសទីតាំងទទួល និងទីតាំងបញ្ជូនដើម្បីមើលតម្លៃប៉ាន់ស្មាន',
+      'calculatingFare': 'កំពុងគណនាតម្លៃ…',
+      'yes': 'បាទ/ចាស',
+      'no': 'ទេ',
+      'helpersNeeded': 'ត្រូវការជំនួយ',
+      'personsForCarrying': '១–៤ នាក់សម្រាប់លីកឥវ៉ាន់',
+      'fareEstimate': 'តម្លៃប៉ាន់ស្មាន',
+      'totalEstimate': 'តម្លៃសរុបប៉ាន់ស្មាន',
+      'finalPriceConfirmed': 'តម្លៃចុងក្រោយនឹងបញ្ជាក់បន្ទាប់ពីកក់',
+      'change': 'ប្តូរ',
+      'confirmLocation': 'បញ្ជាក់ទីតាំង',
+      'confirmDeliveryBooking': 'បញ្ជាក់ការកក់ដឹកជញ្ជូន',
+      'noCancel': 'ទេ, បោះបង់',
+      'yesSendNow': 'បាទ, ផ្ញើឥឡូវនេះ',
+      'confirmMovingBooking': 'បញ្ជាក់ការកក់ដឹកផ្ទុះ',
+      'estimatedFare': 'តម្លៃប៉ាន់ស្មាន',
+      'yesBookNow': 'បាទ, កក់ឥឡូវនេះ',
+      'couldNotFetchEstimate': 'មិនអាចទាញយកតម្លៃប៉ាន់ស្មានបានទេ',
+      'rideCancelled': 'ដំណើរត្រូវបានបោះបង់',
+      'ok': 'យល់ព្រម',
+      'stop': 'ចំណតឈប់',
+      'dropoff': 'ទីតាំងទៅ',
+      'safetyCentre': 'មជ្ឈមណ្ឌលសុវត្ថិភាព',
+      'fare': 'តម្លៃ',
+      'sendSOSQuestion': '🆘 ផ្ញើសញ្ញា SOS?',
+      'sendSOS': 'ផ្ញើ SOS',
+      'sosFailed': 'ការផ្ញើ SOS បរាជ័យ',
+      'driverPhoneNotAvailable': 'លេខទូរស័ព្ទអ្នកបើកបរមិនទាន់មានទេ។',
+      'cannotDialPrefix': 'មិនអាចហៅលេខ',
+      'onThisDevice': 'នៅលើឧបករណ៍នេះបានទេ។',
+      'couldNotGenerateShareLink': 'មិនអាចបង្កើតតំណចែករំលែកបានទេ',
+      'linkCopied': 'តំណត្រូវបានចម្លងទៅក្ដារតម្បៀតខ្ទាស់',
+      'shareTrip': 'ចែករំលែកដំណើរ',
+      'friendsCanTrack': 'មិត្តភ័ក្តិ និងគ្រួសារអាចតាមដានដំណើររបស់អ្នកបានផ្ទាល់',
+      'driverLabel': 'អ្នកបើកបរ',
+      'copyLink': 'ចម្លងតំណ',
+      'shareVia': 'ចែករំលែកតាមរយៈ...',
+      'stopSharingLocation': 'បញ្ឈប់ការចែករំលែកទីតាំង',
+      'cancelRide': 'បោះបង់ដំណើរ',
+      'keepRide': 'បន្តដំណើរ',
+      'businessAccount': 'គណនីអាជីវកម្ម',
+      'noBusinessAccount': 'គ្មានគណនីអាជីវកម្មទេ',
+      'registerOrJoinBusiness': 'ចុះឈ្មោះក្រុមហ៊ុនរបស់អ្នក ឬចូលរួមគណនីអាជីវកម្មដែលមានស្រាប់។',
+      'enterInviteCode': 'បញ្ចូលកូដអញ្ជើញដែលអ្នកគ្រប់គ្រងក្រុមហ៊ុនរបស់អ្នកបានផ្ដល់ឲ្យ។',
+      'fillSampleData': 'បំពេញទិន្នន័យគំរូ',
+      'leaveBusinessQuestion': 'ចាកចេញពីអាជីវកម្ម?',
+      'loseBusinessAccess': 'អ្នកនឹងលែងអាចប្រើមុខងារអាជីវកម្មទៀតទេ។',
+      'leave': 'ចាកចេញ',
+      'edit': 'កែសម្រួល',
+      'active': 'សកម្ម',
+      'removeMemberQuestion': 'លុបសមាជិកនេះ?',
+      'remove': 'លុប',
+      'noMembersYet': 'មិនទាន់មានសមាជិកទេ។',
+      'noBusinessTripsYet': 'មិនទាន់មានដំណើរអាជីវកម្មទេ។',
+      'refresh': 'ធ្វើឲ្យស្រស់',
+      'retry': 'ព្យាយាមម្តងទៀត',
+      'businessRegistered': 'ចុះឈ្មោះអាជីវកម្មបានជោគជ័យ!',
+      'shareInviteCodeNote': 'ចែករំលែកកូដអញ្ជើញនេះជាមួយបុគ្គលិករបស់អ្នកដើម្បីឲ្យពួកគេចូលរួម។',
+      'inviteCodeCopied': 'កូដអញ្ជើញត្រូវបានចម្លង!',
+      'copyCode': 'ចម្លងកូដ',
+      'member': 'សមាជិក',
+      'removeMemberPrefix': 'លុប',
+      'thisMember': 'សមាជិកនេះ',
+      'fromBusinessAccountSuffix': 'ចេញពីគណនីអាជីវកម្ម?',
+      'refLabel': 'លេខយោង',
+      'promotions': 'ការផ្សព្វផ្សាយ',
+      'editProfile': 'កែសម្រួលប្រវត្តិរូប',
+      'rotehPay': 'ROTEH Pay',
+      'qrPayment': 'បង់ប្រាក់ QR',
+      'promosVouchers': 'ប្រូម៉ូសិន និងប័ណ្ណបញ្ចុះតម្លៃ',
+      'scheduledRides': 'ដំណើរដែលបានកំណត់ពេល',
+      'subscriptionPlans': 'គម្រោងសមាជិកភាព',
+      'rotehRewards': 'ROTEH Rewards',
+      'referEarn': 'ណែនាំ និងទទួលរង្វាន់',
+      'myRentals': 'ការជួលរបស់ខ្ញុំ',
+      'switchToDriverMode': 'ប្តូរទៅជាអ្នកបើកបរ',
+      'settings': 'ការកំណត់',
+      'missions': 'បេសកកម្ម',
+      'myEarnings': 'ចំណូលរបស់ខ្ញុំ',
+      'topUpWallet': 'បញ្ចូលប្រាក់ក្នុងកាបូប',
+      'helmetCheck': 'ពិនិត្យមួកសុវត្ថិភាព',
+      'switchToPassengerMode': 'ប្តូរទៅជាអ្នកដំណើរ',
+      'darkMode': 'ម៉ូតងងឹត',
+      'rideLabel': 'ដំណើរ',
+      'rental': 'ជួល',
+      'accepted': 'បានទទួល',
+      'hoursOnline': 'ម៉ោងអនឡាញ',
+      'acceptanceRate': 'អត្រាទទួលយក',
+      'verified': 'បានផ្ទៀងផ្ទាត់',
+      'trips': 'ដំណើរ',
+      'bonuses': 'ប្រាក់រង្វាន់',
+      'fees': 'កម្រៃ',
+      'topUps': 'បញ្ចូលប្រាក់',
+      'heavyItems': '⚠ វត្ថុធ្ងន់',
+      'packing': '📦 វេចខ្ចប់',
+      'management': 'ការគ្រប់គ្រង',
+      'users': 'អ្នកប្រើប្រាស់',
+      'drivers': 'អ្នកបើកបរ',
+      'ridesAdmin': 'ដំណើរ',
+      'deliveriesAdmin': 'ការដឹកជញ្ជូន',
+      'withdrawalsAdmin': 'ការដកប្រាក់',
+      'supportAdmin': 'ជំនួយ',
+      'transactionsAdmin': 'ប្រតិបត្តិការ',
+      'fareRules': 'ច្បាប់តម្លៃ',
+      'surgeZones': 'តំបន់តម្លៃខ្ពស់',
+      'pricingAdmin': 'តម្លៃ',
+      'bannersAdmin': 'បដា',
+      'safetyAdmin': 'សុវត្ថិភាព',
+      'passengersStat': 'អ្នកដំណើរ',
+      'driversTotal': 'អ្នកបើកបរសរុប',
+      'onlineDrivers': 'អ្នកបើកបរអនឡាញ',
+      'pendingDrivers': 'អ្នកបើកបរកំពុងរង់ចាំ',
+      'ridesToday': 'ដំណើរថ្ងៃនេះ',
+      'activeRides': 'ដំណើរកំពុងបន្ត',
+      'deliveriesToday': 'ការដឹកជញ្ជូនថ្ងៃនេះ',
+      'revenueToday': 'ចំណូលថ្ងៃនេះ',
+      'revenueWeek': 'ចំណូលសប្តាហ៍នេះ',
+      'growth': 'កំណើន',
+      'openTickets': 'សំណើកំពុងបើក',
+      'safetyIncidents': 'ករណីសុវត្ថិភាព',
+      'driverApprovalsSuffix': 'ការអនុម័តអ្នកបើកបរ',
+      'ticketsSuffix': 'សំណើ',
+      'serviceModes': 'របៀបសេវាកម្ម',
+      'overview': 'ទិដ្ឋភាពទូទៅ',
+      'pendingActionsSuffix': 'សកម្មភាពកំពុងរង់ចាំ',
+      'clearAll': 'សម្អាតទាំងអស់',
+      'size': 'ទំហំ',
+      'vehicleType': 'ប្រភេទយានជំនិះ',
+      'color': 'ពណ៌',
     },
     'zh': {
       'appName': 'ROTEH',
@@ -294,6 +696,207 @@ class AppLocalizations {
       'eta': '预计到达',
       'min': '分钟',
       'km': '公里',
+      'activeRideInProgress': '行程进行中',
+      'noRecentTrips': '暂无最近行程',
+      'searchProductsHint': '搜索商品…',
+      'filter': '筛选',
+      'listingsAvailable': '个商品可供选择',
+      'findBestDeal': '寻找最优惠的价格',
+      'browseAll': '浏览全部',
+      'rentalVehicle': '租赁车辆',
+      'tryAgain': '重试',
+      'results': '个结果',
+      'noListingsFound': '未找到商品',
+      'tryDifferentFilters': '请尝试其他筛选条件',
+      'salePrice': '售价',
+      'rentPerDay': '租金 / 天',
+      'qty': '数量',
+      'verifiedSeller': '已认证卖家',
+      'editListing': '编辑商品',
+      'fillRequiredFields': '请填写所有必填信息',
+      'orderPlaced': '订单已提交！',
+      'purchaseRequestSent': '您的购买请求已发送给卖家。',
+      'done': '完成',
+      'purchaseProduct': '购买商品',
+      'couponCode': '优惠券代码',
+      'phoneNumber': '电话号码',
+      'confirmInformation': '确认信息',
+      'verifyAddressesNote': '请在继续之前核实所有地址和联系方式。'
+          '订单提交后卖家将收到通知。',
+      'purchaseNow': '立即购买',
+      'findingAddress': '正在查找地址…',
+      'locationType': '位置类型',
+      'rentalDuration': '租赁期限',
+      'orderPlacedSuccess': '订单已成功提交！',
+      'paymentMethod': '付款方式',
+      'startDate': '开始日期',
+      'endDateAuto': '结束日期（自动）',
+      'selectStartDate': '选择开始日期',
+      'discountApplied': '已应用折扣',
+      'apply': '应用',
+      'total': '总计',
+      'deleteListing': '删除此商品？',
+      'willBePermanentlyRemoved': '将被永久删除。',
+      'cancel': '取消',
+      'delete': '删除',
+      'postAListing': '发布商品',
+      'noOrdersYet': '暂无订单',
+      'order': '订单',
+      'left': '剩余',
+      'savedPlaces': '已保存地点',
+      'noSavedPlacesYet': '暂无已保存地点。',
+      'promoCodeTitle': '优惠码',
+      'browseVouchers': '浏览可用优惠券 →',
+      'cambodia': '柬埔寨',
+      'mapLabel': '地图',
+      'noResultsFound': '未找到结果',
+      'addAStop': '添加途经点',
+      'whereTo': '去哪里？',
+      'now': '现在',
+      'confirmBooking': '确认预订',
+      'noDestinationNeeded': '无需目的地 — 当面告诉司机',
+      'whereToTitle': '去哪里？',
+      'noSavedPlaces': '暂无已保存地点',
+      'confirmDestination': '确认目的地',
+      'whereToOptional': '去哪里？（可选）',
+      'chooseRideTitle': '选择车型',
+      'scrollUpForMore': '向上滑动查看更多车型',
+      'discountSuffix': '折扣',
+      'noDestinationSelected': '尚未选择目的地',
+      'selectDestination': '选择目的地',
+      'deliveryAndMoving': '快递与搬家',
+      'moveWithEase': '轻松搬家，\n一切交给我们！',
+      'professionalMovingService': '专业搬家服务',
+      'scheduleMovingDate': '安排搬家日期',
+      'selectLocationsForFare': '选择取件和送达地点以查看预估费用',
+      'calculatingFare': '正在计算费用…',
+      'yes': '是',
+      'no': '否',
+      'helpersNeeded': '需要帮手',
+      'personsForCarrying': '1–4 人协助搬运',
+      'fareEstimate': '费用预估',
+      'totalEstimate': '预估总费用',
+      'finalPriceConfirmed': '最终价格将在预订后确认',
+      'change': '更改',
+      'confirmLocation': '确认位置',
+      'confirmDeliveryBooking': '确认快递预订',
+      'noCancel': '否，取消',
+      'yesSendNow': '是，立即发送',
+      'confirmMovingBooking': '确认搬家预订',
+      'estimatedFare': '预估费用',
+      'yesBookNow': '是，立即预订',
+      'couldNotFetchEstimate': '无法获取预估费用',
+      'rideCancelled': '行程已取消',
+      'ok': '好的',
+      'stop': '途经点',
+      'dropoff': '目的地',
+      'safetyCentre': '安全中心',
+      'fare': '车费',
+      'sendSOSQuestion': '🆘 发送求救信号？',
+      'sendSOS': '发送求救信号',
+      'sosFailed': '求救信号发送失败',
+      'driverPhoneNotAvailable': '司机电话暂时不可用。',
+      'cannotDialPrefix': '无法拨打',
+      'onThisDevice': '此设备不支持拨号。',
+      'couldNotGenerateShareLink': '无法生成分享链接',
+      'linkCopied': '链接已复制到剪贴板',
+      'shareTrip': '分享行程',
+      'friendsCanTrack': '亲友可以实时追踪您的行程',
+      'driverLabel': '司机',
+      'copyLink': '复制链接',
+      'shareVia': '分享至...',
+      'stopSharingLocation': '停止分享位置',
+      'cancelRide': '取消行程',
+      'keepRide': '保留行程',
+      'businessAccount': '企业账户',
+      'noBusinessAccount': '暂无企业账户',
+      'registerOrJoinBusiness': '注册您的公司或加入现有企业账户。',
+      'enterInviteCode': '输入公司管理员提供给您的邀请码。',
+      'fillSampleData': '填充示例数据',
+      'leaveBusinessQuestion': '退出企业账户？',
+      'loseBusinessAccess': '您将无法再使用企业功能。',
+      'leave': '退出',
+      'edit': '编辑',
+      'active': '活跃',
+      'removeMemberQuestion': '移除该成员？',
+      'remove': '移除',
+      'noMembersYet': '暂无成员。',
+      'noBusinessTripsYet': '暂无企业行程。',
+      'refresh': '刷新',
+      'retry': '重试',
+      'businessRegistered': '企业账户注册成功！',
+      'shareInviteCodeNote': '将此邀请码分享给您的员工以便他们加入。',
+      'inviteCodeCopied': '邀请码已复制！',
+      'copyCode': '复制邀请码',
+      'member': '成员',
+      'removeMemberPrefix': '移除',
+      'thisMember': '该成员',
+      'fromBusinessAccountSuffix': '出企业账户？',
+      'refLabel': '参考号',
+      'promotions': '促销活动',
+      'editProfile': '编辑个人资料',
+      'rotehPay': 'ROTEH Pay',
+      'qrPayment': '扫码支付',
+      'promosVouchers': '优惠与代金券',
+      'scheduledRides': '预约行程',
+      'subscriptionPlans': '订阅计划',
+      'rotehRewards': 'ROTEH 奖励',
+      'referEarn': '推荐赚奖励',
+      'myRentals': '我的租赁',
+      'switchToDriverMode': '切换到司机模式',
+      'settings': '设置',
+      'missions': '任务',
+      'myEarnings': '我的收入',
+      'topUpWallet': '钱包充值',
+      'helmetCheck': '头盔检查',
+      'switchToPassengerMode': '切换到乘客模式',
+      'darkMode': '深色模式',
+      'rideLabel': '行程',
+      'rental': '租赁',
+      'accepted': '已接单',
+      'hoursOnline': '在线时长',
+      'acceptanceRate': '接单率',
+      'verified': '已认证',
+      'trips': '行程',
+      'bonuses': '奖金',
+      'fees': '费用',
+      'topUps': '充值',
+      'heavyItems': '⚠ 重物',
+      'packing': '📦 打包',
+      'management': '管理',
+      'users': '用户',
+      'drivers': '司机',
+      'ridesAdmin': '行程',
+      'deliveriesAdmin': '快递',
+      'withdrawalsAdmin': '提现',
+      'supportAdmin': '客服',
+      'transactionsAdmin': '交易记录',
+      'fareRules': '计价规则',
+      'surgeZones': '高峰区域',
+      'pricingAdmin': '定价',
+      'bannersAdmin': '横幅广告',
+      'safetyAdmin': '安全',
+      'passengersStat': '乘客',
+      'driversTotal': '司机总数',
+      'onlineDrivers': '在线司机',
+      'pendingDrivers': '待审核司机',
+      'ridesToday': '今日行程',
+      'activeRides': '进行中行程',
+      'deliveriesToday': '今日快递',
+      'revenueToday': '今日收入',
+      'revenueWeek': '本周收入',
+      'growth': '增长率',
+      'openTickets': '待处理工单',
+      'safetyIncidents': '安全事件',
+      'driverApprovalsSuffix': '司机审核',
+      'ticketsSuffix': '工单',
+      'serviceModes': '服务模式',
+      'overview': '概览',
+      'pendingActionsSuffix': '项待处理事项',
+      'clearAll': '清除全部',
+      'size': '尺寸',
+      'vehicleType': '车辆类型',
+      'color': '颜色',
     },
   };
 
@@ -389,6 +992,206 @@ class AppLocalizations {
   String get eta => tr('eta');
   String get min => tr('min');
   String get km => tr('km');
+  String get activeRideInProgress => tr('activeRideInProgress');
+  String get noRecentTrips => tr('noRecentTrips');
+  String get searchProductsHint => tr('searchProductsHint');
+  String get filter => tr('filter');
+  String get listingsAvailable => tr('listingsAvailable');
+  String get findBestDeal => tr('findBestDeal');
+  String get browseAll => tr('browseAll');
+  String get rentalVehicle => tr('rentalVehicle');
+  String get tryAgain => tr('tryAgain');
+  String get results => tr('results');
+  String get noListingsFound => tr('noListingsFound');
+  String get tryDifferentFilters => tr('tryDifferentFilters');
+  String get salePrice => tr('salePrice');
+  String get rentPerDay => tr('rentPerDay');
+  String get qty => tr('qty');
+  String get verifiedSeller => tr('verifiedSeller');
+  String get editListing => tr('editListing');
+  String get fillRequiredFields => tr('fillRequiredFields');
+  String get orderPlaced => tr('orderPlaced');
+  String get purchaseRequestSent => tr('purchaseRequestSent');
+  String get done => tr('done');
+  String get purchaseProduct => tr('purchaseProduct');
+  String get couponCode => tr('couponCode');
+  String get phoneNumber => tr('phoneNumber');
+  String get confirmInformation => tr('confirmInformation');
+  String get verifyAddressesNote => tr('verifyAddressesNote');
+  String get purchaseNow => tr('purchaseNow');
+  String get findingAddress => tr('findingAddress');
+  String get locationType => tr('locationType');
+  String get rentalDuration => tr('rentalDuration');
+  String get orderPlacedSuccess => tr('orderPlacedSuccess');
+  String get paymentMethod => tr('paymentMethod');
+  String get startDate => tr('startDate');
+  String get endDateAuto => tr('endDateAuto');
+  String get selectStartDate => tr('selectStartDate');
+  String get discountApplied => tr('discountApplied');
+  String get apply => tr('apply');
+  String get total => tr('total');
+  String get deleteListing => tr('deleteListing');
+  String get willBePermanentlyRemoved => tr('willBePermanentlyRemoved');
+  String get cancel => tr('cancel');
+  String get delete => tr('delete');
+  String get postAListing => tr('postAListing');
+  String get noOrdersYet => tr('noOrdersYet');
+  String get order => tr('order');
+  String get left => tr('left');
+  String get savedPlaces => tr('savedPlaces');
+  String get noSavedPlacesYet => tr('noSavedPlacesYet');
+  String get promoCodeTitle => tr('promoCodeTitle');
+  String get browseVouchers => tr('browseVouchers');
+  String get cambodia => tr('cambodia');
+  String get mapLabel => tr('mapLabel');
+  String get noResultsFound => tr('noResultsFound');
+  String get addAStop => tr('addAStop');
+  String get whereTo => tr('whereTo');
+  String get now => tr('now');
+  String get confirmBooking => tr('confirmBooking');
+  String get noDestinationNeeded => tr('noDestinationNeeded');
+  String get whereToTitle => tr('whereToTitle');
+  String get noSavedPlaces => tr('noSavedPlaces');
+  String get confirmDestination => tr('confirmDestination');
+  String get whereToOptional => tr('whereToOptional');
+  String get chooseRideTitle => tr('chooseRideTitle');
+  String get scrollUpForMore => tr('scrollUpForMore');
+  String get discountSuffix => tr('discountSuffix');
+  String get noDestinationSelected => tr('noDestinationSelected');
+  String get selectDestination => tr('selectDestination');
+  String get deliveryAndMoving => tr('deliveryAndMoving');
+  String get moveWithEase => tr('moveWithEase');
+  String get professionalMovingService => tr('professionalMovingService');
+  String get scheduleMovingDate => tr('scheduleMovingDate');
+  String get selectLocationsForFare => tr('selectLocationsForFare');
+  String get calculatingFare => tr('calculatingFare');
+  String get yes => tr('yes');
+  String get no => tr('no');
+  String get helpersNeeded => tr('helpersNeeded');
+  String get personsForCarrying => tr('personsForCarrying');
+  String get fareEstimate => tr('fareEstimate');
+  String get totalEstimate => tr('totalEstimate');
+  String get finalPriceConfirmed => tr('finalPriceConfirmed');
+  String get change => tr('change');
+  String get confirmLocation => tr('confirmLocation');
+  String get confirmDeliveryBooking => tr('confirmDeliveryBooking');
+  String get noCancel => tr('noCancel');
+  String get yesSendNow => tr('yesSendNow');
+  String get confirmMovingBooking => tr('confirmMovingBooking');
+  String get estimatedFare => tr('estimatedFare');
+  String get yesBookNow => tr('yesBookNow');
+  String get couldNotFetchEstimate => tr('couldNotFetchEstimate');
+  String get rideCancelled => tr('rideCancelled');
+  String get ok => tr('ok');
+  String get stop => tr('stop');
+  String get dropoff => tr('dropoff');
+  String get safetyCentre => tr('safetyCentre');
+  String get fare => tr('fare');
+  String get sendSOSQuestion => tr('sendSOSQuestion');
+  String get sendSOS => tr('sendSOS');
+  String get sosFailed => tr('sosFailed');
+  String get driverPhoneNotAvailable => tr('driverPhoneNotAvailable');
+  String get cannotDialPrefix => tr('cannotDialPrefix');
+  String get onThisDevice => tr('onThisDevice');
+  String get couldNotGenerateShareLink => tr('couldNotGenerateShareLink');
+  String get linkCopied => tr('linkCopied');
+  String get shareTrip => tr('shareTrip');
+  String get friendsCanTrack => tr('friendsCanTrack');
+  String get driverLabel => tr('driverLabel');
+  String get copyLink => tr('copyLink');
+  String get shareVia => tr('shareVia');
+  String get stopSharingLocation => tr('stopSharingLocation');
+  String get cancelRide => tr('cancelRide');
+  String get keepRide => tr('keepRide');
+  String get businessAccount => tr('businessAccount');
+  String get noBusinessAccount => tr('noBusinessAccount');
+  String get registerOrJoinBusiness => tr('registerOrJoinBusiness');
+  String get enterInviteCode => tr('enterInviteCode');
+  String get fillSampleData => tr('fillSampleData');
+  String get leaveBusinessQuestion => tr('leaveBusinessQuestion');
+  String get loseBusinessAccess => tr('loseBusinessAccess');
+  String get leave => tr('leave');
+  String get edit => tr('edit');
+  String get active => tr('active');
+  String get removeMemberQuestion => tr('removeMemberQuestion');
+  String get remove => tr('remove');
+  String get noMembersYet => tr('noMembersYet');
+  String get noBusinessTripsYet => tr('noBusinessTripsYet');
+  String get refresh => tr('refresh');
+  String get retry => tr('retry');
+  String get businessRegistered => tr('businessRegistered');
+  String get shareInviteCodeNote => tr('shareInviteCodeNote');
+  String get inviteCodeCopied => tr('inviteCodeCopied');
+  String get copyCode => tr('copyCode');
+  String get member => tr('member');
+  String get removeMemberPrefix => tr('removeMemberPrefix');
+  String get thisMember => tr('thisMember');
+  String get fromBusinessAccountSuffix => tr('fromBusinessAccountSuffix');
+  String get refLabel => tr('refLabel');
+  String get promotions => tr('promotions');
+  String get editProfile => tr('editProfile');
+  String get rotehPay => tr('rotehPay');
+  String get qrPayment => tr('qrPayment');
+  String get promosVouchers => tr('promosVouchers');
+  String get scheduledRides => tr('scheduledRides');
+  String get subscriptionPlans => tr('subscriptionPlans');
+  String get rotehRewards => tr('rotehRewards');
+  String get referEarn => tr('referEarn');
+  String get myRentals => tr('myRentals');
+  String get switchToDriverMode => tr('switchToDriverMode');
+  String get settings => tr('settings');
+  String get missions => tr('missions');
+  String get myEarnings => tr('myEarnings');
+  String get topUpWallet => tr('topUpWallet');
+  String get helmetCheck => tr('helmetCheck');
+  String get switchToPassengerMode => tr('switchToPassengerMode');
+  String get darkMode => tr('darkMode');
+  String get rideLabel => tr('rideLabel');
+  String get rental => tr('rental');
+  String get accepted => tr('accepted');
+  String get hoursOnline => tr('hoursOnline');
+  String get acceptanceRate => tr('acceptanceRate');
+  String get verified => tr('verified');
+  String get trips => tr('trips');
+  String get bonuses => tr('bonuses');
+  String get fees => tr('fees');
+  String get topUps => tr('topUps');
+  String get heavyItems => tr('heavyItems');
+  String get packing => tr('packing');
+  String get management => tr('management');
+  String get users => tr('users');
+  String get drivers => tr('drivers');
+  String get ridesAdmin => tr('ridesAdmin');
+  String get deliveriesAdmin => tr('deliveriesAdmin');
+  String get withdrawalsAdmin => tr('withdrawalsAdmin');
+  String get supportAdmin => tr('supportAdmin');
+  String get transactionsAdmin => tr('transactionsAdmin');
+  String get fareRules => tr('fareRules');
+  String get surgeZones => tr('surgeZones');
+  String get pricingAdmin => tr('pricingAdmin');
+  String get bannersAdmin => tr('bannersAdmin');
+  String get safetyAdmin => tr('safetyAdmin');
+  String get passengersStat => tr('passengersStat');
+  String get driversTotal => tr('driversTotal');
+  String get onlineDrivers => tr('onlineDrivers');
+  String get pendingDrivers => tr('pendingDrivers');
+  String get ridesToday => tr('ridesToday');
+  String get activeRides => tr('activeRides');
+  String get deliveriesToday => tr('deliveriesToday');
+  String get revenueToday => tr('revenueToday');
+  String get revenueWeek => tr('revenueWeek');
+  String get growth => tr('growth');
+  String get openTickets => tr('openTickets');
+  String get safetyIncidents => tr('safetyIncidents');
+  String get driverApprovalsSuffix => tr('driverApprovalsSuffix');
+  String get ticketsSuffix => tr('ticketsSuffix');
+  String get serviceModes => tr('serviceModes');
+  String get overview => tr('overview');
+  String get pendingActionsSuffix => tr('pendingActionsSuffix');
+  String get clearAll => tr('clearAll');
+  String get size => tr('size');
+  String get vehicleType => tr('vehicleType');
+  String get color => tr('color');
 }
 
 class _AppLocalizationsDelegate

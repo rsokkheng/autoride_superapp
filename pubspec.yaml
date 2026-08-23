@@ -76,6 +76,10 @@ flutter:
     - assets/Rental.png
     - assets/ride.png
     - assets/MarketPlace.png
+    - assets/Wallet.png
+    - assets/Rewards.png
+    - assets/Refer.png
+    - assets/Safety.png
     - assets/sounds/booking.wav
     - assets/sounds/accepted.wav
 

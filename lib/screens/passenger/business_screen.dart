@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../utils/phone_utils.dart';
 
 class BusinessScreen extends StatefulWidget {
@@ -68,7 +69,7 @@ class _BusinessScreenState extends State<BusinessScreen>
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Business Account'),
+        title: Text(AppLocalizations.of(context).businessAccount),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
@@ -266,12 +267,12 @@ class _NoAccountViewState extends State<_NoAccountView> {
               ),
             ),
             SizedBox(height: 20),
-            Text('No Business Account',
+            Text(AppLocalizations.of(context).noBusinessAccount,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.appTextPrimary, fontSize: 20,
                     fontWeight: FontWeight.w700)),
             SizedBox(height: 8),
-            Text('Register your company or join an existing business account.',
+            Text(AppLocalizations.of(context).registerOrJoinBusiness,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.appTextSecondary, height: 1.5)),
             const SizedBox(height: 32),
@@ -297,7 +298,7 @@ class _NoAccountViewState extends State<_NoAccountView> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _SectionLabel('Join Business Account'),
           SizedBox(height: 4),
-          Text('Enter the invite code your company admin shared with you.',
+          Text(AppLocalizations.of(context).enterInviteCode,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           const SizedBox(height: 20),
           _Field(ctrl: _codeCtrl, hint: 'Invite code (e.g. ABC12345)',
@@ -322,7 +323,7 @@ class _NoAccountViewState extends State<_NoAccountView> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               foregroundColor: AppTheme.accent,
             ),
-            child: const Text('Fill sample data',
+            child: Text(AppLocalizations.of(context).fillSampleData,
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
           ),
         ]),
@@ -443,14 +444,14 @@ class _AccountDetailState extends State<_AccountDetail> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Leave Business?', style: TextStyle(color: context.appTextPrimary)),
-        content: Text('You will no longer have access to business features.',
+        title: Text(AppLocalizations.of(context).leaveBusinessQuestion, style: TextStyle(color: context.appTextPrimary)),
+        content: Text(AppLocalizations.of(context).loseBusinessAccess,
             style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Leave', style: TextStyle(color: AppTheme.danger))),
+              child: Text(AppLocalizations.of(context).leave, style: const TextStyle(color: AppTheme.danger))),
         ],
       ),
     );
@@ -563,7 +564,7 @@ class _AccountDetailState extends State<_AccountDetail> {
               padding: EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Cancel', style: TextStyle(color: context.appTextSecondary)),
+            child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary)),
           )),
           const SizedBox(width: 10),
           Expanded(child: _SubmitBtn(label: 'Save', busy: _busy, onTap: _save)),
@@ -607,7 +608,7 @@ class _MembersTabState extends State<_MembersTab> {
           padding: EdgeInsets.fromLTRB(20, 20, 20,
               20 + MediaQuery.of(ctx).viewInsets.bottom),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Edit ${m['name'] ?? 'Member'}',
+            Text('${AppLocalizations.of(context).edit} ${m['name'] ?? AppLocalizations.of(context).member}',
                 style: TextStyle(color: context.appTextPrimary,
                     fontSize: 17, fontWeight: FontWeight.w700)),
             SizedBox(height: 16),
@@ -623,7 +624,7 @@ class _MembersTabState extends State<_MembersTab> {
                 keyboard: TextInputType.number),
             SizedBox(height: 12),
             Row(children: [
-              Text('Active', style: TextStyle(color: context.appTextPrimary)),
+              Text(AppLocalizations.of(context).active, style: TextStyle(color: context.appTextPrimary)),
               const Spacer(),
               Switch(
                 value: active,
@@ -666,14 +667,14 @@ class _MembersTabState extends State<_MembersTab> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Remove Member?', style: TextStyle(color: context.appTextPrimary)),
-        content: Text('Remove ${m['name'] ?? 'this member'} from the business account?',
+        title: Text(AppLocalizations.of(context).removeMemberQuestion, style: TextStyle(color: context.appTextPrimary)),
+        content: Text('${AppLocalizations.of(context).removeMemberPrefix} ${m['name'] ?? AppLocalizations.of(context).thisMember} ${AppLocalizations.of(context).fromBusinessAccountSuffix}',
             style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove', style: TextStyle(color: AppTheme.danger))),
+              child: Text(AppLocalizations.of(context).remove, style: const TextStyle(color: AppTheme.danger))),
         ],
       ),
     );
@@ -690,7 +691,7 @@ class _MembersTabState extends State<_MembersTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.members.isEmpty) {
-      return Center(child: Text('No members yet.',
+      return Center(child: Text(AppLocalizations.of(context).noMembersYet,
           style: TextStyle(color: context.appTextSecondary)));
     }
     return ListView.separated(
@@ -768,13 +769,13 @@ class _TripsTabState extends State<_TripsTab> {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No business trips yet.',
+        Text(AppLocalizations.of(context).noBusinessTripsYet,
             style: TextStyle(color: context.appTextSecondary)),
         const SizedBox(height: 16),
         TextButton.icon(
           onPressed: widget.onReload,
           icon: const Icon(Icons.refresh_rounded, color: AppTheme.accent),
-          label: const Text('Refresh', style: TextStyle(color: AppTheme.accent)),
+          label: Text(AppLocalizations.of(context).refresh, style: const TextStyle(color: AppTheme.accent)),
         ),
       ]));
     }
@@ -805,7 +806,7 @@ class _TripsTabState extends State<_TripsTab> {
                 overflow: TextOverflow.ellipsis),
             if (t['expense_ref'] != null) ...[
               const SizedBox(height: 4),
-              Text('Ref: ${t['expense_ref']}',
+              Text('${AppLocalizations.of(context).refLabel}: ${t['expense_ref']}',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
             ],
           ]),
@@ -834,7 +835,7 @@ class _ErrorState extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Retry'),
+          label: Text(AppLocalizations.of(context).retry),
           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
         ),
       ]),
@@ -1038,11 +1039,11 @@ class _InviteCodeDialog extends StatelessWidget {
           child: Icon(Icons.check_rounded, color: AppTheme.accent, size: 36),
         ),
         SizedBox(height: 16),
-        Text('Business Registered!',
+        Text(AppLocalizations.of(context).businessRegistered,
             style: TextStyle(color: context.appTextPrimary, fontSize: 18,
                 fontWeight: FontWeight.w800)),
         SizedBox(height: 8),
-        Text('Share this invite code with your employees so they can join.',
+        Text(AppLocalizations.of(context).shareInviteCodeNote,
             textAlign: TextAlign.center,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.4)),
         const SizedBox(height: 20),
@@ -1072,15 +1073,15 @@ class _InviteCodeDialog extends StatelessWidget {
             onPressed: () {
               Clipboard.setData(ClipboardData(text: code));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Invite code copied!'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context).inviteCodeCopied),
                   behavior: SnackBarBehavior.floating,
-                  duration: Duration(seconds: 2),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             },
             icon: Icon(Icons.copy_rounded, size: 16),
-            label: Text('Copy Code'),
+            label: Text(AppLocalizations.of(context).copyCode),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.accent,
               side: BorderSide(color: AppTheme.accent.withValues(alpha: 0.4)),
@@ -1091,7 +1092,7 @@ class _InviteCodeDialog extends StatelessWidget {
         SizedBox(height: 8),
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('Done', style: TextStyle(color: context.appTextSecondary)),
+          child: Text(AppLocalizations.of(context).done, style: TextStyle(color: context.appTextSecondary)),
         ),
       ]),
     );

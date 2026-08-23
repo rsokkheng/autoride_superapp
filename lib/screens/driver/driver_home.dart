@@ -270,10 +270,10 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
             child: Row(
               children: [
-                Expanded(child: _NavItem(icon: Icons.dashboard_outlined,           label: 'Home',     index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.dashboard_outlined,           label: AppLocalizations.of(context).home,     index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(icon: Icons.account_balance_wallet_outlined, label: AppLocalizations.of(context).earnings, index: 1, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.rocket_launch_outlined,       label: 'Missions', index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.ev_station_outlined,          label: 'Charging', index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.rocket_launch_outlined,       label: AppLocalizations.of(context).missions, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.ev_station_outlined,          label: AppLocalizations.of(context).charging, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(icon: Icons.person_outline,               label: AppLocalizations.of(context).profile,  index: 4, current: _tab, onTap: (i) => setState(() => _tab = i))),
               ],
             ),
@@ -720,19 +720,19 @@ class _DriverDashboardState extends State<_DriverDashboard>
             const SizedBox(height: 16),
 
             // Service modes (multi-select, at least one active)
-            const SectionHeader(title: 'Service Modes'),
+            SectionHeader(title: AppLocalizations.of(context).serviceModes),
             const SizedBox(height: 10),
             Row(children: [
-              _ModeChip(icon: Icons.electric_rickshaw,  label: 'Ride',     active: widget.modeRide,     color: AppTheme.accent,         onTap: () => widget.onModeRide(!widget.modeRide)),
+              _ModeChip(icon: Icons.electric_rickshaw,  label: AppLocalizations.of(context).rideLabel,     active: widget.modeRide,     color: AppTheme.accent,         onTap: () => widget.onModeRide(!widget.modeRide)),
               const SizedBox(width: 8),
-              _ModeChip(icon: Icons.delivery_dining_outlined, label: 'Delivery', active: widget.modeDelivery, color: AppTheme.accentOrange,    onTap: () => widget.onModeDelivery(!widget.modeDelivery)),
+              _ModeChip(icon: Icons.delivery_dining_outlined, label: AppLocalizations.of(context).delivery, active: widget.modeDelivery, color: AppTheme.accentOrange,    onTap: () => widget.onModeDelivery(!widget.modeDelivery)),
               const SizedBox(width: 8),
-              _ModeChip(icon: Icons.car_rental_outlined,      label: 'Rental',   active: widget.modeRental,   color: const Color(0xFF9C27B0), onTap: () => widget.onModeRental(!widget.modeRental)),
+              _ModeChip(icon: Icons.car_rental_outlined,      label: AppLocalizations.of(context).rental,   active: widget.modeRental,   color: const Color(0xFF9C27B0), onTap: () => widget.onModeRental(!widget.modeRental)),
             ]),
             const SizedBox(height: 20),
 
             // Today's stats
-            const SectionHeader(title: "Today's Performance"),
+            SectionHeader(title: AppLocalizations.of(context).todayPerformance),
             const SizedBox(height: 14),
             GridView.count(
               shrinkWrap: true,
@@ -742,10 +742,10 @@ class _DriverDashboardState extends State<_DriverDashboard>
               mainAxisSpacing: 12,
               childAspectRatio: 1.6,
               children: [
-                _StatCard(label: 'Accepted',       value: '${_stats?.acceptedRides  ?? 0}',                                     icon: Icons.check_circle_outline, color: AppTheme.accent),
-                _StatCard(label: 'Completed',      value: '${_stats?.completedRides ?? 0}',                                     icon: Icons.electric_rickshaw,       color: AppTheme.accentOrange),
-                _StatCard(label: 'Hours Online',   value: _stats == null ? '--' : '${_stats!.hoursOnline.toStringAsFixed(1)}h', icon: Icons.access_time,          color: const Color(0xFF9C27B0)),
-                _StatCard(label: 'Acceptance Rate',value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', icon: Icons.thumb_up_outlined, color: AppTheme.success),
+                _StatCard(label: AppLocalizations.of(context).accepted,       value: '${_stats?.acceptedRides  ?? 0}',                                     icon: Icons.check_circle_outline, color: AppTheme.accent),
+                _StatCard(label: AppLocalizations.of(context).completed,      value: '${_stats?.completedRides ?? 0}',                                     icon: Icons.electric_rickshaw,       color: AppTheme.accentOrange),
+                _StatCard(label: AppLocalizations.of(context).hoursOnline,   value: _stats == null ? '--' : '${_stats!.hoursOnline.toStringAsFixed(1)}h', icon: Icons.access_time,          color: const Color(0xFF9C27B0)),
+                _StatCard(label: AppLocalizations.of(context).acceptanceRate,value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', icon: Icons.thumb_up_outlined, color: AppTheme.success),
               ],
             ),
             SizedBox(height: 20),
@@ -968,9 +968,9 @@ class _DriverDashboardState extends State<_DriverDashboard>
             ),
             SizedBox(height: 20),
 
-            const SectionHeader(title: 'Recent Trips'),
+            SectionHeader(title: AppLocalizations.of(context).promotions),
             const SizedBox(height: 14),
-            const _RecentRidesSection(),
+            const PromoEventsSection(),
           ],
         ),
       ),
@@ -1528,9 +1528,9 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
               const SizedBox(height: 6),
               Wrap(spacing: 6, children: [
                 if (widget.delivery.heavyItems == true)
-                  _MovingFlag(label: '⚠ Heavy items', color: cardColor),
+                  _MovingFlag(label: AppLocalizations.of(context).heavyItems, color: cardColor),
                 if (widget.delivery.packingService == true)
-                  _MovingFlag(label: '📦 Packing', color: cardColor),
+                  _MovingFlag(label: AppLocalizations.of(context).packing, color: cardColor),
               ]),
             ]),
           ),
@@ -1779,91 +1779,6 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
           )),
         ]),
       ]),
-    );
-  }
-}
-
-// ─── Driver trip card ─────────────────────────────────────────────────────────
-class _DriverTripCard extends StatelessWidget {
-  final String passenger, from, to, earned, time;
-
-  const _DriverTripCard({required this.passenger, required this.from, required this.to, required this.earned, required this.time});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-      child: Row(children: [
-        CircleAvatar(backgroundColor: AppTheme.accentOrange.withValues(alpha: 0.2), radius: 18,
-          child: Text(passenger[0], style: TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w700))),
-        SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(passenger, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-          Text('$from → $to', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-        ])),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(earned, style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w700)),
-          Text(time,   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-        ]),
-      ]),
-    );
-  }
-}
-
-// ─── Recent rides section ─────────────────────────────────────────────────────
-class _RecentRidesSection extends StatefulWidget {
-  const _RecentRidesSection();
-
-  @override
-  State<_RecentRidesSection> createState() => _RecentRidesSectionState();
-}
-
-class _RecentRidesSectionState extends State<_RecentRidesSection> {
-  List<RideModel> _rides = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final rides = await ApiService.getRides();
-      if (!mounted) return;
-      setState(() { _rides = rides; _loading = false; });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return const Padding(
-        padding: EdgeInsets.all(16),
-        child: Center(child: CircularProgressIndicator(color: AppTheme.accentOrange)),
-      );
-    }
-    if (_rides.isEmpty) {
-      return Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-        child: Center(child: Text('No recent trips', style: TextStyle(color: context.appTextSecondary))),
-      );
-    }
-    return Column(
-      children: _rides.map((ride) => _DriverTripCard(
-        passenger: ride.driver?.name ?? 'Passenger #${ride.passengerId}',
-        from:      ride.pickupAddress,
-        to:        ride.dropoffAddress.isNotEmpty ? ride.dropoffAddress : 'No destination set',
-        earned:    '+${AppTheme.khr(ride.fareKhr)}',
-        time:      ride.createdAt.length >= 16 ? ride.createdAt.substring(11, 16) : '',
-      )).toList(),
     );
   }
 }
@@ -2276,23 +2191,23 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               _EarningItem(
-                                  label: 'Trips',
+                                  label: AppLocalizations.of(context).trips,
                                   value: AppTheme.khr(_tripEarnings),
                                   valueColor: Colors.white,
                                   labelColor: Colors.white70),
                               _EarningItem(
-                                  label: 'Bonuses',
+                                  label: AppLocalizations.of(context).bonuses,
                                   value: AppTheme.khr(_bonuses),
                                   valueColor: Colors.white,
                                   labelColor: Colors.white70),
                               _EarningItem(
-                                  label: 'Fees',
+                                  label: AppLocalizations.of(context).fees,
                                   value: '-${AppTheme.khr(_platformFees)}',
                                   valueColor: Colors.white,
                                   labelColor: Colors.white70),
                               if (_topUps > 0)
                                 _EarningItem(
-                                    label: 'Top-ups',
+                                    label: AppLocalizations.of(context).topUps,
                                     value: AppTheme.khr(_topUps),
                                     valueColor: Colors.white,
                                     labelColor: Colors.white70),
@@ -2731,7 +2646,7 @@ class _DriverProfileState extends State<_DriverProfile> {
                   Text(_vehicleName,  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                   Text(_vehiclePlate, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ])),
-                StatusBadge(label: 'Verified', color: AppTheme.success),
+                StatusBadge(label: AppLocalizations.of(context).verified, color: AppTheme.success),
               ]),
             ),
           const SizedBox(height: 20),
@@ -2741,12 +2656,12 @@ class _DriverProfileState extends State<_DriverProfile> {
               ...([
                 (l.chat,            Icons.chat_bubble_outline,      () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ChatScreen(isDriver: true))), false),
                 (l.bankPayouts,     Icons.account_balance_outlined, () => widget.onGoToEarnings(), false),
-                ('My Earnings',     Icons.account_balance_wallet_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverEarningsScreen())), false),
-                ('Top Up Wallet',   Icons.add_circle_outline,       () async {
+                (l.myEarnings,     Icons.account_balance_wallet_outlined, () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverEarningsScreen())), false),
+                (l.topUpWallet,   Icons.add_circle_outline,       () async {
                   await Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
                   widget.onWalletChanged?.call();
                 }, false),
-                ('Helmet Check',    Icons.security_rounded,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelmetCheckScreen())), false),
+                (l.helmetCheck,    Icons.security_rounded,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelmetCheckScreen())), false),
                 (l.safetySettings,  Icons.shield_outlined,          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())),  false),
                 (l.documents,       Icons.description_outlined,     () {}, false),
                 (l.tripHistory,     Icons.history_outlined,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverHistoryScreen())), false),
@@ -2796,7 +2711,7 @@ class _DriverProfileState extends State<_DriverProfile> {
                       child: Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
                     ),
                     SizedBox(width: 12),
-                    Expanded(child: Text('Switch to Passenger Mode',
+                    Expanded(child: Text(AppLocalizations.of(context).switchToPassengerMode,
                         style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14))),
                     Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
                   ]),
@@ -2814,7 +2729,7 @@ class _DriverProfileState extends State<_DriverProfile> {
                     Icon(Icons.dark_mode_outlined,
                         color: context.appTextSecondary, size: 20),
                     SizedBox(width: 14),
-                    Text('Dark Mode',
+                    Text(AppLocalizations.of(context).darkMode,
                         style: TextStyle(color: context.appTextPrimary,
                             fontSize: 14, fontWeight: FontWeight.w500)),
                     Spacer(),
