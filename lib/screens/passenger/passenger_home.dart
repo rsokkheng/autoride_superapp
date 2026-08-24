@@ -10,7 +10,6 @@ import 'package:autoride_superapp/widgets/slow_connection_banner.dart';
 import 'package:autoride_superapp/widgets/banner_carousel.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/screens/auth/login_screen.dart';
-import 'package:autoride_superapp/screens/driver/driver_home.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 import 'package:autoride_superapp/models/ride_model.dart';
 import 'ride_booking.dart';
@@ -841,15 +840,6 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()))),
                 _ProfileMenuItem(icon: Icons.settings_outlined, label: l.settings,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
-                _ProfileMenuItem(
-                  icon: Icons.drive_eta_outlined,
-                  label: l.switchToDriverMode,
-                  color: AppTheme.accentOrange,
-                  onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
-                    (_) => false,
-                  ),
-                ),
                 _ProfileMenuItem(
                   icon: Icons.logout,
                   label: l.signOut,

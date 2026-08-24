@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../services/websocket_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import 'package:geolocator/geolocator.dart';
@@ -22,6 +21,7 @@ import 'safety_screen.dart';
 import '../shared/ride_chat_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/location_display.dart';
+import '../../utils/app_log.dart';
 import '../../main.dart' show appLocale;
 
 const _kGreen = Color(0xFF00B14F);
@@ -82,13 +82,10 @@ class TripTrackingScreen extends StatefulWidget {
 class _TripTrackingScreenState extends State<TripTrackingScreen>
     with TickerProviderStateMixin {
   GoogleMapController? _mapController;
-  StreamSubscription<TripUpdate>?        _trackingSub;
   StreamSubscription<DriverMarkerModel>? _firestoreSub;
   StreamSubscription<Map<String, dynamic>>? _rideStatusSub;
-  TripUpdate? _lastUpdate;
-  // Server-side status string — more complete than TripStatus enum
-  // (covers 'requested', 'accepted', 'driver_arrived', 'in_progress',
-  //  'completed', 'cancelled')
+  // Server-side status string (covers 'requested', 'accepted',
+  // 'driver_arrived', 'in_progress', 'completed', 'cancelled')
   String _rideStatus = 'requested';
 
   final Set<Marker>   _markers   = {};
@@ -150,6 +147,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // Dynamic vehicle icon — loaded async; null means use default pin
   BitmapDescriptor? _driverIcon;
 
+  // True once at least one real GPS ping has arrived for the assigned
+  // driver (i.e. drivers_live/{id} has lat/lng in Firestore). A driver can
+  // be assigned (name/plate/rating already fetched via REST) well before
+  // their app starts writing live location, so this drives a distinct
+  // "Locating driver…" state instead of silently showing no marker.
+  bool _driverPositionKnown = false;
+
   // Multi-stop: index into wayStops + destination.
   // 0..wayStops.length-1 = intermediate stops; wayStops.length = final destination.
   int _nextStopIndex = 0;
@@ -169,8 +173,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     return 'Stop ${_nextStopIndex + 1}: ${widget.wayStops[_nextStopIndex].address}';
   }
 
-  LatLng get _pickupPoint => widget.pickupLatLng ?? WebSocketService.pickupPoint;
-  LatLng get _destPoint   => widget.destLatLng   ?? WebSocketService.destinationPoint;
+  // Fallback only for the rare case neither was passed in — same default
+  // center used by the map's initial camera position below.
+  LatLng get _pickupPoint => widget.pickupLatLng ?? _initialCamera.target;
+  LatLng get _destPoint   => widget.destLatLng   ?? _initialCamera.target;
 
   static const _initialCamera = CameraPosition(
     target: LatLng(11.5680, 104.9195),
@@ -398,6 +404,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final pos = model.position;
     if (!_inCambodia(pos)) return;
 
+    if (!_driverPositionKnown && mounted) {
+      setState(() => _driverPositionKnown = true);
+    }
+
     // Reload icon if vehicle type changed (e.g. driver switched vehicles)
     final newType = DriverMarkerModel.normalise(model.vehicleType);
     if (newType != _vehicleType) {
@@ -416,11 +426,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
     _checkArrivingSoon(pos);
     _checkArrivingAtDestination(pos);
+    if (_rideStatus == 'in_progress') _checkStopProximity(pos);
 
     // Camera: fit driver + next waypoint so both are always visible — once
     // per real GPS update, not every animation frame (was previously
     // called from the 60fps marker-lerp tick, thrashing the camera).
-    final waypoint = _driverAssigned && _lastUpdate?.status == TripStatus.inProgress
+    final waypoint = _driverAssigned && _rideStatus == 'in_progress'
         ? _destPoint
         : _pickupPoint;
     _fitCamera(pos, waypoint);
@@ -438,7 +449,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   Future<void> _fetchRoute(LatLng driverPos) async {
     final inProgress =
-        _driverAssigned && _lastUpdate?.status == TripStatus.inProgress;
+        _driverAssigned && _rideStatus == 'in_progress';
 
     // Before pickup: driver → pickup.
     // During trip: driver → current stop (or destination if no more stops).
@@ -532,9 +543,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   /// passenger is already onboard — this is a "check your belongings" alert,
   /// not a pickup alert). Localized to the app's current language (km/en/zh).
   void _checkArrivingAtDestination(LatLng driverPos) {
-    final inProgress =
-        _rideStatus == 'in_progress' || _lastUpdate?.status == TripStatus.inProgress;
-    if (!inProgress || _arrivingDestAlertShown) return;
+    if (_rideStatus != 'in_progress' || _arrivingDestAlertShown) return;
     final dist = Geolocator.distanceBetween(
       driverPos.latitude, driverPos.longitude,
       _destPoint.latitude, _destPoint.longitude,
@@ -684,58 +693,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   }
 
   // ── Tracking ───────────────────────────────────────────────────────────────
+  // Real driver position/status only — Firestore live doc, with the REST
+  // poll (_pollRide) as fallback. There is no simulated/fake data source;
+  // a previous WebSocketService here was a hardcoded demo route that always
+  // reported the driver as already en route regardless of actual ride
+  // status, and has been removed entirely.
 
   void _startTracking() {
-    _trackingSub =
-        WebSocketService.instance.startTracking().listen((update) async {
-      if (!mounted) return;
-      final prevStatus = _lastUpdate?.status;
-      setState(() => _lastUpdate = update);
-
-      // Reload vehicle icon if server sends a different vehicle type
-      final newType = DriverMarkerModel.normalise(update.vehicleType);
-      if (newType != _vehicleType) {
-        _vehicleType = newType;
-        MarkerIconService.forType(newType).then((icon) {
-          if (mounted) setState(() => _driverIcon = icon);
-        });
-      }
-
-      // NOTE: WebSocketService is a hardcoded route simulator (see its
-      // source) — it always reports TripStatus.pickingUp immediately, with
-      // no real connection to whether a driver has actually accepted this
-      // ride. It must never be used to place the driver marker: doing so
-      // showed a "driver en route" marker on a fake fixed route before any
-      // real driver had even accepted. Real driver position comes only from
-      // Firestore (_onFirestoreRideStatus/_onDriverMarker) and the REST poll
-      // fallback below, both of which wait for status == 'accepted'.
-
-      // Advance to next wayStop when driver arrives within 80 m during trip
-      if (update.status == TripStatus.inProgress) {
-        _checkStopProximity(update.driverPosition);
-      }
-
-      if (update.status == TripStatus.pickingUp &&
-          prevStatus == TripStatus.searching &&
-          !_driverFoundAlertShown) {
-        // Dedup with _notifyDriverFound(), which now reliably covers this
-        // same "driver found" moment via Firestore/poll — this legacy
-        // WebSocket path is kept as a fallback but shouldn't double-alert.
-        _driverFoundAlertShown = true;
-        await NotificationService.instance.showTripUpdate(
-          title: '🚗 Driver on the way',
-          body: '$_driverName is $_etaMinutes min away',
-          payload: 'picking_up',
-        );
-      } else if (update.status == TripStatus.arrived) {
-        await NotificationService.instance.showTripUpdate(
-          title: '✅ Driver Arrived!',
-          body: '$_driverName is waiting at ${widget.from}',
-          payload: 'arrived',
-        );
-      }
-    });
-
     if (_currentDriverId.isNotEmpty) {
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
@@ -758,9 +722,21 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // completed, instead of relying on a manual button (previously mislabeled
   // "I'm here" and wired to fire on driver-arrived-at-pickup, not
   // trip completion).
+  bool _driverArrivedAlertShown = false;
+
   void _setRideStatus(String status) {
     if (!mounted) return;
+    final prevStatus = _rideStatus;
     setState(() => _rideStatus = status);
+    if (status == 'driver_arrived' && prevStatus != 'driver_arrived' &&
+        !_driverArrivedAlertShown) {
+      _driverArrivedAlertShown = true;
+      NotificationService.instance.showTripUpdate(
+        title: '✅ Driver Arrived!',
+        body: '$_driverName is waiting at ${widget.from}',
+        payload: 'arrived',
+      );
+    }
     if (status == 'completed') {
       _navigateToRating();
     }
@@ -837,8 +813,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   }
 
   void _onFirestoreRideStatus(Map<String, dynamic> data) {
-    final status   = data['status']    as String? ?? '';
-    final driverId = data['driver_id'] as String? ?? '';
+    // driver_id comes back as a Firestore integerValue (int), not a String
+    // — a plain `as String?` cast throws the moment real data arrives.
+    final status   = data['status'] as String? ?? '';
+    final driverId = data['driver_id']?.toString() ?? '';
 
     // Deliberately NOT cancelling _ridePollTimer here — Firestore firing
     // once doesn't guarantee it'll fire again for later transitions (e.g.
@@ -860,6 +838,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       // New driver assigned — re-subscribe to their live position
       _currentDriverId = driverId;
       _arrivingAlertShown = false;
+      _driverPositionKnown = false;
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(driverId)
@@ -895,10 +874,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   void dispose() {
     _ridePollTimer?.cancel();
     _etaCountdownTimer?.cancel();
-    _trackingSub?.cancel();
     _firestoreSub?.cancel();
     _rideStatusSub?.cancel();
-    WebSocketService.instance.stopTracking();
     _mapController?.dispose();
     _pulseController.dispose();
     _markerAnimCtrl.dispose();
@@ -936,6 +913,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       setState(() {
         _currentDriverId = newId;
         _arrivingAlertShown = false;
+        _driverPositionKnown = false;
         _applyDriverDetails(ride);
       });
       _afterDriverDetailsApplied(ride);
@@ -944,7 +922,14 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
           .listen(_onDriverMarker);
-    } catch (_) {}
+    } catch (e, s) {
+      // This used to fail silently, so a persistent auth/network/parse
+      // error here looked identical to "still searching for a driver" —
+      // the passenger would be stuck on the loading screen forever with
+      // no way to tell why. Logged so it's diagnosable; the timer keeps
+      // retrying every 5s regardless.
+      AppLog.e('TripTracking', 'pollRide(${widget.rideId}) failed', e, s);
+    }
   }
 
   // Populates driver/vehicle display fields from a fetched RideModel.
@@ -1006,7 +991,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (!mounted) return;
       setState(() => _applyDriverDetails(ride));
       _afterDriverDetailsApplied(ride);
-    } catch (_) {}
+    } catch (e, s) {
+      AppLog.e('TripTracking', 'fetchDriverDetails(${widget.rideId}) failed', e, s);
+    }
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1023,29 +1010,19 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // Status must not advance past "searching" until a driver is actually assigned.
   bool get _driverAssigned => _currentDriverId.isNotEmpty;
 
-  bool get _isArrived =>
-      _driverAssigned &&
-      (_lastUpdate?.status == TripStatus.arrived ||
-       _rideStatus == 'driver_arrived');
+  bool get _isArrived => _driverAssigned && _rideStatus == 'driver_arrived';
 
   // Driver assigned and still en route to pick up the passenger — i.e. not
   // yet arrived and not already picked up/driving to the destination.
   bool get _isApproachingPickup =>
-      _driverAssigned &&
-      !_isArrived &&
-      _rideStatus != 'in_progress' &&
-      _lastUpdate?.status != TripStatus.inProgress;
+      _driverAssigned && !_isArrived && _rideStatus != 'in_progress';
 
   String get _statusTitle {
-    if (!_driverAssigned) return 'Finding your driver...';
+    if (!_driverAssigned)                return 'Finding your driver...';
     if (_rideStatus == 'driver_arrived') return 'Driver has arrived!';
     if (_rideStatus == 'in_progress')    return 'Trip in progress';
-    switch (_lastUpdate?.status) {
-      case TripStatus.pickingUp:   return 'Your driver is on the way';
-      case TripStatus.inProgress:  return 'Trip in progress';
-      case TripStatus.arrived:     return 'Driver has arrived!';
-      default:                     return 'Driver assigned — connecting...';
-    }
+    if (_rideStatus == 'accepted')       return 'Your driver is on the way';
+    return 'Driver assigned — connecting...';
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -1250,6 +1227,44 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
             ),
           ),
 
+          // ── Locating-driver banner ───────────────────────────────────
+          // Shown on the map itself (not just the bottom sheet) whenever a
+          // driver is assigned but Firestore hasn't received a live GPS
+          // ping yet, so the passenger isn't left staring at a map with no
+          // driver pin and no explanation why.
+          if (_driverAssigned && !_driverPositionKnown)
+            Positioned(
+              top: 90,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.15), blurRadius: 8)
+                    ],
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    SizedBox(
+                      width: 12, height: 12,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: _kGreen),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('Locating your driver…',
+                        style: TextStyle(
+                            color: context.appTextPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              ),
+            ),
+
           // ── ETA badge ─────────────────────────────────────────────────
           Positioned(
             left: 24,
@@ -1380,11 +1395,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           Text(
                             !_driverAssigned
                                 ? 'Looking for a nearby driver…'
-                                : (_hasWayStops &&
-                                        _rideStatus == 'in_progress' &&
-                                        _nextStopIndex < widget.wayStops.length
-                                    ? 'Stop ${_nextStopIndex + 1} · $dist km'
-                                    : (_rideStatus == 'in_progress' ? widget.to : widget.from)),
+                                : (!_driverPositionKnown
+                                    ? 'Locating your driver…'
+                                    : (_hasWayStops &&
+                                            _rideStatus == 'in_progress' &&
+                                            _nextStopIndex < widget.wayStops.length
+                                        ? 'Stop ${_nextStopIndex + 1} · $dist km'
+                                        : (_rideStatus == 'in_progress' ? widget.to : widget.from))),
                             style: TextStyle(fontSize: 13, color: context.appTextSecondary),
                             maxLines: 1, overflow: TextOverflow.ellipsis,
                           ),
@@ -1591,9 +1608,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   bool get _canShare =>
       _driverAssigned &&
       _rideStatus != 'completed' &&
-      _rideStatus != 'cancelled' &&
-      _lastUpdate?.status != null &&
-      _lastUpdate!.status != TripStatus.searching;
+      _rideStatus != 'cancelled';
 
   // ── SOS ────────────────────────────────────────────────────────────────────
 

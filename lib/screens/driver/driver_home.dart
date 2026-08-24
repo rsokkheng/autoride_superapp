@@ -19,7 +19,6 @@ import '../../models/driver_stats_model.dart';
 import '../../models/wallet_model.dart';
 import '../auth/role_selection.dart';
 import '../auth/login_screen.dart';
-import '../passenger/passenger_home.dart';
 import '../passenger/wallet_screen.dart';
 import '../shared/chat_screen.dart';
 import '../passenger/safety_screen.dart';
@@ -2687,36 +2686,6 @@ class _DriverProfileState extends State<_DriverProfile> {
                   ),
                 ),
               ))),
-              // ── Switch to Passenger Mode ────────────────────────────────
-              GestureDetector(
-                onTap: () => Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => PassengerHomeScreen()),
-                  (_) => false,
-                ),
-                child: Container(
-                  margin: EdgeInsets.only(bottom: 10),
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accent.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
-                  ),
-                  child: Row(children: [
-                    Container(
-                      padding: EdgeInsets.all(7),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.person_outline, color: AppTheme.accent, size: 18),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(child: Text(AppLocalizations.of(context).switchToPassengerMode,
-                        style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14))),
-                    Icon(Icons.chevron_right, color: AppTheme.accent, size: 18),
-                  ]),
-                ),
-              ),
               // ── Dark mode ───────────────────────────────────────────────
               Consumer<ThemeProvider>(
                 builder: (context, tp, _) => Container(

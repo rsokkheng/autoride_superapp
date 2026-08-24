@@ -131,7 +131,27 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       ? AppTheme.khr(widget.ride!.fareKhr)
       : widget.fare;
 
-  String get _driverId => widget.ride?.driverId?.toString() ?? 'unknown';
+  // Resolved once in initState via _resolveDriverId(). widget.ride is the
+  // pre-acceptance payload handed down from the incoming-request card (see
+  // driver_home.dart's _RideRequestCard._accept — it deliberately keeps
+  // using the pre-accept ride object for its pickup/dropoff coords, since
+  // the accept response omits them), so widget.ride.driverId is still
+  // null/stale at this point. Publishing live GPS under that null/'unknown'
+  // id writes to a Firestore doc nobody is listening to, which is why the
+  // passenger's map stayed on "Locating your driver…" forever with no
+  // error anywhere — the writes were succeeding, just to the wrong doc.
+  String _driverId = 'unknown';
+
+  Future<void> _resolveDriverId() async {
+    try {
+      final saved = await ApiService.getSavedUser();
+      if (saved != null) {
+        _driverId = saved.id.toString();
+        return;
+      }
+    } catch (_) {}
+    _driverId = widget.ride?.driverId?.toString() ?? 'unknown';
+  }
 
   String get _serviceLabel {
     switch (widget.ride?.serviceType) {
@@ -187,7 +207,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
     _initMap();
     _fetchFullRoute();
-    _startTracking();
+    _resolveDriverId().then((_) => _startTracking());
     _loadWayStops();
     WidgetsBinding.instance.addObserver(this);
   }

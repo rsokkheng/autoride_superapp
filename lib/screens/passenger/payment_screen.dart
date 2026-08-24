@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../services/websocket_service.dart';
 import '../../theme/app_theme.dart';
 import 'rate_driver_screen.dart';
 
@@ -41,7 +39,6 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  GoogleMapController? _mapController;
   String _selectedMethod = 'cash';
   bool   _paying         = false;
 
@@ -76,12 +73,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   @override
-  void dispose() {
-    _mapController?.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,
@@ -96,43 +87,34 @@ class _PaymentScreenState extends State<PaymentScreen> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 24),
         child: Column(children: [
-          // ── Map ─────────────────────────────────────────────────────────
-          SizedBox(
-            height: 160,
-            child: GoogleMap(
-              onMapCreated: (c) {
-                _mapController = c;
-                c.animateCamera(CameraUpdate.newCameraPosition(
-                  const CameraPosition(target: LatLng(11.5680, 104.9195), zoom: 13.5),
-                ));
-              },
-              initialCameraPosition: const CameraPosition(
-                  target: LatLng(11.5680, 104.9195), zoom: 13.5),
-              markers: {
-                Marker(
-                  markerId: const MarkerId('pickup'),
-                  position: WebSocketService.pickupPoint,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-                ),
-                Marker(
-                  markerId: const MarkerId('destination'),
-                  position: WebSocketService.destinationPoint,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-                ),
-              },
-              polylines: {
-                Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: WebSocketService.driverRoute,
-                  color: _kGreen,
-                  width: 4,
-                ),
-              },
-              zoomControlsEnabled: false,
-              myLocationButtonEnabled: false,
-              scrollGesturesEnabled: false,
-              zoomGesturesEnabled: false,
-            ),
+          // ── Route summary ───────────────────────────────────────────────
+          // No coordinates are available on this screen (only address
+          // strings) to draw a real map, and there's no live driver position
+          // to track post-trip anyway — a text summary is honest, unlike the
+          // previous map, which always showed the same hardcoded fake route
+          // regardless of the actual trip.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.circle, color: _kGreen, size: 10),
+                const SizedBox(width: 10),
+                Expanded(child: Text(widget.fromAddress,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _kTextMain, fontSize: 13, fontWeight: FontWeight.w600))),
+              ]),
+              Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Container(width: 1, height: 16, color: _kDivider),
+              ),
+              Row(children: [
+                const Icon(Icons.location_on, color: Colors.red, size: 12),
+                const SizedBox(width: 9),
+                Expanded(child: Text(widget.toAddress,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _kTextMain, fontSize: 13, fontWeight: FontWeight.w600))),
+              ]),
+            ]),
           ),
           const SizedBox(height: 12),
 

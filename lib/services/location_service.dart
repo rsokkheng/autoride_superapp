@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/driver_marker_model.dart';
+import '../utils/app_log.dart';
+import 'api_service.dart';
 import 'auth_service.dart';
 
 enum DriverStatus { online, busy, offline }
@@ -56,6 +58,12 @@ class LocationService {
     _onlineSub = null;
     final granted = await requestPermission();
     if (!granted) return;
+    // Deliberately NOT awaited, and deliberately NOT gating the stream
+    // below on it: the REST push to the backend (which drives ride-dispatch
+    // matching via users.current_latitude/longitude, and — server-side via
+    // the Admin SDK — its own Firestore sync) doesn't depend on this
+    // client's Firebase Auth state at all. Only the direct `.set()` below
+    // needs it, and that's already best-effort with its own .catchError.
     AuthService.signInAnon();
     _onlineSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -75,7 +83,16 @@ class LocationService {
         'mode_delivery': _modeDelivery,
         'mode_rental':   _modeRental,
         'updated_at':    FieldValue.serverTimestamp(),
+      }).catchError((e) {
+        AppLog.e('LocationService',
+            'startOnlineTracking($driverId): Firestore write failed', e);
       });
+      // Also keep users.current_latitude/longitude fresh on the backend —
+      // DriverMatchingService::findDrivers() (ride dispatch) filters on
+      // those DB columns, not Firestore. Without this, a driver who is
+      // online but not yet in a trip never gets matched to any new ride
+      // request, since the columns stay NULL forever.
+      ApiService.updateCurrentLocation(latitude: pos.latitude, longitude: pos.longitude);
     }, onError: (_) {});
   }
 
@@ -129,6 +146,15 @@ class LocationService {
     _onlineSub?.cancel();
     _onlineSub  = null;
     _vehicleType = DriverMarkerModel.normalise(vehicleType);
+    // Deliberately NOT awaited, and deliberately NOT gating the GPS stream
+    // below: `onPosition` also drives the backend REST push
+    // (ApiService.updateDriverLocation → server-side Firestore write via
+    // the Admin SDK, keyed off the driver's auth token — not subject to
+    // client Firestore security rules at all). Blocking the whole stream
+    // on this client-side anonymous sign-in previously meant a Firebase
+    // Auth hiccup killed the REST channel too, when the two are
+    // independent — the direct `.set()` below is just a best-effort extra
+    // and already logs its own failures via .catchError.
     AuthService.signInAnon();
     _tripSub?.cancel();
     _tripSub = Geolocator.getPositionStream(
@@ -149,6 +175,9 @@ class LocationService {
         'mode_delivery': _modeDelivery,
         'mode_rental':   _modeRental,
         'updated_at':    FieldValue.serverTimestamp(),
+      }).catchError((e) {
+        AppLog.e('LocationService',
+            'startTracking($driverId): Firestore write failed', e);
       });
       onPosition(position);
     }, onError: (_) {});
@@ -197,16 +226,18 @@ class LocationService {
 
   // ── Passenger side: stream ride status from Firestore ─────────────────────
   //
-  // Backend (or the driver client) writes to `rides_live/{rideId}` with
-  // at least {status, driver_id}. This eliminates the 5-second polling timer.
+  // The backend (FirestoreService::syncRide) writes ride status to
+  // `bookings/ride_{rideId}` — {status, driver_id, ...} — on every status
+  // transition. This eliminates the 5-second polling timer for detecting
+  // driver assignment/arrival/completion.
   //
   // Falls back gracefully if the document doesn't exist: the stream just
   // never emits, and the caller's timer remains the safety net.
 
   Stream<Map<String, dynamic>> listenRideStatus(String rideId) {
     return _db
-        .collection('rides_live')
-        .doc(rideId)
+        .collection('bookings')
+        .doc('ride_$rideId')
         .snapshots()
         .expand((doc) {
       final data = doc.data();

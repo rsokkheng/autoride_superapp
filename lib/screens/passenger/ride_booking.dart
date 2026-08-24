@@ -1213,6 +1213,10 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   // ── Book ride ─────────────────────────────────────────────────────────────────
 
   Future<void> _bookRide() async {
+    // Still resolving real GPS — _pickupCenter is sitting on the hardcoded
+    // placeholder coordinate at this point, so booking now would silently
+    // use the wrong pickup location.
+    if (_gpsLoading) return;
     if (_pickupAddress.isEmpty) return;
     if (!_noDestination && (_destAddress.isEmpty || _destLatLng == null)) return;
     setState(() { _isBooking = true; _bookError = null; });
@@ -1809,7 +1813,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         cameraTargetBounds: CameraTargetBounds(_kCambodiaBounds),
         minMaxZoomPreference: MinMaxZoomPreference(10, 20),
         onCameraMove: (pos) => _pickupCenter = pos.target,
-        onCameraIdle: () => _reverseGeocodePickup(_pickupCenter),
+        // Skip while GPS is still resolving — otherwise the map's initial
+        // render (still sitting on the hardcoded placeholder center) fires
+        // onCameraIdle immediately and reverse-geocodes that placeholder
+        // into a real-looking street address, which then briefly displays
+        // in place of "Detecting location…" as if it were the user's
+        // actual position.
+        onCameraIdle: () { if (!_gpsLoading) _reverseGeocodePickup(_pickupCenter); },
       ),
 
       Center(child: _Crosshair()),
@@ -2688,7 +2698,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         cameraTargetBounds: CameraTargetBounds(_kCambodiaBounds),
         minMaxZoomPreference: const MinMaxZoomPreference(10, 20),
         onCameraMove: (pos) => _pickupCenter = pos.target,
-        onCameraIdle: () => _reverseGeocodePickup(_pickupCenter),
+        // Skip while GPS is still resolving — otherwise the map's initial
+        // render (still sitting on the hardcoded placeholder center) fires
+        // onCameraIdle immediately and reverse-geocodes that placeholder
+        // into a real-looking street address, which then briefly displays
+        // in place of "Detecting location…" as if it were the user's
+        // actual position.
+        onCameraIdle: () { if (!_gpsLoading) _reverseGeocodePickup(_pickupCenter); },
       ),
 
       // Fixed crosshair — drag the map to reposition pickup. Positioned
@@ -3051,7 +3067,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
             padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + safeBot),
             child: ElevatedButton(
-              onPressed: _isBooking ? null : _bookRide,
+              onPressed: (_isBooking || _gpsLoading) ? null : _bookRide,
               style: AppTheme.confirmButtonStyle(),
               child: _isBooking
                   ? const SizedBox(width: 22, height: 22,
@@ -3506,7 +3522,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
             padding: EdgeInsets.fromLTRB(20, 12, 20, 12 + safeBot),
             child: ElevatedButton(
-              onPressed: _isBooking ? null : _bookRide,
+              onPressed: (_isBooking || _gpsLoading) ? null : _bookRide,
               style: AppTheme.confirmButtonStyle(
                   background: _isScheduled ? AppTheme.warning : null),
               child: _isBooking
