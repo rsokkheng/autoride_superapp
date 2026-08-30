@@ -1412,6 +1412,23 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                       Text(_p.categoryName!,
                           style: const TextStyle(color: Colors.grey, fontSize: 12)),
                     ],
+                    if (_p.vehicleTypeName(appLocale.value.languageCode) != null ||
+                        _p.vehicleColorName(appLocale.value.languageCode) != null ||
+                        _p.vehicleSizeLabel != null) ...[
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 6, children: [
+                        if (_p.vehicleTypeName(appLocale.value.languageCode) != null)
+                          _Pill(label: _p.vehicleTypeName(appLocale.value.languageCode)!,
+                              color: _green, icon: Icons.two_wheeler_outlined),
+                        if (_p.vehicleSizeLabel != null)
+                          _Pill(label: _p.vehicleSizeLabel!, color: Colors.blueGrey),
+                        if (_p.vehicleColorName(appLocale.value.languageCode) != null)
+                          _Pill(
+                            label: _p.vehicleColorName(appLocale.value.languageCode)!,
+                            color: _swatchFor(_p.vehicleColorCode ?? ''),
+                          ),
+                      ]),
+                    ],
                     const SizedBox(height: 12),
                     // Location
                     if (_p.locationText != null)
@@ -1778,25 +1795,25 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
 
               // Location type + address
               _PurchaseField(
-                label: 'Location',
+                label: AppLocalizations.of(context).location,
                 child: Column(children: [
                   _PurchaseDropdown<String>(
-                    label: 'Location Type',
+                    label: AppLocalizations.of(context).locationType,
                     icon: _locType == 'pickup'
                         ? Icons.directions_walk_rounded
                         : Icons.local_shipping_outlined,
                     value: _locType,
-                    items: const [
+                    items: [
                       _DropItemM(
                         value: 'pickup',
-                        label: 'Pick Up',
-                        subtitle: "I'll collect the item myself",
+                        label: AppLocalizations.of(context).pickUp,
+                        subtitle: AppLocalizations.of(context).collectMyself,
                         icon: Icons.directions_walk_rounded,
                       ),
                       _DropItemM(
                         value: 'delivery',
-                        label: 'Delivery',
-                        subtitle: 'Deliver the item to my address',
+                        label: AppLocalizations.of(context).delivery,
+                        subtitle: AppLocalizations.of(context).deliverToAddress,
                         icon: Icons.local_shipping_outlined,
                       ),
                     ],
@@ -1813,7 +1830,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                       address: _locAddress,
                       icon: Icons.location_on_rounded,
                       iconColor: Colors.red,
-                      hint: 'Tap to set delivery location',
+                      hint: AppLocalizations.of(context).tapToSetDelivery,
                       onTap: _pickLocation,
                     ),
                   ],
@@ -1826,7 +1843,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                     if (p.locationLat != null && p.locationLng != null)
                       RotehLocationMap(
                         pin: LatLng(p.locationLat!, p.locationLng!),
-                        addressLabel: p.locationText ?? 'Pickup location',
+                        addressLabel: p.locationText ?? AppLocalizations.of(context).pickupLocation,
                       )
                     else
                       GestureDetector(
@@ -1842,22 +1859,22 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
 
               // Payment
               _PurchaseField(
-                label: 'Payment Type',
+                label: AppLocalizations.of(context).paymentType,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                   _PurchaseDropdown<int>(
-                    label: 'Payment Type',
+                    label: AppLocalizations.of(context).paymentType,
                     icon: Icons.payments_outlined,
                     value: _paymentType,
-                    items: const [
-                      _DropItemM(value: 0, label: 'Paid Full',
-                          subtitle: 'Pay the full amount now',
+                    items: [
+                      _DropItemM(value: 0, label: AppLocalizations.of(context).paidFull,
+                          subtitle: AppLocalizations.of(context).payFullAmountNow,
                           icon: Icons.check_circle_outline),
-                      _DropItemM(value: 1, label: 'Book 30%',
-                          subtitle: 'Pay 30% deposit — balance on delivery',
+                      _DropItemM(value: 1, label: AppLocalizations.of(context).book30,
+                          subtitle: AppLocalizations.of(context).pay30Deposit,
                           icon: Icons.percent_rounded),
-                      _DropItemM(value: 2, label: 'COD',
-                          subtitle: 'Cash on delivery',
+                      _DropItemM(value: 2, label: AppLocalizations.of(context).cod,
+                          subtitle: AppLocalizations.of(context).cashOnDelivery,
                           icon: Icons.payments_outlined),
                     ],
                     onChanged: (v) => setState(() => _paymentType = v),
@@ -1865,24 +1882,24 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                   if (_paymentType != 2) ...[
                     const SizedBox(height: 10),
                     _PurchaseDropdown<String>(
-                      label: 'Payment Method',
+                      label: AppLocalizations.of(context).paymentMethod,
                       icon: Icons.account_balance_wallet_outlined,
                       value: _paymentMethod,
-                      items: const [
-                        _DropItemM(value: 'cash',         label: 'Cash',
-                            subtitle: 'Pay with cash',
+                      items: [
+                        _DropItemM(value: 'cash',         label: AppLocalizations.of(context).cash,
+                            subtitle: AppLocalizations.of(context).payWithCash,
                             icon: Icons.payments_outlined),
-                        _DropItemM(value: 'wallet',       label: 'ROTEH Pay',
-                            subtitle: 'In-app wallet balance',
+                        _DropItemM(value: 'wallet',       label: AppLocalizations.of(context).rotehPay,
+                            subtitle: AppLocalizations.of(context).inAppWalletBalance,
                             icon: Icons.account_balance_wallet),
                         _DropItemM(value: 'aba',          label: 'ABA Pay',
-                            subtitle: 'ABA mobile banking',
+                            subtitle: AppLocalizations.of(context).abaMobileBanking,
                             icon: Icons.account_balance),
                         _DropItemM(value: 'wing',         label: 'Wing',
-                            subtitle: 'Wing mobile wallet',
+                            subtitle: AppLocalizations.of(context).wingMobileWallet,
                             icon: Icons.flight_takeoff),
-                        _DropItemM(value: 'other_online', label: 'Other Online',
-                            subtitle: 'Other online payment',
+                        _DropItemM(value: 'other_online', label: AppLocalizations.of(context).otherOnline,
+                            subtitle: AppLocalizations.of(context).otherOnlinePayment,
                             icon: Icons.language_outlined),
                       ],
                       onChanged: (v) => setState(() => _paymentMethod = v),
@@ -1898,7 +1915,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
               const SizedBox(height: 6),
               _InputField(
                 controller: _couponCtrl,
-                hint: 'Enter coupon code (optional)',
+                hint: AppLocalizations.of(context).enterCouponCodeOptional,
                 icon: Icons.local_offer_outlined,
               ),
               const SizedBox(height: 12),
@@ -2927,6 +2944,16 @@ class _OrderScreenState extends State<_OrderScreen> {
   int? _filterVColorId;
   int? _filterVSizeId;
 
+  // Which type/color/size options currently have at least one active
+  // listing — drives the grayed-out/unavailable chip state. Re-fetched
+  // whenever a filter changes so it narrows as the buyer picks facets.
+  MarketplaceAvailableOptions _availableOptions = const MarketplaceAvailableOptions();
+
+  // Accessory ids selected for the current main item. Cleared whenever the
+  // filter swaps _currentProduct to a different listing, since accessories
+  // belong to one specific product, not the abstract type/size/color combo.
+  final Set<int> _selectedAccessoryIds = {};
+
   // Sizes are only meaningful per vehicle type (e.g. Cargo has different
   // sizes than Passenger, via the marketplace_vehicle_type_size pivot) — the
   // vehicle-types endpoint already nests each type's valid sizes, so once a
@@ -2959,16 +2986,34 @@ class _OrderScreenState extends State<_OrderScreen> {
         ApiService.getMarketplaceVehicleColors(),
         ApiService.getMarketplaceVehicleSizes(),
       ]);
+      final options = await ApiService.getMarketplaceAvailableOptions(
+        categoryId: _currentProduct.categoryId);
       if (!mounted) return;
       setState(() {
         _vTypes  = results[0] as List<MarketplaceVehicleTypeModel>;
         _vColors = results[1] as List<MarketplaceVehicleColorModel>;
         _vSizes  = results[2] as List<MarketplaceVehicleSizeModel>;
+        _availableOptions = options;
         _refLoading = false;
       });
     } catch (_) {
       if (mounted) setState(() => _refLoading = false);
     }
+  }
+
+  // Re-fetches which options are still available given the current filter
+  // selection — narrows as facets get picked (e.g. once "Cargo" is chosen,
+  // only sizes/colors that exist on an active Cargo listing stay enabled).
+  Future<void> _refreshAvailableOptions() async {
+    try {
+      final options = await ApiService.getMarketplaceAvailableOptions(
+        categoryId:     _currentProduct.categoryId,
+        vehicleTypeId:  _filterVTypeId,
+        vehicleColorId: _filterVColorId,
+        vehicleSizeId:  _filterVSizeId,
+      );
+      if (mounted) setState(() => _availableOptions = options);
+    } catch (_) {}
   }
 
   // Called whenever a filter chip is tapped — re-fetches with the new
@@ -2977,6 +3022,7 @@ class _OrderScreenState extends State<_OrderScreen> {
   // if nothing matches that combination.
   Future<void> _applyFilterToCurrentItem() async {
     setState(() { _swappingProduct = true; _filterNoMatch = null; });
+    _refreshAvailableOptions();
     try {
       final page = await ApiService.getMarketplaceProducts(
         listingType:    'sale',
@@ -2989,6 +3035,10 @@ class _OrderScreenState extends State<_OrderScreen> {
       setState(() {
         if (page.products.isNotEmpty) {
           _currentProduct = match.isNotEmpty ? match.first : page.products.first;
+          // Accessories belong to one specific listing — carrying a
+          // selection over to a swapped-in product could apply an add-on
+          // that product doesn't even offer.
+          _selectedAccessoryIds.clear();
         } else {
           _filterNoMatch = 'No listing matches that filter — showing your original pick.';
         }
@@ -3008,11 +3058,16 @@ class _OrderScreenState extends State<_OrderScreen> {
   bool get _datesOk => !_isRent || _start != null;
   DateTime? get _end => _start?.add(Duration(days: _duration.days));
   int  get _days    => _isRent ? _duration.days : 0;
+  // Flat add-on regardless of quantity — a canopy is one physical part
+  // fitted to the vehicle being ordered, not multiplied per unit.
+  double get _selectedAccessoriesTotal => _currentProduct.accessories
+      .where((a) => a.id != null && _selectedAccessoryIds.contains(a.id))
+      .fold(0.0, (sum, a) => sum + a.price);
   double get _mainItemTotal {
-    if (_isRent && _currentProduct.rentPricePerDay != null && _datesOk) {
-      return _currentProduct.rentPricePerDay! * _days * _qty;
-    }
-    return _currentProduct.price * _qty;
+    final base = _isRent && _currentProduct.rentPricePerDay != null && _datesOk
+        ? _currentProduct.rentPricePerDay! * _days * _qty
+        : _currentProduct.price * _qty;
+    return base + _selectedAccessoriesTotal;
   }
   double get _extraItemsTotal => _extraItems.fold(
       0.0, (sum, p) => sum + p.price * (_extraQty[p.id] ?? 1));
@@ -3298,6 +3353,7 @@ class _OrderScreenState extends State<_OrderScreen> {
           rentStartDate: _isRent ? DateFormat('yyyy-MM-dd').format(_start!) : null,
           rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end!)   : null,
           promoCode:     _appliedCode,
+          accessoryIds:  _selectedAccessoryIds.toList(),
         );
       } else {
         // Multiple items — atomic checkout: all orders succeed together or
@@ -3306,7 +3362,8 @@ class _OrderScreenState extends State<_OrderScreen> {
         try {
           await ApiService.checkoutMarketplaceCart(
             items: [
-              MarketplaceCheckoutItem(productId: _currentProduct.id, quantity: _qty),
+              MarketplaceCheckoutItem(productId: _currentProduct.id, quantity: _qty,
+                  accessoryIds: _selectedAccessoryIds.toList()),
               for (final item in _extraItems)
                 MarketplaceCheckoutItem(productId: item.id, quantity: _extraQty[item.id] ?? 1),
             ],
@@ -3327,6 +3384,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             paymentMethod: _pay,
             notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
             promoCode:     _appliedCode,
+            accessoryIds:  _selectedAccessoryIds.toList(),
           );
           for (final item in _extraItems) {
             await ApiService.placeMarketplaceOrder(item.id,
@@ -3482,83 +3540,170 @@ class _OrderScreenState extends State<_OrderScreen> {
 
             // Inline filter — right under the item. Picking one both swaps
             // the main item to a matching listing and narrows "Add Another
-            // Item". Purchase orders only. Type/Size/Color get their own
-            // labeled rows rather than one combined scrolling line, so
-            // color swatches aren't hidden off-screen behind the type chips.
+            // Item". Purchase orders only. Grouped into one card (matching
+            // the Product summary / Rental Period / Quantity cards below)
+            // instead of floating labels directly on the page background —
+            // Type/Size/Color read as one "choose a variant" step, not three
+            // disconnected filters.
             if (!_isVehicleRental && !_refLoading &&
                 (_vTypes.isNotEmpty || _vColors.isNotEmpty || _vSizes.isNotEmpty)) ...[
-              if (_vTypes.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text('Type', style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final vt in _vTypes)
-                    _SelChip(vt.name(appLocale.value.languageCode), _filterVTypeId == vt.id, _green,
-                        () {
-                          setState(() {
-                            final newTypeId = _filterVTypeId == vt.id ? null : vt.id;
-                            _filterVTypeId = newTypeId;
-                            // Drop the size pick if it doesn't belong to the
-                            // newly-selected type's size list.
-                            if (_filterVSizeId != null &&
-                                !_sizesForFilter.any((s) => s.id == _filterVSizeId)) {
-                              _filterVSizeId = null;
-                            }
-                          });
-                          _applyFilterToCurrentItem();
+              const SizedBox(height: 14),
+              _FormLabel(AppLocalizations.of(context).options),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: context.appSurface,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8, offset: const Offset(0, 2))],
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (_vTypes.isNotEmpty) ...[
+                    _OptionRowLabel(
+                        icon: Icons.two_wheeler_outlined, text: AppLocalizations.of(context).type, color: _color),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final vt in _vTypes)
+                        _SelChip(vt.name(appLocale.value.languageCode), _filterVTypeId == vt.id, _color,
+                            () {
+                              setState(() {
+                                final newTypeId = _filterVTypeId == vt.id ? null : vt.id;
+                                _filterVTypeId = newTypeId;
+                                // Drop the size pick if it doesn't belong to the
+                                // newly-selected type's size list.
+                                if (_filterVSizeId != null &&
+                                    !_sizesForFilter.any((s) => s.id == _filterVSizeId)) {
+                                  _filterVSizeId = null;
+                                }
+                              });
+                              _applyFilterToCurrentItem();
+                            },
+                            // Never disable the option already selected —
+                            // it clearly exists (we're looking at it) even
+                            // if the availability probe hasn't caught up.
+                            disabled: _filterVTypeId != vt.id &&
+                                !_availableOptions.vehicleTypeIds.contains(vt.id)),
+                    ]),
+                  ],
+                  if (_sizesForFilter.isNotEmpty) ...[
+                    if (_vTypes.isNotEmpty) _OptionDivider(),
+                    _OptionRowLabel(
+                        icon: Icons.straighten_rounded, text: AppLocalizations.of(context).size, color: _color),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final vs in _sizesForFilter)
+                        _SelChip(vs.label, _filterVSizeId == vs.id, _color,
+                            () { setState(() => _filterVSizeId = _filterVSizeId == vs.id ? null : vs.id); _applyFilterToCurrentItem(); },
+                            disabled: _filterVSizeId != vs.id &&
+                                !_availableOptions.vehicleSizeIds.contains(vs.id)),
+                    ]),
+                  ],
+                  if (_vColors.isNotEmpty) ...[
+                    if (_vTypes.isNotEmpty || _sizesForFilter.isNotEmpty) _OptionDivider(),
+                    _OptionRowLabel(
+                        icon: Icons.palette_outlined,
+                        text: _filterVColorId == null
+                            ? AppLocalizations.of(context).color
+                            : '${AppLocalizations.of(context).color}: ${_vColors.firstWhere((c) => c.id == _filterVColorId).name(appLocale.value.languageCode)}',
+                        color: _color),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 14, runSpacing: 10, children: [
+                      for (final vc in _vColors)
+                        Builder(builder: (_) {
+                          final colorDisabled = _filterVColorId != vc.id &&
+                              !_availableOptions.vehicleColorIds.contains(vc.id);
+                          return GestureDetector(
+                            onTap: colorDisabled ? null : () {
+                              setState(() => _filterVColorId = _filterVColorId == vc.id ? null : vc.id);
+                              _applyFilterToCurrentItem();
+                            },
+                            child: Opacity(
+                              opacity: colorDisabled ? 0.5 : 1.0,
+                              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                Stack(alignment: Alignment.center, children: [
+                                  Container(
+                                    width: 32, height: 32,
+                                    decoration: BoxDecoration(
+                                      color: _swatchFor(vc.code),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: _filterVColorId == vc.id ? _color : const Color(0xFFE0E0E0),
+                                          width: _filterVColorId == vc.id ? 2.5 : 1),
+                                      boxShadow: _filterVColorId == vc.id
+                                          ? [BoxShadow(color: _color.withValues(alpha: 0.35), blurRadius: 6)]
+                                          : null,
+                                    ),
+                                    child: _filterVColorId == vc.id
+                                        ? Icon(Icons.check, size: 16,
+                                            color: _swatchFor(vc.code).computeLuminance() > 0.5 ? Colors.black : Colors.white)
+                                        : null,
+                                  ),
+                                  if (colorDisabled)
+                                    Icon(Icons.close_rounded, size: 18, color: Colors.grey.shade700),
+                                ]),
+                                const SizedBox(height: 5),
+                                Text(vc.name(appLocale.value.languageCode),
+                                    style: TextStyle(
+                                        color: _filterVColorId == vc.id
+                                            ? _color : context.appTextSecondary,
+                                        fontSize: 10,
+                                        fontWeight: _filterVColorId == vc.id ? FontWeight.w700 : FontWeight.w500)),
+                              ]),
+                            ),
+                          );
                         }),
-                ]),
-              ],
-              if (_sizesForFilter.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text('Size', style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final vs in _sizesForFilter)
-                    _SelChip(vs.label, _filterVSizeId == vs.id, _green,
-                        () { setState(() => _filterVSizeId = _filterVSizeId == vs.id ? null : vs.id); _applyFilterToCurrentItem(); }),
-                ]),
-              ],
-              if (_vColors.isNotEmpty) ...[
-                const SizedBox(height: 14),
-                Text('Color', style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 12, runSpacing: 10, children: [
-                  for (final vc in _vColors)
-                    GestureDetector(
-                      onTap: () { setState(() => _filterVColorId = _filterVColorId == vc.id ? null : vc.id); _applyFilterToCurrentItem(); },
-                      child: Tooltip(
-                        message: vc.name(appLocale.value.languageCode),
-                        child: Container(
-                          width: 28, height: 28,
-                          decoration: BoxDecoration(
-                            color: _swatchFor(vc.code),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: _filterVColorId == vc.id ? _green : const Color(0xFFE0E0E0),
-                                width: _filterVColorId == vc.id ? 2.5 : 1),
-                          ),
-                          child: _filterVColorId == vc.id
-                              ? Icon(Icons.check, size: 14,
-                                  color: _swatchFor(vc.code).computeLuminance() > 0.5 ? Colors.black : Colors.white)
-                              : null,
+                    ]),
+                  ],
+                  if (_currentProduct.accessories.isNotEmpty) ...[
+                    if (_vTypes.isNotEmpty || _sizesForFilter.isNotEmpty || _vColors.isNotEmpty)
+                      _OptionDivider(),
+                    _OptionRowLabel(
+                        icon: Icons.build_circle_outlined, text: AppLocalizations.of(context).accessories, color: _color),
+                    const SizedBox(height: 4),
+                    for (final acc in _currentProduct.accessories)
+                      if (acc.id != null)
+                        CheckboxListTile(
+                          value: _selectedAccessoryIds.contains(acc.id),
+                          onChanged: (v) => setState(() {
+                            if (v ?? false) {
+                              _selectedAccessoryIds.add(acc.id!);
+                            } else {
+                              _selectedAccessoryIds.remove(acc.id);
+                            }
+                          }),
+                          controlAffinity: ListTileControlAffinity.leading,
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          activeColor: _color,
+                          title: Text(acc.name(appLocale.value.languageCode),
+                              style: TextStyle(
+                                  color: context.appTextPrimary,
+                                  fontSize: 13, fontWeight: FontWeight.w600)),
+                          secondary: Text('+${_usd(acc.price)}',
+                              style: TextStyle(
+                                  color: _color, fontSize: 13, fontWeight: FontWeight.w700)),
                         ),
-                      ),
-                    ),
+                  ],
+                  if (_swappingProduct) ...[
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      const SizedBox(width: 14, height: 14,
+                          child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
+                      const SizedBox(width: 8),
+                      Text(AppLocalizations.of(context).findingMatch, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                    ]),
+                  ] else if (_filterNoMatch != null) ...[
+                    const SizedBox(height: 12),
+                    Row(children: [
+                      const Icon(Icons.info_outline_rounded, color: Colors.orange, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(child: Text(_filterNoMatch!,
+                          style: const TextStyle(color: Colors.orange, fontSize: 12))),
+                    ]),
+                  ],
                 ]),
-              ],
-              if (_swappingProduct) ...[
-                const SizedBox(height: 8),
-                Row(children: [
-                  const SizedBox(width: 14, height: 14,
-                      child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-                  const SizedBox(width: 8),
-                  Text('Finding a match…', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-                ]),
-              ] else if (_filterNoMatch != null) ...[
-                const SizedBox(height: 8),
-                Text(_filterNoMatch!, style: const TextStyle(color: Colors.orange, fontSize: 12)),
-              ],
+              ),
             ],
             const SizedBox(height: 16),
 
@@ -4007,7 +4152,10 @@ class _OrderScreenState extends State<_OrderScreen> {
           ]),
         )),
 
-        // Confirm
+        // Confirm — total summary and the action button as two clearly
+        // separate rows (was one button with the price crammed into its
+        // label) so the price reads as a receipt total, not part of a
+        // long button caption.
         Container(
           padding: EdgeInsets.fromLTRB(
               16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
@@ -4017,19 +4165,32 @@ class _OrderScreenState extends State<_OrderScreen> {
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 16, offset: const Offset(0, -4))],
           ),
-          child: SizedBox(width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _busy ? null : _submit,
-              style: AppTheme.confirmButtonStyle(),
-              child: _busy
-                  ? const SizedBox(width: 22, height: 22,
-                      child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
-                  : Text(
-                      _isRent
-                          ? (_datesOk ? 'Confirm Rental — ${_usd(_total)}' : 'Select Dates to Continue')
-                          : 'Place Order — ${_usd(_total)}'),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (!_isRent || _datesOk) ...[
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Total Summary', style: TextStyle(
+                      color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text(_usd(_total), style: TextStyle(
+                      color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+                ]),
+              ]),
+              const SizedBox(height: 12),
+            ],
+            SizedBox(width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _busy ? null : _submit,
+                style: AppTheme.confirmButtonStyle(),
+                child: _busy
+                    ? const SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
+                    : Text(
+                        _isRent
+                            ? (_datesOk ? 'Confirm Rental' : 'Select Dates to Continue')
+                            : 'Proceed to Checkout'),
+              ),
             ),
-          ),
+          ]),
         ),
       ]),
     );
@@ -4548,6 +4709,24 @@ class _ActionPill extends StatelessWidget {
 }
 
 
+// One editable accessory row in the Post/Edit Listing form.
+class _AccessoryDraft {
+  final TextEditingController nameEnCtrl;
+  final TextEditingController nameKmCtrl;
+  final TextEditingController priceCtrl;
+
+  _AccessoryDraft({String nameEn = '', String? nameKm, double? price})
+      : nameEnCtrl = TextEditingController(text: nameEn),
+        nameKmCtrl = TextEditingController(text: nameKm ?? ''),
+        priceCtrl  = TextEditingController(text: price == null ? '' : '$price');
+
+  void dispose() {
+    nameEnCtrl.dispose();
+    nameKmCtrl.dispose();
+    priceCtrl.dispose();
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Post / Edit Product Screen
 // ══════════════════════════════════════════════════════════════════════════════
@@ -4589,6 +4768,12 @@ class _PostProductScreenState extends State<_PostProductScreen> {
   // Set correctly in initState() below once widget.existing is known.
   bool _isVehicleProduct = false;
 
+  // Optional paid add-ons a buyer can tick on the Buy screen (e.g. a
+  // removable canopy). Each row is its own set of controllers so the field
+  // widgets stay uncontrolled-per-keystroke instead of rebuilding state on
+  // every character.
+  final List<_AccessoryDraft> _accessories = [];
+
   // Sizes are scoped to the selected vehicle type — the backend 422s on a
   // mismatched pairing (e.g. a cargo-only size picked under Passenger).
   List<MarketplaceVehicleSizeModel> get _sizesForSelectedType {
@@ -4617,6 +4802,9 @@ class _PostProductScreenState extends State<_PostProductScreen> {
       _vehicleSizeId  = e.vehicleSizeId;
       _isVehicleProduct = e.categoryId != null || e.vehicleTypeId != null ||
           e.vehicleColorId != null || e.vehicleSizeId != null;
+      for (final acc in e.accessories) {
+        _accessories.add(_AccessoryDraft(nameEn: acc.nameEn, nameKm: acc.nameKm, price: acc.price));
+      }
     }
     _loadRefData();
   }
@@ -4643,6 +4831,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
   @override
   void dispose() {
     for (final c in [_title, _desc, _price, _rent, _location, _qty]) c.dispose();
+    for (final a in _accessories) a.dispose();
     super.dispose();
   }
 
@@ -4670,6 +4859,23 @@ class _PostProductScreenState extends State<_PostProductScreen> {
     if (t.isEmpty) { setState(() => _err = 'Title is required.'); return; }
     if (p == null) { setState(() => _err = 'Price must be a number.'); return; }
     final r = double.tryParse(_rent.text.trim());
+
+    // Drop rows the seller started but never filled in — nothing to submit
+    // for those. A row with a name but an invalid/blank price is rejected
+    // rather than silently defaulting to free.
+    final accessoryRows = _accessories.where((a) => a.nameEnCtrl.text.trim().isNotEmpty).toList();
+    for (final a in accessoryRows) {
+      if (double.tryParse(a.priceCtrl.text.trim()) == null) {
+        setState(() => _err = 'Enter a valid price for "${a.nameEnCtrl.text.trim()}".');
+        return;
+      }
+    }
+    final accessories = accessoryRows.map((a) => MarketplaceAccessoryInput(
+      nameEn: a.nameEnCtrl.text.trim(),
+      nameKm: a.nameKmCtrl.text.trim().isEmpty ? null : a.nameKmCtrl.text.trim(),
+      price:  double.parse(a.priceCtrl.text.trim()),
+    )).toList();
+
     setState(() { _busy = true; _err = null; });
     try {
       if (_isEdit) {
@@ -4679,7 +4885,8 @@ class _PostProductScreenState extends State<_PostProductScreen> {
             quantity: int.tryParse(_qty.text.trim()) ?? 1, status: _status,
             locationText: _location.text.trim().isEmpty ? null : _location.text.trim(),
             categoryId: _categoryId, vehicleTypeId: _vehicleTypeId,
-            vehicleColorId: _vehicleColorId, vehicleSizeId: _vehicleSizeId);
+            vehicleColorId: _vehicleColorId, vehicleSizeId: _vehicleSizeId,
+            accessories: accessories);
       } else {
         await ApiService.createMarketplaceProduct(
             title: t, price: p, condition: _cond, listingType: _type, status: _status,
@@ -4687,7 +4894,8 @@ class _PostProductScreenState extends State<_PostProductScreen> {
             locationText: _location.text.trim().isEmpty ? null : _location.text.trim(),
             quantity: int.tryParse(_qty.text.trim()) ?? 1, rentPricePerDay: r, images: _imgs,
             categoryId: _categoryId, vehicleTypeId: _vehicleTypeId,
-            vehicleColorId: _vehicleColorId, vehicleSizeId: _vehicleSizeId);
+            vehicleColorId: _vehicleColorId, vehicleSizeId: _vehicleSizeId,
+            accessories: accessories);
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -4702,13 +4910,14 @@ class _PostProductScreenState extends State<_PostProductScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
         backgroundColor: context.appSurface, elevation: 0,
         scrolledUnderElevation: 0.5, shadowColor: Colors.black12,
         leading: _BackBtn(),
-        title: Text(_isEdit ? 'Edit Listing' : 'New Listing',
+        title: Text(_isEdit ? loc.editListing : loc.postAListing,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
       ),
       body: Column(children: [
@@ -4733,7 +4942,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
 
             // Photos
             if (!_isEdit)
-              _Card(title: 'Photos', subtitle: 'Up to 5',
+              _Card(title: loc.photos, subtitle: loc.upTo5,
                 child: Wrap(spacing: 10, runSpacing: 10, children: [
                   for (int i = 0; i < _imgs.length; i++)
                     Stack(children: [
@@ -4763,7 +4972,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
                           const Icon(Icons.add_photo_alternate_outlined,
                               color: _green, size: 26),
                           const SizedBox(height: 4),
-                          Text('${5 - _imgs.length} ${AppLocalizations.of(context).left}',
+                          Text('${5 - _imgs.length} ${loc.left}',
                               style: const TextStyle(color: _green, fontSize: 9,
                                   fontWeight: FontWeight.w600)),
                         ]),
@@ -4772,18 +4981,18 @@ class _PostProductScreenState extends State<_PostProductScreen> {
                 ]),
               ),
 
-            _Card(title: 'Product Info', child: Column(children: [
-              _FF(ctrl: _title, label: 'Title', hint: 'e.g. iPhone 14 Pro'),
+            _Card(title: loc.productInfo, child: Column(children: [
+              _FF(ctrl: _title, label: loc.productTitle, hint: 'e.g. iPhone 14 Pro'),
               const SizedBox(height: 12),
-              _FF(ctrl: _desc, label: 'Description',
-                  hint: 'Describe your product…', maxLines: 3),
+              _FF(ctrl: _desc, label: loc.description,
+                  hint: loc.describeProduct, maxLines: 3),
             ])),
 
-            _Card(title: 'What are you listing?', child: Row(children: [
-              Expanded(child: _SelBtn('Vehicle (tuk-tuk, cargo…)', _isVehicleProduct, _green,
+            _Card(title: loc.whatAreYouListing, child: Row(children: [
+              Expanded(child: _SelBtn(loc.vehicleOption, _isVehicleProduct, _green,
                   () => setState(() => _isVehicleProduct = true))),
               const SizedBox(width: 10),
-              Expanded(child: _SelBtn('Accessory / Other', !_isVehicleProduct, _green,
+              Expanded(child: _SelBtn(loc.accessoryOther, !_isVehicleProduct, _green,
                   () => setState(() {
                     _isVehicleProduct = false;
                     _categoryId = null; _vehicleTypeId = null;
@@ -4792,7 +5001,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
             ])),
 
             if (_isVehicleProduct && !_refLoading && _cats.isNotEmpty)
-              _Card(title: 'Category', subtitle: 'Optional',
+              _Card(title: loc.category, subtitle: loc.optional,
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final cat in _cats)
                     _SelChip(cat.name, _categoryId == cat.id, _green,
@@ -4801,7 +5010,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               ),
 
             if (_isVehicleProduct && !_refLoading && _vTypes.isNotEmpty)
-              _Card(title: 'Vehicle Type', subtitle: 'Optional',
+              _Card(title: loc.vehicleType, subtitle: loc.optional,
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final vt in _vTypes)
                     _SelChip(vt.name(appLocale.value.languageCode), _vehicleTypeId == vt.id, _green,
@@ -4814,7 +5023,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               ),
 
             if (_isVehicleProduct && !_refLoading && _sizesForSelectedType.isNotEmpty)
-              _Card(title: 'Size', subtitle: 'Optional',
+              _Card(title: loc.size, subtitle: loc.optional,
                 child: Wrap(spacing: 8, runSpacing: 8, children: [
                   for (final vs in _sizesForSelectedType)
                     _SelChip(vs.label, _vehicleSizeId == vs.id, _green,
@@ -4823,7 +5032,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               ),
 
             if (_isVehicleProduct && !_refLoading && _vColors.isNotEmpty)
-              _Card(title: 'Color', subtitle: 'Optional',
+              _Card(title: loc.color, subtitle: loc.optional,
                 child: Wrap(spacing: 14, runSpacing: 10, children: [
                   for (final vc in _vColors)
                     GestureDetector(
@@ -4849,8 +5058,56 @@ class _PostProductScreenState extends State<_PostProductScreen> {
                 ]),
               ),
 
+            if (_isVehicleProduct)
+              _Card(title: loc.accessories, subtitle: loc.optionalAddOns,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  for (int i = 0; i < _accessories.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 12),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          _FF(ctrl: _accessories[i].nameEnCtrl, label: loc.nameEn,
+                              hint: 'e.g. Removable Canopy'),
+                          const SizedBox(height: 8),
+                          _FF(ctrl: _accessories[i].nameKmCtrl, label: loc.nameKm,
+                              hint: 'e.g. ក្រណាត់ដំបូល'),
+                          const SizedBox(height: 8),
+                          _FF(ctrl: _accessories[i].priceCtrl, label: loc.priceUsd,
+                              hint: '150', keyboardType: TextInputType.number),
+                        ]),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() {
+                          _accessories[i].dispose();
+                          _accessories.removeAt(i);
+                        }),
+                        icon: const Icon(Icons.close_rounded, color: Colors.red, size: 20),
+                      ),
+                    ]),
+                  ],
+                  if (_accessories.isNotEmpty) const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _accessories.add(_AccessoryDraft())),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: _green.withValues(alpha: 0.4), width: 1.5),
+                      ),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                        const Icon(Icons.add_rounded, color: _green, size: 18),
+                        const SizedBox(width: 6),
+                        Text(loc.addAccessory, style: const TextStyle(
+                            color: _green, fontWeight: FontWeight.w700, fontSize: 13)),
+                      ]),
+                    ),
+                  ),
+                ]),
+              ),
+
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: _Card(title: 'Type',
+              Expanded(child: _Card(title: loc.type,
                 child: Column(children: [
                   for (final t in [('sale', 'Sale'), ('rent', 'Rent'), ('both', 'Both')])
                     _SelBtn(t.$2, _type == t.$1, _green,
@@ -4858,7 +5115,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
                 ]),
               )),
               const SizedBox(width: 12),
-              Expanded(child: _Card(title: 'Condition',
+              Expanded(child: _Card(title: loc.condition,
                 child: Column(children: [
                   for (final c in [('new', 'New'), ('used', 'Used'), ('refurbished', 'Refurb')])
                     _SelBtn(c.$2, _cond == c.$1, _condColor(c.$1),
@@ -4867,25 +5124,25 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               )),
             ]),
 
-            _Card(title: 'Pricing', child: Column(children: [
-              _FF(ctrl: _price, label: 'Price (USD \$)', hint: '100',
+            _Card(title: loc.pricing, child: Column(children: [
+              _FF(ctrl: _price, label: loc.priceUsd, hint: '100',
                   keyboardType: TextInputType.number),
               if (_type == 'rent' || _type == 'both') ...[
                 const SizedBox(height: 12),
-                _FF(ctrl: _rent, label: 'Rent / Day (USD \$)', hint: '10',
+                _FF(ctrl: _rent, label: loc.rentPerDayUsd, hint: '10',
                     keyboardType: TextInputType.number),
               ],
               const SizedBox(height: 12),
-              _FF(ctrl: _qty, label: 'Quantity', hint: '1',
+              _FF(ctrl: _qty, label: loc.quantity, hint: '1',
                   keyboardType: TextInputType.number),
             ])),
 
-            _Card(title: 'Location', child:
-              _FF(ctrl: _location, label: 'Area / District (optional)',
+            _Card(title: loc.location, child:
+              _FF(ctrl: _location, label: loc.areaDistrictOptional,
                   hint: 'e.g. BKK1, Phnom Penh')),
 
             if (_isEdit)
-              _Card(title: 'Status', child: Wrap(spacing: 8, runSpacing: 8,
+              _Card(title: loc.status, child: Wrap(spacing: 8, runSpacing: 8,
                 children: ['draft', 'active', 'paused', 'sold'].map((s) =>
                   _SelBtn(s[0].toUpperCase() + s.substring(1),
                       _status == s, _statusColor(s),
@@ -4948,28 +5205,82 @@ class _Card extends StatelessWidget {
 // Wrap-friendly chip variant of _SelBtn — for option groups with more than
 // two or three choices (category, vehicle type, size) where a full-width
 // stacked block would waste too much vertical space.
+// Small icon + label header for one option group (Type/Size/Color) inside
+// the "Options" card on the Buy/Rent Item screen.
+class _OptionRowLabel extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _OptionRowLabel({required this.icon, required this.text, required this.color});
+  @override
+  Widget build(BuildContext context) => Row(children: [
+    Icon(icon, size: 15, color: color),
+    const SizedBox(width: 6),
+    Text(text, style: TextStyle(
+        color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+  ]);
+}
+
+// Thin separator between option groups in the "Options" card.
+class _OptionDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Divider(height: 1, color: context.appCardBg),
+  );
+}
+
 class _SelChip extends StatelessWidget {
   final String label;
   final bool active;
   final Color color;
   final VoidCallback onTap;
-  const _SelChip(this.label, this.active, this.color, this.onTap);
+  // No active listing exists for this option (given whatever else is
+  // currently selected) — shown grayed out with a diagonal strike and not
+  // tappable, instead of just disappearing or looking selectable but doing
+  // nothing when tapped.
+  final bool disabled;
+  const _SelChip(this.label, this.active, this.color, this.onTap, {this.disabled = false});
   @override
   Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: active ? color : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: active ? color : const Color(0xFFE0E0E0), width: 1.5),
+    onTap: disabled ? null : onTap,
+    child: Opacity(
+      opacity: disabled ? 0.55 : 1.0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: active && !disabled ? color : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: active && !disabled ? color : const Color(0xFFE0E0E0), width: 1.5),
+        ),
+        child: Stack(alignment: Alignment.center, children: [
+          Text(label, style: TextStyle(
+              color: active && !disabled ? _white : Colors.grey.shade600,
+              fontWeight: FontWeight.w600, fontSize: 12)),
+          if (disabled)
+            Positioned.fill(
+              child: CustomPaint(painter: _StrikePainter(Colors.grey.shade500)),
+            ),
+        ]),
       ),
-      child: Text(label, style: TextStyle(
-          color: active ? _white : Colors.grey.shade600,
-          fontWeight: FontWeight.w600, fontSize: 12)),
     ),
   );
+}
+
+// Draws the diagonal "unavailable" strike across a disabled _SelChip's label.
+class _StrikePainter extends CustomPainter {
+  final Color color;
+  const _StrikePainter(this.color);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color..strokeWidth = 1.2;
+    canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _StrikePainter oldDelegate) => oldDelegate.color != color;
 }
 
 class _SelBtn extends StatelessWidget {

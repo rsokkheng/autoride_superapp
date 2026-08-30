@@ -393,66 +393,80 @@ class _HomeTabState extends State<_HomeTab> {
               ),
 
             const SizedBox(height: 8),
-            // Hero banner
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2E7D32), Color(0xFF00E676)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                        color: const Color(0xFF2E7D32).withValues(alpha: 0.25),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6)),
-                  ],
+           // Hero banner
+         GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MarketplaceScreen(),
+            ),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white, // required for shadow to render properly
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                  spreadRadius: 0,
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(children: [
-                  Positioned(right: -20, top: -30,
-                    child: Container(width: 110, height: 110,
-                        decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle))),
-                  Positioned(right: 40, bottom: -40,
-                    child: Container(width: 70, height: 70,
-                        decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle))),
-                  Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Row(
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(AppLocalizations.of(context).evCarsSubtitle, style: const TextStyle(color: AppTheme.primary, fontSize: 15, fontWeight: FontWeight.w700)),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(8)),
-                                child: Text(AppLocalizations.of(context).explore, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
-                              ),
-                            ],
+                        Text(
+                          AppLocalizations.of(context).evCarsSubtitle,
+                          maxLines: 1,
+                        
+                          style: const TextStyle(
+                            color: AppTheme.confirmBlack,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
-                        SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: Image.asset(
-                            'assets/library/icon_fa.png',
-                            fit: BoxFit.contain,
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.accent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            AppLocalizations.of(context).explore,
+                            style: const TextStyle(
+                              color: AppTheme.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ]),
+                  SizedBox(
+                    width: 80,
+                    height: 80,
+                    child: Image.asset(
+                      'assets/library/icon_fa.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
+        ),
             const SizedBox(height: 16),
             const BannerCarousel(),
             const SizedBox(height: 24),
@@ -512,14 +526,14 @@ class _HomeTabState extends State<_HomeTab> {
                   ServiceCard(
                     icon: Icons.handshake,
                     imagePath: 'assets/Rental.png',
-                    title: 'Rental',
+                    title: l.rental,
                     color: const Color(0xFF1565C0),
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CarRentalScreen())),
                   ),
                   ServiceCard(
                     icon: Icons.family_restroom_rounded,
                     imagePath: 'assets/Family.png',
-                    title: 'Family',
+                    title: l.family,
                     color: AppTheme.accentOrange,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyScreen())),
                   ),
@@ -533,13 +547,13 @@ class _HomeTabState extends State<_HomeTab> {
                 SectionHeader(title: l.quickActions),
                 const SizedBox(height: 14),
                 Row(children: [
-                  Expanded(child: _QuickAction(icon: Icons.account_balance_wallet_outlined, imagePath: 'assets/Wallet.png', label: 'Wallet', color: AppTheme.accent,
+                  Expanded(child: _QuickAction(icon: Icons.account_balance_wallet_outlined, imagePath: 'assets/Wallet.png', label: l.wallet, color: AppTheme.accent,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen())))),
                   const SizedBox(width: 12),
-                  Expanded(child: _QuickAction(icon: Icons.star_outline, imagePath: 'assets/Rewards.png', label: 'Rewards', color: AppTheme.gold,
+                  Expanded(child: _QuickAction(icon: Icons.star_outline, imagePath: 'assets/Rewards.png', label: l.rewards, color: AppTheme.gold,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen())))),
                   const SizedBox(width: 12),
-                  Expanded(child: _QuickAction(icon: Icons.card_giftcard_outlined, imagePath: 'assets/Refer.png', label: 'Refer', color: AppTheme.success,
+                  Expanded(child: _QuickAction(icon: Icons.card_giftcard_outlined, imagePath: 'assets/Refer.png', label: l.refer, color: AppTheme.success,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ReferralScreen())))),
                   const SizedBox(width: 12),
                   Expanded(child: _QuickAction(icon: Icons.shield_outlined, imagePath: 'assets/Safety.png', label: l.safety, color: AppTheme.danger,

@@ -2534,6 +2534,38 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed to load vehicle sizes.', raw.statusCode);
   }
 
+  /// Which vehicle_type_id/vehicle_color_id/vehicle_size_id values have at
+  /// least one active listing right now, optionally scoped to a category and
+  /// whichever of the other two filters are already picked — drives which
+  /// Buy Item chips render as selectable vs. grayed-out/unavailable.
+  static Future<MarketplaceAvailableOptions> getMarketplaceAvailableOptions({
+    int? categoryId,
+    int? vehicleTypeId,
+    int? vehicleColorId,
+    int? vehicleSizeId,
+  }) async {
+    final token = await getToken();
+    final params = <String, String>{
+      if (categoryId     != null) 'category_id': '$categoryId',
+      if (vehicleTypeId  != null) 'marketplace_vehicle_type_id':  '$vehicleTypeId',
+      if (vehicleColorId != null) 'marketplace_vehicle_color_id': '$vehicleColorId',
+      if (vehicleSizeId  != null) 'marketplace_vehicle_size_id':  '$vehicleSizeId',
+    };
+    final query = params.isEmpty ? '' : '?${Uri(queryParameters: params).query}';
+    final raw = await _rawGet('/marketplace/available-options$query', token: token);
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode == 200) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return MarketplaceAvailableOptions.fromJson(data);
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load available options.', raw.statusCode);
+  }
+
   static MarketplaceProductsPage _parseProductsPage(String body) {
     dynamic decoded;
     try { decoded = jsonDecode(body); } catch (_) {
@@ -2596,6 +2628,7 @@ class ApiService {
     List<File> images       = const [],  // max 10 files, 5 MB each
     String? guestName,
     String? guestPhone,
+    List<MarketplaceAccessoryInput>? accessories,
   }) async {
     final token   = await getToken();
     final isGuest = token == null;
@@ -2625,6 +2658,12 @@ class ApiService {
     if (vehicleColorId  != null) request.fields['marketplace_vehicle_color_id'] = '$vehicleColorId';
     if (vehicleSizeId   != null) request.fields['marketplace_vehicle_size_id']  = '$vehicleSizeId';
     if (rentPricePerDay != null) request.fields['rent_price_per_day'] = '$rentPricePerDay';
+    // Nested arrays don't survive multipart/form-data the way flat fields
+    // do — JSON-encode the whole list into one field; the backend decodes it.
+    if (accessories != null) {
+      request.fields['accessories'] =
+          jsonEncode(accessories.map((a) => a.toJson()).toList());
+    }
 
     for (final file in images) {
       request.files.add(await http.MultipartFile.fromPath('images[]', file.path));
@@ -2656,6 +2695,7 @@ class ApiService {
     double? locationLat,
     double? locationLng,
     String? expiresAt,
+    List<MarketplaceAccessoryInput>? accessories,
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -2677,6 +2717,9 @@ class ApiService {
       if (locationLat     != null) 'location_lat':       locationLat,
       if (locationLng     != null) 'location_lng':       locationLng,
       if (expiresAt       != null) 'expires_at':         expiresAt,
+      // Sent as a plain array here (unlike create's multipart field) since
+      // this request body is JSON, not multipart/form-data.
+      if (accessories     != null) 'accessories':        accessories.map((a) => a.toJson()).toList(),
     };
     final raw = await _rawPut('/marketplace/$id', body, token: token);
     return _parseProduct(raw);
@@ -2731,6 +2774,7 @@ class ApiService {
     String? rentStartDate,
     String? rentEndDate,
     String? promoCode,
+    List<int> accessoryIds = const [],
   }) async {
     final token = await getToken();
     final body = <String, dynamic>{
@@ -2741,6 +2785,7 @@ class ApiService {
       if (rentStartDate != null) 'rent_start_date': rentStartDate,
       if (rentEndDate   != null) 'rent_end_date':   rentEndDate,
       if (promoCode     != null) 'promo_code':      promoCode,
+      if (accessoryIds.isNotEmpty) 'accessory_ids': accessoryIds,
     };
     final raw = await _rawPost('/marketplace/$productId/order', body, token: token);
     final Map<String, dynamic> decoded;

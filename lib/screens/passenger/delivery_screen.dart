@@ -76,14 +76,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   String   _moveType            = 'home';   // 'home' | 'office'
   String   _movingServiceOption  = 'normal'; // 'normal' | 'express'
-  String   _propertySize        = 'studio';
-  int      _floorPickup         = 1;
-  int      _floorDropoff      = 1;
+  String   _propertySize        = 'home';
+  int      _floorPickup         = 0;
+  int      _floorDropoff      = 0;
   bool     _hasElevator       = true;
   bool     _needsStairsCarry  = false;
   bool     _heavyItems        = false;
   bool     _packingService    = false;
-  int      _requiresHelpers   = 1;        // 1–4
+  int      _requiresHelpers   = 0;        // 0–5
   String   _movePaymentMethod = 'cash';
   bool     _isMoveScheduled   = false;
   DateTime _moveDate          = DateTime.now().add(const Duration(days: 1));
@@ -713,8 +713,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       const SizedBox(height: 20),
 
-      // ── Addresses ────────────────────────────────────────────────────────
-      const SectionHeader(title: 'Addresses'),
+       // Sender
+      SectionHeader(title: 'Information of mover'),
+      SizedBox(height: 14),
+      _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
+      SizedBox(height: 10),
+      _Field(hint: "Sender's phone", icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
+          keyboardType: TextInputType.phone,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+      SizedBox(height: 10),
       const SizedBox(height: 14),
       _AddressWithMap(
         hint: 'Moving from (full address)', icon: Icons.location_on_outlined, controller: _moveFromCtrl,
@@ -775,6 +782,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         icon: Icons.home_work_outlined,
         value: _propertySize,
         items: const [
+          _DropItem(value: 'home',   label: 'Home',   subtitle: 'Private home',          icon: Icons.home_outlined),
           _DropItem(value: 'studio', label: 'Studio / 1 Room', subtitle: 'Small space',        icon: Icons.meeting_room_outlined),
           _DropItem(value: '1br',    label: '1 Bedroom',        subtitle: 'Medium apartment',   icon: Icons.bed_outlined),
           _DropItem(value: '2br',    label: '2 Bedrooms',       subtitle: 'Larger apartment',   icon: Icons.bedroom_parent_outlined),
@@ -1105,8 +1113,8 @@ class _HelperCountRow extends StatelessWidget {
           Text(AppLocalizations.of(context).helpersNeeded, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
           Text(AppLocalizations.of(context).personsForCarrying, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
         ])),
-        Row(children: List.generate(4, (i) {
-          final n = i + 1;
+        Row(children: List.generate(5, (i) {
+          final n = i + 0;
           final selected = value == n;
           return GestureDetector(
             onTap: () => onChanged(n),

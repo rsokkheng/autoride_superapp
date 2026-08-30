@@ -10,6 +10,7 @@ import '../../widgets/guest_fields.dart';
 import '../../widgets/location_picker_screen.dart';
 import 'my_rentals_screen.dart';
 import '../../models/marketplace_model.dart';
+import '../../l10n/app_localizations.dart';
 import '../../main.dart' show appLocale;
 
 // ─────────────────────────────────────────────────────────────────────────────

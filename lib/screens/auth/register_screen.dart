@@ -33,7 +33,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   static const _driverTypes = [
     ('owner',    'Owner',    Icons.person_outlined),
-    ('employee', 'Employee', Icons.badge_outlined),
     ('rental',   'Rental',   Icons.car_rental_outlined),
   ];
 

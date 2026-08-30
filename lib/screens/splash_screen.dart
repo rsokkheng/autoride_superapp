@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
@@ -21,6 +22,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _ctrl;
   late final Animation<double> _logoScale;
   late final Animation<double> _logoOpacity;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -32,11 +34,10 @@ class _SplashScreenState extends State<SplashScreen>
     _logoOpacity = CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.5))
         .drive(Tween(begin: 0.0, end: 1.0));
     _ctrl.forward();
-    _runSequence();
+    _timer = Timer(const Duration(milliseconds: 1800), _runSequence);
   }
 
   Future<void> _runSequence() async {
-    await Future.delayed(const Duration(milliseconds: 1800));
     if (!mounted) return;
 
     final role = await ApiService.getRole();
@@ -72,6 +73,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _timer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }

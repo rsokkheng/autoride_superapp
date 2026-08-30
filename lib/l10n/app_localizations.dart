@@ -110,7 +110,7 @@ class AppLocalizations {
       'dailyBreakdown': 'Daily Breakdown',
       'withdrawEarnings': 'Withdraw Earnings',
       'evCarsAvailable': 'EV Cars Now\nAvailable!',
-      'evCarsSubtitle': 'Rent or buy electric\nvehicles near you',
+      'evCarsSubtitle': 'Rent or buy electric vehicles near you',
       'explore': 'Explore',
       'completed': 'Completed',
       'eta': 'ETA',
@@ -193,7 +193,7 @@ class AppLocalizations {
       'yes': 'Yes',
       'no': 'No',
       'helpersNeeded': 'Helpers needed',
-      'personsForCarrying': '1–4 persons for carrying',
+      'personsForCarrying': '0–5 persons for carrying',
       'fareEstimate': 'Fare Estimate',
       'totalEstimate': 'Total estimate',
       'finalPriceConfirmed': 'Final price confirmed after booking',
@@ -317,6 +317,106 @@ class AppLocalizations {
       'size': 'Size',
       'vehicleType': 'Vehicle Type',
       'color': 'Color',
+      'options': 'Options',
+      'accessories': 'Accessories',
+      'addAccessory': 'Add Accessory',
+      'optional': 'Optional',
+      'optionalAddOns': 'Optional add-ons buyers can select',
+      'nameEn': 'Name (English)',
+      'nameKm': 'Name (Khmer, optional)',
+      'priceUsd': 'Price (USD \$)',
+      'rentPerDayUsd': 'Rent / Day (USD \$)',
+      'whatAreYouListing': 'What are you listing?',
+      'vehicleOption': 'Vehicle (tuk-tuk, cargo…)',
+      'accessoryOther': 'Accessory / Other',
+      'photos': 'Photos',
+      'upTo5': 'Up to 5',
+      'productInfo': 'Product Info',
+      'productTitle': 'Title',
+      'describeProduct': 'Describe your product…',
+      'type': 'Type',
+      'condition': 'Condition',
+      'pricing': 'Pricing',
+      'quantity': 'Quantity',
+      'areaDistrictOptional': 'Area / District (optional)',
+      'status': 'Status',
+      'findingMatch': 'Finding a match…',
+      'totalSummary': 'Total Summary',
+      'addAnotherItem': 'Add Another Item',
+      'addItem': 'Add Item',
+      'searchListings': 'Search listings…',
+      'noOtherListingsFound': 'No other listings found',
+      'pickUp': 'Pick Up',
+      'collectMyself': "I'll collect the item myself",
+      'deliverToAddress': 'Deliver the item to my address',
+      'tapToSetDelivery': 'Tap to set delivery location',
+      'paidFull': 'Paid Full',
+      'payFullAmountNow': 'Pay the full amount now',
+      'book30': 'Book 30%',
+      'pay30Deposit': 'Pay 30% deposit — balance on delivery',
+      'cod': 'COD',
+      'cashOnDelivery': 'Cash on delivery',
+      'payWithCash': 'Pay with cash',
+      'inAppWalletBalance': 'In-app wallet balance',
+      'abaMobileBanking': 'ABA mobile banking',
+      'wingMobileWallet': 'Wing mobile wallet',
+      'otherOnline': 'Other Online',
+      'otherOnlinePayment': 'Other online payment',
+      'enterCouponCodeOptional': 'Enter coupon code (optional)',
+      'enterCouponCode': 'Enter coupon code',
+      'noListingsYet': 'No listings yet',
+      'postSomethingToSell': 'Post something to start selling',
+      'duration': 'Duration',
+      'specialInstructions': 'Any special instructions…',
+      'seller': 'Seller',
+      'specifications': 'Specifications',
+      'pickupLocation': 'Pick-up Location',
+      'all': 'All',
+      'category': 'Category',
+      'location': 'Location',
+      'description': 'Description',
+      'paymentType': 'Payment Type',
+      'cash': 'Cash',
+      'sender': 'Sender',
+      'recipient': 'Recipient',
+      'moving': 'Moving',
+      'topUpRequired': 'Top Up Required',
+      'topUpNow': 'Top Up Now',
+      'lookingForRideRequests': 'Looking for Ride Requests',
+      'deliveryModeActive': 'Delivery Mode Active',
+      'incomingRideRequest': 'Incoming Ride Request',
+      'incomingDeliveryRequest': 'Incoming Delivery Request',
+      'incomingRentalRequest': 'Incoming Rental Request',
+      'acceptDelivery': 'Accept Delivery',
+      'acceptRental': 'Accept Rental',
+      'searchChargingStation': 'Search charging station, location...',
+      'nearbyChargingStations': 'Nearby Charging Stations',
+      'noChargingStationsFound': 'No charging stations found.',
+      'createAccount': 'Create Account',
+      'joinRoteh': 'Join ROTEH',
+      'fastSafeRides': 'Fast, safe rides in Cambodia',
+      'iWantTo': 'I want to',
+      'rideAsPassenger': 'Ride as Passenger',
+      'driveAndEarn': 'Drive & Earn',
+      'driverType': 'Driver Type',
+      'fullName': 'Full Name',
+      'email': 'Email',
+      'enterEmail': 'Enter your email',
+      'password': 'Password',
+      'enterPassword': 'Enter your password',
+      'confirmPassword': 'Confirm Password',
+      'phoneOptional': 'Phone (optional)',
+      'referralCodeOptional': 'Referral Code (optional)',
+      'alreadyHaveAccount': 'Already have an account? ',
+      'signIn': 'Sign In',
+      'demoAccounts': 'Demo Accounts',
+      'sendOtp': 'Send OTP',
+      'verifyAndSignIn': 'Verify & Sign In',
+      'resendOtp': 'Resend OTP',
+      'family': 'Family',
+      'wallet': 'Wallet',
+      'rewards': 'Rewards',
+      'refer': 'Refer',
     },
     'km': {
       'appName': 'រទេះ',
@@ -400,7 +500,7 @@ class AppLocalizations {
       'dailyBreakdown': 'ការបែងចែកប្រចាំថ្ងៃ',
       'withdrawEarnings': 'ដកប្រាក់ចំណូល',
       'evCarsAvailable': 'រថយន្ត EV\nមានឥឡូវ!',
-      'evCarsSubtitle': 'ជួល ឬ ទិញយានជំនិះអគ្គីសនី\nនៅជិតអ្នក',
+      'evCarsSubtitle': 'ជួល ឬ ទិញយានជំនិះអគ្គីសនីនៅជិតអ្នក',
       'explore': 'ស្វែងរកយានជំនិះ',
       'completed': 'បានបញ្ចប់',
       'eta': 'ពេលវេលាប៉ាន់ស្មាន',
@@ -607,6 +707,106 @@ class AppLocalizations {
       'size': 'ទំហំ',
       'vehicleType': 'ប្រភេទយានជំនិះ',
       'color': 'ពណ៌',
+      'options': 'ជម្រើស',
+      'accessories': 'គ្រឿងបន្លាស់',
+      'addAccessory': 'បន្ថែមគ្រឿងបន្លាស់',
+      'optional': 'ស្រេចចិត្ត',
+      'optionalAddOns': 'គ្រឿងបន្លាស់បន្ថែមដែលអ្នកទិញអាចជ្រើសរើស',
+      'nameEn': 'ឈ្មោះ (អង់គ្លេស)',
+      'nameKm': 'ឈ្មោះ (ខ្មែរ, ស្រេចចិត្ត)',
+      'priceUsd': 'តម្លៃ (ដុល្លារ \$)',
+      'rentPerDayUsd': 'ថ្លៃជួល / ថ្ងៃ (ដុល្លារ \$)',
+      'whatAreYouListing': 'តើអ្នកចង់ដាក់លក់អ្វី?',
+      'vehicleOption': 'យានជំនិះ (កង់បី, ឡានដឹក…)',
+      'accessoryOther': 'គ្រឿងបន្លាស់ / ផ្សេងៗ',
+      'photos': 'រូបថត',
+      'upTo5': 'រហូតដល់ ៥ សន្លឹក',
+      'productInfo': 'ព័ត៌មានទំនិញ',
+      'productTitle': 'ចំណងជើង',
+      'describeProduct': 'ពិពណ៌នាអំពីទំនិញរបស់អ្នក…',
+      'type': 'ប្រភេទ',
+      'condition': 'ស្ថានភាព',
+      'pricing': 'ការកំណត់តម្លៃ',
+      'quantity': 'បរិមាណ',
+      'areaDistrictOptional': 'តំបន់ / ខណ្ឌ (ស្រេចចិត្ត)',
+      'status': 'ស្ថានភាព',
+      'findingMatch': 'កំពុងស្វែងរកទំនិញត្រូវគ្នា…',
+      'totalSummary': 'សរុបទាំងអស់',
+      'addAnotherItem': 'បន្ថែមទំនិញផ្សេងទៀត',
+      'addItem': 'បន្ថែមទំនិញ',
+      'searchListings': 'ស្វែងរកទំនិញ…',
+      'noOtherListingsFound': 'រកមិនឃើញទំនិញផ្សេងទៀតទេ',
+      'pickUp': 'មកយកផ្ទាល់',
+      'collectMyself': 'ខ្ញុំនឹងមកយកទំនិញដោយផ្ទាល់',
+      'deliverToAddress': 'ដឹកជញ្ជូនទំនិញទៅកាន់អាសយដ្ឋានរបស់ខ្ញុំ',
+      'tapToSetDelivery': 'ចុចដើម្បីកំណត់ទីតាំងដឹកជញ្ជូន',
+      'paidFull': 'ទូទាត់ពេញលេញ',
+      'payFullAmountNow': 'ទូទាត់ប្រាក់ពេញឥឡូវនេះ',
+      'book30': 'កក់ ៣០%',
+      'pay30Deposit': 'បង់ប្រាក់កក់ ៣០% — នៅសល់ទូទាត់ពេលដឹកដល់',
+      'cod': 'ទូទាត់ពេលទទួល (COD)',
+      'cashOnDelivery': 'ទូទាត់សាច់ប្រាក់ពេលទទួលទំនិញ',
+      'payWithCash': 'ទូទាត់ជាសាច់ប្រាក់',
+      'inAppWalletBalance': 'សមតុល្យកាបូបក្នុងអេប',
+      'abaMobileBanking': 'សេវាធនាគារតាមទូរស័ព្ទ ABA',
+      'wingMobileWallet': 'កាបូបអេឡិចត្រូនិច Wing',
+      'otherOnline': 'អនឡាញផ្សេងទៀត',
+      'otherOnlinePayment': 'ការទូទាត់តាមប្រព័ន្ធអនឡាញផ្សេងៗ',
+      'enterCouponCodeOptional': 'បញ្ចូលលេខកូដប័ណ្ណបញ្ចុះតម្លៃ (ស្រេចចិត្ត)',
+      'enterCouponCode': 'បញ្ចូលលេខកូដប័ណ្ណបញ្ចុះតម្លៃ',
+      'noListingsYet': 'មិនទាន់មានទំនិញដាក់លក់នៅឡើយទេ',
+      'postSomethingToSell': 'បង្ហោះទំនិញដើម្បីចាប់ផ្តើមលក់',
+      'duration': 'រយៈពេល',
+      'specialInstructions': 'ចំណាំ ឬការណែនាំពិសេស…',
+      'seller': 'អ្នកលក់',
+      'specifications': 'លក្ខណៈបច្ចេកទេស',
+      'pickupLocation': 'ទីតាំងទទួលទំនិញ',
+      'all': 'ទាំងអស់',
+      'category': 'ប្រភេទ',
+      'location': 'ទីតាំង',
+      'description': 'ការពិពណ៌នា',
+      'paymentType': 'ប្រភេទការទូទាត់',
+      'cash': 'សាច់ប្រាក់',
+      'sender': 'អ្នកផ្ញើ',
+      'recipient': 'អ្នកទទួល',
+      'moving': 'ដឹកជញ្ជូនផ្លាស់ប្តូរទីលំនៅ',
+      'topUpRequired': 'តម្រូវឱ្យបញ្ចូលប្រាក់',
+      'topUpNow': 'បញ្ចូលប្រាក់ឥឡូវនេះ',
+      'lookingForRideRequests': 'កំពុងស្វែងរកសំណើដំណើរ',
+      'deliveryModeActive': 'ដំណើរការរបៀបដឹកជញ្ជូន',
+      'incomingRideRequest': 'សំណើធ្វើដំណើរចូលមក',
+      'incomingDeliveryRequest': 'សំណើដឹកជញ្ជូនចូលមក',
+      'incomingRentalRequest': 'សំណើជួលចូលមក',
+      'acceptDelivery': 'ទទួលការដឹកជញ្ជូន',
+      'acceptRental': 'ទទួលការជួល',
+      'searchChargingStation': 'ស្វែងរកស្ថានីយ៍សាកថ្ម, ទីតាំង...',
+      'nearbyChargingStations': 'ស្ថានីយ៍សាកថ្មនៅជិត',
+      'noChargingStationsFound': 'រកមិនឃើញស្ថានីយ៍សាកថ្មទេ',
+      'createAccount': 'បង្កើតគណនី',
+      'joinRoteh': 'ចូលរួមជាមួយ រទេះ',
+      'fastSafeRides': 'ការធ្វើដំណើររហ័ស និងសុវត្ថិភាពនៅកម្ពុជា',
+      'iWantTo': 'ខ្ញុំចង់',
+      'rideAsPassenger': 'ជិះជាអ្នកដំណើរ',
+      'driveAndEarn': 'បើកបរ & រកចំណូល',
+      'driverType': 'ប្រភេទអ្នកបើកបរ',
+      'fullName': 'ឈ្មោះពេញ',
+      'email': 'អ៊ីមែល',
+      'enterEmail': 'បញ្ចូលអ៊ីមែលរបស់អ្នក',
+      'password': 'ពាក្យសម្ងាត់',
+      'enterPassword': 'បញ្ចូលពាក្យសម្ងាត់របស់អ្នក',
+      'confirmPassword': 'បញ្ជាក់ពាក្យសម្ងាត់',
+      'phoneOptional': 'លេខទូរស័ព្ទ (ស្រេចចិត្ត)',
+      'referralCodeOptional': 'លេខកូដណែនាំ (ស្រេចចិត្ត)',
+      'alreadyHaveAccount': 'មានគណនីរួចហើយមែនទេ? ',
+      'signIn': 'ចូលគណនី',
+      'demoAccounts': 'គណនីសាកល្បង',
+      'sendOtp': 'ផ្ញើ OTP',
+      'verifyAndSignIn': 'ផ្ទៀងផ្ទាត់ & ចូលគណនី',
+      'resendOtp': 'ផ្ញើ OTP ម្តងទៀត',
+      'family': 'គ្រួសារ',
+      'wallet': 'កាបូប',
+      'rewards': 'រង្វាន់',
+      'refer': 'ណែនាំ',
     },
     'zh': {
       'appName': 'ROTEH',
@@ -690,7 +890,7 @@ class AppLocalizations {
       'dailyBreakdown': '每日明细',
       'withdrawEarnings': '提取收入',
       'evCarsAvailable': '电动车\n现已上线!',
-      'evCarsSubtitle': '在您附近租用或购买\n电动车辆',
+      'evCarsSubtitle': '在您附近租用或购买电动车辆',
       'explore': '探索',
       'completed': '已完成',
       'eta': '预计到达',
@@ -897,6 +1097,106 @@ class AppLocalizations {
       'size': '尺寸',
       'vehicleType': '车辆类型',
       'color': '颜色',
+      'options': '选项',
+      'accessories': '配件',
+      'addAccessory': '添加配件',
+      'optional': '可选',
+      'optionalAddOns': '买家可选择的附加配件',
+      'nameEn': '名称 (英语)',
+      'nameKm': '名称 (高棉语, 可选)',
+      'priceUsd': '价格 (美元 \$)',
+      'rentPerDayUsd': '每日租金 (美元 \$)',
+      'whatAreYouListing': '您要发布什么?',
+      'vehicleOption': '车辆 (嘟嘟车、货车等)',
+      'accessoryOther': '配件 / 其他',
+      'photos': '照片',
+      'upTo5': '最多5张',
+      'productInfo': '商品信息',
+      'productTitle': '标题',
+      'describeProduct': '描述您的商品…',
+      'type': '类型',
+      'condition': '成色',
+      'pricing': '定价',
+      'quantity': '数量',
+      'areaDistrictOptional': '区域 / 地区 (可选)',
+      'status': '状态',
+      'findingMatch': '正在匹配…',
+      'totalSummary': '费用明细',
+      'addAnotherItem': '添加其他商品',
+      'addItem': '添加商品',
+      'searchListings': '搜索商品…',
+      'noOtherListingsFound': '未找到其他商品',
+      'pickUp': '自取',
+      'collectMyself': '我将自行提货',
+      'deliverToAddress': '配送至我的地址',
+      'tapToSetDelivery': '点击设置配送地址',
+      'paidFull': '全额支付',
+      'payFullAmountNow': '立即支付全额',
+      'book30': '预付 30%',
+      'pay30Deposit': '支付30%定金 — 尾款送达时付清',
+      'cod': '货到付款 (COD)',
+      'cashOnDelivery': '送达时现金支付',
+      'payWithCash': '使用现金支付',
+      'inAppWalletBalance': '应用内钱包余额',
+      'abaMobileBanking': 'ABA 手机银行',
+      'wingMobileWallet': 'Wing 电子钱包',
+      'otherOnline': '其他在线支付',
+      'otherOnlinePayment': '其他在线支付方式',
+      'enterCouponCodeOptional': '输入优惠码 (可选)',
+      'enterCouponCode': '输入优惠码',
+      'noListingsYet': '暂无在售商品',
+      'postSomethingToSell': '发布商品开始出售',
+      'duration': '时长',
+      'specialInstructions': '任何特殊要求…',
+      'seller': '卖家',
+      'specifications': '规格参数',
+      'pickupLocation': '提货地点',
+      'all': '全部',
+      'category': '类别',
+      'location': '位置',
+      'description': '描述',
+      'paymentType': '付款方式',
+      'cash': '现金',
+      'sender': '发件人',
+      'recipient': '收件人',
+      'moving': '搬家',
+      'topUpRequired': '需要充值',
+      'topUpNow': '立即充值',
+      'lookingForRideRequests': '正在寻找行程请求',
+      'deliveryModeActive': '配送模式已激活',
+      'incomingRideRequest': '收到行程请求',
+      'incomingDeliveryRequest': '收到配送请求',
+      'incomingRentalRequest': '收到租赁请求',
+      'acceptDelivery': '接受配送',
+      'acceptRental': '接受租赁',
+      'searchChargingStation': '搜索充电站、位置...',
+      'nearbyChargingStations': '附近的充电站',
+      'noChargingStationsFound': '未找到充电站。',
+      'createAccount': '创建账户',
+      'joinRoteh': '加入 ROTEH',
+      'fastSafeRides': '在柬埔寨快速、安全的出行',
+      'iWantTo': '我想',
+      'rideAsPassenger': '作为乘客出行',
+      'driveAndEarn': '驾驶并赚钱',
+      'driverType': '司机类型',
+      'fullName': '全名',
+      'email': '电子邮箱',
+      'enterEmail': '输入您的电子邮箱',
+      'password': '密码',
+      'enterPassword': '输入您的密码',
+      'confirmPassword': '确认密码',
+      'phoneOptional': '电话 (可选)',
+      'referralCodeOptional': '推荐码 (可选)',
+      'alreadyHaveAccount': '已有账户? ',
+      'signIn': '登录',
+      'demoAccounts': '演示账户',
+      'sendOtp': '发送验证码',
+      'verifyAndSignIn': '验证并登录',
+      'resendOtp': '重新发送验证码',
+      'family': '家庭',
+      'wallet': '钱包',
+      'rewards': '奖励',
+      'refer': '推荐',
     },
   };
 
@@ -1192,6 +1492,106 @@ class AppLocalizations {
   String get size => tr('size');
   String get vehicleType => tr('vehicleType');
   String get color => tr('color');
+  String get options => tr('options');
+  String get accessories => tr('accessories');
+  String get addAccessory => tr('addAccessory');
+  String get optional => tr('optional');
+  String get optionalAddOns => tr('optionalAddOns');
+  String get nameEn => tr('nameEn');
+  String get nameKm => tr('nameKm');
+  String get priceUsd => tr('priceUsd');
+  String get rentPerDayUsd => tr('rentPerDayUsd');
+  String get whatAreYouListing => tr('whatAreYouListing');
+  String get vehicleOption => tr('vehicleOption');
+  String get accessoryOther => tr('accessoryOther');
+  String get photos => tr('photos');
+  String get upTo5 => tr('upTo5');
+  String get productInfo => tr('productInfo');
+  String get productTitle => tr('productTitle');
+  String get describeProduct => tr('describeProduct');
+  String get type => tr('type');
+  String get condition => tr('condition');
+  String get pricing => tr('pricing');
+  String get quantity => tr('quantity');
+  String get areaDistrictOptional => tr('areaDistrictOptional');
+  String get status => tr('status');
+  String get findingMatch => tr('findingMatch');
+  String get totalSummary => tr('totalSummary');
+  String get addAnotherItem => tr('addAnotherItem');
+  String get addItem => tr('addItem');
+  String get searchListings => tr('searchListings');
+  String get noOtherListingsFound => tr('noOtherListingsFound');
+  String get pickUp => tr('pickUp');
+  String get collectMyself => tr('collectMyself');
+  String get deliverToAddress => tr('deliverToAddress');
+  String get tapToSetDelivery => tr('tapToSetDelivery');
+  String get paidFull => tr('paidFull');
+  String get payFullAmountNow => tr('payFullAmountNow');
+  String get book30 => tr('book30');
+  String get pay30Deposit => tr('pay30Deposit');
+  String get cod => tr('cod');
+  String get cashOnDelivery => tr('cashOnDelivery');
+  String get payWithCash => tr('payWithCash');
+  String get inAppWalletBalance => tr('inAppWalletBalance');
+  String get abaMobileBanking => tr('abaMobileBanking');
+  String get wingMobileWallet => tr('wingMobileWallet');
+  String get otherOnline => tr('otherOnline');
+  String get otherOnlinePayment => tr('otherOnlinePayment');
+  String get enterCouponCodeOptional => tr('enterCouponCodeOptional');
+  String get enterCouponCode => tr('enterCouponCode');
+  String get noListingsYet => tr('noListingsYet');
+  String get postSomethingToSell => tr('postSomethingToSell');
+  String get duration => tr('duration');
+  String get specialInstructions => tr('specialInstructions');
+  String get seller => tr('seller');
+  String get specifications => tr('specifications');
+  String get pickupLocation => tr('pickupLocation');
+  String get all => tr('all');
+  String get category => tr('category');
+  String get location => tr('location');
+  String get description => tr('description');
+  String get paymentType => tr('paymentType');
+  String get cash => tr('cash');
+  String get sender => tr('sender');
+  String get recipient => tr('recipient');
+  String get moving => tr('moving');
+  String get topUpRequired => tr('topUpRequired');
+  String get topUpNow => tr('topUpNow');
+  String get lookingForRideRequests => tr('lookingForRideRequests');
+  String get deliveryModeActive => tr('deliveryModeActive');
+  String get incomingRideRequest => tr('incomingRideRequest');
+  String get incomingDeliveryRequest => tr('incomingDeliveryRequest');
+  String get incomingRentalRequest => tr('incomingRentalRequest');
+  String get acceptDelivery => tr('acceptDelivery');
+  String get acceptRental => tr('acceptRental');
+  String get searchChargingStation => tr('searchChargingStation');
+  String get nearbyChargingStations => tr('nearbyChargingStations');
+  String get noChargingStationsFound => tr('noChargingStationsFound');
+  String get createAccount => tr('createAccount');
+  String get joinRoteh => tr('joinRoteh');
+  String get fastSafeRides => tr('fastSafeRides');
+  String get iWantTo => tr('iWantTo');
+  String get rideAsPassenger => tr('rideAsPassenger');
+  String get driveAndEarn => tr('driveAndEarn');
+  String get driverType => tr('driverType');
+  String get fullName => tr('fullName');
+  String get email => tr('email');
+  String get enterEmail => tr('enterEmail');
+  String get password => tr('password');
+  String get enterPassword => tr('enterPassword');
+  String get confirmPassword => tr('confirmPassword');
+  String get phoneOptional => tr('phoneOptional');
+  String get referralCodeOptional => tr('referralCodeOptional');
+  String get alreadyHaveAccount => tr('alreadyHaveAccount');
+  String get signIn => tr('signIn');
+  String get demoAccounts => tr('demoAccounts');
+  String get sendOtp => tr('sendOtp');
+  String get verifyAndSignIn => tr('verifyAndSignIn');
+  String get resendOtp => tr('resendOtp');
+  String get family => tr('family');
+  String get wallet => tr('wallet');
+  String get rewards => tr('rewards');
+  String get refer => tr('refer');
 }
 
 class _AppLocalizationsDelegate

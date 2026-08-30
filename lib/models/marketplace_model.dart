@@ -115,6 +115,78 @@ class MarketplaceVehicleSizeModel {
   );
 }
 
+// GET /marketplace/available-options — which vehicle_type_id/color_id/size_id
+// values currently have at least one active listing. Drives the
+// disabled/grayed-out chip state on the Buy Item screen.
+class MarketplaceAvailableOptions {
+  final Set<int> vehicleTypeIds;
+  final Set<int> vehicleColorIds;
+  final Set<int> vehicleSizeIds;
+
+  const MarketplaceAvailableOptions({
+    this.vehicleTypeIds  = const {},
+    this.vehicleColorIds = const {},
+    this.vehicleSizeIds  = const {},
+  });
+
+  factory MarketplaceAvailableOptions.fromJson(Map<String, dynamic> json) {
+    Set<int> ids(String key) => (json[key] as List<dynamic>? ?? [])
+        .map((e) => (e as num).toInt())
+        .toSet();
+    return MarketplaceAvailableOptions(
+      vehicleTypeIds:  ids('vehicle_type_ids'),
+      vehicleColorIds: ids('vehicle_color_ids'),
+      vehicleSizeIds:  ids('vehicle_size_ids'),
+    );
+  }
+}
+
+// One accessory line sent when creating/editing a listing — POST
+// /marketplace (multipart, JSON-encoded into one field) and PUT
+// /marketplace/{id} (plain JSON array) both accept a list of these.
+class MarketplaceAccessoryInput {
+  final String  nameEn;
+  final String? nameKm;
+  final double  price;
+
+  const MarketplaceAccessoryInput({
+    required this.nameEn,
+    this.nameKm,
+    required this.price,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'name_en': nameEn,
+    if (nameKm != null) 'name_km': nameKm,
+    'price': price,
+  };
+}
+
+// One accessory as returned embedded in a product or order response.
+class MarketplaceProductAccessoryModel {
+  final int?    id; // null on an order's snapshot rows once accessory_id was nulled out
+  final String  nameEn;
+  final String? nameKm;
+  final double  price;
+
+  const MarketplaceProductAccessoryModel({
+    this.id,
+    required this.nameEn,
+    this.nameKm,
+    required this.price,
+  });
+
+  String name(String languageCode) => languageCode == 'km' ? (nameKm ?? nameEn) : nameEn;
+
+  factory MarketplaceProductAccessoryModel.fromJson(Map<String, dynamic> json) =>
+      MarketplaceProductAccessoryModel(
+        id:     (json['id'] as num?)?.toInt(),
+        nameEn: json['name_en'] as String? ?? '',
+        nameKm: json['name_km'] as String?,
+        price:  num.tryParse(json['price']?.toString() ?? '')?.toDouble() ?? 0,
+      );
+}
+
 class MarketplaceProductModel {
   final int id;
   final String title;
@@ -135,11 +207,26 @@ class MarketplaceProductModel {
   final int? vehicleTypeId;
   final int? vehicleColorId;
   final int? vehicleSizeId;
+  // Display names for the vehicle attributes above — only present when the
+  // backend eager-loads the marketplace_vehicle_type/color/size relations
+  // (browse/detail responses do; some legacy/lightweight ones may not).
+  final String? vehicleTypeNameEn;
+  final String? vehicleTypeNameKm;
+  final String? vehicleColorNameEn;
+  final String? vehicleColorNameKm;
+  final String? vehicleColorCode;
+  final String? vehicleSizeLabel;
   final int? sellerId;
   final String? sellerName;
   final List<String> images;
+  final List<MarketplaceProductAccessoryModel> accessories;
   final int viewsCount;
   final String createdAt;
+
+  String? vehicleTypeName(String languageCode) =>
+      languageCode == 'km' ? (vehicleTypeNameKm ?? vehicleTypeNameEn) : (vehicleTypeNameEn ?? vehicleTypeNameKm);
+  String? vehicleColorName(String languageCode) =>
+      languageCode == 'km' ? (vehicleColorNameKm ?? vehicleColorNameEn) : (vehicleColorNameEn ?? vehicleColorNameKm);
 
   const MarketplaceProductModel({
     required this.id,
@@ -161,9 +248,16 @@ class MarketplaceProductModel {
     this.vehicleTypeId,
     this.vehicleColorId,
     this.vehicleSizeId,
+    this.vehicleTypeNameEn,
+    this.vehicleTypeNameKm,
+    this.vehicleColorNameEn,
+    this.vehicleColorNameKm,
+    this.vehicleColorCode,
+    this.vehicleSizeLabel,
     this.sellerId,
     this.sellerName,
     required this.images,
+    this.accessories = const [],
     required this.viewsCount,
     required this.createdAt,
   });
@@ -175,7 +269,10 @@ class MarketplaceProductModel {
       v == null ? null : v is num ? v.toDouble() : double.tryParse(v.toString());
 
   factory MarketplaceProductModel.fromJson(Map<String, dynamic> json) {
-    final seller = json['seller'] as Map<String, dynamic>?;
+    final seller  = json['seller'] as Map<String, dynamic>?;
+    final vType   = json['marketplace_vehicle_type']  as Map<String, dynamic>?;
+    final vColor  = json['marketplace_vehicle_color'] as Map<String, dynamic>?;
+    final vSize   = json['marketplace_vehicle_size']  as Map<String, dynamic>?;
     final images = <String>[];
     for (final e in (json['images'] as List<dynamic>? ?? [])) {
       if (e is Map<String, dynamic>) {
@@ -185,6 +282,10 @@ class MarketplaceProductModel {
         images.add(e);
       }
     }
+    final accessories = (json['accessories'] as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(MarketplaceProductAccessoryModel.fromJson)
+        .toList();
     return MarketplaceProductModel(
       id:             (json['id']    as num?)?.toInt() ?? 0,
       title:          json['title']  as String? ?? '',
@@ -205,9 +306,16 @@ class MarketplaceProductModel {
       vehicleTypeId:  (json['marketplace_vehicle_type_id']  as num?)?.toInt(),
       vehicleColorId: (json['marketplace_vehicle_color_id'] as num?)?.toInt(),
       vehicleSizeId:  (json['marketplace_vehicle_size_id']  as num?)?.toInt(),
+      vehicleTypeNameEn:  vType?['name_en']  as String?,
+      vehicleTypeNameKm:  vType?['name_km']  as String?,
+      vehicleColorNameEn: vColor?['name_en'] as String?,
+      vehicleColorNameKm: vColor?['name_km'] as String?,
+      vehicleColorCode:   vColor?['code']    as String?,
+      vehicleSizeLabel:   vSize?['label']    as String?,
       sellerId:       (seller?['id']       as num?)?.toInt(),
       sellerName:     seller?['name']      as String?,
       images:         images,
+      accessories:    accessories,
       viewsCount:     (json['views_count'] as num?)?.toInt() ?? 0,
       createdAt:      json['created_at']   as String? ?? '',
     );
@@ -223,6 +331,7 @@ class MarketplaceCheckoutItem {
   final String orderType; // purchase | rent
   final String? rentStartDate; // yyyy-MM-dd, required when orderType == rent
   final String? rentEndDate;
+  final List<int> accessoryIds;
 
   const MarketplaceCheckoutItem({
     required this.productId,
@@ -230,6 +339,7 @@ class MarketplaceCheckoutItem {
     this.orderType = 'purchase',
     this.rentStartDate,
     this.rentEndDate,
+    this.accessoryIds = const [],
   });
 
   Map<String, dynamic> toJson() => {
@@ -238,6 +348,7 @@ class MarketplaceCheckoutItem {
     'order_type':  orderType,
     if (rentStartDate != null) 'rent_start_date': rentStartDate,
     if (rentEndDate   != null) 'rent_end_date':   rentEndDate,
+    if (accessoryIds.isNotEmpty) 'accessory_ids': accessoryIds,
   };
 }
 
@@ -256,6 +367,8 @@ class MarketplaceOrderModel {
   final String paymentStatus;   // unpaid | paid | refunded
   final double unitPriceUsd;
   final double totalPriceUsd;
+  final double accessoriesTotalUsd;
+  final List<MarketplaceProductAccessoryModel> accessories;
   final String? notes;
   final String createdAt;
   final String? renterName;
@@ -278,6 +391,8 @@ class MarketplaceOrderModel {
     required this.paymentStatus,
     required this.unitPriceUsd,
     required this.totalPriceUsd,
+    this.accessoriesTotalUsd = 0,
+    this.accessories = const [],
     this.notes,
     required this.createdAt,
     this.renterName,
@@ -286,8 +401,8 @@ class MarketplaceOrderModel {
     this.sellerPhone,
   });
 
-  // total_price_usd = unit_price_usd × days × quantity
-  double get computedTotal => unitPriceUsd * (days ?? 1) * quantity;
+  // total_price_usd = unit_price_usd × days × quantity + accessories_total_usd
+  double get computedTotal => unitPriceUsd * (days ?? 1) * quantity + accessoriesTotalUsd;
 
   factory MarketplaceOrderModel.fromJson(Map<String, dynamic> json) {
     final product = json['product'] as Map<String, dynamic>?;
@@ -320,6 +435,12 @@ class MarketplaceOrderModel {
                          json['unit_price_usd'] ?? json['unit_price']),
       totalPriceUsd: MarketplaceProductModel._toDouble(
                          json['total_price_usd'] ?? json['total_price']),
+      accessoriesTotalUsd: MarketplaceProductModel._toDouble(
+                         json['accessories_total_usd'] ?? json['accessories_total']),
+      accessories:   (json['accessories'] as List<dynamic>? ?? [])
+                         .whereType<Map<String, dynamic>>()
+                         .map(MarketplaceProductAccessoryModel.fromJson)
+                         .toList(),
       notes:         json['notes'] as String?,
       createdAt:     json['created_at'] as String? ?? '',
       // buyer key used in buying orders; renter key used in rental confirmations

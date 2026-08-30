@@ -14,6 +14,7 @@ class AppTheme {
   static const Color danger        = Color(0xFFEE0033);
   static const Color gold          = Color(0xFFFFD700);
   static const Color confirmBlue   = Color(0xFF2196F3);
+  static const Color confirmBlack = Color(0xFF000000);
 
   // ── Dark ─────────────────────────────────────────────────────────────────
   static const Color darkPrimary       = Color(0xFF121212);
