@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class VoucherScreen extends StatefulWidget {
   const VoucherScreen({super.key});
@@ -30,15 +31,15 @@ class _VoucherScreenState extends State<VoucherScreen>
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Vouchers'),
+        title: Text(AppLocalizations.of(context).vouchersTitle),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.store_outlined), text: 'Store'),
-            Tab(icon: Icon(Icons.wallet_giftcard_rounded), text: 'My Vouchers'),
+          tabs: [
+            Tab(icon: const Icon(Icons.store_outlined), text: AppLocalizations.of(context).storeTabLabel),
+            Tab(icon: const Icon(Icons.wallet_giftcard_rounded), text: AppLocalizations.of(context).myVouchersTabLabel),
           ],
         ),
       ),
@@ -90,8 +91,8 @@ class _StoreTabState extends State<StoreTab> {
     try {
       await ApiService.claimVoucher(id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Voucher claimed! Check My Vouchers.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).voucherClaimedCheckMy),
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
       ));
@@ -124,14 +125,14 @@ class _StoreTabState extends State<StoreTab> {
         SizedBox(height: 12),
         Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_vouchers.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.discount_outlined, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No vouchers available', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+        Text(AppLocalizations.of(context).noVouchersAvailable, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       ]));
     }
     return RefreshIndicator(
@@ -147,7 +148,7 @@ class _StoreTabState extends State<StoreTab> {
           return _VoucherCard(
             voucher:  v,
             isClaiming: _claiming.contains(id),
-            actionLabel: 'Claim',
+            actionLabel: AppLocalizations.of(context).claimBtn,
             onAction:   () => _claim(v),
           );
         },
@@ -197,16 +198,16 @@ class _MyVouchersTabState extends State<MyVouchersTab> {
         SizedBox(height: 12),
         Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_vouchers.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wallet_giftcard_rounded, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No vouchers yet', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+        Text(AppLocalizations.of(context).noVouchersYet, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
         SizedBox(height: 6),
-        Text('Claim from the Store tab', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+        Text(AppLocalizations.of(context).claimFromStoreTab, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       ]));
     }
     return RefreshIndicator(
@@ -224,9 +225,9 @@ class _MyVouchersTabState extends State<MyVouchersTab> {
           return _VoucherCard(
             voucher:    v['voucher'] as Map<String, dynamic>? ?? v,
             isClaiming: false,
-            actionLabel: used ? 'Used' : 'Available',
+            actionLabel: used ? AppLocalizations.of(context).usedBadge : AppLocalizations.of(context).available,
             onAction:   null,
-            badge:      used ? 'USED' : (short.isNotEmpty ? 'Exp $short' : null),
+            badge:      used ? AppLocalizations.of(context).usedBadgeCap : (short.isNotEmpty ? '${AppLocalizations.of(context).expPrefix} $short' : null),
             badgeColor: used ? context.appTextSecondary : AppTheme.accent,
           );
         },
@@ -256,7 +257,7 @@ class _VoucherCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title    = voucher['title']       as String? ?? voucher['name'] as String? ?? 'Voucher';
+    final title    = voucher['title']       as String? ?? voucher['name'] as String? ?? AppLocalizations.of(context).voucherFallback;
     final desc     = voucher['description'] as String? ?? '';
     final discount = voucher['discount_value'] ?? voucher['discount'] ?? '';
     final type     = (voucher['discount_type'] as String? ?? '').toLowerCase();

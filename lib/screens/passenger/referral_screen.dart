@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class ReferralScreen extends StatefulWidget {
   const ReferralScreen({super.key});
@@ -51,8 +52,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
     if (!mounted) return;
     setState(() => _copied = true);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Copied!'),
+      SnackBar(
+        content: Text(AppLocalizations.of(context).copiedExcl),
         backgroundColor: AppTheme.success,
         duration: Duration(seconds: 1),
       ),
@@ -63,9 +64,10 @@ class _ReferralScreenState extends State<ReferralScreen> {
 
   void _share() {
     final box = _shareKey.currentContext?.findRenderObject() as RenderBox?;
+    final l = AppLocalizations.of(context);
     Share.share(
-      'Join ROTEH with my code: $_code and get 10,000 ៛ off your first ride!\n'
-      'Download ROTEH now.',
+      '${l.joinRotehWithCodePrefix} $_code ${l.get10000OffFirstRideSuffix}\n'
+      '${l.downloadRotehNow}',
       sharePositionOrigin:
           box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
@@ -75,7 +77,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: Text('Referral')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).referralTitle)),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
@@ -83,7 +85,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Text(_error!, style: TextStyle(color: context.appTextSecondary)),
                     const SizedBox(height: 16),
-                    ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                    ElevatedButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry)),
                   ]),
                 )
               : RefreshIndicator(
@@ -119,12 +121,12 @@ class _ReferralScreenState extends State<ReferralScreen> {
             color: AppTheme.accent, size: 56),
       ),
       SizedBox(height: 20),
-      Text('Share & Earn',
+      Text(AppLocalizations.of(context).shareAndEarn,
           style: TextStyle(color: context.appTextPrimary,
               fontSize: 26, fontWeight: FontWeight.w900)),
       SizedBox(height: 10),
       Text(
-        'Give friends 10,000 ៛ off their first ride.\nYou earn 500 points per referral.',
+        AppLocalizations.of(context).giveFriendsDiscountDesc,
         textAlign: TextAlign.center,
         style: TextStyle(color: context.appTextSecondary, fontSize: 15, height: 1.5),
       ),
@@ -142,7 +144,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
             blurRadius: 12, offset: Offset(0, 4))],
       ),
       child: Column(children: [
-        Text('Your Referral Code',
+        Text(AppLocalizations.of(context).yourReferralCode,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -190,8 +192,8 @@ class _ReferralScreenState extends State<ReferralScreen> {
         elevation: 0,
       ),
       icon: const Icon(Icons.share_outlined),
-      label: const Text('Share with Friends',
-          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+      label: Text(AppLocalizations.of(context).shareWithFriends,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
     );
   }
 
@@ -204,14 +206,14 @@ class _ReferralScreenState extends State<ReferralScreen> {
       ),
       child: Row(children: [
         Expanded(child: _StatItem(
-          label: 'Friends Referred',
+          label: AppLocalizations.of(context).friendsReferred,
           value: '$_referredCount',
           icon: Icons.people_outline,
         )),
         Container(width: 1, height: 48, color: context.appCardBg),
         Expanded(child: _StatItem(
-          label: 'Points Earned',
-          value: '$_pointsEarned pts',
+          label: AppLocalizations.of(context).pointsEarnedLabel,
+          value: '$_pointsEarned ${AppLocalizations.of(context).ptsSuffix}',
           icon: Icons.star_outline,
         )),
       ]),
@@ -220,7 +222,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
 
   Widget _buildReferralList() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Friends Who Joined',
+      Text(AppLocalizations.of(context).friendsWhoJoined,
           style: TextStyle(color: context.appTextPrimary,
               fontSize: 17, fontWeight: FontWeight.w700)),
       SizedBox(height: 12),
@@ -267,7 +269,7 @@ class _ReferralRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name   = item['name'] as String? ?? 'Friend';
+    final name   = item['name'] as String? ?? AppLocalizations.of(context).friend;
     final date   = item['joined_at'] as String? ?? item['created_at'] as String? ?? '';
     final short  = date.length >= 10 ? date.substring(0, 10) : date;
     final pts    = item['points_awarded'] as int? ?? 500;
@@ -288,11 +290,11 @@ class _ReferralRow extends StatelessWidget {
                 style: TextStyle(color: context.appTextPrimary,
                     fontWeight: FontWeight.w600)),
             if (short.isNotEmpty)
-              Text('Joined $short',
+              Text('${AppLocalizations.of(context).joinedPrefix} $short',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ]),
         ),
-        Text('+$pts pts',
+        Text('+$pts ${AppLocalizations.of(context).ptsSuffix}',
             style: const TextStyle(color: AppTheme.success,
                 fontWeight: FontWeight.w700)),
       ]),

@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -41,7 +42,7 @@ class _DriverVehicleScreenState extends State<DriverVehicleScreen> {
       appBar: AppBar(
         backgroundColor: context.appSurface, elevation: 0,
         leading: BackButton(color: context.appTextPrimary),
-        title: Text('My Vehicles',
+        title: Text(AppLocalizations.of(context).myVehicles,
             style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
@@ -106,8 +107,8 @@ class _DriverVehicleScreenState extends State<DriverVehicleScreen> {
     final files = picked.map((x) => File(x.path)).toList();
     try {
       await ApiService.uploadVehicleImages(v.id, files);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Images uploaded'),
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).imagesUploaded),
         backgroundColor: _green, behavior: SnackBarBehavior.floating,
       ));
     } on ApiException catch (e) {
@@ -178,7 +179,7 @@ class _VehicleCard extends StatelessWidget {
               SizedBox(height: 4),
               Row(children: [
                 _Chip(
-                  label: vehicle.type.isEmpty ? 'Vehicle' : vehicle.type,
+                  label: vehicle.type.isEmpty ? AppLocalizations.of(context).vehicle : vehicle.type,
                   color: AppTheme.accent,
                 ),
                 SizedBox(width: 6),
@@ -195,7 +196,7 @@ class _VehicleCard extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: onEdit,
                 icon: const Icon(Icons.edit_outlined, size: 16),
-                label: const Text('Edit'),
+                label: Text(AppLocalizations.of(context).edit),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.accent,
                   side: const BorderSide(color: AppTheme.accent),
@@ -209,7 +210,7 @@ class _VehicleCard extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onUpload,
                 icon: const Icon(Icons.photo_camera_outlined, size: 16),
-                label: const Text('Photos'),
+                label: Text(AppLocalizations.of(context).photos),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _green, foregroundColor: Colors.white,
                   elevation: 0,
@@ -263,11 +264,11 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
   bool    _saving = false;
   String? _error;
 
-  static const _types = [
-    ('motorbike', 'Motorbike', Icons.two_wheeler),
-    ('car',       'Car',       Icons.directions_car_outlined),
-    ('van',       'Van',       Icons.airport_shuttle_outlined),
-    ('truck',     'Truck',     Icons.local_shipping_outlined),
+  List<(String, String, IconData)> _typesFor(AppLocalizations l) => [
+    ('motorbike', l.motorbike, Icons.two_wheeler),
+    ('car',       l.carShort,  Icons.directions_car_outlined),
+    ('van',       l.van,       Icons.airport_shuttle_outlined),
+    ('truck',     l.truck,     Icons.local_shipping_outlined),
   ];
 
   @override
@@ -295,7 +296,7 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
   Future<void> _save() async {
     if (_makeCtrl.text.trim().isEmpty || _modelCtrl.text.trim().isEmpty
         || _plateCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Make, model and plate are required');
+      setState(() => _error = AppLocalizations.of(context).makeModelAndPlateAre);
       return;
     }
     setState(() { _saving = true; _error = null; });
@@ -350,17 +351,17 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
               decoration: BoxDecoration(color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(2)))),
           SizedBox(height: 16),
-          Text(isEdit ? 'Edit Vehicle' : 'Register Vehicle',
+          Text(isEdit ? AppLocalizations.of(context).editVehicle : AppLocalizations.of(context).registerVehicle,
               style: TextStyle(fontSize: 17,
                   fontWeight: FontWeight.w700, color: context.appTextPrimary)),
           SizedBox(height: 16),
 
           // Vehicle type
-          Text('Vehicle Type',
+          Text(AppLocalizations.of(context).vehicleType,
               style: TextStyle(color: context.appTextSecondary,
                   fontSize: 12, fontWeight: FontWeight.w600)),
           SizedBox(height: 8),
-          Row(children: _types.map((t) => Expanded(child: Padding(
+          Row(children: _typesFor(AppLocalizations.of(context)).map((t) => Expanded(child: Padding(
             padding: EdgeInsets.only(right: 6),
             child: GestureDetector(
               onTap: () => setState(() => _type = t.$1),
@@ -391,20 +392,20 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
           const SizedBox(height: 14),
 
           Row(children: [
-            Expanded(child: _F(ctrl: _makeCtrl,  label: 'Make',  hint: 'Honda')),
+            Expanded(child: _F(ctrl: _makeCtrl,  label: AppLocalizations.of(context).make,  hint: AppLocalizations.of(context).honda)),
             const SizedBox(width: 10),
-            Expanded(child: _F(ctrl: _modelCtrl, label: 'Model', hint: 'Wave')),
+            Expanded(child: _F(ctrl: _modelCtrl, label: AppLocalizations.of(context).model, hint: AppLocalizations.of(context).wave)),
           ]),
           const SizedBox(height: 10),
           Row(children: [
-            Expanded(child: _F(ctrl: _yearCtrl,  label: 'Year',  hint: '2022',
+            Expanded(child: _F(ctrl: _yearCtrl,  label: AppLocalizations.of(context).year,  hint: '2022',
                 keyboardType: TextInputType.number)),
             const SizedBox(width: 10),
-            Expanded(child: _F(ctrl: _colorCtrl, label: 'Color (optional)',
+            Expanded(child: _F(ctrl: _colorCtrl, label: AppLocalizations.of(context).colorOptional,
                 hint: 'Red')),
           ]),
           const SizedBox(height: 10),
-          _F(ctrl: _plateCtrl, label: 'License Plate',
+          _F(ctrl: _plateCtrl, label: AppLocalizations.of(context).licensePlate,
               hint: '1A-1234',
               keyboardType: TextInputType.text),
 
@@ -424,7 +425,7 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
                   ? const SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : Text(isEdit ? 'Save Changes' : 'Register Vehicle'),
+                  : Text(isEdit ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).registerVehicle),
             ),
           ),
         ]),
@@ -480,18 +481,18 @@ class _EmptyView extends StatelessWidget {
       Icon(Icons.directions_car_outlined,
           color: context.appTextSecondary, size: 60),
       SizedBox(height: 16),
-      Text('No vehicles registered',
+      Text(AppLocalizations.of(context).noVehiclesRegistered,
           style: TextStyle(color: context.appTextPrimary,
               fontSize: 16, fontWeight: FontWeight.w700)),
       SizedBox(height: 8),
-      Text('Register your vehicle to start accepting rides.',
+      Text(AppLocalizations.of(context).registerYourVehicleToStart,
           textAlign: TextAlign.center,
           style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: onAdd,
         icon: const Icon(Icons.add),
-        label: const Text('Register Vehicle'),
+        label: Text(AppLocalizations.of(context).registerVehicle),
         style: ElevatedButton.styleFrom(
           backgroundColor: _green, foregroundColor: Colors.white,
           elevation: 0,
@@ -520,7 +521,7 @@ class _ErrorView extends StatelessWidget {
           style: ElevatedButton.styleFrom(
               backgroundColor: _green, foregroundColor: Colors.white,
               elevation: 0),
-          child: const Text('Retry')),
+          child: Text(AppLocalizations.of(context).retry)),
     ]),
   );
 }

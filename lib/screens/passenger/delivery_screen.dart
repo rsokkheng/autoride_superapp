@@ -48,7 +48,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   final _recipientPhoneCtrl  = TextEditingController();
   final _dropoffCtrl         = TextEditingController();
   final _packageDetailsCtrl  = TextEditingController();
-  final _feeCtrl             = TextEditingController();
+  final _packageAmountCtrl   = TextEditingController();
   final _notesCtrl           = TextEditingController();
   final _delivPartnerCodeCtrl = TextEditingController();
 
@@ -63,10 +63,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
   // Delivery has its own vehicle lineup (includes Bike, unlike the ride
   // side's AppTheme.vehicleTypes) since small-package bike delivery is a
   // distinct, commonly-offered option here.
-  static const _kDeliveryVehicles = [
-    _DropItem(value: 'bike',    label: 'Bike —ម៉ូតូ',      subtitle: 'Up to 20 kg   •  Fastest',     icon: Icons.two_wheeler_outlined),
-    _DropItem(value: 'tuk_tuk', label: 'Tuk Tuk — តុកតុក', subtitle: 'Up to 100 kg  •  Affordable',  icon: Icons.electric_rickshaw_outlined),
-    _DropItem(value: 'car',     label: 'Car — ឡាន',        subtitle: 'Up to 200 kg  •  Comfortable', icon: Icons.directions_car_outlined),
+  // Built per-frame rather than held as a static, so the labels follow the
+  // active locale.
+  List<_DropItem<String>> _deliveryVehicles(AppLocalizations l) => [
+    _DropItem(value: 'bike',    label: l.bike,   subtitle: l.upTo20KgFastest,        icon: Icons.two_wheeler_outlined),
+    _DropItem(value: 'tuk_tuk', label: l.tukTuk, subtitle: l.upTo100KgAffordable,    icon: Icons.electric_rickshaw_outlined),
+    _DropItem(value: 'car',     label: l.car,    subtitle: l.upTo200KgComfortable,   icon: Icons.directions_car_outlined),
   ];
 
   // ── Moving fields ────────────────────────────────────────────────────────
@@ -169,7 +171,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     _recipientPhoneCtrl.dispose();
     _dropoffCtrl.dispose();
     _packageDetailsCtrl.dispose();
-    _feeCtrl.dispose();
+    _packageAmountCtrl.dispose();
     _notesCtrl.dispose();
     _delivPartnerCodeCtrl.dispose();
     _moveFromCtrl.dispose();
@@ -184,7 +186,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     final pickup  = _pickupCtrl.text.trim();
     final dropoff = _dropoffCtrl.text.trim();
     if (pickup.isEmpty || dropoff.isEmpty) {
-      setState(() => _error = 'Pickup and delivery address are required.');
+      setState(() => _error = AppLocalizations.of(context).pickupAndDeliveryAddressAre);
       return;
     }
     for (final ctrl in [_senderPhoneCtrl, _recipientPhoneCtrl]) {
@@ -197,6 +199,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     }
 
     // ── Confirmation dialog ──────────────────────────────────────────────
+    final packageAmount = int.tryParse(_packageAmountCtrl.text.trim());
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -208,13 +211,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         recipientName:  _recipientNameCtrl.text.trim().isEmpty ? null : _recipientNameCtrl.text.trim(),
         recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty? null : normalizeLocalPhone(_recipientPhoneCtrl.text),
         packageDetails: _packageDetailsCtrl.text.trim().isEmpty
-            ? 'No description'
+            ? AppLocalizations.of(context).noDescription
             : _packageDetailsCtrl.text.trim(),
         packageSize:    _packageSize,
         serviceOption:  _deliveryServiceOption,
         paymentBy:      _paymentBy,
         paymentMethod:  _paymentMethod,
-        fee:            int.tryParse(_feeCtrl.text.trim()),
+        packageAmount:  packageAmount,
         scheduledAt:    _isScheduled ? _scheduledTime : null,
         notes:          _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
       ),
@@ -227,14 +230,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         pickupAddress:  pickup,
         dropoffAddress: dropoff,
         packageDetails: _packageDetailsCtrl.text.trim().isEmpty
-            ? 'No description'
+            ? AppLocalizations.of(context).noDescription
             : _packageDetailsCtrl.text.trim(),
         senderName:     _senderNameCtrl.text.trim().isEmpty     ? null : _senderNameCtrl.text.trim(),
         senderPhone:    _senderPhoneCtrl.text.trim().isEmpty    ? null : normalizeLocalPhone(_senderPhoneCtrl.text),
         recipientName:  _recipientNameCtrl.text.trim().isEmpty  ? null : _recipientNameCtrl.text.trim(),
         recipientPhone: _recipientPhoneCtrl.text.trim().isEmpty ? null : normalizeLocalPhone(_recipientPhoneCtrl.text),
         packageSize:    _packageSize,
-        fee:            int.tryParse(_feeCtrl.text.trim()),
+        packageAmount:  packageAmount,
         paymentBy:      _paymentBy,
         paymentMethod:  _paymentMethod,
         serviceOption:  _deliveryServiceOption,
@@ -252,7 +255,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             to:            dropoff,
             fareDisplay:   AppTheme.khr(created.fee),
             serviceType:   'delivery',
-            recipientName: recipientName.isEmpty ? 'Recipient' : recipientName,
+            recipientName: recipientName.isEmpty ? AppLocalizations.of(context).recipient : recipientName,
           ),
         ),
       );
@@ -271,7 +274,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     final from = _moveFromCtrl.text.trim();
     final to   = _moveToCtrl.text.trim();
     if (from.isEmpty || to.isEmpty) {
-      setState(() => _error = 'From and To addresses are required.');
+      setState(() => _error = AppLocalizations.of(context).fromAndToAddressesAre);
       return;
     }
 
@@ -334,7 +337,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 ? AppTheme.khr(_movingEstimate!.total)
                 : AppTheme.khr(createdMoving.fee),
             serviceType:   'moving',
-            recipientName: 'Moving crew',
+            recipientName: AppLocalizations.of(context).movingCrew,
           ),
         ),
       );
@@ -525,8 +528,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             ),
             child: _SubmitButton(
               label: isDelivery
-                  ? (_isScheduled ? 'Schedule Delivery' : 'Send Now')
-                  : (_isMoveScheduled ? 'Schedule Moving' : 'Book Moving'),
+                  ? (_isScheduled ? AppLocalizations.of(context).scheduleDelivery2 : AppLocalizations.of(context).sendNow)
+                  : (_isMoveScheduled ? AppLocalizations.of(context).scheduleMoving : AppLocalizations.of(context).bookMoving),
               icon: isDelivery ? Icons.delivery_dining : Icons.local_shipping,
               loading: _submitting,
               onPressed: isDelivery ? _submitDelivery : _submitMoving,
@@ -559,7 +562,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       SizedBox(height: 20),
 
       // Sender
-      SectionHeader(title: 'Sender'),
+      SectionHeader(title: AppLocalizations.of(context).sender),
       SizedBox(height: 14),
       _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
       SizedBox(height: 10),
@@ -568,14 +571,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
       _AddressWithMap(
-        hint: 'Pickup address', icon: Icons.location_on_outlined, controller: _pickupCtrl,
+        hint: AppLocalizations.of(context).pickupAddress, icon: Icons.location_on_outlined, controller: _pickupCtrl,
         onMapTap: () => _openLocationPicker(_pickupCtrl, _pickupLatLng, (ll) => _pickupLatLng = ll),
         onLatLng: (ll) => setState(() => _pickupLatLng = ll),
       ),
       SizedBox(height: 20),
 
       // Recipient
-      SectionHeader(title: 'Recipient'),
+      SectionHeader(title: AppLocalizations.of(context).recipient),
       SizedBox(height: 14),
       _Field(hint: "Recipient's name",  icon: Icons.person_outline, controller: _recipientNameCtrl),
       SizedBox(height: 10),
@@ -584,33 +587,37 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
       _AddressWithMap(
-        hint: 'Delivery address', icon: Icons.location_on, controller: _dropoffCtrl,
+        hint: AppLocalizations.of(context).deliveryAddress, icon: Icons.location_on, controller: _dropoffCtrl,
         onMapTap: () => _openLocationPicker(_dropoffCtrl, _dropoffLatLng, (ll) => _dropoffLatLng = ll),
         onLatLng: (ll) => setState(() => _dropoffLatLng = ll),
       ),
       SizedBox(height: 20),
 
       // Package
-      SectionHeader(title: 'Package'),
-      SizedBox(height: 14),
-      _Field(hint: 'Package description (optional)', icon: Icons.inventory_2_outlined,
+      SectionHeader(title: AppLocalizations.of(context).package),
+      const SizedBox(height: 14),
+      _Field(hint: AppLocalizations.of(context).packageDescriptionOptional, icon: Icons.inventory_2_outlined,
           controller: _packageDetailsCtrl),
-      SizedBox(height: 10),
-      _Field(hint: 'Fee in KHR (e.g. 18000)', icon: Icons.attach_money, controller: _feeCtrl,
-          keyboardType: TextInputType.numberWithOptions(decimal: true)),
-      SizedBox(height: 10),
-      _Field(hint: 'Notes (optional)', icon: Icons.notes_outlined, controller: _notesCtrl),
-      SizedBox(height: 16),
+      const SizedBox(height: 10),
+      _Field(
+        hint: AppLocalizations.of(context).packageAmountHint,
+        icon: Icons.payments_outlined,
+        controller: _packageAmountCtrl,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      ),
+      const SizedBox(height: 10),
+      _Field(hint: AppLocalizations.of(context).notesOptional, icon: Icons.notes_outlined, controller: _notesCtrl),
+      const SizedBox(height: 16),
 
       // Package size
       _AppDropdown<String>(
-        label: 'Package Size',
+        label: AppLocalizations.of(context).packageSize,
         icon: Icons.inventory_2_outlined,
         value: _packageSize,
-        items: const [
-          _DropItem(value: 'small',  label: 'Small',  subtitle: 'Up to 2 kg',   icon: Icons.circle_outlined),
-          _DropItem(value: 'medium', label: 'Medium', subtitle: '2 – 10 kg',    icon: Icons.circle_outlined),
-          _DropItem(value: 'large',  label: 'Large',  subtitle: '10 kg and above', icon: Icons.circle_outlined),
+        items: [
+          _DropItem(value: 'small',  label: AppLocalizations.of(context).small,  subtitle: AppLocalizations.of(context).upTo2Kg,   icon: Icons.circle_outlined),
+          _DropItem(value: 'medium', label: AppLocalizations.of(context).medium, subtitle: AppLocalizations.of(context).n210Kg,    icon: Icons.circle_outlined),
+          _DropItem(value: 'large',  label: AppLocalizations.of(context).large,  subtitle: AppLocalizations.of(context).n10KgAndAbove, icon: Icons.circle_outlined),
         ],
         onChanged: (v) => setState(() => _packageSize = v),
       ),
@@ -618,12 +625,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Service option
       _AppDropdown<String>(
-        label: 'Service Option',
+        label: AppLocalizations.of(context).serviceOption,
         icon: Icons.speed,
         value: _deliveryServiceOption,
-        items: const [
-          _DropItem(value: 'normal',  label: 'Normal',  subtitle: 'Standard delivery speed', icon: Icons.check_circle_outline),
-          _DropItem(value: 'express', label: 'Express', subtitle: 'Faster delivery at higher fee', icon: Icons.flash_on_outlined),
+        items: [
+          _DropItem(value: 'normal',  label: AppLocalizations.of(context).normal,  subtitle: AppLocalizations.of(context).standardDeliverySpeed, icon: Icons.check_circle_outline),
+          _DropItem(value: 'express', label: AppLocalizations.of(context).express, subtitle: AppLocalizations.of(context).fasterDeliveryAtHigherFee, icon: Icons.flash_on_outlined),
         ],
         onChanged: (v) => setState(() => _deliveryServiceOption = v),
       ),
@@ -631,22 +638,22 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Delivery vehicle — Bike / Tuk Tuk / Car
       _AppDropdown<String>(
-        label: 'Delivery Vehicle',
+        label: AppLocalizations.of(context).deliveryVehicle,
         icon: Icons.directions_car_outlined,
         value: _deliveryVehicleType,
-        items: _kDeliveryVehicles,
+        items: _deliveryVehicles(AppLocalizations.of(context)),
         onChanged: (v) => setState(() => _deliveryVehicleType = v),
       ),
       SizedBox(height: 12),
 
       // Payment by
       _AppDropdown<String>(
-        label: 'Payment By',
+        label: AppLocalizations.of(context).paymentBy,
         icon: Icons.person_outline,
         value: _paymentBy,
-        items: const [
-          _DropItem(value: 'sender',    label: 'Sender',    subtitle: 'Pays upfront', icon: Icons.upload_outlined),
-          _DropItem(value: 'recipient', label: 'Recipient', subtitle: 'Cash on delivery (COD)', icon: Icons.download_outlined),
+        items: [
+          _DropItem(value: 'sender',    label: AppLocalizations.of(context).sender,    subtitle: AppLocalizations.of(context).paysUpfront, icon: Icons.upload_outlined),
+          _DropItem(value: 'recipient', label: AppLocalizations.of(context).recipient, subtitle: AppLocalizations.of(context).cashOnDeliveryCod, icon: Icons.download_outlined),
         ],
         onChanged: (v) => setState(() => _paymentBy = v),
       ),
@@ -654,15 +661,15 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Payment method (always visible, no payment model needed)
       _AppDropdown<String>(
-        label: 'Payment Method',
+        label: AppLocalizations.of(context).paymentMethod,
         icon: Icons.wallet_outlined,
         value: _paymentMethod,
-        items: const [
-          _DropItem(value: 'cash',        label: 'Cash',         subtitle: 'Pay with cash',           icon: Icons.money),
-          _DropItem(value: 'wallet',       label: 'ROTEH Wallet', subtitle: 'Pay from wallet balance',  icon: Icons.account_balance_wallet_outlined),
-          _DropItem(value: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.credit_card),
-          _DropItem(value: 'wing',         label: 'Wing Money',   subtitle: 'Wing mobile payment',     icon: Icons.send_to_mobile),
-          _DropItem(value: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language),
+        items: [
+          _DropItem(value: 'cash',        label: AppLocalizations.of(context).cash,         subtitle: AppLocalizations.of(context).payWithCash,           icon: Icons.money),
+          _DropItem(value: 'wallet',       label: AppLocalizations.of(context).rotehWallet, subtitle: AppLocalizations.of(context).payFromWalletBalance,  icon: Icons.account_balance_wallet_outlined),
+          _DropItem(value: 'aba',          label: AppLocalizations.of(context).abaPay,      subtitle: AppLocalizations.of(context).abaMobileBanking,      icon: Icons.credit_card),
+          _DropItem(value: 'wing',         label: AppLocalizations.of(context).wingMoney,   subtitle: AppLocalizations.of(context).wingMobilePayment,     icon: Icons.send_to_mobile),
+          _DropItem(value: 'other_online', label: AppLocalizations.of(context).otherOnline, subtitle: AppLocalizations.of(context).otherOnlinePayment,    icon: Icons.language),
         ],
         onChanged: (v) => setState(() => _paymentMethod = v),
       ),
@@ -714,7 +721,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       const SizedBox(height: 20),
 
        // Sender
-      SectionHeader(title: 'Information of mover'),
+      SectionHeader(title: AppLocalizations.of(context).informationOfMover),
       SizedBox(height: 14),
       _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
       SizedBox(height: 10),
@@ -724,7 +731,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       SizedBox(height: 10),
       const SizedBox(height: 14),
       _AddressWithMap(
-        hint: 'Moving from (full address)', icon: Icons.location_on_outlined, controller: _moveFromCtrl,
+        hint: AppLocalizations.of(context).movingFromFullAddress, icon: Icons.location_on_outlined, controller: _moveFromCtrl,
         onMapTap: () => _openLocationPicker(_moveFromCtrl, _moveFromLatLng, (ll) {
           _moveFromLatLng = ll;
           _fetchMovingEstimate();
@@ -736,7 +743,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       ),
       const SizedBox(height: 10),
       _AddressWithMap(
-        hint: 'Moving to (full address)', icon: Icons.location_on, controller: _moveToCtrl,
+        hint: AppLocalizations.of(context).movingToFullAddress, icon: Icons.location_on, controller: _moveToCtrl,
         onMapTap: () => _openLocationPicker(_moveToCtrl, _moveToLatLng, (ll) {
           _moveToLatLng = ll;
           _fetchMovingEstimate();
@@ -750,24 +757,24 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // ── Move type ─────────────────────────────────────────────────────────
       _AppDropdown<String>(
-        label: 'Move Type',
+        label: AppLocalizations.of(context).moveType,
         icon: Icons.local_shipping_outlined,
         value: _moveType,
-        items: const [
-          _DropItem(value: 'home',   label: 'Home Move',   subtitle: 'Residential moving',          icon: Icons.home_outlined),
-          _DropItem(value: 'office', label: 'Office Move', subtitle: 'Commercial / office moving',  icon: Icons.business_outlined),
+        items: [
+          _DropItem(value: 'home',   label: AppLocalizations.of(context).homeMove,   subtitle: AppLocalizations.of(context).residentialMoving,          icon: Icons.home_outlined),
+          _DropItem(value: 'office', label: AppLocalizations.of(context).officeMove, subtitle: AppLocalizations.of(context).commercialOfficeMoving,  icon: Icons.business_outlined),
         ],
         onChanged: (v) => setState(() => _moveType = v),
       ),
       const SizedBox(height: 12),
 
       _AppDropdown<String>(
-        label: 'Service Option',
+        label: AppLocalizations.of(context).serviceOption,
         icon: Icons.speed,
         value: _movingServiceOption,
-        items: const [
-          _DropItem(value: 'normal',  label: 'Normal',  subtitle: 'Standard moving service', icon: Icons.check_circle_outline),
-          _DropItem(value: 'express', label: 'Express', subtitle: 'Priority moving service', icon: Icons.flash_on_outlined),
+        items: [
+          _DropItem(value: 'normal',  label: AppLocalizations.of(context).normal,  subtitle: AppLocalizations.of(context).standardMovingService, icon: Icons.check_circle_outline),
+          _DropItem(value: 'express', label: AppLocalizations.of(context).express, subtitle: AppLocalizations.of(context).priorityMovingService, icon: Icons.flash_on_outlined),
         ],
         onChanged: (v) {
           setState(() => _movingServiceOption = v);
@@ -778,27 +785,27 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // ── Property size ─────────────────────────────────────────────────────
       _AppDropdown<String>(
-        label: 'Property Size',
+        label: AppLocalizations.of(context).propertySize,
         icon: Icons.home_work_outlined,
         value: _propertySize,
-        items: const [
-          _DropItem(value: 'home',   label: 'Home',   subtitle: 'Private home',          icon: Icons.home_outlined),
-          _DropItem(value: 'studio', label: 'Studio / 1 Room', subtitle: 'Small space',        icon: Icons.meeting_room_outlined),
-          _DropItem(value: '1br',    label: '1 Bedroom',        subtitle: 'Medium apartment',   icon: Icons.bed_outlined),
-          _DropItem(value: '2br',    label: '2 Bedrooms',       subtitle: 'Larger apartment',   icon: Icons.bedroom_parent_outlined),
-          _DropItem(value: '3br+',   label: '3+ Bedrooms',      subtitle: 'Large home or villa', icon: Icons.villa_outlined),
+        items: [
+          _DropItem(value: 'home',   label: AppLocalizations.of(context).home3,   subtitle: AppLocalizations.of(context).privateHome,          icon: Icons.home_outlined),
+          _DropItem(value: 'studio', label: AppLocalizations.of(context).studio1Room, subtitle: AppLocalizations.of(context).smallSpace,        icon: Icons.meeting_room_outlined),
+          _DropItem(value: '1br',    label: AppLocalizations.of(context).n1Bedroom,        subtitle: AppLocalizations.of(context).mediumApartment,   icon: Icons.bed_outlined),
+          _DropItem(value: '2br',    label: AppLocalizations.of(context).n2Bedrooms,       subtitle: AppLocalizations.of(context).largerApartment,   icon: Icons.bedroom_parent_outlined),
+          _DropItem(value: '3br+',   label: AppLocalizations.of(context).n3Bedrooms,      subtitle: AppLocalizations.of(context).largeHomeOrVilla, icon: Icons.villa_outlined),
         ],
         onChanged: (v) => setState(() => _propertySize = v),
       ),
       const SizedBox(height: 20),
 
       // ── 🏢 Building Info ──────────────────────────────────────────────────
-      const SectionHeader(title: '🏢 Building Info'),
+      SectionHeader(title: AppLocalizations.of(context).buildingInfo),
       const SizedBox(height: 14),
 
       // Pickup floor
       _FloorPicker(
-        label: 'Pickup floor',
+        label: AppLocalizations.of(context).pickupFloor,
         value: _floorPickup,
         onChanged: (v) {
           setState(() {
@@ -812,7 +819,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Dropoff floor
       _FloorPicker(
-        label: 'Dropoff floor',
+        label: AppLocalizations.of(context).dropoffFloor,
         value: _floorDropoff,
         onChanged: (v) {
           setState(() {
@@ -826,8 +833,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Elevator toggle
       _BoolToggleRow(
-        label: 'Has elevator',
-        subtitle: 'Building has a working elevator',
+        label: AppLocalizations.of(context).hasElevator,
+        subtitle: AppLocalizations.of(context).buildingHasAWorkingElevator,
         icon: Icons.elevator_outlined,
         value: _hasElevator,
         onChanged: (v) {
@@ -842,8 +849,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Stairs carry (auto-set but still editable)
       _BoolToggleRow(
-        label: 'Needs stairs carry',
-        subtitle: 'Manual carry up/down stairs required',
+        label: AppLocalizations.of(context).needsStairsCarry,
+        subtitle: AppLocalizations.of(context).manualCarryUpDownStairs,
         icon: Icons.stairs_outlined,
         value: _needsStairsCarry,
         onChanged: (v) => setState(() => _needsStairsCarry = v),
@@ -851,7 +858,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       const SizedBox(height: 20),
 
       // ── 🧍 Service Options ────────────────────────────────────────────────
-      const SectionHeader(title: '🧍 Service Options'),
+      SectionHeader(title: AppLocalizations.of(context).serviceOptions),
       const SizedBox(height: 14),
 
       // Helpers count
@@ -866,8 +873,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Heavy items
       _CheckOption(
-        label: 'Has heavy items',
-        subtitle: 'Fridge, sofa, bed, wardrobe',
+        label: AppLocalizations.of(context).hasHeavyItems,
+        subtitle: AppLocalizations.of(context).fridgeSofaBedWardrobe,
         icon: Icons.chair_outlined,
         value: _heavyItems,
         onChanged: (v) {
@@ -879,8 +886,8 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
       // Packing service
       _CheckOption(
-        label: 'Packing service',
-        subtitle: 'We box and wrap your belongings',
+        label: AppLocalizations.of(context).packingService,
+        subtitle: AppLocalizations.of(context).weBoxAndWrapYour,
         icon: Icons.inventory_2_outlined,
         value: _packingService,
         onChanged: (v) => setState(() => _packingService = v),
@@ -888,20 +895,20 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       SizedBox(height: 20),
 
       // ── Notes ─────────────────────────────────────────────────────────────
-      _Field(hint: 'Notes (optional)', icon: Icons.notes_outlined, controller: _moveNotesCtrl),
+      _Field(hint: AppLocalizations.of(context).notesOptional, icon: Icons.notes_outlined, controller: _moveNotesCtrl),
       SizedBox(height: 20),
 
       // ── 💳 Payment Method ─────────────────────────────────────────────────
       _AppDropdown<String>(
-        label: 'Payment Method',
+        label: AppLocalizations.of(context).paymentMethod,
         icon: Icons.wallet_outlined,
         value: _movePaymentMethod,
-        items: const [
-          _DropItem(value: 'cash',        label: 'Cash',         subtitle: 'Pay with cash',           icon: Icons.money),
-          _DropItem(value: 'wallet',       label: 'ROTEH Wallet', subtitle: 'Pay from wallet balance',  icon: Icons.account_balance_wallet_outlined),
-          _DropItem(value: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.credit_card),
-          _DropItem(value: 'wing',         label: 'Wing Money',   subtitle: 'Wing mobile payment',     icon: Icons.send_to_mobile),
-          _DropItem(value: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language),
+        items: [
+          _DropItem(value: 'cash',        label: AppLocalizations.of(context).cash,         subtitle: AppLocalizations.of(context).payWithCash,           icon: Icons.money),
+          _DropItem(value: 'wallet',       label: AppLocalizations.of(context).rotehWallet, subtitle: AppLocalizations.of(context).payFromWalletBalance,  icon: Icons.account_balance_wallet_outlined),
+          _DropItem(value: 'aba',          label: AppLocalizations.of(context).abaPay,      subtitle: AppLocalizations.of(context).abaMobileBanking,      icon: Icons.credit_card),
+          _DropItem(value: 'wing',         label: AppLocalizations.of(context).wingMoney,   subtitle: AppLocalizations.of(context).wingMobilePayment,     icon: Icons.send_to_mobile),
+          _DropItem(value: 'other_online', label: AppLocalizations.of(context).otherOnline, subtitle: AppLocalizations.of(context).otherOnlinePayment,    icon: Icons.language),
         ],
         onChanged: (v) => setState(() => _movePaymentMethod = v),
       ),
@@ -1164,13 +1171,13 @@ class _MovingFareBreakdown extends StatelessWidget {
               color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
         ]),
         SizedBox(height: 12),
-        _PriceRow(label: 'Base fee',     value: AppTheme.khr(estimate.baseFee)),
+        _PriceRow(label: AppLocalizations.of(context).baseFee,     value: AppTheme.khr(estimate.baseFee)),
         if (estimate.distanceFee > 0)
-          _PriceRow(label: 'Distance fee', value: AppTheme.khr(estimate.distanceFee)),
+          _PriceRow(label: AppLocalizations.of(context).distanceFee, value: AppTheme.khr(estimate.distanceFee)),
         if (estimate.helperFee > 0)
-          _PriceRow(label: 'Helper fee',   value: AppTheme.khr(estimate.helperFee)),
+          _PriceRow(label: AppLocalizations.of(context).helperFee,   value: AppTheme.khr(estimate.helperFee)),
         if (estimate.floorFee > 0)
-          _PriceRow(label: 'Floor fee',    value: AppTheme.khr(estimate.floorFee)),
+          _PriceRow(label: AppLocalizations.of(context).floorFee,    value: AppTheme.khr(estimate.floorFee)),
         Divider(height: 16, color: context.appCardBg),
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(AppLocalizations.of(context).totalEstimate,
@@ -1381,8 +1388,8 @@ class _ModeToggle extends StatelessWidget {
     return Row(children: [
       Expanded(child: _ModeCard(
         value: 'delivery',
-        label: 'Delivery',
-        subtitle: 'Send packages',
+        label: AppLocalizations.of(context).delivery,
+        subtitle: AppLocalizations.of(context).sendPackages,
         icon: Icons.delivery_dining,
         selected: selected == 'delivery',
         onTap: () => onChanged('delivery'),
@@ -1390,8 +1397,8 @@ class _ModeToggle extends StatelessWidget {
       const SizedBox(width: 12),
       Expanded(child: _ModeCard(
         value: 'moving',
-        label: 'Moving',
-        subtitle: 'Relocate home/office',
+        label: AppLocalizations.of(context).moving,
+        subtitle: AppLocalizations.of(context).relocateHomeOffice,
         icon: Icons.local_shipping,
         selected: selected == 'moving',
         onTap: () => onChanged('moving'),
@@ -1877,7 +1884,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                             color: context.appTextPrimary, fontSize: 14),
                         textAlignVertical: TextAlignVertical.center,
                         decoration: InputDecoration(
-                          hintText: 'Search location…',
+                          hintText: AppLocalizations.of(context).searchLocation,
                           hintStyle: TextStyle(
                               color: context.appTextSecondary, fontSize: 14),
                           prefixIcon: _searching
@@ -1998,7 +2005,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                         ])
                       : Text(
                           _address.isEmpty
-                              ? 'Drag map to select location'
+                              ? AppLocalizations.of(context).dragMapToSelectLocation
                               : _address,
                           style: TextStyle(
                             color: _address.isEmpty
@@ -2100,6 +2107,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
   final String  serviceOption;
   final String  paymentBy;
   final String  paymentMethod;
+  final int?    packageAmount;
   final int?    fee;
   final DateTime? scheduledAt;
   final String? notes;
@@ -2116,6 +2124,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
     this.senderPhone,
     this.recipientName,
     this.recipientPhone,
+    this.packageAmount,
     this.fee,
     this.scheduledAt,
     this.notes,
@@ -2124,17 +2133,17 @@ class _DeliveryConfirmDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String payLabel = {
-      'cash': 'Cash',
-      'wallet': 'Wallet',
-      'aba': 'ABA Pay',
-      'wing': 'Wing Money',
-      'other_online': 'Other Online',
+      'cash': AppLocalizations.of(context).cash,
+      'wallet': AppLocalizations.of(context).wallet,
+      'aba': AppLocalizations.of(context).abaPay,
+      'wing': AppLocalizations.of(context).wingMoney,
+      'other_online': AppLocalizations.of(context).otherOnline,
     }[paymentMethod] ?? paymentMethod;
 
     final String sizeLabel = {
-      'small':  'Small',
-      'medium': 'Medium',
-      'large':  'Large',
+      'small':  AppLocalizations.of(context).small,
+      'medium': AppLocalizations.of(context).medium,
+      'large':  AppLocalizations.of(context).large,
     }[packageSize] ?? packageSize;
 
     return Dialog(
@@ -2173,14 +2182,14 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                 _ConfirmRow(
                   icon: Icons.location_on_outlined,
                   iconColor: Color(0xFF00C853),
-                  label: 'Pickup',
+                  label: AppLocalizations.of(context).pickup,
                   value: pickupAddress,
                 ),
                 SizedBox(height: 8),
                 _ConfirmRow(
                   icon: Icons.location_on,
                   iconColor: AppTheme.danger,
-                  label: 'Dropoff',
+                  label: AppLocalizations.of(context).dropoff,
                   value: dropoffAddress,
                 ),
 
@@ -2188,18 +2197,18 @@ class _DeliveryConfirmDialog extends StatelessWidget {
 
                 // Sender / recipient
                 if (senderName != null)
-                  _ConfirmRow(icon: Icons.person_outline, label: 'Sender', value: senderName!),
+                  _ConfirmRow(icon: Icons.person_outline, label: AppLocalizations.of(context).sender, value: senderName!),
                 if (senderPhone != null) ...[
                   SizedBox(height: 6),
-                  _ConfirmRow(icon: Icons.phone_outlined, label: 'Sender Ph.', value: senderPhone!),
+                  _ConfirmRow(icon: Icons.phone_outlined, label: AppLocalizations.of(context).senderPh, value: senderPhone!),
                 ],
                 if (recipientName != null) ...[
                   SizedBox(height: 6),
-                  _ConfirmRow(icon: Icons.person_outline, iconColor: AppTheme.accentOrange, label: 'Recipient', value: recipientName!),
+                  _ConfirmRow(icon: Icons.person_outline, iconColor: AppTheme.accentOrange, label: AppLocalizations.of(context).recipient, value: recipientName!),
                 ],
                 if (recipientPhone != null) ...[
                   SizedBox(height: 6),
-                  _ConfirmRow(icon: Icons.phone_outlined, iconColor: AppTheme.accentOrange, label: 'Recip. Ph.', value: recipientPhone!),
+                  _ConfirmRow(icon: Icons.phone_outlined, iconColor: AppTheme.accentOrange, label: AppLocalizations.of(context).recipPh, value: recipientPhone!),
                 ],
 
                 Divider(height: 20, color: context.appCardBg),
@@ -2207,33 +2216,42 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                 // Package
                 _ConfirmRow(
                   icon: Icons.inventory_2_outlined,
-                  label: 'Package',
+                  label: AppLocalizations.of(context).package,
                   value: packageDetails,
                 ),
                 const SizedBox(height: 6),
                 _ConfirmRow(
                   icon: Icons.straighten_outlined,
-                  label: 'Size',
+                  label: AppLocalizations.of(context).size,
                   value: sizeLabel,
                 ),
                 const SizedBox(height: 6),
                 _ConfirmRow(
                   icon: Icons.flash_on_outlined,
-                  label: 'Service',
-                  value: serviceOption == 'express' ? 'Express' : 'Normal',
+                  label: AppLocalizations.of(context).service,
+                  value: serviceOption == 'express' ? AppLocalizations.of(context).express : AppLocalizations.of(context).normal,
                 ),
                 const SizedBox(height: 6),
                 _ConfirmRow(
                   icon: Icons.payment_outlined,
-                  label: 'Payment',
+                  label: AppLocalizations.of(context).payment,
                   value: '$payLabel (paid by ${paymentBy == 'recipient' ? 'recipient' : 'sender'})',
                 ),
-                if (fee != null) ...[
+                if (packageAmount != null && packageAmount! > 0) ...[
+                  const SizedBox(height: 6),
+                  _ConfirmRow(
+                    icon: Icons.payments_outlined,
+                    iconColor: AppTheme.accent,
+                    label: AppLocalizations.of(context).packageAmount,
+                    value: AppTheme.khr(packageAmount!),
+                  ),
+                ],
+                if (fee != null && fee! > 0) ...[
                   const SizedBox(height: 6),
                   _ConfirmRow(
                     icon: Icons.receipt_long_outlined,
                     iconColor: AppTheme.accent,
-                    label: 'Fee',
+                    label: AppLocalizations.of(context).deliveryFee,
                     value: AppTheme.khr(fee!),
                   ),
                 ],
@@ -2242,7 +2260,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                   _ConfirmRow(
                     icon: Icons.schedule_outlined,
                     iconColor: AppTheme.warning,
-                    label: 'Scheduled',
+                    label: AppLocalizations.of(context).scheduled,
                     value: '${scheduledAt!.day}/${scheduledAt!.month}/${scheduledAt!.year}'
                         '  ${scheduledAt!.hour.toString().padLeft(2, '0')}:'
                         '${scheduledAt!.minute.toString().padLeft(2, '0')}',
@@ -2252,7 +2270,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                   const SizedBox(height: 6),
                   _ConfirmRow(
                     icon: Icons.notes_outlined,
-                    label: 'Notes',
+                    label: AppLocalizations.of(context).notes,
                     value: notes!,
                   ),
                 ],
@@ -2330,11 +2348,11 @@ class _MovingConfirmDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String payLabel = {
-      'cash': 'Cash',
-      'wallet': 'Wallet',
-      'aba': 'ABA Pay',
-      'wing': 'Wing Money',
-      'other_online': 'Other Online',
+      'cash': AppLocalizations.of(context).cash,
+      'wallet': AppLocalizations.of(context).wallet,
+      'aba': AppLocalizations.of(context).abaPay,
+      'wing': AppLocalizations.of(context).wingMoney,
+      'other_online': AppLocalizations.of(context).otherOnline,
     }[paymentMethod] ?? paymentMethod;
 
     return Dialog(
@@ -2372,14 +2390,14 @@ class _MovingConfirmDialog extends StatelessWidget {
               _ConfirmRow(
                 icon: Icons.location_on_outlined,
                 iconColor: Color(0xFF00C853),
-                label: 'From',
+                label: AppLocalizations.of(context).from,
                 value: from,
               ),
               SizedBox(height: 8),
               _ConfirmRow(
                 icon: Icons.location_on,
                 iconColor: AppTheme.danger,
-                label: 'To',
+                label: AppLocalizations.of(context).to,
                 value: to,
               ),
 
@@ -2388,7 +2406,7 @@ class _MovingConfirmDialog extends StatelessWidget {
               // Building & helpers
               _ConfirmRow(
                 icon: Icons.apartment_outlined,
-                label: 'Floors',
+                label: AppLocalizations.of(context).floors,
                 value: 'Pickup: $floorPickup  •  Dropoff: $floorDropoff',
               ),
               const SizedBox(height: 6),
@@ -2396,26 +2414,26 @@ class _MovingConfirmDialog extends StatelessWidget {
                 icon: hasElevator
                     ? Icons.elevator_outlined
                     : Icons.stairs_outlined,
-                label: 'Elevator',
-                value: hasElevator ? 'Yes' : 'No (stairs carry)',
+                label: AppLocalizations.of(context).elevator,
+                value: hasElevator ? 'Yes' : AppLocalizations.of(context).noStairsCarry,
               ),
               const SizedBox(height: 6),
               _ConfirmRow(
                 icon: Icons.people_outline,
-                label: 'Helpers',
+                label: AppLocalizations.of(context).helpers,
                 value: '$requiresHelpers helper${requiresHelpers != 1 ? 's' : ''}'
                     ' (${heavyItems ? 'heavy carry' : 'normal carry'})',
               ),
               const SizedBox(height: 6),
               _ConfirmRow(
                 icon: Icons.flash_on_outlined,
-                label: 'Service',
-                value: serviceOption == 'express' ? 'Express' : 'Normal',
+                label: AppLocalizations.of(context).service,
+                value: serviceOption == 'express' ? AppLocalizations.of(context).express : AppLocalizations.of(context).normal,
               ),
               const SizedBox(height: 6),
               _ConfirmRow(
                 icon: Icons.payment_outlined,
-                label: 'Payment',
+                label: AppLocalizations.of(context).payment,
                 value: payLabel,
               ),
               if (scheduledAt != null) ...[
@@ -2423,7 +2441,7 @@ class _MovingConfirmDialog extends StatelessWidget {
                 _ConfirmRow(
                   icon: Icons.schedule_outlined,
                   iconColor: AppTheme.warning,
-                  label: 'Scheduled',
+                  label: AppLocalizations.of(context).scheduled,
                   value: '${scheduledAt!.day}/${scheduledAt!.month}/${scheduledAt!.year}'
                       '  ${scheduledAt!.hour.toString().padLeft(2,'0')}:'
                       '${scheduledAt!.minute.toString().padLeft(2,'0')}',
@@ -2433,7 +2451,7 @@ class _MovingConfirmDialog extends StatelessWidget {
                 SizedBox(height: 6),
                 _ConfirmRow(
                   icon: Icons.notes_outlined,
-                  label: 'Notes',
+                  label: AppLocalizations.of(context).notes,
                   value: notes!,
                 ),
               ],

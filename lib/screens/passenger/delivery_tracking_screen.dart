@@ -1,10 +1,14 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
+import 'passenger_delivery_summary_screen.dart';
 
 const _kGreen   = Color(0xFF00B14F);
 // Phnom Penh fallback coords used when no geocoded positions are available.
@@ -64,6 +68,10 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   // Cancel in-progress guard
   bool _cancelling = false;
+
+  // Share state
+  bool _sharing = false;
+  String? _shareUrl;
 
   final Set<Marker> _markers = {};
 
@@ -244,13 +252,13 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel Order?',
+        title: Text(AppLocalizations.of(context).cancelOrder2,
             style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('Are you sure you want to cancel this delivery?'),
+        content: Text(AppLocalizations.of(context).areYouSureYouWant),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep Order'),
+            child: Text(AppLocalizations.of(context).keepOrder),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -261,7 +269,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Cancel Order',
+            child: Text(AppLocalizations.of(context).cancelOrder,
                 style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
@@ -311,6 +319,19 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     );
   }
 
+  void _openDeliverySummary() {
+    if (_delivery == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PassengerDeliverySummaryScreen(
+          delivery:    _delivery!,
+          fareDisplay: widget.fareDisplay,
+        ),
+      ),
+    );
+  }
+
   Future<void> _showRatingDialog() async {
     _stars = 5;
     await showDialog(
@@ -336,8 +357,111 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             return;
           } catch (_) {}
           if (!mounted) return;
-          // Navigate home after successful rating
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          if (_delivery != null) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PassengerDeliverySummaryScreen(
+                  delivery:    _delivery!,
+                  fareDisplay: widget.fareDisplay,
+                ),
+              ),
+            );
+          } else {
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        },
+      ),
+    );
+  }
+
+  // ── Share Tracking ───────────────────────────────────────────────────────────
+
+  Future<void> _shareDelivery() async {
+    setState(() => _sharing = true);
+    try {
+      final result = await ApiService.shareDelivery(widget.deliveryId);
+      if (!mounted) return;
+      final url = result.shareUrl.isNotEmpty ? result.shareUrl : null;
+      setState(() {
+        _shareUrl = url;
+        _sharing = false;
+      });
+      if (url != null) {
+        _showShareSheet(url);
+      } else {
+        _shareLocationFallback();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _sharing = false);
+      _shareLocationFallback();
+    }
+  }
+
+  void _shareLocationFallback() {
+    final isMoving = widget.serviceType == 'moving';
+    final serviceLabel = isMoving ? 'Moving Service' : 'Package Delivery';
+    final recipient = widget.recipientName.isNotEmpty
+        ? widget.recipientName
+        : (_delivery?.recipientName ?? '');
+    final driverName = _delivery?.driver?.name;
+    final pickup = _pickupPos;
+    final dropoff = _dropoffPos;
+
+    final buf = StringBuffer();
+    buf.writeln('Track my ROTEH $serviceLabel 📦');
+    if (recipient.isNotEmpty) {
+      buf.writeln('Recipient: $recipient');
+    }
+    if (driverName != null && driverName.isNotEmpty) {
+      buf.writeln('Driver/Crew: $driverName');
+    }
+    buf.writeln('From: ${widget.from}');
+    buf.writeln('To: ${widget.to}');
+    buf.writeln('Status: $_statusLabel');
+    buf.writeln('Pickup Location: https://maps.google.com/?q=${pickup.latitude},${pickup.longitude}');
+    buf.writeln('Destination: https://maps.google.com/?q=${dropoff.latitude},${dropoff.longitude}');
+
+    final box = context.findRenderObject() as RenderBox?;
+    Share.share(
+      buf.toString().trim(),
+      subject: 'Track my $serviceLabel',
+      sharePositionOrigin:
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null,
+    );
+  }
+
+  Future<void> _stopSharing() async {
+    try {
+      await ApiService.stopSharingDelivery(widget.deliveryId);
+      if (mounted) {
+        setState(() => _shareUrl = null);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context).trackingLinkDeactivated),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (_) {}
+  }
+
+  void _showShareSheet(String url) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DeliveryShareSheet(
+        url:           url,
+        from:          widget.from,
+        to:            widget.to,
+        serviceType:   widget.serviceType,
+        recipientName: widget.recipientName.isNotEmpty
+            ? widget.recipientName
+            : (_delivery?.recipientName ?? ''),
+        driverName:    _delivery?.driver?.name,
+        onStop: () {
+          Navigator.pop(context);
+          _stopSharing();
         },
       ),
     );
@@ -374,7 +498,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
           mapType: MapType.normal,
         ),
 
-        // ── Top route card ────────────────────────────────────────────────
+        // ── Top route card & buttons ───────────────────────────────────────
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -384,6 +508,11 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 _BackButton(onTap: () => Navigator.pop(context)),
                 const SizedBox(width: 10),
                 Expanded(child: _RouteCard(from: widget.from, to: widget.to)),
+                const SizedBox(width: 10),
+                _ShareHeaderButton(
+                  loading: _sharing,
+                  onTap: _shareDelivery,
+                ),
               ],
             ),
           ),
@@ -395,33 +524,78 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             top: MediaQuery.of(context).padding.top + 90,
             left: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: _kGreen,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: _kGreen.withValues(alpha: 0.35),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle, color: Colors.white, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Delivered!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
+            child: GestureDetector(
+              onTap: _openDeliverySummary,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _kGreen,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _kGreen.withValues(alpha: 0.35),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.white, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _isMoving ? 'Moving Completed!' : 'Delivered!',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          if (_delivery != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '${PassengerDeliverySummaryScreen.formatDateTimeStr(_delivery!.updatedAt, locale: Localizations.localeOf(context))} • ${widget.fareDisplay}',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            AppLocalizations.of(context).summary,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(width: 2),
+                          Icon(Icons.chevron_right,
+                              color: Colors.white, size: 14),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -441,9 +615,12 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             serviceType: widget.serviceType,
             recipientName: widget.recipientName,
             cancelling:  _cancelling,
+            sharing:     _sharing,
             onCancel:    _cancelling ? null : _cancelDelivery,
             onChat:      _driverAssigned ? _openChat : null,
             onRate:      _isDelivered ? _showRatingDialog : null,
+            onViewSummary: _isDelivered ? _openDeliverySummary : null,
+            onShare:     _shareDelivery,
           ),
         ),
       ],
@@ -465,9 +642,12 @@ class _BottomSheet extends StatelessWidget {
   final String  serviceType;
   final String  recipientName;
   final bool    cancelling;
+  final bool    sharing;
   final VoidCallback? onCancel;
   final VoidCallback? onChat;
   final VoidCallback? onRate;
+  final VoidCallback? onViewSummary;
+  final VoidCallback? onShare;
 
   const _BottomSheet({
     required this.delivery,
@@ -481,9 +661,12 @@ class _BottomSheet extends StatelessWidget {
     required this.serviceType,
     required this.recipientName,
     required this.cancelling,
+    this.sharing = false,
     this.onCancel,
     this.onChat,
     this.onRate,
+    this.onViewSummary,
+    this.onShare,
   });
 
   @override
@@ -559,6 +742,112 @@ class _BottomSheet extends StatelessWidget {
               ),
               const SizedBox(height: 18),
 
+              // Delivered completion summary card
+              if (isDelivered && delivery != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _kGreen.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.verified, color: _kGreen, size: 18),
+                          const SizedBox(width: 6),
+                          Text(
+                            serviceType == 'moving'
+                                ? 'Moving Completed (ការរើផ្ទះបានបញ្ចប់)'
+                                : 'Delivery Completed (បានបញ្ចប់ការដឹក)',
+                            style: const TextStyle(
+                              color: _kGreen,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_filled,
+                              size: 14, color: context.appTextSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            AppLocalizations.of(context).completedAt2,
+                            style: TextStyle(
+                                fontSize: 12, color: context.appTextSecondary),
+                          ),
+                          Expanded(
+                            child: Text(
+                              PassengerDeliverySummaryScreen
+                                  .formatDateTimeStr(delivery!.updatedAt,
+                                      locale: Localizations.localeOf(context)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: context.appTextPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.local_shipping_outlined,
+                              size: 14, color: context.appTextSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            AppLocalizations.of(context).deliveryFee2,
+                            style: TextStyle(
+                                fontSize: 12, color: context.appTextSecondary),
+                          ),
+                          Text(
+                            AppTheme.khr(delivery!.fee),
+                            style: const TextStyle(
+                              color: _kGreen,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (delivery!.packageAmount != null &&
+                          delivery!.packageAmount! > 0) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.inventory_2_outlined,
+                                size: 14, color: context.appTextSecondary),
+                            const SizedBox(width: 6),
+                            Text(
+                              AppLocalizations.of(context).packageAmount2,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: context.appTextSecondary),
+                            ),
+                            Text(
+                              AppTheme.khr(delivery!.packageAmount!),
+                              style: TextStyle(
+                                color: context.appTextPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // Driver info card (shown when driver is assigned)
               if (driverAssigned && delivery?.driver != null) ...[
                 _DriverCard(driver: delivery!.driver!),
@@ -570,7 +859,7 @@ class _BottomSheet extends StatelessWidget {
               // Recipient info
               _InfoRow(
                 icon: Icons.person_outline,
-                label: 'Recipient',
+                label: AppLocalizations.of(context).recipient,
                 value: recipientName.isNotEmpty
                     ? recipientName
                     : (delivery?.recipientName ?? '--'),
@@ -580,9 +869,17 @@ class _BottomSheet extends StatelessWidget {
                 icon: serviceType == 'moving'
                     ? Icons.local_shipping_outlined
                     : Icons.delivery_dining_outlined,
-                label: 'Service',
+                label: AppLocalizations.of(context).service,
                 value: serviceType == 'moving' ? 'Moving' : 'Delivery',
               ),
+              if (delivery?.packageAmount != null && delivery!.packageAmount! > 0) ...[
+                const SizedBox(height: 6),
+                _InfoRow(
+                  icon: Icons.payments_outlined,
+                  label: AppLocalizations.of(context).packageAmount,
+                  value: AppTheme.khr(delivery!.packageAmount!),
+                ),
+              ],
               const SizedBox(height: 16),
               Divider(color: Theme.of(context).dividerColor, height: 1),
               const SizedBox(height: 14),
@@ -594,9 +891,16 @@ class _BottomSheet extends StatelessWidget {
                   // Chat Driver
                   _ActionBtn(
                     icon: Icons.chat_bubble_outline,
-                    label: 'Chat Driver',
+                    label: AppLocalizations.of(context).chatDriver,
                     onTap: onChat ?? () {},
                     disabled: !driverAssigned,
+                  ),
+                  // Share Tracking Link
+                  _ActionBtn(
+                    icon: Icons.share_outlined,
+                    label: AppLocalizations.of(context).shareLink,
+                    onTap: onShare ?? () {},
+                    loading: sharing,
                   ),
                   // Cancel (only when requested)
                   if (canCancel)
@@ -610,29 +914,54 @@ class _BottomSheet extends StatelessWidget {
                 ],
               ),
 
-              // "Rate Delivery" button when delivered
+              // "View Summary" and "Rate Delivery" buttons when delivered
               if (isDelivered) ...[
                 const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: onRate,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _kGreen,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: const Text(
-                      'Rate Delivery',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: onViewSummary,
+                        icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                        label: Text(
+                          AppLocalizations.of(context).viewSummary,
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _kGreen,
+                          side: const BorderSide(color: _kGreen, width: 1.5),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: onRate,
+                        icon: const Icon(Icons.star_rounded, size: 18),
+                        label: Text(
+                          AppLocalizations.of(context).rateDelivery,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _kGreen,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ],
@@ -1007,14 +1336,14 @@ class _RatingDialogState extends State<_RatingDialog> {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text(
-        'Rate Delivery',
+        AppLocalizations.of(context).rateDelivery,
         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'How was your delivery experience?',
+            AppLocalizations.of(context).howWasYourDeliveryExperience,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13),
             textAlign: TextAlign.center,
           ),
@@ -1045,7 +1374,7 @@ class _RatingDialogState extends State<_RatingDialog> {
             controller: _ctrl,
             maxLines: 3,
             decoration: InputDecoration(
-              hintText: 'Leave a comment (optional)',
+              hintText: AppLocalizations.of(context).leaveACommentOptional,
               hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 13),
               filled: true,
               fillColor: Colors.grey[100],
@@ -1073,7 +1402,7 @@ class _RatingDialogState extends State<_RatingDialog> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Skip'),
+              child: Text(AppLocalizations.of(context).skip),
             ),
           ),
           const SizedBox(width: 12),
@@ -1081,7 +1410,7 @@ class _RatingDialogState extends State<_RatingDialog> {
             child: ElevatedButton(
               onPressed: () => widget.onSubmit(_stars, _ctrl.text.trim()),
               style: AppTheme.confirmButtonStyle(background: _kGreen),
-              child: const Text('Submit'),
+              child: Text(AppLocalizations.of(context).submit),
             ),
           ),
         ]),
@@ -1109,7 +1438,7 @@ class _ErrorView extends StatelessWidget {
             Icon(Icons.error_outline, color: Colors.red[400], size: 48),
             SizedBox(height: 12),
             Text(
-              'Could not load delivery',
+              AppLocalizations.of(context).couldNotLoadDelivery,
               style: TextStyle(
                 color: context.appTextPrimary,
                 fontSize: 16,
@@ -1132,10 +1461,340 @@ class _ErrorView extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text('Retry'),
+              child: Text(AppLocalizations.of(context).retry),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Share header button (top right of screen) ────────────────────────────────
+
+class _ShareHeaderButton extends StatelessWidget {
+  final VoidCallback onTap;
+  final bool loading;
+
+  const _ShareHeaderButton({required this.onTap, this.loading = false});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: loading ? null : onTap,
+    child: Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: loading
+          ? const Center(
+              child: SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2, color: _kGreen),
+              ),
+            )
+          : const Icon(Icons.share_outlined, color: Colors.black87, size: 18),
+    ),
+  );
+}
+
+// ── Delivery share bottom sheet ──────────────────────────────────────────────
+
+class _DeliveryShareSheet extends StatelessWidget {
+  final String url;
+  final String from;
+  final String to;
+  final String serviceType;
+  final String recipientName;
+  final String? driverName;
+  final VoidCallback onStop;
+
+  const _DeliveryShareSheet({
+    required this.url,
+    required this.from,
+    required this.to,
+    required this.serviceType,
+    required this.recipientName,
+    this.driverName,
+    required this.onStop,
+  });
+
+  bool get isMoving => serviceType == 'moving';
+
+  void _copy(BuildContext ctx) {
+    Clipboard.setData(ClipboardData(text: url));
+    ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+      content: Text(AppLocalizations.of(ctx).trackingLinkCopiedToClipboard),
+      behavior: SnackBarBehavior.floating,
+      duration: Duration(seconds: 2),
+    ));
+  }
+
+  void _shareNative(BuildContext context) {
+    final box = context.findRenderObject() as RenderBox?;
+    final title = isMoving ? 'Moving Service' : 'Package Delivery';
+    final recipientText = recipientName.isNotEmpty ? 'Recipient: $recipientName\n' : '';
+    final driverText = (driverName != null && driverName!.isNotEmpty) ? 'Driver: $driverName\n' : '';
+
+    Share.share(
+      'Track my ROTEH $title live 📦🚚\n'
+      '$recipientText$driverText'
+      'From: $from\nTo: $to\n\n'
+      'Track here: $url',
+      subject: 'Track my $title live',
+      sharePositionOrigin:
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final cardBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFF7F9F7);
+    final textPrimary = isDark ? Colors.white : Colors.black87;
+    final textSecondary = isDark ? Colors.grey[400] : Colors.grey[600];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.only(
+        left: 24,
+        right: 24,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Header
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _kGreen.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.share_location, color: _kGreen, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isMoving ? 'Share Moving Tracking' : 'Share Delivery Tracking',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                    ),
+                    Text(
+                      AppLocalizations.of(context).recipientsAndFriendsCanTrack,
+                      style: TextStyle(fontSize: 12, color: textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Delivery summary card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.15)),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.circle, color: _kGreen, size: 8),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        from,
+                        style: TextStyle(color: textPrimary, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 3),
+                  child: Column(
+                    children: List.generate(
+                      3,
+                      (_) => Container(
+                        width: 2,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(vertical: 1),
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.red, size: 10),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        to,
+                        style: TextStyle(color: textPrimary, fontSize: 13),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                if (recipientName.isNotEmpty || (driverName != null && driverName!.isNotEmpty)) ...[
+                  const SizedBox(height: 10),
+                  Divider(color: Colors.grey.withValues(alpha: 0.2), height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      if (recipientName.isNotEmpty) ...[
+                        Icon(Icons.person_outline, color: textSecondary, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'For: $recipientName',
+                          style: TextStyle(color: textSecondary, fontSize: 12),
+                        ),
+                      ],
+                      const Spacer(),
+                      if (driverName != null && driverName!.isNotEmpty) ...[
+                        Icon(Icons.directions_car_outlined, color: textSecondary, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Driver: $driverName',
+                          style: TextStyle(color: textSecondary, fontSize: 12),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // URL copy box
+          GestureDetector(
+            onTap: () => _copy(context),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _kGreen.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.link, color: _kGreen, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      url,
+                      style: const TextStyle(
+                        color: _kGreen,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _kGreen,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      AppLocalizations.of(context).copy,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Action buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _shareNative(context),
+                  icon: const Icon(Icons.share, size: 18),
+                  label: Text(AppLocalizations.of(context).shareVia),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _kGreen,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Center(
+            child: TextButton(
+              onPressed: onStop,
+              child: Text(
+                AppLocalizations.of(context).stopSharingTracking,
+                style: TextStyle(
+                  color: Colors.red.shade400,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 const _green = Color(0xFF00C48C);
 
@@ -48,7 +49,7 @@ class _SupportScreenState extends State<SupportScreen>
         backgroundColor: context.appSurface,
         elevation: 0,
         leading: BackButton(color: context.appTextPrimary),
-        title: Text('Help & Support',
+        title: Text(AppLocalizations.of(context).helpSupport,
             style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
@@ -62,7 +63,7 @@ class _SupportScreenState extends State<SupportScreen>
           indicatorColor: _green,
           labelColor: _green,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [Tab(text: 'My Tickets'), Tab(text: 'FAQ')],
+          tabs: [Tab(text: AppLocalizations.of(context).myTicketsTab), Tab(text: AppLocalizations.of(context).faqTab)],
         ),
       ),
       body: TabBarView(controller: _tabs, children: [
@@ -125,7 +126,7 @@ class _TicketsTab extends StatelessWidget {
           style: ElevatedButton.styleFrom(
               backgroundColor: _green, foregroundColor: Colors.white,
               elevation: 0),
-          child: const Text('Retry')),
+          child: Text(AppLocalizations.of(context).retry)),
     ]));
     if (tickets.isEmpty) return RefreshIndicator(
       onRefresh: onRefresh, color: _green,
@@ -133,11 +134,11 @@ class _TicketsTab extends StatelessWidget {
         Icon(Icons.support_agent_outlined,
             color: context.appTextSecondary, size: 60),
         SizedBox(height: 16),
-        Text('No support tickets', textAlign: TextAlign.center,
+        Text(AppLocalizations.of(context).noSupportTickets, textAlign: TextAlign.center,
             style: TextStyle(color: context.appTextPrimary,
                 fontSize: 16, fontWeight: FontWeight.w700)),
         SizedBox(height: 6),
-        Text('Tap + to create a new support request.',
+        Text(AppLocalizations.of(context).tapPlusToCreateTicket,
             textAlign: TextAlign.center,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       ]),
@@ -150,12 +151,12 @@ class _TicketsTab extends StatelessWidget {
       onRefresh: onRefresh, color: _green,
       child: ListView(padding: const EdgeInsets.all(16), children: [
         if (open.isNotEmpty) ...[
-          _SectionLabel('Open (${open.length})'),
+          _SectionLabel('${AppLocalizations.of(context).openParenPrefix} (${open.length})'),
           ...open.map((t) => _TicketTile(ticket: t, onTap: () => onOpen(t))),
           const SizedBox(height: 8),
         ],
         if (closed.isNotEmpty) ...[
-          _SectionLabel('Resolved (${closed.length})'),
+          _SectionLabel('${AppLocalizations.of(context).resolvedParenPrefix} (${closed.length})'),
           ...closed.map((t) => _TicketTile(ticket: t, onTap: () => onOpen(t))),
         ],
       ]),
@@ -222,13 +223,13 @@ class _TicketTile extends StatelessWidget {
               maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 3),
           Row(children: [
-            Text('${ticket.replies.length} repl${ticket.replies.length == 1 ? 'y' : 'ies'}',
+            Text('${ticket.replies.length} ${AppLocalizations.of(context).repliesCountLabel}',
                 style: TextStyle(
                     color: context.appTextSecondary, fontSize: 12)),
             if (ticket.createdAt != null) ...[
               Text(' · ',
                   style: TextStyle(color: context.appTextSecondary)),
-              Text(_fmt(ticket.createdAt!),
+              Text(_fmt(context, ticket.createdAt!),
                   style: TextStyle(
                       color: context.appTextSecondary, fontSize: 12)),
             ],
@@ -248,11 +249,12 @@ class _TicketTile extends StatelessWidget {
     ),
   );
 
-  String _fmt(DateTime dt) {
+  String _fmt(BuildContext context, DateTime dt) {
+    final l = AppLocalizations.of(context);
     final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    return '${diff.inMinutes}m ago';
+    if (diff.inDays > 0) return '${diff.inDays}${l.dAgoSuffix}';
+    if (diff.inHours > 0) return '${diff.inHours}${l.hAgoSuffix}';
+    return '${diff.inMinutes}${l.mAgoSuffix}';
   }
 }
 
@@ -261,15 +263,18 @@ class _TicketTile extends StatelessWidget {
 class _FaqTab extends StatelessWidget {
   const _FaqTab();
 
-  static const _faqs = [
-    ('How do I book a ride?', 'Open the app, tap Book Ride, set your pickup and destination, then confirm.'),
-    ('How do I cancel a ride?', 'During a booking you can tap Cancel on the tracking screen. Cancellation fees may apply after the driver is on the way.'),
-    ('How does payment work?', 'We accept cash and wallet. Choose your method before confirming the booking.'),
-    ('How do I report a problem?', 'Create a support ticket by tapping the + button above. Our team responds within 24 hours.'),
-    ('Where does AutoRide operate?', 'Currently available across Phnom Penh, Cambodia.'),
-    ('How do I become a driver?', 'Register with role "Driver", complete verification, then register your vehicle.'),
-    ('What if the driver doesn\'t show up?', 'Use the SOS or contact button on the tracking screen, or cancel and rebook.'),
-  ];
+  List<(String, String)> _faqs(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [
+      (l.faq1Q, l.faq1A),
+      (l.faq2Q, l.faq2A),
+      (l.faq3Q, l.faq3A),
+      (l.faq4Q, l.faq4A),
+      (l.faq5Q, l.faq5A),
+      (l.faq6Q, l.faq6A),
+      (l.faq7Q, l.faq7A),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,17 +292,17 @@ class _FaqTab extends StatelessWidget {
           child: Row(children: [
             const Icon(Icons.support_agent, color: Colors.white, size: 32),
             const SizedBox(width: 12),
-            const Expanded(child: Column(
+            Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Need help?', style: TextStyle(
+              Text(AppLocalizations.of(context).needHelpTitle, style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w700,
                   fontSize: 15)),
-              Text('Can\'t find your answer? Open a ticket.',
-                  style: TextStyle(color: Colors.white70, fontSize: 12)),
+              Text(AppLocalizations.of(context).cantFindAnswerDesc,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12)),
             ])),
           ]),
         ),
-        ..._faqs.map((faq) => _FaqTile(q: faq.$1, a: faq.$2)),
+        ..._faqs(context).map((faq) => _FaqTile(q: faq.$1, a: faq.$2)),
       ],
     );
   }
@@ -369,7 +374,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
 
   Future<void> _submit() async {
     if (_subCtrl.text.trim().isEmpty || _msgCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Subject and message are required');
+      setState(() => _error = AppLocalizations.of(context).subjectAndMessageRequired);
       return;
     }
     setState(() { _saving = true; _error = null; });
@@ -405,17 +410,17 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
           decoration: BoxDecoration(color: Colors.grey[300],
               borderRadius: BorderRadius.circular(2)))),
       SizedBox(height: 16),
-      Text('New Support Ticket',
+      Text(AppLocalizations.of(context).newSupportTicketTitle,
           style: TextStyle(fontSize: 17,
               fontWeight: FontWeight.w700, color: context.appTextPrimary)),
       SizedBox(height: 16),
 
       // Priority
       Row(children: [
-        Text('Priority: ',
+        Text(AppLocalizations.of(context).priorityColonLabel,
             style: TextStyle(color: context.appTextSecondary,
                 fontWeight: FontWeight.w600, fontSize: 13)),
-        ...[('normal', 'Normal'), ('high', 'High'), ('urgent', 'Urgent')]
+        ...[('normal', AppLocalizations.of(context).normal), ('high', AppLocalizations.of(context).highPriority), ('urgent', AppLocalizations.of(context).urgentPriority)]
             .map((p) => Padding(
           padding: EdgeInsets.only(right: 8),
           child: ChoiceChip(
@@ -436,7 +441,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
         controller: _subCtrl,
         style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
-          labelText: 'Subject',
+          labelText: AppLocalizations.of(context).subjectLabel,
           labelStyle: TextStyle(color: context.appTextSecondary),
           filled: true, fillColor: context.appCardBg,
           border: OutlineInputBorder(
@@ -454,7 +459,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
         maxLines: 4,
         style: TextStyle(color: context.appTextPrimary),
         decoration: InputDecoration(
-          labelText: 'Describe your issue',
+          labelText: AppLocalizations.of(context).describeYourIssueLabel,
           labelStyle: TextStyle(color: context.appTextSecondary),
           alignLabelWithHint: true,
           filled: true, fillColor: context.appCardBg,
@@ -483,7 +488,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
               ? const SizedBox(width: 20, height: 20,
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: Colors.white))
-              : const Text('Submit Ticket'),
+              : Text(AppLocalizations.of(context).submitTicketBtn),
         ),
       ),
     ]),
@@ -585,7 +590,7 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
                   )),
             ),
             const SizedBox(width: 8),
-            Text('Priority: ${_ticket.priority}',
+            Text('${AppLocalizations.of(context).priorityColonLabel} ${_ticket.priority}',
                 style: TextStyle(
                     color: context.appTextSecondary, fontSize: 12)),
           ]),
@@ -594,7 +599,7 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
           if (_ticket.replies.isEmpty)
             Center(child: Padding(
               padding: EdgeInsets.all(24),
-              child: Text('No replies yet. We\'ll respond within 24 hours.',
+              child: Text(AppLocalizations.of(context).noRepliesYetDesc,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: context.appTextSecondary, fontSize: 13)),
@@ -623,7 +628,7 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
                 style: TextStyle(
                     color: context.appTextPrimary, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Write a reply…',
+                  hintText: AppLocalizations.of(context).writeAReplyHint,
                   hintStyle: TextStyle(
                       color: context.appTextSecondary),
                   filled: true, fillColor: context.appCardBg,
@@ -691,7 +696,7 @@ class _ReplyBubble extends StatelessWidget {
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.start, children: [
           if (isStaff)
-            Text('Support Team',
+            Text(AppLocalizations.of(context).supportTeamLabel,
                 style: TextStyle(color: _green,
                     fontSize: 11, fontWeight: FontWeight.w700)),
           Text(reply.message,
@@ -701,7 +706,7 @@ class _ReplyBubble extends StatelessWidget {
                   fontSize: 13, height: 1.4)),
           SizedBox(height: 4),
           Text(reply.createdAt != null
-              ? _fmt(reply.createdAt!) : '',
+              ? _fmt(context, reply.createdAt!) : '',
               style: TextStyle(
                   color: isStaff
                       ? context.appTextSecondary
@@ -712,10 +717,11 @@ class _ReplyBubble extends StatelessWidget {
     );
   }
 
-  String _fmt(DateTime dt) {
+  String _fmt(BuildContext context, DateTime dt) {
+    final l = AppLocalizations.of(context);
     final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    return '${diff.inMinutes}m ago';
+    if (diff.inDays > 0) return '${diff.inDays}${l.dAgoSuffix}';
+    if (diff.inHours > 0) return '${diff.inHours}${l.hAgoSuffix}';
+    return '${diff.inMinutes}${l.mAgoSuffix}';
   }
 }

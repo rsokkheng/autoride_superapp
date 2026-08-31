@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AccessibilityScreen extends StatefulWidget {
   const AccessibilityScreen({super.key});
@@ -38,8 +39,8 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
     try {
       await ApiService.updateAccessibilitySettings(_settings);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Accessibility settings saved.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).accessibilitySettingsSaved),
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
       ));
@@ -71,14 +72,14 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Accessibility'),
+        title: Text(AppLocalizations.of(context).accessibilityTitle),
         actions: [
           if (!_loading && _error == null)
             TextButton(
               onPressed: _saving ? null : _save,
               child: _saving
                   ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
-                  : Text('Save', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+                  : Text(AppLocalizations.of(context).save, style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
             ),
         ],
       ),
@@ -90,64 +91,64 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
                   SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _Section(title: 'Visual', children: [
+                    _Section(title: AppLocalizations.of(context).visualSection, children: [
                       _Toggle(
                         icon: Icons.text_increase_rounded,
-                        label: 'Large Text',
-                        subtitle: 'Increase font size throughout the app',
+                        label: AppLocalizations.of(context).largeText,
+                        subtitle: AppLocalizations.of(context).largeTextSubtitle,
                         value: _bool('large_text'),
                         onChanged: (v) => _toggle('large_text', v),
                       ),
                       _Toggle(
                         icon: Icons.contrast_rounded,
-                        label: 'High Contrast',
-                        subtitle: 'Improve visibility with stronger colours',
+                        label: AppLocalizations.of(context).highContrast,
+                        subtitle: AppLocalizations.of(context).highContrastSubtitle,
                         value: _bool('high_contrast'),
                         onChanged: (v) => _toggle('high_contrast', v),
                       ),
                       _Toggle(
                         icon: Icons.animation_rounded,
-                        label: 'Reduce Motion',
-                        subtitle: 'Minimise animations and transitions',
+                        label: AppLocalizations.of(context).reduceMotion,
+                        subtitle: AppLocalizations.of(context).reduceMotionSubtitle,
                         value: _bool('reduce_motion'),
                         onChanged: (v) => _toggle('reduce_motion', v),
                       ),
                     ]),
                     const SizedBox(height: 16),
-                    _Section(title: 'Audio & Speech', children: [
+                    _Section(title: AppLocalizations.of(context).audioAndSpeechSection, children: [
                       _Toggle(
                         icon: Icons.record_voice_over_rounded,
-                        label: 'Screen Reader Support',
-                        subtitle: 'Optimise labels for assistive technology',
+                        label: AppLocalizations.of(context).screenReaderSupport,
+                        subtitle: AppLocalizations.of(context).screenReaderSupportSubtitle,
                         value: _bool('screen_reader'),
                         onChanged: (v) => _toggle('screen_reader', v),
                       ),
                       _Toggle(
                         icon: Icons.vibration_rounded,
-                        label: 'Haptic Feedback',
-                        subtitle: 'Vibrate on key interactions',
+                        label: AppLocalizations.of(context).hapticFeedback,
+                        subtitle: AppLocalizations.of(context).hapticFeedbackSubtitle,
                         value: _bool('haptic_feedback'),
                         onChanged: (v) => _toggle('haptic_feedback', v),
                       ),
                     ]),
                     const SizedBox(height: 16),
-                    _Section(title: 'Interaction', children: [
+                    _Section(title: AppLocalizations.of(context).interactionSection, children: [
                       _Toggle(
                         icon: Icons.touch_app_outlined,
-                        label: 'Large Touch Targets',
-                        subtitle: 'Bigger buttons and tap areas',
+                        label: AppLocalizations.of(context).largeTouchTargets,
+                        subtitle: AppLocalizations.of(context).largeTouchTargetsSubtitle,
                         value: _bool('large_touch_targets'),
                         onChanged: (v) => _toggle('large_touch_targets', v),
                       ),
                       _Toggle(
                         icon: Icons.accessible_forward_rounded,
-                        label: 'Wheelchair Accessible Vehicles',
-                        subtitle: 'Show only accessible vehicle options',
+                        label: AppLocalizations.of(context).wheelchairAccessibleVehicles,
+                        subtitle: AppLocalizations.of(context).wheelchairAccessibleVehiclesSubtitle,
                         value: _bool('wheelchair_accessible'),
                         onChanged: (v) => _toggle('wheelchair_accessible', v),
                       ),
@@ -160,7 +161,7 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
                         style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
                         child: _saving
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('Save Settings'),
+                            : Text(AppLocalizations.of(context).saveSettings),
                       ),
                     ),
                     const SizedBox(height: 16),

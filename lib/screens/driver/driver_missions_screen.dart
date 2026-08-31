@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/delivery_model.dart';
@@ -44,7 +45,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     } on ApiException catch (e) {
       if (mounted) setState(() { _errorRides = e.message; _loadingRides = false; });
     } catch (_) {
-      if (mounted) setState(() { _errorRides = 'Failed to load ride history.'; _loadingRides = false; });
+      if (mounted) setState(() { _errorRides = AppLocalizations.of(context).failedToLoadRideHistory; _loadingRides = false; });
     }
   }
 
@@ -62,7 +63,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     } on ApiException catch (e) {
       if (mounted) setState(() { _errorDeliveries = e.message; _loadingDeliveries = false; });
     } catch (_) {
-      if (mounted) setState(() { _errorDeliveries = 'Failed to load deliveries.'; _loadingDeliveries = false; });
+      if (mounted) setState(() { _errorDeliveries = AppLocalizations.of(context).failedToLoadDeliveries; _loadingDeliveries = false; });
     }
   }
 
@@ -74,7 +75,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     } on ApiException catch (e) {
       if (mounted) setState(() { _errorMovings = e.message; _loadingMovings = false; });
     } catch (_) {
-      if (mounted) setState(() { _errorMovings = 'Failed to load movings.'; _loadingMovings = false; });
+      if (mounted) setState(() { _errorMovings = AppLocalizations.of(context).failedToLoadMovings; _loadingMovings = false; });
     }
   }
 
@@ -94,7 +95,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Missions'),
+            Text(AppLocalizations.of(context).missions),
             if (totalActive > 0) ...[
               SizedBox(width: 8),
               Container(
@@ -118,20 +119,20 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
           labelColor: AppTheme.accentOrange,
           unselectedLabelColor: context.appTextSecondary,
           tabs: [
-            const Tab(
-              child: _TabLabel(icon: Icons.electric_rickshaw, label: 'Ride', count: 0),
+            Tab(
+              child: _TabLabel(icon: Icons.electric_rickshaw, label: AppLocalizations.of(context).ride, count: 0),
             ),
             Tab(
               child: _TabLabel(
                 icon: Icons.delivery_dining_outlined,
-                label: 'Delivery',
+                label: AppLocalizations.of(context).delivery,
                 count: _activeDeliveries.length,
               ),
             ),
             Tab(
               child: _TabLabel(
                 icon: Icons.local_shipping_outlined,
-                label: 'Moving',
+                label: AppLocalizations.of(context).moving,
                 count: _activeMovings.length,
               ),
             ),
@@ -239,7 +240,7 @@ class _MissionList extends StatelessWidget {
         ElevatedButton(
           onPressed: onRefresh,
           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentOrange),
-          child: const Text('Retry'),
+          child: Text(AppLocalizations.of(context).retry),
         ),
       ]));
     }
@@ -265,7 +266,7 @@ class _MissionList extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
           SizedBox(height: 8),
-          Text('Accept a job from the home screen\nto see it here.',
+          Text(AppLocalizations.of(context).acceptAJobFromThe,
               textAlign: TextAlign.center,
               style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
@@ -300,8 +301,8 @@ class _MissionList extends StatelessWidget {
                       style: const TextStyle(
                           color: Colors.white, fontWeight: FontWeight.w700),
                     ),
-                    const Text(
-                      'Tap to refresh for latest status',
+                    Text(
+                      AppLocalizations.of(context).tapToRefreshForLatest,
                       style: TextStyle(color: Colors.white54, fontSize: 11),
                     ),
                   ]),
@@ -446,8 +447,10 @@ class _MissionCard extends StatelessWidget {
 
   const _MissionCard({required this.d, required this.type});
 
-  static const _deliverySteps = ['Accepted', 'Picked Up', 'In Transit', 'Delivered'];
-  static const _movingSteps   = ['Accepted', 'Arrived', 'Loading', 'In Transit', 'Done'];
+  List<String> _deliverySteps(AppLocalizations l) =>
+      [l.accepted, l.pickedUp, l.inTransit, l.delivered];
+  List<String> _movingSteps(AppLocalizations l) =>
+      [l.accepted, l.arrived2, l.loading2, l.inTransit, l.done];
 
   int _deliveryStep(String status) {
     switch (status) {
@@ -495,7 +498,8 @@ class _MissionCard extends StatelessWidget {
 
   Widget build(BuildContext context) {
     final isMoving = type == _MissionType.moving;
-    final steps    = isMoving ? _movingSteps : _deliverySteps;
+    final l        = AppLocalizations.of(context);
+    final steps    = isMoving ? _movingSteps(l) : _deliverySteps(l);
     final step     = isMoving ? _movingStep(d.status) : _deliveryStep(d.status);
 
     return GestureDetector(
@@ -530,14 +534,14 @@ class _MissionCard extends StatelessWidget {
             SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(
-                _title(),
+                _title(context),
                 style: TextStyle(
                     color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 14),
               ),
               Text(
-                isMoving ? 'MOVING' : (d.packageSize?.toUpperCase() ?? 'DELIVERY'),
+                isMoving ? AppLocalizations.of(context).moving2 : (d.packageSize?.toUpperCase() ?? AppLocalizations.of(context).delivery2),
                 style: TextStyle(
                     color: AppTheme.accentOrange.withValues(alpha: 0.8),
                     fontSize: 10,
@@ -563,7 +567,7 @@ class _MissionCard extends StatelessWidget {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.cancel_outlined, color: AppTheme.danger, size: 14),
                 SizedBox(width: 6),
-                Text('This order was cancelled',
+                Text(AppLocalizations.of(context).thisOrderWasCancelled,
                     style: TextStyle(color: AppTheme.danger, fontSize: 12)),
               ]),
             ),
@@ -632,19 +636,20 @@ class _MissionCard extends StatelessWidget {
     )); // GestureDetector + Container
   }
 
-  String _title() {
+  String _title(BuildContext context) {
+    final l = AppLocalizations.of(context);
     if (type == _MissionType.moving) {
-      return 'Moving #${d.id}';
+      return '${l.moving} #${d.id}';
     }
-    if (d.packageDetails.isNotEmpty && d.packageDetails != 'No description') {
+    if (d.packageDetails.isNotEmpty && d.packageDetails != l.noDescription) {
       return d.packageDetails.length > 38
           ? '${d.packageDetails.substring(0, 38)}…'
           : d.packageDetails;
     }
     if (d.packageSize != null) {
-      return '${d.packageSize![0].toUpperCase()}${d.packageSize!.substring(1)} Package';
+      return '${d.packageSize![0].toUpperCase()}${d.packageSize!.substring(1)} ${l.package}';
     }
-    return 'Delivery #${d.id}';
+    return '${l.delivery} #${d.id}';
   }
 }
 
@@ -664,19 +669,19 @@ class _StatusBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        _label(),
+        _label(context),
         style: TextStyle(
             color: color, fontSize: 10, fontWeight: FontWeight.w800),
       ),
     );
   }
 
-  String _label() {
+  String _label(BuildContext context) {
     switch (status) {
-      case 'accepted':    return 'ACCEPTED';
-      case 'in_progress': return 'IN PROGRESS';
-      case 'completed':   return 'DONE';
-      case 'cancelled':   return 'CANCELLED';
+      case 'accepted':    return AppLocalizations.of(context).accepted2;
+      case 'in_progress': return AppLocalizations.of(context).inProgress;
+      case 'completed':   return AppLocalizations.of(context).done2;
+      case 'cancelled':   return AppLocalizations.of(context).cancelled;
       default:            return status.toUpperCase();
     }
   }
@@ -725,7 +730,7 @@ class _RideHistoryTab extends StatelessWidget {
         ElevatedButton(
           onPressed: onRefresh,
           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentOrange),
-          child: const Text('Retry'),
+          child: Text(AppLocalizations.of(context).retry),
         ),
       ]));
     }
@@ -747,7 +752,7 @@ class _RideHistoryTab extends StatelessWidget {
               child: Column(children: [
                 Icon(Icons.electric_rickshaw, color: context.appTextSecondary, size: 56),
                 SizedBox(height: 16),
-                Text('No rides yet',
+                Text(AppLocalizations.of(context).noRidesYet,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
               ]),
@@ -774,13 +779,13 @@ class _RideSummaryCard extends StatelessWidget {
       ),
       child: Row(children: [
         _SummaryStat(icon: Icons.check_circle_outline,
-            label: 'Completed', value: '${summary.totalCompleted}'),
+            label: AppLocalizations.of(context).completed, value: '${summary.totalCompleted}'),
         _SummaryStat(icon: Icons.account_balance_wallet_outlined,
-            label: 'Earned', value: AppTheme.khr(summary.totalEarnedKhr)),
+            label: AppLocalizations.of(context).earned, value: AppTheme.khr(summary.totalEarnedKhr)),
         _SummaryStat(icon: Icons.route_outlined,
-            label: 'Distance', value: '${summary.totalKm.toStringAsFixed(1)} km'),
+            label: AppLocalizations.of(context).distance, value: '${summary.totalKm.toStringAsFixed(1)} km'),
         _SummaryStat(icon: Icons.payments_outlined,
-            label: 'Avg fare', value: AppTheme.khr(summary.avgFareKhr)),
+            label: AppLocalizations.of(context).avgFare, value: AppTheme.khr(summary.avgFareKhr)),
       ]),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/app_theme.dart';
@@ -45,11 +46,11 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
 
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: Text('Helmet Check')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).helmetCheck)),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(24),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Upload a photo to verify that a helmet is being worn correctly.',
+          Text(AppLocalizations.of(context).uploadAPhotoToVerify,
               style: TextStyle(color: context.appTextSecondary, fontSize: 14, height: 1.5)),
 
           SizedBox(height: 24),
@@ -69,7 +70,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                   ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                       Icon(Icons.add_a_photo_outlined, size: 52, color: AppTheme.accent.withValues(alpha: 0.6)),
                       SizedBox(height: 12),
-                      Text('Tap to upload photo', style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
+                      Text(AppLocalizations.of(context).tapToUploadPhoto, style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
                     ])
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(18),
@@ -95,7 +96,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () => _pickImage(ImageSource.camera),
                   icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                  label: const Text('Retake'),
+                  label: Text(AppLocalizations.of(context).retake),
                   style: OutlinedButton.styleFrom(foregroundColor: AppTheme.accent, side: const BorderSide(color: AppTheme.accent)),
                 ),
               ),
@@ -104,7 +105,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                 child: OutlinedButton.icon(
                   onPressed: () => _pickImage(ImageSource.gallery),
                   icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: const Text('Gallery'),
+                  label: Text(AppLocalizations.of(context).gallery),
                   style: OutlinedButton.styleFrom(foregroundColor: AppTheme.accent, side: const BorderSide(color: AppTheme.accent)),
                 ),
               ),
@@ -126,7 +127,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
               icon: _checking
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.security_rounded, color: Colors.white),
-              label: Text(_checking ? 'Checking…' : 'Check Helmet',
+              label: Text(_checking ? AppLocalizations.of(context).checking : AppLocalizations.of(context).checkHelmet,
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
@@ -171,7 +172,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  detected ? 'Helmet Detected!' : 'No Helmet Detected',
+                  detected ? AppLocalizations.of(context).helmetDetected : AppLocalizations.of(context).noHelmetDetected,
                   style: TextStyle(
                     color: detected ? AppTheme.success : AppTheme.danger,
                     fontSize: 20,
@@ -188,7 +189,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                 if (!detected) ...[
                   SizedBox(height: 12),
                   Text(
-                    'Please wear a helmet before starting your trip.',
+                    AppLocalizations.of(context).pleaseWearAHelmetBefore,
                     style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.5),
                     textAlign: TextAlign.center,
                   ),
@@ -210,12 +211,12 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
             leading: Icon(Icons.camera_alt_rounded, color: AppTheme.accent),
-            title: Text('Take Photo', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).takePhoto, style: TextStyle(color: context.appTextPrimary)),
             onTap: () { Navigator.pop(context); _pickImage(ImageSource.camera); },
           ),
           ListTile(
             leading: Icon(Icons.photo_library_rounded, color: AppTheme.accent),
-            title: Text('Choose from Gallery', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).chooseFromGallery, style: TextStyle(color: context.appTextPrimary)),
             onTap: () { Navigator.pop(context); _pickImage(ImageSource.gallery); },
           ),
           const SizedBox(height: 8),

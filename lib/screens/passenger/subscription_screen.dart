@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 // Map Font Awesome class names → Flutter icons
 IconData _planIcon(String icon) {
@@ -20,9 +21,10 @@ Color _hexColor(String hex) {
   }
 }
 
-String _formatDate(DateTime dt) {
-  const m = ['Jan','Feb','Mar','Apr','May','Jun',
-              'Jul','Aug','Sep','Oct','Nov','Dec'];
+String _formatDate(BuildContext context, DateTime dt) {
+  final l = AppLocalizations.of(context);
+  final m = [l.jan, l.feb, l.mar, l.apr, l.may, l.jun,
+              l.jul, l.aug, l.sep, l.oct, l.nov, l.dec];
   return '${dt.day} ${m[dt.month - 1]} ${dt.year}';
 }
 
@@ -101,12 +103,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     if (method == null || !mounted) return;
 
     final isUpgrade = _my != null && _my!.isActive;
-    final action    = isUpgrade ? 'Upgrade to' : 'Subscribe to';
+    final l = AppLocalizations.of(context);
+    final action    = isUpgrade ? l.upgradeToPrefix : l.subscribeToPrefix;
     final confirmed = await _confirm(
       title:   '$action ${plan.name}?',
       body:    '${AppTheme.khr(plan.priceKhr)} / ${plan.billingCycle}\n'
-               'Payment: ${_methodLabel(method)}',
-      confirm: isUpgrade ? 'Upgrade' : 'Subscribe',
+               '${l.paymentColonPrefix} ${_methodLabel(context, method)}',
+      confirm: isUpgrade ? l.upgradeBtn : l.subscribeBtn,
     );
     if (confirmed != true || !mounted) return;
 
@@ -125,9 +128,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
 
   Future<void> _cancel() async {
     final confirmed = await _confirm(
-      title:   'Cancel Subscription?',
-      body:    'Benefits continue until your plan expires. Auto-renew will be turned off.',
-      confirm: 'Cancel Plan',
+      title:   AppLocalizations.of(context).cancelSubscriptionQuestion,
+      body:    AppLocalizations.of(context).benefitsContinueDesc,
+      confirm: AppLocalizations.of(context).cancelPlanBtn,
       danger:  true,
     );
     if (confirmed != true || !mounted) return;
@@ -176,14 +179,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
       padding: EdgeInsets.all(20),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Payment Method',
+        Text(AppLocalizations.of(context).paymentMethod,
             style: TextStyle(color: context.appTextPrimary, fontSize: 16,
                 fontWeight: FontWeight.w700)),
         SizedBox(height: 16),
         ...[
-          ('wallet', Icons.account_balance_wallet_rounded, 'AutoRide Wallet'),
-          ('card',   Icons.credit_card_rounded,            'Credit / Debit Card'),
-          ('qr',     Icons.qr_code_rounded,                'QR Payment'),
+          ('wallet', Icons.account_balance_wallet_rounded, AppLocalizations.of(context).autoRideWalletLabel),
+          ('card',   Icons.credit_card_rounded,            AppLocalizations.of(context).creditDebitCardLabel),
+          ('qr',     Icons.qr_code_rounded,                AppLocalizations.of(context).qrPayment),
         ].map((e) => ListTile(
           leading: Icon(e.$2, color: AppTheme.accent),
           title: Text(e.$3, style: TextStyle(color: context.appTextPrimary)),
@@ -210,7 +213,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
           style: TextStyle(color: context.appTextSecondary, height: 1.5)),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
+            child: Text(AppLocalizations.of(context).cancel,
                 style: TextStyle(color: context.appTextSecondary))),
         TextButton(onPressed: () => Navigator.pop(context, true),
             child: Text(confirm,
@@ -238,27 +241,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     ));
   }
 
-  String _methodLabel(String m) => switch (m) {
-    'wallet' => 'AutoRide Wallet',
-    'card'   => 'Card',
-    'qr'     => 'QR Payment',
-    _        => m,
-  };
+  String _methodLabel(BuildContext context, String m) {
+    final l = AppLocalizations.of(context);
+    return switch (m) {
+      'wallet' => l.autoRideWalletLabel,
+      'card'   => l.cardLabel,
+      'qr'     => l.qrPayment,
+      _        => m,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Subscription Plans'),
+        title: Text(AppLocalizations.of(context).subscriptionPlansTitle),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(text: 'Plans'),
-            Tab(text: 'History'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context).plansTab),
+            Tab(text: AppLocalizations.of(context).history),
           ],
         ),
       ),
@@ -311,10 +317,10 @@ class _PlansTab extends StatelessWidget {
         if (my != null && my!.isActive) ...[
           _ActiveSubCard(sub: my!, onCancel: onCancel, onAutoRenew: onAutoRenew),
           const SizedBox(height: 20),
-          const _Label('Change Plan'),
+          _Label(AppLocalizations.of(context).changePlanLabel),
           const SizedBox(height: 12),
         ] else ...[
-          const _Label('Choose a Plan'),
+          _Label(AppLocalizations.of(context).choosePlanLabel),
           const SizedBox(height: 12),
         ],
 
@@ -386,11 +392,11 @@ class _ActiveSubCard extends StatelessWidget {
         // Credit usage bar
         if (sub.remainingCreditKhr > 0 || sub.usedRideCreditKhr > 0) ...[
           Row(children: [
-            Text('Ride credit',
+            Text(AppLocalizations.of(context).rideCreditLabel,
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 12)),
             const Spacer(),
-            Text('${AppTheme.khr(sub.remainingCreditKhr)} left',
+            Text('${AppTheme.khr(sub.remainingCreditKhr)} ${AppLocalizations.of(context).leftSuffix}',
                 style: const TextStyle(color: Colors.white,
                     fontSize: 12, fontWeight: FontWeight.w600)),
           ]),
@@ -412,19 +418,19 @@ class _ActiveSubCard extends StatelessWidget {
 
         // Stats row
         Row(children: [
-          _StatChip(label: 'Cancellations left',
+          _StatChip(label: AppLocalizations.of(context).cancellationsLeftLabel,
               value: sub.remainingCancellations),
           const SizedBox(width: 10),
           if (sub.expiresAt != null)
-            _StatChip(label: 'Expires',
-                value: '${sub.expiresInDays}d · ${_formatDate(sub.expiresAt!)}'),
+            _StatChip(label: AppLocalizations.of(context).expiresPrefix,
+                value: '${sub.expiresInDays}d · ${_formatDate(context, sub.expiresAt!)}'),
         ]),
 
         const SizedBox(height: 16),
 
         // Auto-renew + cancel
         Row(children: [
-          Text('Auto-renew',
+          Text(AppLocalizations.of(context).autoRenewLabel,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.9),
                   fontSize: 13)),
           const SizedBox(width: 8),
@@ -461,7 +467,7 @@ class _ActiveSubCard extends StatelessWidget {
               side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-            child: const Text('Cancel Plan', style: TextStyle(fontSize: 13)),
+            child: Text(AppLocalizations.of(context).cancelPlanBtn, style: const TextStyle(fontSize: 13)),
           ),
         ]),
       ]),
@@ -550,7 +556,7 @@ class _PlanCard extends StatelessWidget {
                         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                             color: color, borderRadius: BorderRadius.circular(10)),
-                        child: Text('CURRENT',
+                        child: Text(AppLocalizations.of(context).currentBadge.toUpperCase(),
                             style: TextStyle(color: Colors.white,
                                 fontSize: 9, fontWeight: FontWeight.w800,
                                 letterSpacing: 0.5)),
@@ -583,18 +589,18 @@ class _PlanCard extends StatelessWidget {
               // Highlight pills
               Wrap(spacing: 8, runSpacing: 6, children: [
                 if (plan.rideCreditKhr > 0)
-                  _Pill(label: '${AppTheme.khr(plan.rideCreditKhr)} credit',
+                  _Pill(label: '${AppTheme.khr(plan.rideCreditKhr)} ${AppLocalizations.of(context).creditSuffix}',
                       color: color),
                 if (plan.rideDiscountPct > 0)
-                  _Pill(label: '${plan.rideDiscountPct}% off rides',
+                  _Pill(label: '${plan.rideDiscountPct}% ${AppLocalizations.of(context).offRidesSuffix}',
                       color: color),
                 if (plan.deliveryDiscountPct > 0)
-                  _Pill(label: '${plan.deliveryDiscountPct}% off delivery',
+                  _Pill(label: '${plan.deliveryDiscountPct}% ${AppLocalizations.of(context).offDeliverySuffix}',
                       color: color),
                 if (plan.surgeWaived)
-                  _Pill(label: 'No surge', color: color),
+                  _Pill(label: AppLocalizations.of(context).noSurgeLabel, color: color),
                 if (plan.priorityMatching)
-                  _Pill(label: 'Priority matching', color: color),
+                  _Pill(label: AppLocalizations.of(context).priorityMatching, color: color),
               ]),
               SizedBox(height: 12),
               // Feature list
@@ -611,10 +617,10 @@ class _PlanCard extends StatelessWidget {
               const SizedBox(height: 4),
               // Cancellations & bonus
               _FeatureRow(icon: Icons.cancel_outlined,
-                  label: '${plan.freeCancellations} free cancellations / month',
+                  label: '${plan.freeCancellations} ${AppLocalizations.of(context).freeCancellationsPerMonthSuffix}',
                   color: color),
               _FeatureRow(icon: Icons.stars_rounded,
-                  label: '${plan.bonusPointsPct}% bonus loyalty points',
+                  label: '${plan.bonusPointsPct}% ${AppLocalizations.of(context).bonusLoyaltyPointsSuffix}',
                   color: color),
             ]),
           ),
@@ -633,7 +639,7 @@ class _PlanCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: Text('Current Plan',
+                      child: Text(AppLocalizations.of(context).currentPlanBtn,
                           style: TextStyle(color: color,
                               fontWeight: FontWeight.w700)),
                     )
@@ -647,8 +653,8 @@ class _PlanCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                       ),
-                      child: const Text('Subscribe',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
+                      child: Text(AppLocalizations.of(context).subscribeBtn,
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
             ),
           ),
@@ -709,7 +715,7 @@ class _HistoryTab extends StatelessWidget {
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 48),
           SizedBox(height: 12),
-          Text('No billing history yet.',
+          Text(AppLocalizations.of(context).noBillingHistoryYet,
               style: TextStyle(color: context.appTextSecondary)),
         ]),
       );
@@ -747,10 +753,10 @@ class _BillCard extends StatelessWidget {
           Text(bill.planName,
               style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 14)),
-          Text('${_typeLabel(bill.type)} · ${bill.reference}',
+          Text('${_typeLabel(context, bill.type)} · ${bill.reference}',
               style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           if (bill.paidAt != null)
-            Text(_formatDate(bill.paidAt!),
+            Text(_formatDate(context, bill.paidAt!),
                 style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
         ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -777,13 +783,16 @@ class _BillCard extends StatelessWidget {
     );
   }
 
-  String _typeLabel(String t) => switch (t) {
-    'subscribe' => 'New subscription',
-    'upgrade'   => 'Upgrade',
-    'renew'     => 'Renewal',
-    'cancel'    => 'Cancellation',
-    _           => t,
-  };
+  String _typeLabel(BuildContext context, String t) {
+    final l = AppLocalizations.of(context);
+    return switch (t) {
+      'subscribe' => l.newSubscriptionLabel,
+      'upgrade'   => l.upgradeBtn,
+      'renew'     => l.renewalLabel,
+      'cancel'    => l.cancellationLabel,
+      _           => t,
+    };
+  }
 }
 
 // ── Shared ────────────────────────────────────────────────────────────────────

@@ -1933,7 +1933,7 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
                 const SizedBox(height: 6),
                 _InputField(
                   controller: _phoneCtrl,
-                  hint: 'e.g. 012 345 678',
+                  hint: AppLocalizations.of(context).phoneNumberHintExample,
                   icon: Icons.phone_outlined,
                   keyboardType: TextInputType.phone,
                 ),

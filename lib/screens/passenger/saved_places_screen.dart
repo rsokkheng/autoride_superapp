@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/location_picker_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 const _green = Color(0xFF00C48C);
 
@@ -40,14 +41,14 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete place?'),
-        content: Text('Remove "${p.label}" from your saved places?'),
+        title: Text(AppLocalizations.of(context).deletePlaceQuestion),
+        content: Text('${AppLocalizations.of(context).removePlacePrefix} "${p.label}" ${AppLocalizations.of(context).fromSavedPlacesQuestionSuffix}'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context).cancel)),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete',
-                  style: TextStyle(color: AppTheme.danger))),
+              child: Text(AppLocalizations.of(context).delete,
+                  style: const TextStyle(color: AppTheme.danger))),
         ],
       ),
     );
@@ -57,7 +58,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
       setState(() => _places.removeWhere((x) => x.id == p.id));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('"${p.label}" removed'),
+          content: Text('"${p.label}" ${AppLocalizations.of(context).removedSuffix}'),
           behavior: SnackBarBehavior.floating,
           backgroundColor: _green,
         ));
@@ -79,7 +80,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
         backgroundColor: context.appSurface,
         elevation: 0,
         leading: BackButton(color: context.appTextPrimary),
-        title: Text('Saved Places',
+        title: Text(AppLocalizations.of(context).savedPlaces,
             style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
@@ -105,7 +106,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                                 p.label.toLowerCase() == 'home')) ...[
                               _QuickAddTile(
                                 icon: Icons.home_outlined,
-                                label: 'Add Home',
+                                label: AppLocalizations.of(context).addHomeLabel,
                                 onTap: () => _showAddEdit(null,
                                     presetLabel: 'Home'),
                               ),
@@ -115,7 +116,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                                 p.label.toLowerCase() == 'work')) ...[
                               _QuickAddTile(
                                 icon: Icons.work_outline,
-                                label: 'Add Work',
+                                label: AppLocalizations.of(context).addWorkLabel,
                                 onTap: () => _showAddEdit(null,
                                     presetLabel: 'Work'),
                               ),
@@ -123,7 +124,7 @@ class _SavedPlacesScreenState extends State<SavedPlacesScreen> {
                             ],
                             Padding(
                               padding: EdgeInsets.only(bottom: 10),
-                              child: Text('Your Places',
+                              child: Text(AppLocalizations.of(context).yourPlacesLabel,
                                   style: TextStyle(
                                       color: context.appTextSecondary,
                                       fontSize: 12,
@@ -227,7 +228,7 @@ class _PlaceTile extends StatelessWidget {
                 color: _green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Text('Default',
+              child: Text(AppLocalizations.of(context).defaultBadge,
                   style: TextStyle(
                       color: _green, fontSize: 10,
                       fontWeight: FontWeight.w600)),
@@ -238,19 +239,19 @@ class _PlaceTile extends StatelessWidget {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'edit',
+              PopupMenuItem(value: 'edit',
                   child: Row(children: [
-                    Icon(Icons.edit_outlined, size: 18),
-                    SizedBox(width: 10),
-                    Text('Edit'),
+                    const Icon(Icons.edit_outlined, size: 18),
+                    const SizedBox(width: 10),
+                    Text(AppLocalizations.of(context).edit),
                   ])),
-              const PopupMenuItem(value: 'delete',
+              PopupMenuItem(value: 'delete',
                   child: Row(children: [
-                    Icon(Icons.delete_outline,
+                    const Icon(Icons.delete_outline,
                         size: 18, color: AppTheme.danger),
-                    SizedBox(width: 10),
-                    Text('Delete',
-                        style: TextStyle(color: AppTheme.danger)),
+                    const SizedBox(width: 10),
+                    Text(AppLocalizations.of(context).delete,
+                        style: const TextStyle(color: AppTheme.danger)),
                   ])),
             ],
             onSelected: (v) {
@@ -312,18 +313,18 @@ class _EmptyView extends StatelessWidget {
       Icon(Icons.bookmark_border_rounded,
           color: context.appTextSecondary, size: 60),
       SizedBox(height: 16),
-      Text('No saved places yet',
+      Text(AppLocalizations.of(context).noSavedPlacesYet,
           style: TextStyle(color: context.appTextPrimary,
               fontSize: 16, fontWeight: FontWeight.w700)),
       SizedBox(height: 6),
-      Text('Save home, work, or favourite spots\nfor faster booking.',
+      Text(AppLocalizations.of(context).saveHomeWorkDesc,
           textAlign: TextAlign.center,
           style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       const SizedBox(height: 20),
       ElevatedButton.icon(
         onPressed: onAdd,
         icon: const Icon(Icons.add),
-        label: const Text('Add a place'),
+        label: Text(AppLocalizations.of(context).addAPlaceBtn),
         style: ElevatedButton.styleFrom(
           backgroundColor: _green, foregroundColor: Colors.white,
           elevation: 0,
@@ -353,7 +354,7 @@ class _ErrorView extends StatelessWidget {
           style: ElevatedButton.styleFrom(
               backgroundColor: _green, foregroundColor: Colors.white,
               elevation: 0),
-          child: const Text('Retry')),
+          child: Text(AppLocalizations.of(context).retry)),
     ]),
   );
 }
@@ -405,7 +406,7 @@ class _AddEditSheetState extends State<_AddEditSheet> {
     final result = await Navigator.push<LocationPickResult>(
       context,
       MaterialPageRoute(builder: (_) => LocationPickerScreen(
-        title:    'Set Location',
+        title:    AppLocalizations.of(context).setLocationTitle,
         pinColor: _green,
         initial:  _latLng,
       )),
@@ -425,7 +426,7 @@ class _AddEditSheetState extends State<_AddEditSheet> {
     final lat   = _latLng?.latitude  ?? 0;
     final lng   = _latLng?.longitude ?? 0;
     if (label.isEmpty || _address.isEmpty || _latLng == null) {
-      setState(() => _error = 'Label and location are required');
+      setState(() => _error = AppLocalizations.of(context).labelAndLocationRequired);
       return;
     }
     setState(() { _saving = true; _error = null; });
@@ -471,16 +472,16 @@ class _AddEditSheetState extends State<_AddEditSheet> {
               borderRadius: BorderRadius.circular(2)),
         )),
         SizedBox(height: 18),
-        Text(isEdit ? 'Edit Place' : 'Add Place',
+        Text(isEdit ? AppLocalizations.of(context).editPlaceTitle : AppLocalizations.of(context).addPlaceTitle,
             style: TextStyle(fontSize: 17,
                 fontWeight: FontWeight.w700, color: context.appTextPrimary)),
         SizedBox(height: 18),
 
-        _SheetField(ctrl: _labelCtrl, label: 'Label',
-            hint: 'Home, Work, Gym…',
+        _SheetField(ctrl: _labelCtrl, label: AppLocalizations.of(context).labelFieldTitle,
+            hint: AppLocalizations.of(context).labelHintExample,
             icon: Icons.bookmark_outline),
         SizedBox(height: 12),
-        Text('Location', style: TextStyle(
+        Text(AppLocalizations.of(context).location, style: TextStyle(
             color: context.appTextSecondary, fontSize: 12,
             fontWeight: FontWeight.w600)),
         SizedBox(height: 4),
@@ -500,10 +501,10 @@ class _AddEditSheetState extends State<_AddEditSheet> {
               const SizedBox(width: 10),
               Expanded(
                 child: _picking
-                    ? Text('Opening map…',
+                    ? Text(AppLocalizations.of(context).openingMapEllipsis,
                         style: TextStyle(color: context.appTextSecondary, fontSize: 14))
                     : Text(
-                        _address.isEmpty ? 'Search or drag pin on map' : _address,
+                        _address.isEmpty ? AppLocalizations.of(context).searchOrDragPinHint : _address,
                         maxLines: 2, overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                             color: _address.isEmpty
@@ -525,7 +526,7 @@ class _AddEditSheetState extends State<_AddEditSheet> {
             onChanged: (v) => setState(() => _isDefault = v ?? false),
             activeColor: _green,
           ),
-          Text('Set as default',
+          Text(AppLocalizations.of(context).setAsDefaultCheckbox,
               style: TextStyle(color: context.appTextPrimary)),
         ]),
 
@@ -545,7 +546,7 @@ class _AddEditSheetState extends State<_AddEditSheet> {
                 ? const SizedBox(width: 20, height: 20,
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: Colors.white))
-                : Text(isEdit ? 'Save Changes' : 'Add Place'),
+                : Text(isEdit ? AppLocalizations.of(context).saveChanges : AppLocalizations.of(context).addPlaceTitle),
           ),
         ),
       ]),

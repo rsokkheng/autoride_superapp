@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:math' show pi, sin, cos, atan2;
 import 'dart:ui' show lerpDouble;
@@ -10,6 +11,7 @@ import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
 import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
+import 'driver_delivery_summary_screen.dart';
 
 // Default Phnom Penh centre — used until GPS fix obtained
 const _kPhnomPenh = LatLng(11.5680, 104.9195);
@@ -167,7 +169,9 @@ class _DriverDeliveryActiveScreenState
         position: _pickupLatLng,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         infoWindow: InfoWindow(
-          title: _isMoving ? 'Moving From' : 'Pickup',
+          title: _isMoving
+              ? AppLocalizations.of(context).movingFrom
+              : AppLocalizations.of(context).pickup,
           snippet: widget.delivery.pickupAddress,
         ),
       ),
@@ -176,7 +180,9 @@ class _DriverDeliveryActiveScreenState
         position: _dropoffLatLng,
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         infoWindow: InfoWindow(
-          title: _isMoving ? 'Moving To' : 'Dropoff',
+          title: _isMoving
+              ? AppLocalizations.of(context).movingTo
+              : AppLocalizations.of(context).dropoff,
           snippet: widget.delivery.dropoffAddress,
         ),
       ),
@@ -248,7 +254,7 @@ class _DriverDeliveryActiveScreenState
         markerId:   const MarkerId('driver'),
         position:   LatLng(lat, lng),
         icon:       BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-        infoWindow: const InfoWindow(title: 'You'),
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).you),
         rotation:   _driverHeading,
         anchor:     const Offset(0.5, 0.5),
         flat:       true,
@@ -290,14 +296,14 @@ class _DriverDeliveryActiveScreenState
     final passengerId = widget.delivery.senderId;
     final senderName  = widget.delivery.sender?.name
         ?? widget.delivery.senderName
-        ?? 'Sender #$passengerId';
+        ?? '${AppLocalizations.of(context).senderNumberPrefix}$passengerId';
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => RideChatScreen(
         rideId:      'delivery-${widget.delivery.id}',
         driverId:    driverId,
         passengerId: passengerId,
         myId:        driverId,
-        myName:      saved?.name ?? 'Driver',
+        myName:      saved?.name ?? AppLocalizations.of(context).driver,
         otherName:   senderName,
         isDriver:    true,
       ),
@@ -382,7 +388,7 @@ class _DriverDeliveryActiveScreenState
         // Mark arrived at pickup — no separate API endpoint; we just advance the UI phase
         // and optionally send a status ping via startDelivery if the server supports it
         setState(() => _deliveryPhase = _DeliveryPhase.arrivedAtPickup);
-        _showPhaseSnack('You arrived at pickup location');
+        _showPhaseSnack(AppLocalizations.of(context).youArrivedAtPickupLocation);
         break;
 
       case _DeliveryPhase.arrivedAtPickup:
@@ -392,16 +398,19 @@ class _DriverDeliveryActiveScreenState
           // Refresh route to dropoff
           if (_driverLatLng != null) _fetchLiveRoute(_driverLatLng!);
         });
-        _showPhaseSnack('Package picked up — heading to dropoff');
+        _showPhaseSnack(AppLocalizations.of(context).packagePickedUpHeadingToDropoff);
         break;
 
       case _DeliveryPhase.inTransit:
-        await ApiService.completeDelivery(widget.delivery.id);
+        DeliveryModel? completedDelivery;
+        try {
+          completedDelivery = await ApiService.completeDelivery(widget.delivery.id);
+        } catch (_) {}
         setState(() {
           _deliveryPhase = _DeliveryPhase.completed;
           _completed     = true;
         });
-        _showCompleteSummary();
+        await _showCompleteSummary(completedDelivery ?? widget.delivery);
         break;
 
       case _DeliveryPhase.completed:
@@ -413,7 +422,7 @@ class _DriverDeliveryActiveScreenState
     switch (_movingPhase) {
       case _MovingPhase.headingToLocation:
         setState(() => _movingPhase = _MovingPhase.arrivedAtLocation);
-        _showPhaseSnack('Arrived at moving location — start loading');
+        _showPhaseSnack(AppLocalizations.of(context).arrivedAtMovingLocationStartLoading);
         break;
 
       case _MovingPhase.arrivedAtLocation:
@@ -422,16 +431,19 @@ class _DriverDeliveryActiveScreenState
           _movingPhase = _MovingPhase.inTransit;
           if (_driverLatLng != null) _fetchLiveRoute(_driverLatLng!);
         });
-        _showPhaseSnack('Loading complete — heading to new location');
+        _showPhaseSnack(AppLocalizations.of(context).loadingCompleteHeadingToNewLocation);
         break;
 
       case _MovingPhase.inTransit:
-        await ApiService.completeMoving(widget.delivery.id);
+        DeliveryModel? completedDelivery;
+        try {
+          completedDelivery = await ApiService.completeMoving(widget.delivery.id);
+        } catch (_) {}
         setState(() {
           _movingPhase = _MovingPhase.completed;
           _completed   = true;
         });
-        _showCompleteSummary();
+        await _showCompleteSummary(completedDelivery ?? widget.delivery);
         break;
 
       case _MovingPhase.completed:
@@ -450,20 +462,16 @@ class _DriverDeliveryActiveScreenState
     ));
   }
 
-  void _showCompleteSummary() {
+  Future<void> _showCompleteSummary([DeliveryModel? delivery]) async {
     LocationService.instance.stopTracking(widget.driverIdStr);
-    showModalBottomSheet(
-      context: context,
-      isDismissible: false,
-      enableDrag:    false,
-      backgroundColor: context.appSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    final targetDelivery = delivery ?? widget.delivery;
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => DriverDeliverySummaryScreen(delivery: targetDelivery),
       ),
-      builder: (_) => _CompleteSummarySheet(delivery: widget.delivery),
-    ).then((_) {
-      if (mounted) Navigator.of(context).pop();
-    });
+    );
+    if (mounted) Navigator.of(context).pop();
   }
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -570,7 +578,7 @@ class _EtaChip extends StatelessWidget {
       Icon(Icons.access_time, size: 14, color: AppTheme.accentOrange),
       SizedBox(width: 4),
       Text(
-        etaMin > 0 ? '$etaMin min' : 'Arriving',
+        etaMin > 0 ? '$etaMin ${AppLocalizations.of(context).minShort}' : AppLocalizations.of(context).arriving,
         style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13),
       ),
       if (distanceKm > 0) ...[
@@ -631,37 +639,37 @@ class _BottomPanel extends StatelessWidget {
 
   // ── Delivery workflow labels ───────────────────────────────────────────────
 
-  String get _buttonLabel {
+  String _buttonLabel(AppLocalizations l) {
     if (isMoving) {
       switch (movingPhase) {
-        case _MovingPhase.headingToLocation: return 'Arrived at Location';
-        case _MovingPhase.arrivedAtLocation: return 'Loading Complete';
-        case _MovingPhase.inTransit:         return 'Mark as Delivered';
-        case _MovingPhase.completed:         return 'Done';
+        case _MovingPhase.headingToLocation: return l.arrivedAtLocation;
+        case _MovingPhase.arrivedAtLocation: return l.loadingComplete;
+        case _MovingPhase.inTransit:         return l.markAsDelivered;
+        case _MovingPhase.completed:         return l.done;
       }
     }
     switch (deliveryPhase) {
-      case _DeliveryPhase.headingToPickup:  return 'Arrived at Pickup';
-      case _DeliveryPhase.arrivedAtPickup:  return 'Package Picked Up';
-      case _DeliveryPhase.inTransit:        return 'Mark as Delivered';
-      case _DeliveryPhase.completed:        return 'Done';
+      case _DeliveryPhase.headingToPickup:  return l.arrivedAtPickup;
+      case _DeliveryPhase.arrivedAtPickup:  return l.packagePickedUp;
+      case _DeliveryPhase.inTransit:        return l.markAsDelivered;
+      case _DeliveryPhase.completed:        return l.done;
     }
   }
 
-  String get _statusLabel {
+  String _statusLabel(AppLocalizations l) {
     if (isMoving) {
       switch (movingPhase) {
-        case _MovingPhase.headingToLocation: return 'Heading to pickup location';
-        case _MovingPhase.arrivedAtLocation: return 'At location — loading items';
-        case _MovingPhase.inTransit:         return 'In transit to new location';
-        case _MovingPhase.completed:         return 'Moving complete!';
+        case _MovingPhase.headingToLocation: return l.headingToPickupLocation;
+        case _MovingPhase.arrivedAtLocation: return l.atLocationLoadingItems;
+        case _MovingPhase.inTransit:         return l.inTransitToNewLocation;
+        case _MovingPhase.completed:         return l.movingCompleteExcl;
       }
     }
     switch (deliveryPhase) {
-      case _DeliveryPhase.headingToPickup: return 'Heading to sender';
-      case _DeliveryPhase.arrivedAtPickup: return 'At pickup — collect package';
-      case _DeliveryPhase.inTransit:       return 'On the way to recipient';
-      case _DeliveryPhase.completed:       return 'Delivered!';
+      case _DeliveryPhase.headingToPickup: return l.headingToSender;
+      case _DeliveryPhase.arrivedAtPickup: return l.atPickupCollectPackage;
+      case _DeliveryPhase.inTransit:       return l.onTheWayToRecipient;
+      case _DeliveryPhase.completed:       return l.deliveredExcl;
     }
   }
 
@@ -669,9 +677,9 @@ class _BottomPanel extends StatelessWidget {
       (isMoving && movingPhase == _MovingPhase.completed) ||
       (!isMoving && deliveryPhase == _DeliveryPhase.completed);
 
-  List<String> get _steps => isMoving
-      ? ['Heading', 'At Location', 'In Transit', 'Done']
-      : ['Heading', 'At Pickup', 'In Transit', 'Delivered'];
+  List<String> _steps(AppLocalizations l) => isMoving
+      ? [l.heading, l.atLocation, l.inTransit, l.done]
+      : [l.heading, l.atPickup, l.inTransit, l.delivered];
 
   int get _currentStep {
     if (isMoving) return movingPhase.index;
@@ -698,7 +706,7 @@ class _BottomPanel extends StatelessWidget {
         SizedBox(height: 14),
 
         // Progress stepper
-        _MiniStepper(steps: _steps, currentStep: _currentStep),
+        _MiniStepper(steps: _steps(AppLocalizations.of(context)), currentStep: _currentStep),
         SizedBox(height: 14),
 
         // Status label
@@ -712,14 +720,14 @@ class _BottomPanel extends StatelessWidget {
           ),
           SizedBox(width: 8),
           Expanded(
-            child: Text(_statusLabel,
+            child: Text(_statusLabel(AppLocalizations.of(context)),
                 style: TextStyle(
                     color: context.appTextPrimary,
                     fontWeight: FontWeight.w700,
                     fontSize: 15)),
           ),
           if (etaMinutes > 0 && !_isDone)
-            Text('$etaMinutes min away',
+            Text('$etaMinutes ${AppLocalizations.of(context).minAway}',
                 style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
         SizedBox(height: 12),
@@ -777,7 +785,7 @@ class _BottomPanel extends StatelessWidget {
                   ? const SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
-                  : Text(_buttonLabel),
+                  : Text(_buttonLabel(AppLocalizations.of(context))),
             ),
           ),
 
@@ -789,11 +797,11 @@ class _BottomPanel extends StatelessWidget {
               color: AppTheme.accent.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Row(children: [
+            child: Row(children: [
               Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
               SizedBox(width: 8),
               Expanded(child: Text(
-                'To update progress, continue from the active job screen.',
+                AppLocalizations.of(context).toUpdateProgressContinueFrom,
                 style: TextStyle(color: AppTheme.accent, fontSize: 12),
               )),
             ]),
@@ -899,77 +907,6 @@ class _RecipientRow extends StatelessWidget {
             child: const Icon(Icons.phone, color: AppTheme.success, size: 18),
           ),
         ),
-    ]),
-  );
-}
-
-// ─── Complete summary bottom sheet ────────────────────────────────────────────
-
-class _CompleteSummarySheet extends StatelessWidget {
-  final DeliveryModel delivery;
-  const _CompleteSummarySheet({required this.delivery});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.fromLTRB(24, 20, 24, 36),
-    child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        width: 72, height: 72,
-        decoration: BoxDecoration(
-          color: AppTheme.success.withValues(alpha: 0.12),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 44),
-      ),
-      SizedBox(height: 16),
-      Text(
-        delivery.isMoving ? 'Moving Complete!' : 'Delivery Complete!',
-        style: TextStyle(
-            color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800),
-      ),
-      SizedBox(height: 6),
-      Text(
-        delivery.isMoving
-            ? 'Great job — the moving job is done.'
-            : 'Package delivered successfully.',
-        style: TextStyle(color: context.appTextSecondary, fontSize: 13),
-        textAlign: TextAlign.center,
-      ),
-      SizedBox(height: 20),
-      // Fee earned
-      Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: context.appCardBg,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.payments_outlined, color: AppTheme.accentOrange, size: 20),
-          SizedBox(width: 8),
-          Text('You earned ', style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
-          Text(
-            AppTheme.khr(delivery.fee),
-            style: const TextStyle(
-                color: AppTheme.accentOrange, fontSize: 20, fontWeight: FontWeight.w800),
-          ),
-        ]),
-      ),
-      const SizedBox(height: 20),
-      SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: () => Navigator.of(context).pop(),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.accentOrange,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 15),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            elevation: 0,
-            textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-          ),
-          child: const Text('Back to Home'),
-        ),
-      ),
     ]),
   );
 }

@@ -1,7 +1,21 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/app_log.dart';
+import '../l10n/app_localizations.dart';
+import '../main.dart' show navigatorKey;
 
 class AuthService {
+  // Localized user-facing string, falling back to plain English when no
+  // context is available yet (e.g. very early in app startup).
+  static String _tr(String Function(AppLocalizations) pick, String fallback) {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return fallback;
+    try {
+      return pick(AppLocalizations.of(ctx));
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   /// Returns true once a Firebase user (anonymous or otherwise) is signed
   /// in. Callers that are about to write to Firestore under rules gated on
   /// `request.auth != null` (e.g. drivers_live location updates) should
@@ -37,8 +51,8 @@ class AuthService {
       phoneNumber: phoneNumber,
       timeout: const Duration(seconds: 60),
       verificationCompleted: onAutoVerified,
-      verificationFailed: (e) =>
-          onFailed(e.message ?? 'Phone verification failed.'),
+      verificationFailed: (e) => onFailed(e.message ??
+          _tr((l) => l.phoneVerificationFailedMsg, 'Phone verification failed.')),
       codeSent: (verificationId, resendToken) => onCodeSent(verificationId),
       codeAutoRetrievalTimeout: (_) {},
     );
@@ -60,7 +74,8 @@ class AuthService {
     final result = await FirebaseAuth.instance.signInWithCredential(credential);
     final idToken = await result.user?.getIdToken();
     if (idToken == null) {
-      throw Exception('Could not obtain Firebase ID token.');
+      throw Exception(
+          _tr((l) => l.couldNotObtainFirebaseToken, 'Could not obtain Firebase ID token.'));
     }
     return idToken;
   }

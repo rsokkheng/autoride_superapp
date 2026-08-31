@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class ScheduledRidesScreen extends StatefulWidget {
   const ScheduledRidesScreen({super.key});
@@ -32,13 +33,14 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
     }
   }
 
-  String _formatDate(String? scheduledAt) {
+  String _formatDate(BuildContext context, String? scheduledAt) {
     if (scheduledAt == null) return '';
     final dt = DateTime.tryParse(scheduledAt);
     if (dt == null) return scheduledAt;
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final l = AppLocalizations.of(context);
+    final weekdays = [l.mon, l.tue, l.wed, l.thu, l.fri, l.sat, l.sun];
+    final months = [l.jan, l.feb, l.mar, l.apr, l.may, l.jun,
+                    l.jul, l.aug, l.sep, l.oct, l.nov, l.dec];
     final wd  = weekdays[dt.weekday - 1];
     final mon = months[dt.month - 1];
     final day = dt.day;
@@ -48,15 +50,16 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
     return '$wd, $mon $day · ${h.toString().padLeft(2, '0')}:$min $ampm';
   }
 
-  String _countdown(String? scheduledAt) {
+  String _countdown(BuildContext context, String? scheduledAt) {
     if (scheduledAt == null) return '';
     final dt = DateTime.tryParse(scheduledAt);
     if (dt == null) return '';
+    final l = AppLocalizations.of(context);
     final diff = dt.difference(DateTime.now());
-    if (diff.isNegative) return 'Past';
-    if (diff.inDays > 1) return 'in ${diff.inDays} days';
-    if (diff.inHours >= 1) return 'in ${diff.inHours} hrs';
-    return 'in ${diff.inMinutes} min';
+    if (diff.isNegative) return l.pastLabel;
+    if (diff.inDays > 1) return '${l.inPrefix} ${diff.inDays} ${l.daysLabel2}';
+    if (diff.inHours >= 1) return '${l.inPrefix} ${diff.inHours} ${l.hrsLabel}';
+    return '${l.inPrefix} ${diff.inMinutes} ${l.minLabel}';
   }
 
   Future<void> _confirmCancel(Map<String, dynamic> ride) async {
@@ -67,20 +70,20 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Ride',
+        title: Text(AppLocalizations.of(context).cancelRideTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text(
-          'Are you sure you want to cancel this scheduled ride?',
+          AppLocalizations.of(context).cancelScheduledRideConfirm,
           style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Keep', style: TextStyle(color: AppTheme.accent)),
+            child: Text(AppLocalizations.of(context).keepLabel, style: const TextStyle(color: AppTheme.accent)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Cancel Ride', style: TextStyle(color: AppTheme.danger)),
+            child: Text(AppLocalizations.of(context).cancelRideTitle, style: const TextStyle(color: AppTheme.danger)),
           ),
         ],
       ),
@@ -90,7 +93,7 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
       await ApiService.cancelScheduledRide(id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ride cancelled.'), backgroundColor: AppTheme.success),
+        SnackBar(content: Text(AppLocalizations.of(context).rideCancelledPeriod), backgroundColor: AppTheme.success),
       );
       _load();
     } on ApiException catch (e) {
@@ -106,7 +109,7 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Scheduled Rides'),
+        title: Text(AppLocalizations.of(context).scheduledRidesTitle),
         actions: [
           IconButton(
             icon: Icon(Icons.calendar_month_outlined),
@@ -126,7 +129,7 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
                       Text(_error!, textAlign: TextAlign.center,
                           style: TextStyle(color: context.appTextSecondary)),
                       SizedBox(height: 16),
-                      ElevatedButton(onPressed: _load, child: Text('Retry')),
+                      ElevatedButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry)),
                     ]),
                   ),
                 )
@@ -147,11 +150,11 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
                                   color: AppTheme.accent, size: 48),
                             ),
                             SizedBox(height: 16),
-                            Text('No upcoming rides',
+                            Text(AppLocalizations.of(context).noUpcomingRides,
                                 style: TextStyle(color: context.appTextPrimary,
                                     fontSize: 18, fontWeight: FontWeight.w700)),
                             SizedBox(height: 8),
-                            Text('Schedule a ride to see it here.',
+                            Text(AppLocalizations.of(context).scheduleRideToSeeHere,
                                 style: TextStyle(color: context.appTextSecondary)),
                           ]),
                         ])
@@ -161,8 +164,8 @@ class _ScheduledRidesScreenState extends State<ScheduledRidesScreen> {
                           separatorBuilder: (_, __) => const SizedBox(height: 12),
                           itemBuilder: (_, i) => _RideCard(
                             ride: _rides[i],
-                            formattedDate: _formatDate(_rides[i]['scheduled_at'] as String?),
-                            countdown: _countdown(_rides[i]['scheduled_at'] as String?),
+                            formattedDate: _formatDate(context, _rides[i]['scheduled_at'] as String?),
+                            countdown: _countdown(context, _rides[i]['scheduled_at'] as String?),
                             onCancel: () => _confirmCancel(_rides[i]),
                           ),
                         ),
@@ -191,6 +194,7 @@ class _RideCard extends StatelessWidget {
     final service  = ride['service_type']    as String? ?? 'ride';
     final fareKhr  = ride['fare_khr'] ?? ride['estimated_fare'] ?? 0;
     final isRide   = service.toLowerCase() != 'delivery';
+    final isPast   = countdown == AppLocalizations.of(context).pastLabel;
 
     return Container(
       padding: EdgeInsets.all(16),
@@ -212,14 +216,14 @@ class _RideCard extends StatelessWidget {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: countdown == 'Past'
+                  color: isPast
                       ? context.appTextSecondary.withValues(alpha: 0.15)
                       : AppTheme.accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(countdown,
                     style: TextStyle(
-                      color: countdown == 'Past' ? context.appTextSecondary : AppTheme.accent,
+                      color: isPast ? context.appTextSecondary : AppTheme.accent,
                       fontSize: 12, fontWeight: FontWeight.w600,
                     )),
               ),
@@ -243,7 +247,7 @@ class _RideCard extends StatelessWidget {
                     size: 14,
                     color: isRide ? AppTheme.accent : AppTheme.accentOrange),
                 SizedBox(width: 4),
-                Text(isRide ? 'Ride' : 'Delivery',
+                Text(isRide ? AppLocalizations.of(context).ride : AppLocalizations.of(context).delivery,
                     style: TextStyle(
                       color: isRide ? AppTheme.accent : AppTheme.accentOrange,
                       fontSize: 12, fontWeight: FontWeight.w600,
@@ -261,7 +265,7 @@ class _RideCard extends StatelessWidget {
               child: OutlinedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Modify coming soon.')),
+                    SnackBar(content: Text(AppLocalizations.of(context).modifyComingSoon)),
                   );
                 },
                 style: OutlinedButton.styleFrom(
@@ -269,7 +273,7 @@ class _RideCard extends StatelessWidget {
                   foregroundColor: AppTheme.accent,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Modify'),
+                child: Text(AppLocalizations.of(context).modifyBtn),
               ),
             ),
             const SizedBox(width: 12),
@@ -280,7 +284,7 @@ class _RideCard extends StatelessWidget {
                   foregroundColor: AppTheme.danger,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(AppLocalizations.of(context).cancel, style: const TextStyle(fontWeight: FontWeight.w700)),
               ),
             ),
           ]),

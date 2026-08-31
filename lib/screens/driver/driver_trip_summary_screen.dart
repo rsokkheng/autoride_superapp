@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/ride_model.dart';
@@ -34,11 +35,12 @@ class DriverTripSummaryScreen extends StatelessWidget {
   String get _passengerRating =>
       ride.passengerRating != null ? ride.passengerRating!.toStringAsFixed(1) : '5.0';
 
-  String get _serviceLabel {
+  String _serviceLabel(BuildContext context) {
+    final l = AppLocalizations.of(context);
     switch (ride.serviceType) {
-      case 'motorcycle': return 'Bike';
-      case 'tuk_tuk':     return 'Tuk Tuk';
-      default:            return 'Car'; // standard/premium/shared/van
+      case 'motorcycle': return l.bike3;
+      case 'tuk_tuk':     return l.tukTuk4;
+      default:            return l.carShort; // standard/premium/shared/van
     }
   }
 
@@ -76,7 +78,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                       child: Icon(Icons.check, color: Colors.white, size: 36),
                     ),
                     SizedBox(height: 14),
-                    Text('Trip Completed!',
+                    Text(AppLocalizations.of(context).tripCompleted,
                         style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
                     Text('Ride #${ride.id}',
@@ -112,7 +114,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                       color: _kGreen.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(_serviceLabel,
+                    child: Text(_serviceLabel(context),
                         style: TextStyle(color: _kGreen, fontSize: 11, fontWeight: FontWeight.w700)),
                   ),
                 ])),
@@ -123,10 +125,10 @@ class DriverTripSummaryScreen extends StatelessWidget {
                 _Card(child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Trip Details',
+                    Text(AppLocalizations.of(context).tripDetails,
                         style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
                     SizedBox(height: 14),
-                    _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: 'Pickup', address: ride.pickupAddress),
+                    _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: AppLocalizations.of(context).pickup, address: ride.pickupAddress),
                     for (int i = 0; i < wayStops.length; i++) ...[
                       Padding(
                         padding: EdgeInsets.only(left: 9),
@@ -141,10 +143,10 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     _TripAddressRow(
                       icon: Icons.location_on,
                       color: AppTheme.danger,
-                      label: 'Dropoff',
+                      label: AppLocalizations.of(context).dropoff,
                       address: ride.dropoffAddress.isNotEmpty
                           ? ride.dropoffAddress
-                          : (ride.noDestination ? 'No destination — told in person' : '--'),
+                          : (ride.noDestination ? AppLocalizations.of(context).noDestinationToldInPerson : '--'),
                     ),
                   ],
                 )),
@@ -154,7 +156,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                 _Card(child: Row(children: [
                   _StatItem(
                     icon: Icons.straighten_outlined,
-                    label: 'Distance',
+                    label: AppLocalizations.of(context).distance,
                     value: _distKm != null
                         ? '${_distKm!.toStringAsFixed(1)} km'
                         : '--',
@@ -162,26 +164,26 @@ class DriverTripSummaryScreen extends StatelessWidget {
                   _Divider(),
                   _StatItem(
                     icon: Icons.access_time_outlined,
-                    label: 'Duration',
+                    label: AppLocalizations.of(context).duration,
                     value: _durMin != null ? '$_durMin min' : '--',
                   ),
                   _Divider(),
                   _StatItem(
                     icon: Icons.directions_car_outlined,
-                    label: 'Type',
-                    value: _serviceLabel,
+                    label: AppLocalizations.of(context).type,
+                    value: _serviceLabel(context),
                   ),
                 ])),
                 SizedBox(height: 12),
 
                 // ── Fare summary ────────────────────────────────────────────
                 _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('FARE SUMMARY',
+                  Text(AppLocalizations.of(context).fareSummary,
                       style: TextStyle(color: context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                   const SizedBox(height: 14),
                   if (_distKm != null) ...[
                     _FareRow(
-                      label: 'Base fare',
+                      label: AppLocalizations.of(context).baseFare,
                       value: AppTheme.khr(3000),
                     ),
                     const SizedBox(height: 8),
@@ -193,7 +195,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     Divider(color: Theme.of(context).dividerColor, height: 16),
                   ],
                   Row(children: [
-                    Text('Total Fare',
+                    Text(AppLocalizations.of(context).totalFare,
                         style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
                     Spacer(),
                     Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -208,7 +210,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
 
                 // ── Payment method ──────────────────────────────────────────
                 _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('PAYMENT METHOD',
+                  Text(AppLocalizations.of(context).paymentMethod2,
                       style: TextStyle(color: context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                   const SizedBox(height: 14),
                   _PaymentMethodDisplay(method: ride.paymentMethod ?? 'cash'),
@@ -231,7 +233,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                child: const Text('Back to Dashboard',
+                child: Text(AppLocalizations.of(context).backToDashboard,
                     style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ),
@@ -341,20 +343,21 @@ class _PaymentMethodDisplay extends StatelessWidget {
   final String method;
   const _PaymentMethodDisplay({required this.method});
 
-  static const _methods = [
-    _PayMethod('cash',        'Cash',        Icons.payments_outlined,    Color(0xFF6B7280)),
-    _PayMethod('aba',         'ABA Pay',     Icons.account_balance,      Color(0xFF003087)),
-    _PayMethod('acleda',      'ACLEDA',      Icons.account_balance,      Color(0xFF006B3F)),
-    _PayMethod('wing',        'Wing',        Icons.flight_takeoff,       Color(0xFFFF6B00)),
-    _PayMethod('wallet',      'ROTEH Pay',Icons.account_balance_wallet,Color(0xFF00B14F)),
-    _PayMethod('other_online','Online Pay',  Icons.language,             Color(0xFF2196F3)),
+  List<_PayMethod> _methodsFor(AppLocalizations l) => [
+    _PayMethod('cash',        l.cash,     Icons.payments_outlined,     const Color(0xFF6B7280)),
+    _PayMethod('aba',         l.abaPay,   Icons.account_balance,       const Color(0xFF003087)),
+    _PayMethod('acleda',      l.acleda,   Icons.account_balance,       const Color(0xFF006B3F)),
+    _PayMethod('wing',        l.wing,     Icons.flight_takeoff,        const Color(0xFFFF6B00)),
+    _PayMethod('wallet',      l.rotehPay, Icons.account_balance_wallet,const Color(0xFF00B14F)),
+    _PayMethod('other_online',l.onlinePay,Icons.language,              const Color(0xFF2196F3)),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final matched = _methods.firstWhere(
+    final methods = _methodsFor(AppLocalizations.of(context));
+    final matched = methods.firstWhere(
       (m) => m.key == method,
-      orElse: () => _methods.first,
+      orElse: () => methods.first,
     );
 
     return Row(children: [
@@ -370,7 +373,7 @@ class _PaymentMethodDisplay extends StatelessWidget {
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(matched.label,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
-        Text('Payment received', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+        Text(AppLocalizations.of(context).paymentReceived, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
       ]),
       const Spacer(),
       Container(
@@ -379,7 +382,7 @@ class _PaymentMethodDisplay extends StatelessWidget {
           color: const Color(0xFF00B14F).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Text('Confirmed',
+        child: Text(AppLocalizations.of(context).confirmed,
             style: TextStyle(color: Color(0xFF00B14F), fontSize: 11, fontWeight: FontWeight.w700)),
       ),
     ]);

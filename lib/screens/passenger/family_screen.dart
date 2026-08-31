@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../utils/phone_utils.dart';
+import '../../l10n/app_localizations.dart';
 import 'ride_booking.dart';
 
 class FamilyScreen extends StatefulWidget {
@@ -37,12 +38,12 @@ class _FamilyScreenState extends State<FamilyScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Family Account'),
+        title: Text(AppLocalizations.of(context).familyAccountTitle),
         actions: [
           if (_group != null)
             IconButton(
               icon: const Icon(Icons.person_add_rounded),
-              tooltip: 'Add member',
+              tooltip: AppLocalizations.of(context).addMemberTooltip,
               onPressed: () => _showAddMember(context),
             ),
         ],
@@ -122,12 +123,12 @@ class _SetupViewState extends State<_SetupView> {
               color: AppTheme.accent, size: 40),
         ),
         SizedBox(height: 20),
-        Text('Create a Family Group',
+        Text(AppLocalizations.of(context).createFamilyGroupTitle,
             style: TextStyle(color: context.appTextPrimary, fontSize: 20,
                 fontWeight: FontWeight.w700)),
         SizedBox(height: 8),
         Text(
-          'Book rides on behalf of family members. They don\'t need an app — just a phone number.',
+          AppLocalizations.of(context).familyGroupDescription,
           textAlign: TextAlign.center,
           style: TextStyle(color: context.appTextSecondary, height: 1.5),
         ),
@@ -136,7 +137,7 @@ class _SetupViewState extends State<_SetupView> {
           controller: _nameCtrl,
           style: TextStyle(color: context.appTextPrimary),
           decoration: InputDecoration(
-            hintText: 'Group name (e.g. Sokkheng Family)',
+            hintText: AppLocalizations.of(context).groupNameHint,
             hintStyle: TextStyle(color: context.appTextSecondary),
             prefixIcon: Icon(Icons.group_rounded,
                 color: context.appTextSecondary, size: 20),
@@ -164,7 +165,7 @@ class _SetupViewState extends State<_SetupView> {
                 ? const SizedBox(width: 18, height: 18,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 : const Icon(Icons.add_rounded),
-            label: const Text('Create Group',
+            label: Text(AppLocalizations.of(context).createGroup,
                 style: TextStyle(fontWeight: FontWeight.w700)),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.accent,
@@ -210,7 +211,7 @@ class _GroupView extends StatelessWidget {
               Text(group.name,
                   style: const TextStyle(color: Colors.white, fontSize: 17,
                       fontWeight: FontWeight.w800)),
-              Text('${group.members.length} member${group.members.length != 1 ? "s" : ""}',
+              Text('${group.members.length} ${AppLocalizations.of(context).membersCountSuffix}',
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
                       fontSize: 13)),
             ])),
@@ -221,14 +222,14 @@ class _GroupView extends StatelessWidget {
 
         // Members label + add button
         Row(children: [
-          Text('Members',
+          Text(AppLocalizations.of(context).membersLabel,
               style: TextStyle(color: context.appTextPrimary, fontSize: 14,
                   fontWeight: FontWeight.w700)),
           Spacer(),
           TextButton.icon(
             onPressed: onAddMember,
             icon: Icon(Icons.add_rounded, size: 16, color: AppTheme.accent),
-            label: Text('Add', style: TextStyle(color: AppTheme.accent,
+            label: Text(AppLocalizations.of(context).add, style: TextStyle(color: AppTheme.accent,
                 fontWeight: FontWeight.w600)),
             style: TextButton.styleFrom(padding: EdgeInsets.zero),
           ),
@@ -240,7 +241,7 @@ class _GroupView extends StatelessWidget {
             padding: EdgeInsets.all(20),
             decoration: BoxDecoration(
                 color: context.appSurface, borderRadius: BorderRadius.circular(14)),
-            child: Center(child: Text('No members yet. Add a family member to book rides for them.',
+            child: Center(child: Text(AppLocalizations.of(context).noMembersYetMsg,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.appTextSecondary, fontSize: 13))),
           )
@@ -287,19 +288,19 @@ class _GroupView extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Remove Member?',
+        title: Text(AppLocalizations.of(context).removeMemberQuestion,
             style: TextStyle(color: context.appTextPrimary)),
-        content: Text('Remove ${m.name} from the family group?',
+        content: Text('${AppLocalizations.of(context).removeMemberPrefix} ${m.name} ${AppLocalizations.of(context).fromFamilyGroupQuestionSuffix}',
             style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel',
+              child: Text(AppLocalizations.of(context).cancel,
                   style: TextStyle(color: context.appTextSecondary))),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove',
-                  style: TextStyle(color: AppTheme.danger))),
+              child: Text(AppLocalizations.of(context).remove,
+                  style: const TextStyle(color: AppTheme.danger))),
         ],
       ),
     );
@@ -365,7 +366,7 @@ class _MemberCard extends StatelessWidget {
                 Icon(Icons.check_circle_outline_rounded,
                     color: AppTheme.success, size: 12),
                 SizedBox(width: 3),
-                Text('Has AutoRide account',
+                Text(AppLocalizations.of(context).hasAutorideAccountLabel,
                     style: TextStyle(color: AppTheme.success, fontSize: 11)),
               ]),
             ),
@@ -382,7 +383,7 @@ class _MemberCard extends StatelessWidget {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text('Book', style: TextStyle(
+            child: Text(AppLocalizations.of(context).bookLabel, style: TextStyle(
                 fontWeight: FontWeight.w700, fontSize: 13)),
           ),
           SizedBox(height: 6),
@@ -421,9 +422,10 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
   bool    _busy = false;
   String? _err;
 
-  static const _suggestions = [
-    'Mother', 'Father', 'Spouse', 'Son', 'Daughter', 'Sibling', 'Friend',
-  ];
+  List<String> _suggestions(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [l.mother, l.father, l.spouse, l.son, l.daughter, l.sibling, l.friend];
+  }
 
   @override
   void dispose() {
@@ -463,25 +465,25 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
           20 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Add Family Member',
+        Text(AppLocalizations.of(context).addFamilyMemberTitle,
             style: TextStyle(color: context.appTextPrimary, fontSize: 17,
                 fontWeight: FontWeight.w700)),
         SizedBox(height: 16),
-        _FieldWidget(ctrl: _nameCtrl, hint: 'Full name *',
+        _FieldWidget(ctrl: _nameCtrl, hint: AppLocalizations.of(context).fullNameStarHint,
             icon: Icons.person_outline_rounded),
         SizedBox(height: 10),
-        _FieldWidget(ctrl: _phoneCtrl, hint: 'Phone number *',
+        _FieldWidget(ctrl: _phoneCtrl, hint: AppLocalizations.of(context).phoneNumberStarHint,
             icon: Icons.phone_outlined, keyboard: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
         SizedBox(height: 10),
         _FieldWidget(ctrl: _relationshipCtrl,
-            hint: 'Relationship (e.g. Mother, Friend…)',
+            hint: AppLocalizations.of(context).relationshipHint,
             icon: Icons.people_outline_rounded),
         SizedBox(height: 8),
         // Quick-tap suggestions (free text — tapping fills the field)
         Wrap(
           spacing: 8, runSpacing: 6,
-          children: _suggestions.map((s) => GestureDetector(
+          children: _suggestions(context).map((s) => GestureDetector(
             onTap: () => setState(() => _relationshipCtrl.text = s),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -519,8 +521,8 @@ class _AddMemberSheetState extends State<_AddMemberSheet> {
             child: _busy
                 ? const SizedBox(width: 20, height: 20,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : const Text('Add Member',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
+                : Text(AppLocalizations.of(context).addMemberBtn,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
           ),
         ),
       ]),
@@ -545,9 +547,10 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
   bool    _busy = false;
   String? _err;
 
-  static const _suggestions = [
-    'Mother', 'Father', 'Spouse', 'Son', 'Daughter', 'Sibling', 'Friend',
-  ];
+  List<String> _suggestions(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [l.mother, l.father, l.spouse, l.son, l.daughter, l.sibling, l.friend];
+  }
 
   @override
   void dispose() {
@@ -587,24 +590,24 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
           20 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Edit ${widget.member.name}',
+        Text('${AppLocalizations.of(context).edit} ${widget.member.name}',
             style: TextStyle(color: context.appTextPrimary, fontSize: 17,
                 fontWeight: FontWeight.w700)),
         SizedBox(height: 16),
-        _FieldWidget(ctrl: _nameCtrl, hint: 'Full name',
+        _FieldWidget(ctrl: _nameCtrl, hint: AppLocalizations.of(context).fullNameHint,
             icon: Icons.person_outline_rounded),
         SizedBox(height: 10),
-        _FieldWidget(ctrl: _phoneCtrl, hint: 'Phone number',
+        _FieldWidget(ctrl: _phoneCtrl, hint: AppLocalizations.of(context).phoneNumberHint2,
             icon: Icons.phone_outlined, keyboard: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
         SizedBox(height: 10),
         _FieldWidget(ctrl: _relationshipCtrl,
-            hint: 'Relationship (e.g. Mother, Friend…)',
+            hint: AppLocalizations.of(context).relationshipHint,
             icon: Icons.people_outline_rounded),
         SizedBox(height: 8),
         Wrap(
           spacing: 8, runSpacing: 6,
-          children: _suggestions.map((s) => GestureDetector(
+          children: _suggestions(context).map((s) => GestureDetector(
             onTap: () => setState(() => _relationshipCtrl.text = s),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -635,7 +638,7 @@ class _EditMemberSheetState extends State<_EditMemberSheet> {
             child: _busy
                 ? const SizedBox(width: 20, height: 20,
                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : const Text('Save Changes'),
+                : Text(AppLocalizations.of(context).saveChanges),
           ),
         ),
       ]),
@@ -709,7 +712,7 @@ class _ErrorView extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh_rounded),
-          label: const Text('Retry'),
+          label: Text(AppLocalizations.of(context).retry),
           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent,
               foregroundColor: Colors.white),
         ),

@@ -20,14 +20,17 @@ import '../../main.dart' show appLocale;
 enum _Dur { m1, m2, m3, m6, y1, y2 }
 
 extension _DurX on _Dur {
-  String get label => switch (this) {
-    _Dur.m1 => '1 Month',
-    _Dur.m2 => '2 Months',
-    _Dur.m3 => '3 Months',
-    _Dur.m6 => '6 Months',
-    _Dur.y1 => '1 Year',
-    _Dur.y2 => '2 Years',
-  };
+  String get label {
+    final l = AppLocalizations(appLocale.value);
+    return switch (this) {
+      _Dur.m1 => l.durMonth1,
+      _Dur.m2 => l.durMonth2,
+      _Dur.m3 => l.durMonth3,
+      _Dur.m6 => l.durMonth6,
+      _Dur.y1 => l.durYear1,
+      _Dur.y2 => l.durYear2,
+    };
+  }
   IconData get icon => switch (this) {
     _Dur.m1 || _Dur.m2 || _Dur.m3 || _Dur.m6 => Icons.calendar_month_outlined,
     _Dur.y1 || _Dur.y2                         => Icons.calendar_today_outlined,
@@ -45,20 +48,26 @@ extension _DurX on _Dur {
 enum _LocType { pickup, delivery }
 
 extension _LocTypeX on _LocType {
-  String get label    => this == _LocType.pickup ? 'Pick Up' : 'Delivery';
-  String get subtitle => this == _LocType.pickup
-      ? "I'll collect the car myself"
-      : "Deliver the car to my address";
+  String get label {
+    final l = AppLocalizations(appLocale.value);
+    return this == _LocType.pickup ? l.pickUpLabel : l.delivery;
+  }
+  String get subtitle {
+    final l = AppLocalizations(appLocale.value);
+    return this == _LocType.pickup ? l.collectCarMyself : l.deliverCarToAddress;
+  }
   IconData get icon   => this == _LocType.pickup
       ? Icons.directions_walk_rounded
       : Icons.local_shipping_outlined;
   Color get pinColor  => this == _LocType.pickup ? AppTheme.accent : AppTheme.danger;
-  String get hint     => this == _LocType.pickup
-      ? 'Tap to set pickup location'
-      : 'Tap to set delivery location';
-  String get mapTitle => this == _LocType.pickup
-      ? 'Set Pickup Location'
-      : 'Set Delivery Location';
+  String get hint {
+    final l = AppLocalizations(appLocale.value);
+    return this == _LocType.pickup ? l.tapToSetPickupLocation : l.tapToSetDeliveryLocation;
+  }
+  String get mapTitle {
+    final l = AppLocalizations(appLocale.value);
+    return this == _LocType.pickup ? l.setPickupLocationTitle : l.setDeliveryLocationTitle;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,15 +106,18 @@ class _RentalCar {
     );
   }
 
-  static String _labelFor(String type) => switch (type) {
-    'suv'        => 'SUV',
-    'van'        => 'Van',
-    'motorcycle' => 'Motorcycle',
-    'truck'      => 'Truck',
-    'tuk_tuk'    => 'Tuk Tuk',
-    'electric'   => 'Electric',
-    _            => 'Sedan',
-  };
+  static String _labelFor(String type) {
+    final l = AppLocalizations(appLocale.value);
+    return switch (type) {
+      'suv'        => l.suvLabel,
+      'van'        => l.van,
+      'motorcycle' => l.motorcycle,
+      'truck'      => l.truck,
+      'tuk_tuk'    => l.tukTuk,
+      'electric'   => l.electricLabel,
+      _            => l.sedanLabel,
+    };
+  }
 
   static double _toDouble(dynamic v) =>
       v == null ? 0 : v is num ? v.toDouble() : double.tryParse(v.toString()) ?? 0;
@@ -192,13 +204,16 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     return '\$${fmt.format(v)}';
   }
 
-  static const _payments = [
-    _PayOpt(id: 'cash',         label: 'Cash',         subtitle: 'Pay in cash on pickup',   icon: Icons.payments_outlined),
-    _PayOpt(id: 'wallet',       label: 'ROTEH Pay',    subtitle: 'In-app wallet balance',   icon: Icons.account_balance_wallet_outlined),
-    _PayOpt(id: 'aba',          label: 'ABA Pay',      subtitle: 'ABA mobile banking',      icon: Icons.account_balance),
-    _PayOpt(id: 'wing',         label: 'Wing',         subtitle: 'Wing mobile wallet',      icon: Icons.flight_takeoff),
-    _PayOpt(id: 'other_online', label: 'Other Online', subtitle: 'Other online payment',    icon: Icons.language_outlined),
-  ];
+  List<_PayOpt> get _payments {
+    final l = AppLocalizations(appLocale.value);
+    return [
+      _PayOpt(id: 'cash',         label: l.cash,        subtitle: l.payInCashOnPickup,      icon: Icons.payments_outlined),
+      _PayOpt(id: 'wallet',       label: l.rotehPay,     subtitle: l.inAppWalletBalance,    icon: Icons.account_balance_wallet_outlined),
+      _PayOpt(id: 'aba',          label: l.abaPay,       subtitle: l.abaMobileBanking,      icon: Icons.account_balance),
+      _PayOpt(id: 'wing',         label: l.wing,         subtitle: l.wingMobileWallet,      icon: Icons.flight_takeoff),
+      _PayOpt(id: 'other_online', label: l.otherOnline,  subtitle: l.otherOnlinePayment,    icon: Icons.language_outlined),
+    ];
+  }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -295,7 +310,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   void _openLocTypeSheet() {
     _openSheet<_LocType>(
       context: context,
-      title: 'Location Type',
+      title: AppLocalizations.of(context).locationTypeLabel,
       items: _LocType.values.map((t) => _SheetItem(
         value: t, label: t.label, subtitle: t.subtitle, icon: t.icon,
       )).toList(),
@@ -318,11 +333,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   void _openDurationSheet() {
     _openSheet<_Dur>(
       context: context,
-      title: 'Rental Duration',
+      title: AppLocalizations.of(context).rentalDurationTitle,
       items: _Dur.values.map((d) => _SheetItem(
         value: d,
         label: d.label,
-        subtitle: 'Ends ${_fmt(_calcEndDate(_startDate, d))}',
+        subtitle: '${AppLocalizations.of(context).endsPrefix} ${_fmt(_calcEndDate(_startDate, d))}',
         icon: d.icon,
       )).toList(),
       selected: _duration,
@@ -333,7 +348,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   void _openPaymentSheet() {
     _openSheet<String>(
       context: context,
-      title: 'Payment Method',
+      title: AppLocalizations.of(context).paymentMethod,
       items: _payments.map((p) => _SheetItem(
         value: p.id, label: p.label, subtitle: p.subtitle, icon: p.icon,
       )).toList(),
@@ -361,7 +376,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       setState(() { _couponError = e.message; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _couponError = 'Failed to apply coupon.'; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
+      setState(() { _couponError = AppLocalizations.of(context).failedToApplyCoupon; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
     }
   }
 
@@ -377,7 +392,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     final user      = r['user']     as Map<String, dynamic>?;
     final vtype     = r['vehicle_type'] as String? ?? '';
     final title     = product?['title'] as String?
-                          ?? (vtype.isEmpty ? 'Vehicle' : vtype[0].toUpperCase() + vtype.substring(1).replaceAll('_', ' '));
+                          ?? (vtype.isEmpty ? AppLocalizations.of(context).vehicle : vtype[0].toUpperCase() + vtype.substring(1).replaceAll('_', ' '));
     final image     = product?['image']  as String?;
     // field names vary: total_days | days, daily_rate_usd | daily_rate, total_amount_usd | total_amount | total
     final days  = (r['total_days']  ?? r['days'])  as num?;
@@ -429,7 +444,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     color: AppTheme.success.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text('Booked #$rentalId',
+                  child: Text('${AppLocalizations.of(context).bookedHashPrefix}$rentalId',
                       style: const TextStyle(
                           color: AppTheme.success,
                           fontWeight: FontWeight.w700, fontSize: 12)),
@@ -454,17 +469,17 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                       fontWeight: FontWeight.w800, fontSize: 18)),
               const SizedBox(height: 14),
               if (startDate.isNotEmpty)
-                _ConfRow(label: 'Dates', value: '$startDate → $endDate'),
+                _ConfRow(label: AppLocalizations.of(context).datesLabel, value: '$startDate → $endDate'),
               if (days != null)
-                _ConfRow(label: 'Duration', value: '${days.toInt()} day${days.toInt() == 1 ? '' : 's'}'),
+                _ConfRow(label: AppLocalizations.of(context).duration, value: '${days.toInt()} ${AppLocalizations.of(context).daysLabel}'),
               if (daily != null)
-                _ConfRow(label: 'Daily rate', value: usd(daily.toDouble())),
+                _ConfRow(label: AppLocalizations.of(context).dailyRateLabel, value: usd(daily.toDouble())),
               if (total != null)
-                _ConfRow(label: 'Total', value: usd(total.toDouble()), highlight: true),
+                _ConfRow(label: AppLocalizations.of(context).total, value: usd(total.toDouble()), highlight: true),
               if (user != null) ...[
                 const Divider(height: 24),
-                _ConfRow(label: 'Renter', value: user['name'] as String? ?? ''),
-                _ConfRow(label: 'Phone',  value: user['phone'] as String? ?? ''),
+                _ConfRow(label: AppLocalizations.of(context).renterLabel, value: user['name'] as String? ?? ''),
+                _ConfRow(label: AppLocalizations.of(context).phone,  value: user['phone'] as String? ?? ''),
               ],
               const SizedBox(height: 20),
               SizedBox(
@@ -483,8 +498,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: const Text('Done',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  child: Text(AppLocalizations.of(context).done,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                 ),
               ),
               SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
@@ -497,16 +512,16 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
 
   Future<void> _bookNow() async {
     if (_selectedCar == null) {
-      setState(() => _bookError = 'Please select a Vehicle before booking.');
+      setState(() => _bookError = AppLocalizations.of(context).selectVehicleBeforeBooking);
       return;
     }
     if (_locType == _LocType.delivery && _locAddress.isEmpty) {
-      setState(() => _bookError = 'Please set a delivery location.');
+      setState(() => _bookError = AppLocalizations.of(context).setDeliveryLocationError);
       return;
     }
     if (_isGuest) {
       if (_guestNameCtrl.text.trim().isEmpty || _guestPhoneCtrl.text.trim().isEmpty) {
-        setState(() => _bookError = 'Please enter your name and phone number.');
+        setState(() => _bookError = AppLocalizations.of(context).enterNamePhoneError);
         return;
       }
     }
@@ -553,8 +568,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: const Text('Rental Vehicle',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        title: Text(AppLocalizations.of(context).rentalVehicleTitle,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
       ),
       body: Column(children: [
         Expanded(
@@ -563,11 +578,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
               // ── Location ──────────────────────────────────────────────────
-              _label('Location'),
+              _label(AppLocalizations.of(context).locationLabel),
               const SizedBox(height: 8),
               _DropdownTile(
                 icon: _locType.icon,
-                label: 'Location Type',
+                label: AppLocalizations.of(context).locationTypeLabel,
                 value: _locType.label,
                 subtitle: _locType.subtitle,
                 onTap: _openLocTypeSheet,
@@ -586,7 +601,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               const SizedBox(height: 16),
 
               // ── Vehicle for rent ─────────────────────────────────────────────
-              _label('Vehicle for Rent'),
+              _label(AppLocalizations.of(context).vehicleForRentLabel),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _browseCars,
@@ -615,11 +630,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                             ),
                             const SizedBox(width: 14),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('Browse Available Vehicle',
+                              Text(AppLocalizations.of(context).browseAvailableVehicle,
                                   style: TextStyle(color: context.appTextPrimary,
                                       fontWeight: FontWeight.w700, fontSize: 14)),
                               const SizedBox(height: 2),
-                              Text('Tap to view all Vehicle for rent',
+                              Text(AppLocalizations.of(context).tapToViewAllVehicles,
                                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                             ])),
                             const Icon(Icons.chevron_right_rounded,
@@ -667,8 +682,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                                 color: AppTheme.accent.withValues(alpha: 0.10),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text('Change',
-                                  style: TextStyle(color: AppTheme.accent,
+                              child: Text(AppLocalizations.of(context).change,
+                                  style: const TextStyle(color: AppTheme.accent,
                                       fontSize: 12, fontWeight: FontWeight.w700)),
                             ),
                           ]),
@@ -678,7 +693,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               const SizedBox(height: 16),
 
               // ── Rental Period ─────────────────────────────────────────────
-              _label('Rental Period'),
+              _label(AppLocalizations.of(context).rentalPeriodLabel),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -691,9 +706,9 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 child: Column(children: [
                   _DropdownTile(
                     icon: _duration.icon,
-                    label: 'Duration',
+                    label: AppLocalizations.of(context).duration,
                     value: _duration.label,
-                    subtitle: '$_totalDays days  ·  ends ${_fmt(_endDate)}',
+                    subtitle: '$_totalDays ${AppLocalizations.of(context).daysLabel}  ·  ${AppLocalizations.of(context).endsLabel} ${_fmt(_endDate)}',
                     onTap: _openDurationSheet,
                   ),
                   const SizedBox(height: 12),
@@ -707,7 +722,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Start Date', style: TextStyle(
+                          Text(AppLocalizations.of(context).startDateLabel, style: TextStyle(
                               color: context.appTextSecondary,
                               fontSize: 10, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 4),
@@ -736,7 +751,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                         border: Border.all(color: AppTheme.accent.withValues(alpha: 0.18)),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        const Text('End Date (auto)', style: TextStyle(
+                        Text(AppLocalizations.of(context).endDateAutoLabel, style: const TextStyle(
                             color: AppTheme.accent,
                             fontSize: 10, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
@@ -757,11 +772,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               const SizedBox(height: 16),
 
               // ── Payment ───────────────────────────────────────────────────
-              _label('Payment Method'),
+              _label(AppLocalizations.of(context).paymentMethod),
               const SizedBox(height: 8),
               _DropdownTile(
                 icon: _payment.icon,
-                label: 'Payment Method',
+                label: AppLocalizations.of(context).paymentMethod,
                 value: _payment.label,
                 subtitle: _payment.subtitle,
                 onTap: _openPaymentSheet,
@@ -770,7 +785,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
 
               // ── Guest info ────────────────────────────────────────────────
               if (_isGuest) ...[
-                _label('Your Information'),
+                _label(AppLocalizations.of(context).yourInformationLabel),
                 const SizedBox(height: 8),
                 GuestFields(
                     nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
@@ -778,14 +793,14 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               ],
 
               // ── Notes ─────────────────────────────────────────────────────
-              _label('Notes (optional)'),
+              _label(AppLocalizations.of(context).notesOptionalLabel),
               const SizedBox(height: 8),
               TextField(
                 controller: _notesCtrl,
                 maxLines: 3,
                 style: TextStyle(color: context.appTextPrimary, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Any special requests…',
+                  hintText: AppLocalizations.of(context).anySpecialRequestsHint,
                   hintStyle: TextStyle(color: context.appTextSecondary),
                   filled: true,
                   fillColor: context.appSurface,
@@ -798,7 +813,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               const SizedBox(height: 20),
 
               // ── Coupon code ───────────────────────────────────────────────
-              _label('Coupon Code'),
+              _label(AppLocalizations.of(context).couponCodeLabel),
               const SizedBox(height: 8),
               if (_appliedCode != null) ...[
                 Container(
@@ -814,7 +829,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(_appliedCode!, style: const TextStyle(
                           color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
-                      Text('- ${AppTheme.khr(_discountKhr)} discount applied',
+                      Text('- ${AppTheme.khr(_discountKhr)} ${AppLocalizations.of(context).discountAppliedSuffix}',
                           style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     ])),
                     GestureDetector(
@@ -839,7 +854,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                       style: TextStyle(color: context.appTextPrimary, fontSize: 14,
                           fontWeight: FontWeight.w600, letterSpacing: 1.2),
                       decoration: InputDecoration(
-                        hintText: 'Enter coupon code',
+                        hintText: AppLocalizations.of(context).enterCouponCodeHint,
                         hintStyle: TextStyle(color: context.appTextSecondary,
                             fontWeight: FontWeight.w400, letterSpacing: 0),
                         filled: true,
@@ -869,7 +884,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                       child: _applyingCoupon
                           ? const SizedBox(width: 18, height: 18,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                          : Text(AppLocalizations.of(context).apply, style: const TextStyle(fontWeight: FontWeight.w700)),
                     ),
                   ),
                 ]),
@@ -895,24 +910,24 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                       blurRadius: 8, offset: const Offset(0, 2))],
                 ),
                 child: Column(children: [
-                  Text('Booking Summary',
+                  Text(AppLocalizations.of(context).bookingSummaryLabel,
                       style: TextStyle(color: context.appTextPrimary,
                           fontSize: 15, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 12),
-                  _SummaryRow('Vehicle',    car?.name ?? '—'),
+                  _SummaryRow(AppLocalizations.of(context).vehicle,    car?.name ?? '—'),
                   const SizedBox(height: 8),
-                  _SummaryRow('Duration',   _duration.label),
+                  _SummaryRow(AppLocalizations.of(context).duration,   _duration.label),
                   const SizedBox(height: 8),
-                  _SummaryRow('Daily Rate', car == null ? '—' : _usd(_dailyRate)),
+                  _SummaryRow(AppLocalizations.of(context).dailyRateLabel, car == null ? '—' : _usd(_dailyRate)),
                   const SizedBox(height: 8),
-                  _SummaryRow('Days',       car == null ? '—' : '$_totalDays days'),
+                  _SummaryRow(AppLocalizations.of(context).daysCapLabel, car == null ? '—' : '$_totalDays ${AppLocalizations.of(context).daysLabel}'),
                   const SizedBox(height: 8),
                   Row(children: [
                     Row(mainAxisSize: MainAxisSize.min, children: [
                       const Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.accent),
                       const SizedBox(width: 4),
                       Text(
-                        _appliedCode != null ? 'Discount ($_appliedCode)' : 'Discount',
+                        _appliedCode != null ? '${AppLocalizations.of(context).discountLabel} ($_appliedCode)' : AppLocalizations.of(context).discountLabel,
                         style: TextStyle(color: context.appTextSecondary, fontSize: 14),
                       ),
                     ]),
@@ -928,7 +943,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                   ]),
                   Divider(color: context.appCardBg, height: 20),
                   Row(children: [
-                    Text('Total', style: TextStyle(color: context.appTextPrimary,
+                    Text(AppLocalizations.of(context).total, style: TextStyle(color: context.appTextPrimary,
                         fontWeight: FontWeight.w700, fontSize: 16)),
                     const Spacer(),
                     Text(
@@ -983,8 +998,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               child: _booking
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : const Text('Book Now',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                  : Text(AppLocalizations.of(context).bookNowLabel,
+                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
             ),
           ),
         ),
@@ -1308,8 +1323,8 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: const Text('Vehicle for Rent',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        title: Text(AppLocalizations.of(context).vehicleForRentLabel,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
         actions: [
           IconButton(
             onPressed: _openFilterSheet,
@@ -1332,7 +1347,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
               scrollDirection: Axis.horizontal,
               child: Row(children: [
                 _VehicleTypePill(
-                  label: 'All',
+                  label: AppLocalizations.of(context).all,
                   active: _vTypeId == null,
                   onTap: () { setState(() => _vTypeId = null); _load(); },
                 ),
@@ -1371,10 +1386,10 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                   setState(() { _vTypeId = null; _vSizeId = null; _vColorId = null; });
                   _load();
                 },
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 6),
-                  child: Text('Clear all',
-                      style: TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Text(AppLocalizations.of(context).clearAll,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12, decoration: TextDecoration.underline)),
                 ),
               ),
             ]),
@@ -1400,7 +1415,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                 elevation: 0,
               ),
               child: Text(
-                _selected == null ? 'Select a Vehicle' : 'Rent — ${_selected!.title}',
+                _selected == null ? AppLocalizations.of(context).selectAVehicleLabel : '${AppLocalizations.of(context).rentDashPrefix} ${_selected!.title}',
                 style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
@@ -1419,14 +1434,14 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),
         const SizedBox(height: 12),
-        Text('Failed to load vehicles',
+        Text(AppLocalizations.of(context).failedToLoadVehicles,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        TextButton(onPressed: _load, child: const Text('Retry')),
+        TextButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_products.isEmpty) {
-      return Center(child: Text('No Vehicle available for rent.',
+      return Center(child: Text(AppLocalizations.of(context).noVehicleAvailableForRent,
           style: TextStyle(color: context.appTextSecondary)));
     }
     return ListView.separated(
@@ -1485,7 +1500,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text('+${p.images.length - 1} photos',
+                      child: Text('+${p.images.length - 1} ${AppLocalizations.of(context).photosCountSuffix}',
                           style: const TextStyle(color: Colors.white, fontSize: 11)),
                     ),
                   ),
@@ -1690,10 +1705,10 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Text('Filter', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+              Text(AppLocalizations.of(context).filter, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
               GestureDetector(
                 onTap: () => setState(() { _vType = null; _vSize = null; _vColor = null; }),
-                child: const Text('Clear all', style: TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600)),
+                child: Text(AppLocalizations.of(context).clearAll, style: const TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             ]),
           ),
@@ -1704,19 +1719,19 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 if (widget.vehicleTypes.isNotEmpty) ...[
-                  _sectionTitle('Vehicle Type'),
+                  _sectionTitle(AppLocalizations.of(context).vehicleType),
                   for (final vt in widget.vehicleTypes)
                     _checkboxRow(vt.name(appLocale.value.languageCode), _vType == vt.id,
                         () => setState(() => _vType = _vType == vt.id ? null : vt.id)),
                 ],
                 if (widget.vehicleSizes.isNotEmpty) ...[
-                  _sectionTitle('Size'),
+                  _sectionTitle(AppLocalizations.of(context).size),
                   for (final vs in widget.vehicleSizes)
                     _checkboxRow(vs.label, _vSize == vs.id,
                         () => setState(() => _vSize = _vSize == vs.id ? null : vs.id)),
                 ],
                 if (widget.vehicleColors.isNotEmpty) ...[
-                  _sectionTitle('Color'),
+                  _sectionTitle(AppLocalizations.of(context).color),
                   Wrap(spacing: 14, runSpacing: 10, children: [
                     for (final vc in widget.vehicleColors)
                       GestureDetector(
@@ -1760,7 +1775,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
                   onPressed: () => Navigator.pop(context, _RentalFilterSelection(
                     vehicleTypeId: _vType, vehicleSizeId: _vSize, vehicleColorId: _vColor,
                   )),
-                  child: const Text('Apply', style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: Text(AppLocalizations.of(context).apply, style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
             ),

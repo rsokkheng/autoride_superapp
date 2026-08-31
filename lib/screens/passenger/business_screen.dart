@@ -75,10 +75,10 @@ class _BusinessScreenState extends State<BusinessScreen>
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(text: 'Account'),
-            Tab(text: 'Members'),
-            Tab(text: 'Trips'),
+          tabs: [
+            Tab(text: AppLocalizations.of(context).tabAccount),
+            Tab(text: AppLocalizations.of(context).tabMembers),
+            Tab(text: AppLocalizations.of(context).trips),
           ],
         ),
       ),
@@ -277,13 +277,13 @@ class _NoAccountViewState extends State<_NoAccountView> {
                 style: TextStyle(color: context.appTextSecondary, height: 1.5)),
             const SizedBox(height: 32),
             _BigBtn(
-              label: 'Register a Business',
+              label: AppLocalizations.of(context).registerABusiness,
               icon: Icons.add_business_rounded,
               onTap: widget.onRegister,
             ),
             const SizedBox(height: 12),
             _BigBtn(
-              label: 'Join with Invite Code',
+              label: AppLocalizations.of(context).joinWithInviteCode,
               icon: Icons.qr_code_rounded,
               outlined: true,
               onTap: widget.onJoin,
@@ -296,16 +296,16 @@ class _NoAccountViewState extends State<_NoAccountView> {
       return SingleChildScrollView(
         padding: EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _SectionLabel('Join Business Account'),
+          _SectionLabel(AppLocalizations.of(context).joinBusinessAccount),
           SizedBox(height: 4),
           Text(AppLocalizations.of(context).enterInviteCode,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           const SizedBox(height: 20),
-          _Field(ctrl: _codeCtrl, hint: 'Invite code (e.g. ABC12345)',
+          _Field(ctrl: _codeCtrl, hint: AppLocalizations.of(context).inviteCodeHint,
               icon: Icons.key_rounded, inputFormatters: [_UpperCase()]),
           if (_err != null) ...[const SizedBox(height: 10), _ErrMsg(_err!)],
           const SizedBox(height: 20),
-          _SubmitBtn(label: 'Join Business', busy: _busy, onTap: _join),
+          _SubmitBtn(label: AppLocalizations.of(context).joinBusiness, busy: _busy, onTap: _join),
         ]),
       );
     }
@@ -315,7 +315,7 @@ class _NoAccountViewState extends State<_NoAccountView> {
       padding: const EdgeInsets.all(20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const _SectionLabel('Register Business'),
+          _SectionLabel(AppLocalizations.of(context).registerBusiness),
           const Spacer(),
           TextButton(
             onPressed: _fillSample,
@@ -328,24 +328,24 @@ class _NoAccountViewState extends State<_NoAccountView> {
           ),
         ]),
         const SizedBox(height: 12),
-        _Field(ctrl: _nameCtrl,     hint: 'Company name *',       icon: Icons.business_rounded),
+        _Field(ctrl: _nameCtrl,     hint: AppLocalizations.of(context).companyNameRequiredHint, icon: Icons.business_rounded),
         const SizedBox(height: 10),
-        _Field(ctrl: _taxCtrl,      hint: 'Tax ID / VAT number',  icon: Icons.receipt_long_outlined),
+        _Field(ctrl: _taxCtrl,      hint: AppLocalizations.of(context).taxIdHint,  icon: Icons.receipt_long_outlined),
         const SizedBox(height: 10),
-        _Field(ctrl: _industryCtrl, hint: 'Industry',             icon: Icons.category_outlined),
+        _Field(ctrl: _industryCtrl, hint: AppLocalizations.of(context).industryHint, icon: Icons.category_outlined),
         const SizedBox(height: 16),
-        const _SectionLabel('Contact Person'),
+        _SectionLabel(AppLocalizations.of(context).contactPerson),
         const SizedBox(height: 10),
-        _Field(ctrl: _contactCtrl, hint: 'Contact name *',  icon: Icons.person_outline_rounded),
+        _Field(ctrl: _contactCtrl, hint: AppLocalizations.of(context).contactNameRequiredHint, icon: Icons.person_outline_rounded),
         const SizedBox(height: 10),
-        _Field(ctrl: _phoneCtrl,   hint: 'Contact phone',   icon: Icons.phone_outlined,
+        _Field(ctrl: _phoneCtrl,   hint: AppLocalizations.of(context).contactPhoneHint, icon: Icons.phone_outlined,
             keyboard: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
         const SizedBox(height: 10),
-        _Field(ctrl: _emailCtrl,   hint: 'Billing email *', icon: Icons.email_outlined,
+        _Field(ctrl: _emailCtrl,   hint: AppLocalizations.of(context).billingEmailRequiredHint, icon: Icons.email_outlined,
             keyboard: TextInputType.emailAddress),
         const SizedBox(height: 16),
-        const _SectionLabel('Billing Cycle'),
+        _SectionLabel(AppLocalizations.of(context).billingCycle),
         const SizedBox(height: 10),
         Row(children: ['weekly', 'monthly'].map((c) {
           final sel = _billingCycle == c;
@@ -362,7 +362,9 @@ class _NoAccountViewState extends State<_NoAccountView> {
                   border: Border.all(color: sel ? AppTheme.accent : context.appCardBg,
                       width: sel ? 1.5 : 1),
                 ),
-                child: Text(c[0].toUpperCase() + c.substring(1),
+                child: Text(c == 'weekly'
+                        ? AppLocalizations.of(context).weeklyLabel
+                        : AppLocalizations.of(context).monthlyLabel,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: sel ? AppTheme.accent : context.appTextSecondary,
@@ -373,10 +375,10 @@ class _NoAccountViewState extends State<_NoAccountView> {
           ));
         }).toList()),
         const SizedBox(height: 10),
-        _Field(ctrl: _addressCtrl, hint: 'Company address', icon: Icons.location_on_outlined),
+        _Field(ctrl: _addressCtrl, hint: AppLocalizations.of(context).companyAddressHint, icon: Icons.location_on_outlined),
         if (_err != null) ...[const SizedBox(height: 10), _ErrMsg(_err!)],
         const SizedBox(height: 20),
-        _SubmitBtn(label: 'Register Business', busy: _busy, onTap: _register),
+        _SubmitBtn(label: AppLocalizations.of(context).registerBusiness, busy: _busy, onTap: _register),
         const SizedBox(height: 8),
       ]),
     );
@@ -482,23 +484,23 @@ class _AccountDetailState extends State<_AccountDetail> {
           ),
           const SizedBox(height: 16),
           _DetailCard(children: [
-            _DetailRow(label: 'Tax ID',        value: acc['tax_id']        as String? ?? '—'),
-            _DetailRow(label: 'Billing Email', value: acc['billing_email'] as String? ?? '—'),
-            _DetailRow(label: 'Billing Cycle', value: acc['billing_cycle'] as String? ?? '—'),
-            _DetailRow(label: 'Contact',       value: acc['contact_name']  as String? ?? '—'),
-            _DetailRow(label: 'Phone',         value: acc['contact_phone'] as String? ?? '—'),
-            _DetailRow(label: 'Address',       value: acc['address']       as String? ?? '—'),
+            _DetailRow(label: AppLocalizations.of(context).taxIdLabel,        value: acc['tax_id']        as String? ?? '—'),
+            _DetailRow(label: AppLocalizations.of(context).billingEmailLabel, value: acc['billing_email'] as String? ?? '—'),
+            _DetailRow(label: AppLocalizations.of(context).billingCycleLabel, value: acc['billing_cycle'] as String? ?? '—'),
+            _DetailRow(label: AppLocalizations.of(context).contactLabel,      value: acc['contact_name']  as String? ?? '—'),
+            _DetailRow(label: AppLocalizations.of(context).phone,             value: acc['contact_phone'] as String? ?? '—'),
+            _DetailRow(label: AppLocalizations.of(context).addressLabel,      value: acc['address']       as String? ?? '—'),
             if (acc['code'] != null)
-              _DetailRow(label: 'Invite Code', value: acc['code'] as String, isBold: true),
+              _DetailRow(label: AppLocalizations.of(context).inviteCodeLabel, value: acc['code'] as String, isBold: true),
           ]),
           const SizedBox(height: 20),
           Row(children: [
             Expanded(child: _BigBtn(
-                label: 'Edit Account', icon: Icons.edit_rounded,
+                label: AppLocalizations.of(context).editAccount, icon: Icons.edit_rounded,
                 onTap: () => setState(() => _editing = true))),
             const SizedBox(width: 10),
             Expanded(child: _BigBtn(
-                label: 'Leave', icon: Icons.exit_to_app_rounded,
+                label: AppLocalizations.of(context).leave, icon: Icons.exit_to_app_rounded,
                 outlined: true, danger: true, onTap: _leave)),
           ]),
         ]),
@@ -508,26 +510,26 @@ class _AccountDetailState extends State<_AccountDetail> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const _SectionLabel('Edit Business Account'),
+        _SectionLabel(AppLocalizations.of(context).editBusinessAccount),
         const SizedBox(height: 16),
-        _Field(ctrl: _nameCtrl,     hint: 'Company name',    icon: Icons.business_rounded),
+        _Field(ctrl: _nameCtrl,     hint: AppLocalizations.of(context).companyNameHint, icon: Icons.business_rounded),
         const SizedBox(height: 10),
-        _Field(ctrl: _taxCtrl,      hint: 'Tax ID / VAT number', icon: Icons.receipt_long_outlined),
+        _Field(ctrl: _taxCtrl,      hint: AppLocalizations.of(context).taxIdHint, icon: Icons.receipt_long_outlined),
         const SizedBox(height: 10),
-        _Field(ctrl: _emailCtrl,    hint: 'Billing email',   icon: Icons.email_outlined,
+        _Field(ctrl: _emailCtrl,    hint: AppLocalizations.of(context).billingEmailHint, icon: Icons.email_outlined,
             keyboard: TextInputType.emailAddress),
         const SizedBox(height: 10),
-        _Field(ctrl: _contactCtrl,  hint: 'Contact name',    icon: Icons.person_outline_rounded),
+        _Field(ctrl: _contactCtrl,  hint: AppLocalizations.of(context).contactNameHint, icon: Icons.person_outline_rounded),
         const SizedBox(height: 10),
-        _Field(ctrl: _phoneCtrl,    hint: 'Contact phone',   icon: Icons.phone_outlined,
+        _Field(ctrl: _phoneCtrl,    hint: AppLocalizations.of(context).contactPhoneHint, icon: Icons.phone_outlined,
             keyboard: TextInputType.phone,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
         const SizedBox(height: 10),
-        _Field(ctrl: _industryCtrl, hint: 'Industry',        icon: Icons.category_outlined),
+        _Field(ctrl: _industryCtrl, hint: AppLocalizations.of(context).industryHint, icon: Icons.category_outlined),
         const SizedBox(height: 10),
-        _Field(ctrl: _addressCtrl,  hint: 'Address',         icon: Icons.location_on_outlined),
+        _Field(ctrl: _addressCtrl,  hint: AppLocalizations.of(context).addressHint, icon: Icons.location_on_outlined),
         const SizedBox(height: 16),
-        const _SectionLabel('Billing Cycle'),
+        _SectionLabel(AppLocalizations.of(context).billingCycle),
         const SizedBox(height: 10),
         Row(children: ['weekly', 'monthly'].map((c) {
           final sel = _billingCycle == c;
@@ -544,7 +546,9 @@ class _AccountDetailState extends State<_AccountDetail> {
                   border: Border.all(color: sel ? AppTheme.accent : context.appCardBg,
                       width: sel ? 1.5 : 1),
                 ),
-                child: Text(c[0].toUpperCase() + c.substring(1),
+                child: Text(c == 'weekly'
+                        ? AppLocalizations.of(context).weeklyLabel
+                        : AppLocalizations.of(context).monthlyLabel,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: sel ? AppTheme.accent : context.appTextSecondary,
@@ -567,7 +571,7 @@ class _AccountDetailState extends State<_AccountDetail> {
             child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary)),
           )),
           const SizedBox(width: 10),
-          Expanded(child: _SubmitBtn(label: 'Save', busy: _busy, onTap: _save)),
+          Expanded(child: _SubmitBtn(label: AppLocalizations.of(context).save, busy: _busy, onTap: _save)),
         ]),
       ]),
     );
@@ -612,15 +616,15 @@ class _MembersTabState extends State<_MembersTab> {
                 style: TextStyle(color: context.appTextPrimary,
                     fontSize: 17, fontWeight: FontWeight.w700)),
             SizedBox(height: 16),
-            _Field(ctrl: roleCtrl,  hint: 'Role (member / admin)', icon: Icons.shield_outlined),
+            _Field(ctrl: roleCtrl,  hint: AppLocalizations.of(context).roleMemberAdminHint, icon: Icons.shield_outlined),
             SizedBox(height: 10),
-            _Field(ctrl: deptCtrl,  hint: 'Department',            icon: Icons.corporate_fare_rounded),
+            _Field(ctrl: deptCtrl,  hint: AppLocalizations.of(context).departmentHint,      icon: Icons.corporate_fare_rounded),
             SizedBox(height: 10),
-            _Field(ctrl: ccCtrl,    hint: 'Cost center',           icon: Icons.account_tree_outlined),
+            _Field(ctrl: ccCtrl,    hint: AppLocalizations.of(context).costCenterHint,      icon: Icons.account_tree_outlined),
             SizedBox(height: 10),
-            _Field(ctrl: empCtrl,   hint: 'Employee ID',           icon: Icons.badge_outlined),
+            _Field(ctrl: empCtrl,   hint: AppLocalizations.of(context).employeeIdHint,      icon: Icons.badge_outlined),
             SizedBox(height: 10),
-            _Field(ctrl: limitCtrl, hint: 'Monthly limit (KHR)',   icon: Icons.wallet_outlined,
+            _Field(ctrl: limitCtrl, hint: AppLocalizations.of(context).monthlyLimitKhrHint, icon: Icons.wallet_outlined,
                 keyboard: TextInputType.number),
             SizedBox(height: 12),
             Row(children: [
@@ -635,7 +639,7 @@ class _MembersTabState extends State<_MembersTab> {
             if (err != null) ...[const SizedBox(height: 8), _ErrMsg(err!)],
             const SizedBox(height: 16),
             _SubmitBtn(
-              label: 'Save Changes',
+              label: AppLocalizations.of(context).saveChanges,
               busy: busy,
               onTap: () async {
                 setS(() { busy = true; err = null; });
@@ -794,7 +798,7 @@ class _TripsTabState extends State<_TripsTab> {
             Row(children: [
               Icon(Icons.directions_car_outlined, color: AppTheme.accent, size: 16),
               SizedBox(width: 6),
-              Expanded(child: Text(t['expense_category'] as String? ?? 'Business Trip',
+              Expanded(child: Text(t['expense_category'] as String? ?? AppLocalizations.of(context).businessTripDefault,
                   style: TextStyle(color: context.appTextPrimary,
                       fontWeight: FontWeight.w600, fontSize: 14))),
               Text(fare, style: TextStyle(color: context.appTextPrimary,

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import 'voucher_screen.dart' show StoreTab, MyVouchersTab;
 
 class PromoScreen extends StatefulWidget {
@@ -32,16 +33,16 @@ class _PromoScreenState extends State<PromoScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Promos & Vouchers'),
+        title: Text(AppLocalizations.of(context).promosVouchers),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.local_offer_outlined), text: 'Promos'),
-            Tab(icon: Icon(Icons.store_outlined), text: 'Store'),
-            Tab(icon: Icon(Icons.wallet_giftcard_rounded), text: 'My Vouchers'),
+          tabs: [
+            Tab(icon: const Icon(Icons.local_offer_outlined), text: AppLocalizations.of(context).promosTabLabel),
+            Tab(icon: const Icon(Icons.store_outlined), text: AppLocalizations.of(context).storeTabLabel),
+            Tab(icon: const Icon(Icons.wallet_giftcard_rounded), text: AppLocalizations.of(context).myVouchersTabLabel),
           ],
         ),
       ),
@@ -49,6 +50,7 @@ class _PromoScreenState extends State<PromoScreen>
         controller: _tab,
         children: const [_PromosTab(), StoreTab(), MyVouchersTab()],
       ),
+
     );
   }
 }
@@ -66,13 +68,16 @@ class _PromosTabState extends State<_PromosTab> {
   String? _applySuccess;
   bool _applying = false;
 
-  static const _promos = [
-    _Promo(code: 'NEWUSER50', title: '50% Off First Ride', desc: 'Valid for new users only. Max discount \$5.', expiry: 'Expires Jun 30, 2026', discount: '50%', type: 'ride', color: Color(0xFF00D4AA), icon: Icons.directions_car),
-    _Promo(code: 'ROTEH15', title: '15% Off Any Ride', desc: 'Use any time. Min fare \$3.00.', expiry: 'Expires May 31, 2026', discount: '15%', type: 'ride', color: Color(0xFF2196F3), icon: Icons.percent),
-    _Promo(code: 'DELIVER10', title: '\$1 Off Delivery', desc: 'Valid on standard and same-day deliveries.', expiry: 'Expires Jun 15, 2026', discount: '\$1', type: 'delivery', color: Color(0xFFFF6B35), icon: Icons.delivery_dining),
-    _Promo(code: 'EVCHARGE', title: 'Free EV Station Map', desc: 'Get premium station directions for free.', expiry: 'No expiry', discount: 'Free', type: 'ev', color: Color(0xFFFFB300), icon: Icons.ev_station),
-    _Promo(code: 'WEEKEND20', title: '20% Off Weekends', desc: 'Valid Sat–Sun. Max discount \$8.', expiry: 'Expires Jun 30, 2026', discount: '20%', type: 'ride', color: Color(0xFF9C27B0), icon: Icons.weekend),
-  ];
+  List<_Promo> _promos(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [
+      _Promo(code: 'NEWUSER50', title: l.promo1Title, desc: l.promo1Desc, expiry: '${l.expiresPrefix} Jun 30, 2026', discount: '50%', type: 'ride', color: const Color(0xFF00D4AA), icon: Icons.directions_car),
+      _Promo(code: 'ROTEH15', title: l.promo2Title, desc: l.promo2Desc, expiry: '${l.expiresPrefix} May 31, 2026', discount: '15%', type: 'ride', color: const Color(0xFF2196F3), icon: Icons.percent),
+      _Promo(code: 'DELIVER10', title: l.promo3Title, desc: l.promo3Desc, expiry: '${l.expiresPrefix} Jun 15, 2026', discount: '\$1', type: 'delivery', color: const Color(0xFFFF6B35), icon: Icons.delivery_dining),
+      _Promo(code: 'EVCHARGE', title: l.promo4Title, desc: l.promo4Desc, expiry: l.noExpiry, discount: l.freeLabel, type: 'ev', color: const Color(0xFFFFB300), icon: Icons.ev_station),
+      _Promo(code: 'WEEKEND20', title: l.promo5Title, desc: l.promo5Desc, expiry: '${l.expiresPrefix} Jun 30, 2026', discount: '20%', type: 'ride', color: const Color(0xFF9C27B0), icon: Icons.weekend),
+    ];
+  }
 
   @override
   void dispose() {
@@ -98,23 +103,24 @@ class _PromosTabState extends State<_PromosTab> {
       );
       if (!mounted) return;
       if (result.valid) {
+        final l = AppLocalizations.of(context);
         final discount = result.discountPercent != null
-            ? '${result.discountPercent!.toStringAsFixed(0)}% off'
+            ? '${result.discountPercent!.toStringAsFixed(0)}% ${l.offSuffix}'
             : result.discountAmount != null
-                ? '${AppTheme.khr(result.discountAmount!)} off'
-                : 'discount applied';
+                ? '${AppTheme.khr(result.discountAmount!)} ${l.offSuffix}'
+                : l.discountAppliedFallback;
         setState(() => _applySuccess =
-            'Promo "$code" applied — $discount${result.description != null ? '\n${result.description}' : ''}');
+            '${l.promoAppliedDashPrefix} "$code" ${l.appliedDashSuffix} $discount${result.description != null ? '\n${result.description}' : ''}');
         _codeController.clear();
       } else {
-        setState(() => _applyError = 'Invalid or expired promo code.');
+        setState(() => _applyError = AppLocalizations.of(context).invalidExpiredPromoCode);
       }
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _applyError = e.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _applyError = 'Could not validate code. Try again.');
+      setState(() => _applyError = AppLocalizations.of(context).couldNotValidateCode);
     } finally {
       if (mounted) setState(() => _applying = false);
     }
@@ -130,7 +136,7 @@ class _PromosTabState extends State<_PromosTab> {
           padding: EdgeInsets.all(16),
           decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Enter Promo Code', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+            Text(AppLocalizations.of(context).enterPromoCodeTitle, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
             SizedBox(height: 12),
             Row(children: [
               Expanded(
@@ -139,7 +145,7 @@ class _PromosTabState extends State<_PromosTab> {
                   style: TextStyle(color: context.appTextPrimary, letterSpacing: 1.5, fontWeight: FontWeight.w700),
                   textCapitalization: TextCapitalization.characters,
                   decoration: InputDecoration(
-                    hintText: 'e.g. ROTEH15',
+                    hintText: AppLocalizations.of(context).codeHintExample,
                     hintStyle: TextStyle(color: context.appTextSecondary, letterSpacing: 0, fontWeight: FontWeight.normal),
                     filled: true,
                     fillColor: context.appCardBg,
@@ -160,7 +166,7 @@ class _PromosTabState extends State<_PromosTab> {
                 child: _applying
                     ? SizedBox(width: 16, height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary))
-                    : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w800)),
+                    : Text(AppLocalizations.of(context).apply, style: const TextStyle(fontWeight: FontWeight.w800)),
               ),
             ]),
             if (_applyError != null) ...[
@@ -175,15 +181,15 @@ class _PromosTabState extends State<_PromosTab> {
         ),
         const SizedBox(height: 20),
 
-        const SectionHeader(title: 'Available Vouchers'),
+        SectionHeader(title: AppLocalizations.of(context).availableVouchersTitle),
         const SizedBox(height: 12),
 
-        ..._promos.map((p) => _PromoCard(
+        ..._promos(context).map((p) => _PromoCard(
           promo: p,
           onCopy: () {
             Clipboard.setData(ClipboardData(text: p.code));
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Code "${p.code}" copied!'),
+              content: Text('${AppLocalizations.of(context).codeCopiedPrefix} "${p.code}" ${AppLocalizations.of(context).copiedSuffix}'),
               backgroundColor: AppTheme.success,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -273,7 +279,7 @@ class _PromoCard extends StatelessWidget {
               child: Row(children: [
                 Icon(Icons.copy, color: promo.color, size: 16),
                 const SizedBox(width: 4),
-                Text('Copy', style: TextStyle(color: promo.color, fontWeight: FontWeight.w600, fontSize: 13)),
+                Text(AppLocalizations.of(context).copy, style: TextStyle(color: promo.color, fontWeight: FontWeight.w600, fontSize: 13)),
               ]),
             ),
           ]),

@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:math' show min, max, sin, cos, atan2, pi, sqrt;
 import 'dart:ui' show lerpDouble;
@@ -122,11 +123,15 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   }
 
   String get _passengerName => widget.ride?.passenger?.name
-      ?? (widget.ride != null ? 'Passenger #${widget.ride!.passengerId}' : widget.passengerName);
+      ?? (widget.ride != null
+          ? '${AppLocalizations.of(context).passengerNumberPrefix}${widget.ride!.passengerId}'
+          : widget.passengerName);
   String get _pickupAddr    => widget.ride?.pickupAddress  ?? widget.pickup;
   String get _destAddr      => (widget.ride?.dropoffAddress.isNotEmpty ?? false)
       ? widget.ride!.dropoffAddress
-      : (_isMetered ? 'No destination — ask passenger' : widget.destination);
+      : (_isMetered
+          ? AppLocalizations.of(context).noDestinationAskPassenger
+          : widget.destination);
   String get _fare          => widget.ride != null
       ? AppTheme.khr(widget.ride!.fareKhr)
       : widget.fare;
@@ -154,19 +159,20 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   }
 
   String get _serviceLabel {
+    final l = AppLocalizations.of(context);
     switch (widget.ride?.serviceType) {
-      case 'motorcycle': return 'Bike';
-      case 'tuk_tuk':     return 'Tuk-Tuk';
-      default:            return 'Car';
+      case 'motorcycle': return l.bike4;
+      case 'tuk_tuk':     return l.tukTuk5;
+      default:            return l.carShort;
     }
   }
 
   String get _paymentLabel {
     switch (widget.ride?.paymentMethod) {
-      case 'aba':    return 'ABA Pay';
+      case 'aba':    return 'ABA Pay'; // brand name — not translated
       case 'wing':   return 'Wing';
       case 'wallet': return 'ROTEH Pay';
-      default:       return 'Cash';
+      default:       return AppLocalizations.of(context).cash;
     }
   }
 
@@ -476,7 +482,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         position:   pos,
         icon:       _driverIcon ?? BitmapDescriptor.defaultMarkerWithHue(
                         BitmapDescriptor.hueOrange),
-        infoWindow: const InfoWindow(title: 'You'),
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).you),
         // No rotation: ride.png is a fixed-orientation illustration (pin +
         // side-view tuk-tuk), not a top-down sprite meant to spin with GPS
         // bearing — rotating it made the tuk-tuk render upside-down/sideways
@@ -572,10 +578,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   // "Turn left onto Boon Tat St" → "Boon Tat St"; falls back to the full
   // instruction when there's no "onto"/"toward" clause to isolate.
-  static String _navStreetName(RouteStep step) {
+  String _navStreetName(RouteStep step) {
     final text = step.instruction;
     final match = RegExp(r'onto (.+)$', caseSensitive: false).firstMatch(text);
-    return match?.group(1) ?? (text.isEmpty ? 'Continue straight' : text);
+    return match?.group(1) ?? (text.isEmpty ? AppLocalizations.of(context).continueStraight : text);
   }
 
   String _navDistanceLabel(RouteStep step) {
@@ -591,8 +597,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   void _autoArriveAtPickup() {
     setState(() => _phase = _TripPhase.waitingAtPickup);
     NotificationService.instance.showTripUpdate(
-      title: 'Arrived at Pickup',
-      body:  'You have arrived at $_pickupAddr',
+      title: AppLocalizations.of(context).arrivedAtPickup,
+      body:  '${AppLocalizations.of(context).youHaveArrivedAt} $_pickupAddr',
     );
   }
 
@@ -603,8 +609,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     _arrivingAtStop = true;
     setState(() => _nextStopIndex++);
     NotificationService.instance.showTripUpdate(
-      title: 'Arrived at Stop',
-      body:  'You have arrived at ${stop.address}',
+      title: AppLocalizations.of(context).arrivedAtStop,
+      body:  '${AppLocalizations.of(context).youHaveArrivedAt} ${stop.address}',
     );
     if (widget.ride != null) {
       try {
@@ -725,10 +731,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   String get _phaseLabel {
     switch (_phase) {
-      case _TripPhase.headingToPickup: return 'Heading to Pickup';
-      case _TripPhase.waitingAtPickup: return 'Waiting at Pickup';
-      case _TripPhase.inProgress:      return 'Trip in Progress';
-      case _TripPhase.completed:       return 'Trip Completed';
+      case _TripPhase.headingToPickup: return AppLocalizations.of(context).headingToPickup2;
+      case _TripPhase.waitingAtPickup: return AppLocalizations.of(context).waitingAtPickup;
+      case _TripPhase.inProgress:      return AppLocalizations.of(context).tripInProgressCap;
+      case _TripPhase.completed:       return AppLocalizations.of(context).tripCompleted;
     }
   }
 
@@ -743,10 +749,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   String get _ctaLabel {
     switch (_phase) {
-      case _TripPhase.headingToPickup: return '✅  Arrived at Pickup';
-      case _TripPhase.waitingAtPickup: return '🚗  Passenger On Board — Start Trip';
-      case _TripPhase.inProgress:      return '🏁  Complete Trip';
-      case _TripPhase.completed:       return '🏠  Back to Dashboard';
+      case _TripPhase.headingToPickup: return AppLocalizations.of(context).arrivedAtPickupBtn;
+      case _TripPhase.waitingAtPickup: return AppLocalizations.of(context).passengerOnBoardStartTrip;
+      case _TripPhase.inProgress:      return AppLocalizations.of(context).completeTripBtn;
+      case _TripPhase.completed:       return AppLocalizations.of(context).backToDashboardBtn;
     }
   }
 
@@ -818,7 +824,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
       final notifiedFareKhr = (completedRide ?? widget.ride)?.fareKhr ?? 0;
       await NotificationService.instance.showTripUpdate(
-        title: 'Trip Completed',
+        title: AppLocalizations.of(context).tripCompleted2,
         body:  'You earned ${AppTheme.khr(notifiedFareKhr > 0 ? notifiedFareKhr : (finalFareKhr ?? 0))}',
       );
       if (!mounted) return;
@@ -910,7 +916,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   Future<({int amount, double distanceKm})?> _estimateMeteredFare() async {
     _meteredFareError = null;
     if (widget.ride == null) {
-      _meteredFareError = 'No active ride.';
+      _meteredFareError = AppLocalizations.of(context).noActiveRide;
       return null;
     }
 
@@ -972,21 +978,22 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       // much even accounting for a winding route. Catches a backend
       // calculation bug even when the GPS position itself was valid.
       if (estimate.distanceKm > 500) {
-        _meteredFareError = 'Calculated distance (${estimate.distanceKm.toStringAsFixed(1)} km) '
-            'looks wrong — that\'s farther than any trip within Cambodia.';
+        _meteredFareError = '${AppLocalizations.of(context).calculatedDistancePrefix} '
+            '(${estimate.distanceKm.toStringAsFixed(1)} km) '
+            '${AppLocalizations.of(context).looksWrongFartherThanTrip}';
         return null;
       }
       final fare = estimate.fares[widget.ride!.serviceType] ??
           (estimate.fares.values.isNotEmpty ? estimate.fares.values.first : null);
       if (fare == null) {
-        _meteredFareError = 'No fare returned for service type '
-            '"${widget.ride!.serviceType}" (available: ${estimate.fares.keys.join(', ')}).';
+        _meteredFareError = '${AppLocalizations.of(context).noFareReturnedForServiceType} '
+            '"${widget.ride!.serviceType}" (${AppLocalizations.of(context).available}: ${estimate.fares.keys.join(', ')}).';
         return null;
       }
       return (amount: fare.total, distanceKm: estimate.distanceKm);
     } catch (e, s) {
       AppLog.e('DriverTrip', 'estimateRide failed for metered fare', e, s);
-      _meteredFareError = 'Fare calculation failed: $e';
+      _meteredFareError = '${AppLocalizations.of(context).fareCalculationFailedPrefix} $e';
       return null;
     }
   }
@@ -1004,10 +1011,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Trip Completed',
+        title: Text(AppLocalizations.of(context).tripCompleted2,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800)),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('This trip had no destination set — here\'s the calculated summary.',
+          Text(AppLocalizations.of(context).thisTripHadNoDestination,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           const SizedBox(height: 16),
           Container(
@@ -1016,16 +1023,16 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                 color: context.appCardBg, borderRadius: BorderRadius.circular(12)),
             child: Column(children: [
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                _SummaryStat(icon: Icons.route_outlined, label: 'Distance',
+                _SummaryStat(icon: Icons.route_outlined, label: AppLocalizations.of(context).distance,
                     value: '${distanceKm.toStringAsFixed(1)} km'),
-                _SummaryStat(icon: Icons.timer_outlined, label: 'Duration',
+                _SummaryStat(icon: Icons.timer_outlined, label: AppLocalizations.of(context).duration,
                     value: durationMin != null ? '$durationMin min' : '--'),
               ]),
               const SizedBox(height: 14),
               Divider(height: 1, color: context.appTextSecondary.withValues(alpha: 0.2)),
               const SizedBox(height: 14),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Amount to collect',
+                Text(AppLocalizations.of(context).amountToCollect,
                     style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 Text(AppTheme.khr(fareKhr),
                     style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 20)),
@@ -1036,7 +1043,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, fareKhr),
@@ -1045,7 +1052,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Confirm'),
+            child: Text(AppLocalizations.of(context).confirm),
           ),
         ],
       ),
@@ -1063,16 +1070,16 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         builder: (ctx, setLocal) => AlertDialog(
           backgroundColor: context.appSurface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Enter Final Fare',
+          title: Text(AppLocalizations.of(context).enterFinalFare,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800)),
           content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(
               suggested != null
-                  ? 'This trip had no destination set. Suggested fare below is calculated '
-                    'from ${suggested.distanceKm.toStringAsFixed(1)} km travelled — adjust if needed.'
+                  ? '${AppLocalizations.of(context).tripHadNoDestinationSuggested} '
+                    'from ${suggested.distanceKm.toStringAsFixed(1)} km ${AppLocalizations.of(context).fromDistanceTravelledAdjust}'
                   : "This trip had no destination set — enter the metered fare to complete it.\n"
                     "Couldn't auto-calculate a suggestion: "
-                    "${_meteredFareError ?? 'unknown error'}",
+                    "${_meteredFareError ?? AppLocalizations.of(context).unknownError}",
               style: TextStyle(color: context.appTextSecondary, fontSize: 13),
             ),
             const SizedBox(height: 14),
@@ -1094,13 +1101,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             ElevatedButton(
               onPressed: () {
                 final amt = int.tryParse(ctrl.text.trim());
                 if (amt == null || amt <= 0) {
-                  setLocal(() => error = 'Enter a valid amount');
+                  setLocal(() => error = AppLocalizations.of(context).enterAValidAmount2);
                   return;
                 }
                 Navigator.pop(ctx, amt);
@@ -1110,7 +1117,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Complete Trip'),
+              child: Text(AppLocalizations.of(context).completeTrip),
             ),
           ],
         ),
@@ -1128,22 +1135,22 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         title: Row(children: [
           Icon(Icons.warning_amber_rounded, color: AppTheme.danger, size: 28),
           SizedBox(width: 10),
-          Text('Emergency SOS',
+          Text(AppLocalizations.of(context).emergencySos,
               style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w800)),
         ]),
         content: Text(
-          'This will alert emergency services and notify AutoRide operations team with your location.',
+          AppLocalizations.of(context).thisWillAlertEmergencyServices,
           style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel',
+              child: Text(AppLocalizations.of(context).cancel,
                   style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () { Navigator.pop(context); _sendSOS(); },
             style: AppTheme.confirmButtonStyle(background: AppTheme.danger),
-            child: const Text('Send SOS'),
+            child: Text(AppLocalizations.of(context).sendSos),
           ),
         ],
       ),
@@ -1151,8 +1158,8 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   }
 
   void _sendSOS() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Text('🚨 SOS Sent! Help is on the way.'),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(AppLocalizations.of(context).sosSentHelpIsOn),
       backgroundColor: AppTheme.danger,
       behavior: SnackBarBehavior.floating,
     ));
@@ -1168,9 +1175,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         driverId:    widget.ride!.driverId ?? saved?.id ?? 0,
         passengerId: widget.ride!.passengerId,
         myId:        saved?.id   ?? 0,
-        myName:      saved?.name ?? 'Driver',
+        myName:      saved?.name ?? AppLocalizations.of(context).driver,
         otherName:   widget.ride!.passenger?.name
-                         ?? 'Passenger #${widget.ride!.passengerId}',
+                         ?? '${AppLocalizations.of(context).passengerNumberPrefix}${widget.ride!.passengerId}',
         isDriver:    true,
       ),
     ));
@@ -1208,7 +1215,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             child: ElevatedButton.icon(
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.call),
-              label: const Text('Call Now',
+              label: Text(AppLocalizations.of(context).callNow,
                   style: TextStyle(fontWeight: FontWeight.w800)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.success,
@@ -1330,9 +1337,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                 child: Row(children: [
                   const Icon(Icons.location_off, color: Colors.white, size: 18),
                   const SizedBox(width: 8),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'Location permission denied — live tracking and fare '
+                      '${AppLocalizations.of(context).locationPermissionDeniedLiveTracking}'
                       'calculation won\'t work.',
                       style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
                     ),
@@ -1343,7 +1350,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                           color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: const Text('Enable',
+                      child: Text(AppLocalizations.of(context).enable,
                           style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w800, fontSize: 12)),
                     ),
                   ),
@@ -1406,7 +1413,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     Icon(Icons.warning_amber_rounded,
                         color: Colors.white, size: 16),
                     SizedBox(width: 4),
-                    Text('SOS',
+                    Text(AppLocalizations.of(context).sos,
                         style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
@@ -1435,7 +1442,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                       Text('${_speedKmh.round()}',
                           style: TextStyle(color: context.appTextPrimary,
                               fontSize: 20, fontWeight: FontWeight.w900)),
-                      Text('km/h',
+                      Text(AppLocalizations.of(context).kmH,
                           style: TextStyle(color: context.appTextSecondary,
                               fontSize: 10, fontWeight: FontWeight.w600)),
                     ]),
@@ -1573,7 +1580,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(_isMetered ? 'Metered' : _fare,
+                        child: Text(_isMetered ? AppLocalizations.of(context).metered : _fare,
                             style: TextStyle(color: context.appTextPrimary,
                                 fontWeight: FontWeight.w800, fontSize: 15)),
                       ),
@@ -1705,12 +1712,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                     Icon(Icons.check_circle,
                         color: AppTheme.success, size: 48),
                     SizedBox(height: 8),
-                    Text('Trip Completed!',
+                    Text(AppLocalizations.of(context).tripCompleted,
                         style: TextStyle(
                             color: AppTheme.success,
                             fontWeight: FontWeight.w800,
                             fontSize: 18)),
-                    Text('You earned $_fare',
+                    Text('${AppLocalizations.of(context).youEarnedPrefix} $_fare',
                         style: TextStyle(
                             color: context.appTextSecondary)),
                   ]),

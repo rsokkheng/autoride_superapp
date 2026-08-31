@@ -21,7 +21,7 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: context.appBackground,
         elevation: 0,
-        title: Text('Settings',
+        title: Text(AppLocalizations.of(context).settingsTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         iconTheme: IconThemeData(color: context.appTextPrimary),
       ),
@@ -44,13 +44,13 @@ class SettingsScreen extends StatelessWidget {
           ),
           _SettingsTile(
             icon: Icons.cancel_outlined,
-            label: 'Cancellation Policy',
+            label: l.cancellationPolicyTitle,
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const CancellationPolicyScreen())),
           ),
           _SettingsTile(
             icon: Icons.accessibility_new_rounded,
-            label: 'Accessibility',
+            label: l.accessibilityTitle,
             onTap: () => Navigator.push(context,
                 MaterialPageRoute(builder: (_) => const AccessibilityScreen())),
           ),
@@ -65,7 +65,7 @@ class SettingsScreen extends StatelessWidget {
                 child: Row(children: [
                   Icon(Icons.fingerprint, color: context.appTextSecondary, size: 20),
                   const SizedBox(width: 14),
-                  Text('Biometric Login',
+                  Text(l.biometricLogin,
                       style: TextStyle(color: context.appTextPrimary,
                           fontSize: 14, fontWeight: FontWeight.w500)),
                   const Spacer(),
@@ -104,7 +104,7 @@ class SettingsScreen extends StatelessWidget {
               child: Row(children: [
                 Icon(Icons.dark_mode_outlined, color: context.appTextSecondary, size: 20),
                 const SizedBox(width: 14),
-                Text('Dark Mode',
+                Text(l.darkMode,
                     style: TextStyle(color: context.appTextPrimary,
                         fontSize: 14, fontWeight: FontWeight.w500)),
                 const Spacer(),

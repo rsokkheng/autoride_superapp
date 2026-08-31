@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -61,16 +62,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return readAt != null && readAt.toString().isNotEmpty;
   }
 
-  String _relativeTime(String? rawTime) {
+  String _relativeTime(BuildContext context, String? rawTime) {
     if (rawTime == null || rawTime.isEmpty) return '';
     final dt = DateTime.tryParse(rawTime);
     if (dt == null) return rawTime;
+    final l = AppLocalizations.of(context);
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1)  return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24)   return '${diff.inHours} hrs ago';
-    if (diff.inDays == 1)    return 'Yesterday';
-    if (diff.inDays < 7)     return '${diff.inDays} days ago';
+    if (diff.inMinutes < 1)  return l.justNow;
+    if (diff.inMinutes < 60) return '${diff.inMinutes} ${l.minAgoSuffix}';
+    if (diff.inHours < 24)   return '${diff.inHours} ${l.hrsAgoSuffix}';
+    if (diff.inDays == 1)    return l.yesterday;
+    if (diff.inDays < 7)     return '${diff.inDays} ${l.daysAgoSuffix}';
     return '${dt.day}/${dt.month}/${dt.year}';
   }
 
@@ -106,11 +108,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Notifications'),
+        title: Text(AppLocalizations.of(context).notifications),
         actions: [
           TextButton(
             onPressed: _notifications.isEmpty ? null : _markAllRead,
-            child: Text('Mark all read', style: TextStyle(color: AppTheme.accent, fontSize: 13)),
+            child: Text(AppLocalizations.of(context).markAllRead, style: TextStyle(color: AppTheme.accent, fontSize: 13)),
           ),
         ],
       ),
@@ -130,7 +132,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               Icon(Icons.notifications_none_outlined,
                                   color: context.appTextSecondary, size: 64),
                               SizedBox(height: 16),
-                              Text('No notifications yet',
+                              Text(AppLocalizations.of(context).noNotificationsYet,
                                   style: TextStyle(
                                       color: context.appTextSecondary,
                                       fontSize: 16,
@@ -147,9 +149,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         final id     = n['id'];
                         final read   = _isRead(n);
                         final type   = n['type']?.toString();
-                        final title  = n['title']?.toString() ?? n['data']?['title']?.toString() ?? 'Notification';
+                        final title  = n['title']?.toString() ?? n['data']?['title']?.toString() ?? AppLocalizations.of(context).notificationFallback;
                         final body   = n['body']?.toString() ?? n['message']?.toString() ?? n['data']?['body']?.toString() ?? '';
-                        final time   = _relativeTime(n['created_at']?.toString());
+                        final time   = _relativeTime(context, n['created_at']?.toString());
                         final color  = _typeColor(type);
                         final icon   = _typeIcon(type);
 

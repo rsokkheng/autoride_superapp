@@ -1,58 +1,62 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 import 'support_screen.dart';
 
 class CancellationPolicyScreen extends StatelessWidget {
   const CancellationPolicyScreen({super.key});
 
-  static const _policies = [
-    _PolicyItem(
-      title: 'Before driver accepts',
-      description: 'Free cancellation',
-      detail: 'You can cancel at any time before a driver accepts your ride with no charge.',
-      color: AppTheme.success,
-      icon: Icons.check_circle_outline,
-      free: true,
-    ),
-    _PolicyItem(
-      title: 'After driver accepts (0–2 min)',
-      description: 'Free cancellation',
-      detail: 'You have a 2-minute grace period after the driver accepts to cancel for free.',
-      color: AppTheme.success,
-      icon: Icons.timer_outlined,
-      free: true,
-    ),
-    _PolicyItem(
-      title: 'After driver accepts (2–5 min)',
-      description: '2,000 ៛ fee',
-      detail: 'A small cancellation fee applies if you cancel 2–5 minutes after the driver accepts.',
-      color: AppTheme.warning,
-      icon: Icons.warning_amber_outlined,
-      free: false,
-    ),
-    _PolicyItem(
-      title: 'After driver accepts (5+ min)',
-      description: '5,000 ៛ fee',
-      detail: 'If you cancel more than 5 minutes after acceptance, a higher fee applies.',
-      color: AppTheme.accentOrange,
-      icon: Icons.timer_off_outlined,
-      free: false,
-    ),
-    _PolicyItem(
-      title: 'After driver arrives',
-      description: '10,000 ៛ fee',
-      detail: 'Cancelling after the driver arrives at your pickup location incurs the highest fee.',
-      color: AppTheme.danger,
-      icon: Icons.location_on_outlined,
-      free: false,
-    ),
-  ];
+  List<_PolicyItem> _policies(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [
+      _PolicyItem(
+        title: l.beforeDriverAccepts,
+        description: l.freeCancellation,
+        detail: l.freeCancelBeforeAcceptDetail,
+        color: AppTheme.success,
+        icon: Icons.check_circle_outline,
+        free: true,
+      ),
+      _PolicyItem(
+        title: l.afterDriverAccepts0to2,
+        description: l.freeCancellation,
+        detail: l.gracePeriodDetail,
+        color: AppTheme.success,
+        icon: Icons.timer_outlined,
+        free: true,
+      ),
+      _PolicyItem(
+        title: l.afterDriverAccepts2to5,
+        description: l.fee2000Riel,
+        detail: l.smallCancelFeeDetail,
+        color: AppTheme.warning,
+        icon: Icons.warning_amber_outlined,
+        free: false,
+      ),
+      _PolicyItem(
+        title: l.afterDriverAccepts5plus,
+        description: l.fee5000Riel,
+        detail: l.higherFeeDetail,
+        color: AppTheme.accentOrange,
+        icon: Icons.timer_off_outlined,
+        free: false,
+      ),
+      _PolicyItem(
+        title: l.afterDriverArrives,
+        description: l.fee10000Riel,
+        detail: l.highestFeeDetail,
+        color: AppTheme.danger,
+        icon: Icons.location_on_outlined,
+        free: false,
+      ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: const Text('Cancellation Policy')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).cancellationPolicyTitle)),
       body: Column(children: [
         Expanded(
           child: ListView(
@@ -66,19 +70,19 @@ class CancellationPolicyScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
                 ),
-                child: const Row(children: [
-                  Icon(Icons.info_outline, color: AppTheme.accent, size: 20),
-                  SizedBox(width: 10),
+                child: Row(children: [
+                  const Icon(Icons.info_outline, color: AppTheme.accent, size: 20),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Fees go to drivers as compensation for their time.',
-                      style: TextStyle(color: AppTheme.accent, fontSize: 13,
+                      AppLocalizations.of(context).feesGoToDriversNote,
+                      style: const TextStyle(color: AppTheme.accent, fontSize: 13,
                           fontWeight: FontWeight.w500),
                     ),
                   ),
                 ]),
               ),
-              for (final p in _policies) _PolicyTile(item: p),
+              for (final p in _policies(context)) _PolicyTile(item: p),
               const SizedBox(height: 16),
             ],
           ),
@@ -99,8 +103,8 @@ class CancellationPolicyScreen extends StatelessWidget {
                 elevation: 0,
               ),
               icon: const Icon(Icons.headset_mic_outlined),
-              label: const Text('Contact Support',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              label: Text(AppLocalizations.of(context).contactSupport,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ),
           ),
         ),

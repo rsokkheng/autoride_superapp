@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../utils/phone_utils.dart';
+import '../../l10n/app_localizations.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -50,12 +51,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
             leading: Icon(Icons.photo_camera_outlined, color: AppTheme.accent),
-            title: Text('Take a photo', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).takeAPhoto, style: TextStyle(color: context.appTextPrimary)),
             onTap: () => Navigator.pop(context, ImageSource.camera),
           ),
           ListTile(
             leading: Icon(Icons.photo_library_outlined, color: AppTheme.accent),
-            title: Text('Choose from gallery', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).chooseFromGallery, style: TextStyle(color: context.appTextPrimary)),
             onTap: () => Navigator.pop(context, ImageSource.gallery),
           ),
           const SizedBox(height: 8),
@@ -76,14 +77,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Could not update photo: ${e.message}'),
+        content: Text('${AppLocalizations.of(context).couldNotUpdatePhotoPrefix} ${e.message}'),
         backgroundColor: AppTheme.danger,
         behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Could not update photo. Try again.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).couldNotUpdatePhotoTryAgain),
         backgroundColor: AppTheme.danger,
         behavior: SnackBarBehavior.floating,
       ));
@@ -142,7 +143,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (!mounted) return;
       setState(() { _saving = false; _originalPhone = newPhone; });
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Profile updated successfully!'),
+        content: Text(AppLocalizations.of(context).profileUpdatedSuccess),
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -185,7 +186,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).editProfile)),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
@@ -200,7 +201,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ElevatedButton(
                         onPressed: () { setState(() { _loading = true; _error = null; }); _loadProfile(); },
                         style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                        child: const Text('Retry', style: TextStyle(color: AppTheme.primary)),
+                        child: Text(AppLocalizations.of(context).retry, style: const TextStyle(color: AppTheme.primary)),
                       ),
                     ]),
                   ),
@@ -245,18 +246,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ]),
                     ),
                     SizedBox(height: 8),
-                    Text('Tap photo to change', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                    Text(AppLocalizations.of(context).tapPhotoToChange, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     SizedBox(height: 28),
 
-                    _Field(label: 'Full Name',    controller: _nameCtrl,  icon: Icons.person_outline),
+                    _Field(label: AppLocalizations.of(context).fullName,    controller: _nameCtrl,  icon: Icons.person_outline),
                     SizedBox(height: 14),
-                    _Field(label: 'Email',        controller: _emailCtrl, icon: Icons.email_outlined,
+                    _Field(label: AppLocalizations.of(context).email,        controller: _emailCtrl, icon: Icons.email_outlined,
                         keyboardType: TextInputType.emailAddress),
                     SizedBox(height: 14),
 
                     // Phone field with OTP badge
                     Stack(alignment: Alignment.centerRight, children: [
-                      _Field(label: 'Phone Number', controller: _phoneCtrl, icon: Icons.phone_outlined,
+                      _Field(label: AppLocalizations.of(context).phoneNumber, controller: _phoneCtrl, icon: Icons.phone_outlined,
                           keyboardType: TextInputType.phone,
                           inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                       if (_phoneCtrl.text.trim() != _originalPhone)
@@ -268,14 +269,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 color: AppTheme.warning.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4))),
-                            child: Text('OTP required', style: TextStyle(color: AppTheme.warning, fontSize: 10, fontWeight: FontWeight.w700)),
+                            child: Text(AppLocalizations.of(context).otpRequiredBadge, style: TextStyle(color: AppTheme.warning, fontSize: 10, fontWeight: FontWeight.w700)),
                           ),
                         ),
                     ]),
                     SizedBox(height: 6),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Changing your phone number requires OTP verification.',
+                      child: Text(AppLocalizations.of(context).changingPhoneRequiresOtp,
                           style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                     ),
                     const SizedBox(height: 28),
@@ -289,7 +290,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         child: _saving
                             ? const SizedBox(width: 22, height: 22,
                                 child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-                            : const Text('Save Changes'),
+                            : Text(AppLocalizations.of(context).saveChanges),
                       ),
                     ),
                   ]),
@@ -375,7 +376,7 @@ class _OtpSheetState extends State<_OtpSheet> {
   Future<void> _verify() async {
     final code = _codeCtrl.text.trim();
     if (code.length != 6) {
-      setState(() => _error = 'Enter the 6-digit code.');
+      setState(() => _error = AppLocalizations.of(context).enterSixDigitCode);
       return;
     }
     setState(() { _verifying = true; _error = null; });
@@ -411,10 +412,10 @@ class _OtpSheetState extends State<_OtpSheet> {
           child: Icon(Icons.phone_android, color: AppTheme.accent, size: 32),
         ),
         SizedBox(height: 14),
-        Text('Verify Phone Number',
+        Text(AppLocalizations.of(context).verifyPhoneNumberTitle,
             style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        Text('A 6-digit code was sent to\n${widget.phone}',
+        Text('${AppLocalizations.of(context).codeSentToPrefix}\n${widget.phone}',
             textAlign: TextAlign.center,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.5)),
 
@@ -430,7 +431,7 @@ class _OtpSheetState extends State<_OtpSheet> {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(Icons.developer_mode, color: AppTheme.warning, size: 16),
               SizedBox(width: 6),
-              Text('Dev code: $_devCode',
+              Text('${AppLocalizations.of(context).devCodePrefix} $_devCode',
                   style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 13)),
             ]),
           ),
@@ -441,7 +442,7 @@ class _OtpSheetState extends State<_OtpSheet> {
         if (_sending) ...[
           CircularProgressIndicator(color: AppTheme.accent),
           SizedBox(height: 12),
-          Text('Sending OTP...', style: TextStyle(color: context.appTextSecondary)),
+          Text(AppLocalizations.of(context).sendingOtpEllipsis, style: TextStyle(color: context.appTextSecondary)),
         ] else if (_sent) ...[
           // 6-digit input
           TextField(
@@ -470,7 +471,7 @@ class _OtpSheetState extends State<_OtpSheet> {
                 color: _secondsLeft <= 60 ? AppTheme.danger : context.appTextSecondary, size: 15),
             SizedBox(width: 5),
             Text(
-              _secondsLeft > 0 ? 'Expires in $_countdownLabel' : 'Code expired',
+              _secondsLeft > 0 ? '${AppLocalizations.of(context).expiresInPrefix} $_countdownLabel' : AppLocalizations.of(context).codeExpired,
               style: TextStyle(
                   color: _secondsLeft <= 60 ? AppTheme.danger : context.appTextSecondary,
                   fontSize: 13),
@@ -512,14 +513,14 @@ class _OtpSheetState extends State<_OtpSheet> {
               child: _verifying
                   ? SizedBox(width: 20, height: 20,
                       child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-                  : Text('Verify', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  : Text(AppLocalizations.of(context).verify, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
           SizedBox(height: 10),
           TextButton(
             onPressed: (_sending || _secondsLeft > 0) ? null : _sendOtp,
             child: Text(
-              _secondsLeft > 0 ? 'Resend in $_countdownLabel' : 'Resend OTP',
+              _secondsLeft > 0 ? '${AppLocalizations.of(context).resendInPrefix} $_countdownLabel' : AppLocalizations.of(context).resendOtp,
               style: TextStyle(
                 color: _secondsLeft > 0 ? context.appTextSecondary : AppTheme.accent,
                 fontWeight: FontWeight.w600,
@@ -533,7 +534,7 @@ class _OtpSheetState extends State<_OtpSheet> {
               onPressed: _sendOtp,
               style: AppTheme.confirmButtonStyle(
                 background: AppTheme.accent, foreground: AppTheme.primary),
-              child: const Text('Send OTP'),
+              child: Text(AppLocalizations.of(context).sendOtp),
             ),
           ),
         ],

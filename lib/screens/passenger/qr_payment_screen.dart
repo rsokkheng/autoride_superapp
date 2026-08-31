@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class QrPaymentScreen extends StatefulWidget {
   const QrPaymentScreen({super.key});
@@ -33,15 +34,15 @@ class _QrPaymentScreenState extends State<QrPaymentScreen>
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('QR Payment'),
+        title: Text(AppLocalizations.of(context).qrPaymentTitle),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.qr_code), text: 'My QR'),
-            Tab(icon: Icon(Icons.history_rounded), text: 'History'),
+          tabs: [
+            Tab(icon: const Icon(Icons.qr_code), text: AppLocalizations.of(context).myQrTabLabel),
+            Tab(icon: const Icon(Icons.history_rounded), text: AppLocalizations.of(context).history),
           ],
         ),
       ),
@@ -85,7 +86,7 @@ class _MyQrTabState extends State<_MyQrTab> {
     final raw = _amtCtrl.text.trim();
     final amount = int.tryParse(raw);
     if (amount == null || amount <= 0) {
-      setState(() => _error = 'Enter a valid amount in KHR.');
+      setState(() => _error = AppLocalizations.of(context).enterValidAmountKhr);
       return;
     }
     setState(() { _generating = true; _error = null; _qrData = null; _status = null; });
@@ -166,13 +167,13 @@ class _MyQrTabState extends State<_MyQrTab> {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Generate QR to Receive',
+          Text(AppLocalizations.of(context).generateQrToReceive,
               style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
           SizedBox(height: 6),
-          Text('Enter an amount and share the QR with the payer.',
+          Text(AppLocalizations.of(context).enterAmountShareQr,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.5)),
           SizedBox(height: 20),
-          Text('Amount (KHR)', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(AppLocalizations.of(context).amountKhrLabel, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
           SizedBox(height: 8),
           TextField(
             controller: _amtCtrl,
@@ -210,7 +211,7 @@ class _MyQrTabState extends State<_MyQrTab> {
               icon: _generating
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.qr_code_rounded, color: Colors.white),
-              label: Text(_generating ? 'Generating…' : 'Generate QR',
+              label: Text(_generating ? AppLocalizations.of(context).generatingEllipsis : AppLocalizations.of(context).generateQrBtn,
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
             ),
           ),
@@ -238,9 +239,9 @@ class _MyQrTabState extends State<_MyQrTab> {
               : Icon(_statusIcon, color: _statusColor, size: 16),
           SizedBox(width: 8),
           Text(
-            _status == 'paid' ? 'Payment received!' :
-            _status == 'expired' ? 'QR expired' :
-            _status == 'cancelled' ? 'Cancelled' : 'Waiting for payment…',
+            _status == 'paid' ? AppLocalizations.of(context).paymentReceived :
+            _status == 'expired' ? AppLocalizations.of(context).qrExpired :
+            _status == 'cancelled' ? AppLocalizations.of(context).cancelled2 : AppLocalizations.of(context).waitingForPayment,
             style: TextStyle(color: _statusColor, fontWeight: FontWeight.w700, fontSize: 13),
           ),
         ]),
@@ -287,7 +288,7 @@ class _MyQrTabState extends State<_MyQrTab> {
       SizedBox(height: 20),
 
       if (ref.isNotEmpty)
-        Text('Ref: $ref', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+        Text('${AppLocalizations.of(context).refLabel}: $ref', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
 
       const SizedBox(height: 16),
 
@@ -296,8 +297,8 @@ class _MyQrTabState extends State<_MyQrTab> {
           child: OutlinedButton.icon(
             onPressed: _qrString.isEmpty ? null : () {
               Clipboard.setData(ClipboardData(text: _qrString));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text('QR reference copied'),
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(AppLocalizations.of(context).qrReferenceCopied),
                 backgroundColor: AppTheme.success,
                 behavior: SnackBarBehavior.floating,
               ));
@@ -309,7 +310,7 @@ class _MyQrTabState extends State<_MyQrTab> {
               padding: EdgeInsets.symmetric(vertical: 13),
             ),
             icon: Icon(Icons.copy_outlined, size: 18),
-            label: Text('Copy', style: TextStyle(fontWeight: FontWeight.w600)),
+            label: Text(AppLocalizations.of(context).copy, style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ),
         SizedBox(width: 12),
@@ -324,7 +325,7 @@ class _MyQrTabState extends State<_MyQrTab> {
               padding: const EdgeInsets.symmetric(vertical: 13),
             ),
             icon: const Icon(Icons.refresh_rounded, size: 18),
-            label: const Text('New QR', style: TextStyle(fontWeight: FontWeight.w600)),
+            label: Text(AppLocalizations.of(context).newQrBtn, style: const TextStyle(fontWeight: FontWeight.w600)),
           ),
         ),
       ]),
@@ -373,14 +374,14 @@ class _HistoryTabState extends State<_HistoryTab> {
         SizedBox(height: 12),
         Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_items.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No QR payment history', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+        Text(AppLocalizations.of(context).noQrPaymentHistory, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       ]));
     }
     return RefreshIndicator(
@@ -399,6 +400,16 @@ class _HistoryTabState extends State<_HistoryTab> {
 class _HistoryTile extends StatelessWidget {
   final Map<String, dynamic> item;
   const _HistoryTile({required this.item});
+
+  String _statusLabel(BuildContext context, String status) {
+    final l = AppLocalizations.of(context);
+    return switch (status) {
+      'paid'      => l.paidStatus.toUpperCase(),
+      'cancelled' => l.cancelled2.toUpperCase(),
+      'expired'   => l.qrExpired.toUpperCase(),
+      _           => l.pendingStatus.toUpperCase(),
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -441,7 +452,7 @@ class _HistoryTile extends StatelessWidget {
               color: statusColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Text(status.toUpperCase(),
+            child: Text(_statusLabel(context, status),
                 style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w700)),
           ),
         ]),

@@ -1,6 +1,17 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
+
+String _tierLabel(BuildContext context, String tier) {
+  final l = AppLocalizations.of(context);
+  return switch (tier) {
+    'Platinum' => l.platinumTier,
+    'Gold'     => l.goldTier,
+    'Silver'   => l.silverTier,
+    _          => l.bronzeTier,
+  };
+}
 
 class LoyaltyScreen extends StatefulWidget {
   const LoyaltyScreen({super.key});
@@ -74,11 +85,12 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     return _points / 1000;
   }
 
-  String get _nextTierLabel {
-    if (_points >= 10000) return 'Max tier reached';
-    if (_points >= 5000)  return '${_nextTierPoints - _points} pts to Platinum';
-    if (_points >= 1000)  return '${_nextTierPoints - _points} pts to Gold';
-    return '${_nextTierPoints - _points} pts to Silver';
+  String _nextTierLabel(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (_points >= 10000) return l.maxTierReached;
+    if (_points >= 5000)  return '${_nextTierPoints - _points} ${l.ptsToPlatinumSuffix}';
+    if (_points >= 1000)  return '${_nextTierPoints - _points} ${l.ptsToGoldSuffix}';
+    return '${_nextTierPoints - _points} ${l.ptsToSilverSuffix}';
   }
 
   Future<void> _showRedeemDialog() async {
@@ -87,21 +99,21 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Redeem Points',
+        title: Text(AppLocalizations.of(context).redeemPointsTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text(
-          'Redeem 500 pts for 5,000 ៛ discount on your next ride?',
+          AppLocalizations.of(context).redeem500ptsQuestion,
           style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.appTextSecondary)),
+            child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: AppTheme.confirmButtonStyle(),
-            child: const Text('Confirm'),
+            child: Text(AppLocalizations.of(context).confirm),
           ),
         ],
       ),
@@ -112,8 +124,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       await ApiService.redeemPoints(500);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('500 pts redeemed! Discount applied to next ride.'),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pts500Redeemed),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -132,7 +144,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: Text('ROTEH Rewards')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).rotehRewardsTitle)),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
@@ -140,7 +152,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Text(_error!, style: TextStyle(color: context.appTextSecondary)),
                     const SizedBox(height: 16),
-                    ElevatedButton(onPressed: _load, child: const Text('Retry')),
+                    ElevatedButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry)),
                   ]),
                 )
               : RefreshIndicator(
@@ -172,8 +184,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                                   width: 20, height: 20,
                                   child: CircularProgressIndicator(
                                       color: Colors.white, strokeWidth: 2))
-                              : const Text('Redeem 500 pts',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                              : Text(AppLocalizations.of(context).redeem500pts,
+                                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                         ),
                       ),
                       const SizedBox(height: 32),
@@ -197,10 +209,10 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('ROTEH Points',
-                style: TextStyle(color: Colors.white70, fontSize: 14)),
+            Text(AppLocalizations.of(context).rotehPointsLabel,
+                style: const TextStyle(color: Colors.white70, fontSize: 14)),
             const SizedBox(height: 4),
-            Text('$_points pts',
+            Text('$_points ${AppLocalizations.of(context).ptsSuffix}',
                 style: const TextStyle(color: Colors.white,
                     fontSize: 36, fontWeight: FontWeight.w900)),
           ]),
@@ -214,7 +226,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               const Icon(Icons.star, color: Colors.white, size: 16),
               const SizedBox(width: 4),
-              Text(_tier,
+              Text(_tierLabel(context, _tier),
                   style: const TextStyle(color: Colors.white,
                       fontWeight: FontWeight.w800, fontSize: 14)),
             ]),
@@ -231,48 +243,49 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(_nextTierLabel,
+        Text(_nextTierLabel(context),
             style: const TextStyle(color: Colors.white70, fontSize: 12)),
       ]),
     );
   }
 
   Widget _buildTierBenefits() {
-    const tiers = [
+    final l = AppLocalizations.of(context);
+    final tiers = [
       _TierDef(
         name: 'Bronze',
-        color: Color(0xFFCD7F32),
+        color: const Color(0xFFCD7F32),
         minPts: 0,
         maxPts: 999,
-        benefits: ['10 pts per 1,000 ៛ spent', 'Birthday bonus 100 pts', 'Basic support'],
+        benefits: [l.ptsPer1000Spent10, l.birthdayBonus100pts, l.basicSupport],
       ),
       _TierDef(
         name: 'Silver',
         color: Colors.grey,
         minPts: 1000,
         maxPts: 4999,
-        benefits: ['12 pts per 1,000 ៛ spent', 'Priority matching', '5% fare discount'],
+        benefits: [l.ptsPer1000Spent12, l.priorityMatching, l.fareDiscount5pct],
       ),
       _TierDef(
         name: 'Gold',
-        color: Color(0xFFFFD700),
+        color: const Color(0xFFFFD700),
         minPts: 5000,
         maxPts: 9999,
-        benefits: ['15 pts per 1,000 ៛ spent', '10% fare discount', 'Free cancellation ×3/mo'],
+        benefits: [l.ptsPer1000Spent15, l.fareDiscount10pct, l.freeCancellation3perMo],
       ),
       _TierDef(
         name: 'Platinum',
-        color: Color(0xFF00BCD4),
+        color: const Color(0xFF00BCD4),
         minPts: 10000,
         maxPts: null,
-        benefits: ['20 pts per 1,000 ៛ spent', '15% fare discount', 'Dedicated support line', 'Free cancellation unlimited'],
+        benefits: [l.ptsPer1000Spent20, l.fareDiscount15pct, l.dedicatedSupportLine, l.freeCancellationUnlimited],
       ),
     ];
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Membership Tiers',
+        Text(AppLocalizations.of(context).membershipTiersTitle,
             style: TextStyle(color: context.appTextPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
@@ -299,7 +312,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                   child: Icon(Icons.star_rounded, color: tier.color, size: 22),
                 ),
                 title: Row(children: [
-                  Text(tier.name,
+                  Text(_tierLabel(context, tier.name),
                       style: TextStyle(
                           color: context.appTextPrimary,
                           fontWeight: FontWeight.w700,
@@ -312,7 +325,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                         color: tier.color.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Text('Current',
+                      child: Text(AppLocalizations.of(context).currentBadge,
                           style: TextStyle(
                               color: tier.color,
                               fontSize: 11,
@@ -322,8 +335,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                 ]),
                 subtitle: Text(
                   tier.maxPts != null
-                      ? '${tier.minPts}–${tier.maxPts} pts'
-                      : '${tier.minPts}+ pts',
+                      ? '${tier.minPts}–${tier.maxPts} ${AppLocalizations.of(context).ptsSuffix}'
+                      : '${tier.minPts}+ ${AppLocalizations.of(context).ptsSuffix}',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                 ),
                 children: [
@@ -354,15 +367,16 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   Widget _buildHowToEarn() {
-    const items = [
-      _EarnItem(Icons.directions_car_outlined, 'Complete a trip', '10 pts per 1,000 ៛'),
-      _EarnItem(Icons.star_outline, 'Rate your driver', '50 pts bonus'),
-      _EarnItem(Icons.person_add_alt_outlined, 'Refer a friend', '500 pts per referral'),
+    final l = AppLocalizations.of(context);
+    final items = [
+      _EarnItem(Icons.directions_car_outlined, l.completeATrip, l.ptsPer1000Simple10),
+      _EarnItem(Icons.star_outline, l.rateYourDriver, l.ptsBonus50),
+      _EarnItem(Icons.person_add_alt_outlined, l.referAFriend, l.ptsPerReferral500),
     ];
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('How to Earn',
+        Text(AppLocalizations.of(context).howToEarnTitle,
             style: TextStyle(color: context.appTextPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
         SizedBox(height: 12),
@@ -411,7 +425,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Points Activity',
+        Text(AppLocalizations.of(context).pointsActivityTitle,
             style: TextStyle(color: context.appTextPrimary,
                 fontSize: 17, fontWeight: FontWeight.w700)),
         SizedBox(height: 12),
@@ -461,7 +475,7 @@ class _HistoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final desc   = item['description'] as String? ?? item['type'] as String? ?? 'Points';
+    final desc   = item['description'] as String? ?? item['type'] as String? ?? AppLocalizations.of(context).pointsFallback;
     final pts    = item['points'] as int? ?? 0;
     final earned = pts >= 0;
     final date   = item['created_at'] as String? ?? '';
@@ -491,7 +505,7 @@ class _HistoryRow extends StatelessWidget {
               Text(short, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ]),
         ),
-        Text('${earned ? '+' : ''}$pts pts',
+        Text('${earned ? '+' : ''}$pts ${AppLocalizations.of(context).ptsSuffix}',
             style: TextStyle(
               color: earned ? AppTheme.success : AppTheme.danger,
               fontWeight: FontWeight.w700,

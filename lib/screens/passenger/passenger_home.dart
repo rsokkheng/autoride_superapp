@@ -241,7 +241,7 @@ class _HomeTabState extends State<_HomeTab> {
       builder: (_) => TripTrackingScreen(
         rideId:       ride.id,
         driverId:     ride.driverId?.toString() ?? '',
-        driverName:   ride.driver?.name ?? 'Finding driver...',
+        driverName:   ride.driver?.name ?? AppLocalizations.of(context).findingDriver,
         vehicle:      ride.vehicle != null
             ? (ride.vehicle!.make.trim().toLowerCase() ==
                     ride.vehicle!.model.trim().toLowerCase()
@@ -813,7 +813,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                 SizedBox(width: 4),
                 Text('4.9', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                 SizedBox(width: 4),
-                Text('(128 trips)', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                Text(AppLocalizations.of(context).n128Trips, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
               ],
             ),
             const SizedBox(height: 24),

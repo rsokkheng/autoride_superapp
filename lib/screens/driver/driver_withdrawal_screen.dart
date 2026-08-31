@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -30,15 +31,15 @@ class _DriverWithdrawalScreenState extends State<DriverWithdrawalScreen>
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Withdraw Earnings'),
+        title: Text(AppLocalizations.of(context).withdrawEarnings),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.send_rounded), text: 'Withdraw'),
-            Tab(icon: Icon(Icons.history_rounded), text: 'History'),
+          tabs: [
+            Tab(icon: Icon(Icons.send_rounded), text: AppLocalizations.of(context).withdraw),
+            Tab(icon: Icon(Icons.history_rounded), text: AppLocalizations.of(context).history),
           ],
         ),
       ),
@@ -68,11 +69,11 @@ class _WithdrawFormState extends State<_WithdrawForm> {
   bool _submitting   = false;
   String? _error;
 
-  static const _methods = [
-    ('bank_transfer', 'Bank Transfer', Icons.account_balance_rounded),
-    ('aba',           'ABA Bank',      Icons.credit_card_rounded),
-    ('wing',          'Wing',          Icons.phone_android_rounded),
-    ('acleda',        'ACLEDA',        Icons.account_balance_outlined),
+  List<(String, String, IconData)> _methodsFor(AppLocalizations l) => [
+    ('bank_transfer', l.bankTransfer, Icons.account_balance_rounded),
+    ('aba',           l.abaBank,      Icons.credit_card_rounded),
+    ('wing',          l.wing,         Icons.phone_android_rounded),
+    ('acleda',        l.acleda,       Icons.account_balance_outlined),
   ];
 
   @override
@@ -86,37 +87,38 @@ class _WithdrawFormState extends State<_WithdrawForm> {
 
   Future<void> _confirmAndSubmit() async {
     final amt = int.tryParse(_amtCtrl.text.trim());
-    if (amt == null || amt <= 0) { setState(() => _error = 'Enter a valid amount.'); return; }
-    if (_accNumCtrl.text.trim().isEmpty) { setState(() => _error = 'Enter account number.'); return; }
-    if (_accNameCtrl.text.trim().isEmpty) { setState(() => _error = 'Enter account holder name.'); return; }
+    if (amt == null || amt <= 0) { setState(() => _error = AppLocalizations.of(context).enterAValidAmount); return; }
+    if (_accNumCtrl.text.trim().isEmpty) { setState(() => _error = AppLocalizations.of(context).enterAccountNumber); return; }
+    if (_accNameCtrl.text.trim().isEmpty) { setState(() => _error = AppLocalizations.of(context).enterAccountHolderName); return; }
 
-    final methodLabel = _methods.firstWhere((m) => m.$1 == _method).$2;
+    final methodLabel = _methodsFor(AppLocalizations.of(context))
+        .firstWhere((m) => m.$1 == _method).$2;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Confirm Withdrawal',
+        title: Text(AppLocalizations.of(context).confirmWithdrawal,
             style: TextStyle(fontWeight: FontWeight.w800)),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _ConfirmRow('Amount', '${amt.toString()} ៛'),
-          _ConfirmRow('Method', methodLabel),
-          _ConfirmRow('Account Number', _accNumCtrl.text.trim()),
-          _ConfirmRow('Account Name', _accNameCtrl.text.trim()),
+          _ConfirmRow(AppLocalizations.of(context).amount, '${amt.toString()} ៛'),
+          _ConfirmRow(AppLocalizations.of(context).method, methodLabel),
+          _ConfirmRow(AppLocalizations.of(context).accountNumber, _accNumCtrl.text.trim()),
+          _ConfirmRow(AppLocalizations.of(context).accountName, _accNameCtrl.text.trim()),
           if (_bankCtrl.text.trim().isNotEmpty)
-            _ConfirmRow('Bank', _bankCtrl.text.trim()),
+            _ConfirmRow(AppLocalizations.of(context).bank, _bankCtrl.text.trim()),
           const SizedBox(height: 8),
-          Text('Please make sure these details are correct. This cannot be undone once submitted.',
+          Text(AppLocalizations.of(context).pleaseMakeSureTheseDetails,
               style: TextStyle(color: Theme.of(ctx).textTheme.bodySmall?.color, fontSize: 12)),
         ]),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: AppTheme.confirmButtonStyle(),
-            child: const Text('Confirm'),
+            child: Text(AppLocalizations.of(context).confirm),
           ),
         ],
       ),
@@ -140,8 +142,8 @@ class _WithdrawFormState extends State<_WithdrawForm> {
       _accNumCtrl.clear();
       _accNameCtrl.clear();
       _bankCtrl.clear();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Withdrawal request submitted!'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).withdrawalRequestSubmitted),
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
       ));
@@ -174,14 +176,14 @@ class _WithdrawFormState extends State<_WithdrawForm> {
           ),
         ],
 
-        Text('Amount (KHR)', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context).amountKhr, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         SizedBox(height: 8),
         _Field(controller: _amtCtrl, hint: '0', type: TextInputType.number, suffix: '៛'),
 
         SizedBox(height: 20),
-        Text('Payment Method', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context).paymentMethod, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: _methods.map((m) {
+        Wrap(spacing: 8, runSpacing: 8, children: _methodsFor(AppLocalizations.of(context)).map((m) {
           final selected = _method == m.$1;
           return GestureDetector(
             onTap: () => setState(() => _method = m.$1),
@@ -202,19 +204,19 @@ class _WithdrawFormState extends State<_WithdrawForm> {
         }).toList()),
 
         SizedBox(height: 20),
-        Text('Account Number', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context).accountNumber, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         SizedBox(height: 8),
         _Field(controller: _accNumCtrl, hint: 'e.g. 000123456789', type: TextInputType.number),
 
         SizedBox(height: 16),
-        Text('Account Holder Name', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context).accountHolderName, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         SizedBox(height: 8),
-        _Field(controller: _accNameCtrl, hint: 'Full name as on account'),
+        _Field(controller: _accNameCtrl, hint: AppLocalizations.of(context).fullNameAsOnAccount),
 
         SizedBox(height: 16),
-        Text('Bank Name (optional)', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context).bankNameOptional, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
         const SizedBox(height: 8),
-        _Field(controller: _bankCtrl, hint: 'e.g. ABA, ACLEDA, Wing…'),
+        _Field(controller: _bankCtrl, hint: AppLocalizations.of(context).eGAbaAcledaWing),
 
         const SizedBox(height: 24),
         SizedBox(
@@ -229,7 +231,7 @@ class _WithdrawFormState extends State<_WithdrawForm> {
             ),
             child: _submitting
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Request Withdrawal', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                : Text(AppLocalizations.of(context).requestWithdrawal, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
           ),
         ),
       ]),
@@ -328,14 +330,14 @@ class _WithdrawHistoryState extends State<_WithdrawHistory> {
         SizedBox(height: 12),
         Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_items.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.receipt_long_outlined, color: context.appTextSecondary, size: 48),
         SizedBox(height: 12),
-        Text('No withdrawal history', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+        Text(AppLocalizations.of(context).noWithdrawalHistory, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       ]));
     }
     return RefreshIndicator(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -39,14 +40,14 @@ class TripReceiptScreen extends StatelessWidget {
     this.tripDate,
   });
 
-  String get _paymentLabel {
+  String _paymentLabel(AppLocalizations l) {
     switch (paymentMethod.toLowerCase()) {
       case 'cash':
-        return 'Cash';
+        return l.cash;
       case 'wallet':
-        return 'ROTEH Wallet';
+        return l.rotehWallet;
       case 'aba':
-        return 'ABA Pay';
+        return 'ABA Pay'; // brand name — not translated
       default:
         return paymentMethod;
     }
@@ -65,43 +66,56 @@ class TripReceiptScreen extends StatelessWidget {
     }
   }
 
-  String get _formattedDate {
+  static const _kMonths = {
+    'en': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    'km': ['មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+           'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'],
+    'zh': ['1月', '2月', '3月', '4月', '5月', '6月',
+           '7月', '8月', '9月', '10月', '11月', '12月'],
+  };
+
+  String _formattedDate(Locale locale) {
     if (tripDate == null) return '—';
     final d = tripDate!;
-    final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
+    final months = _kMonths[locale.languageCode] ?? _kMonths['en']!;
     final hour = d.hour > 12 ? d.hour - 12 : (d.hour == 0 ? 12 : d.hour);
     final minute = d.minute.toString().padLeft(2, '0');
     final ampm = d.hour >= 12 ? 'PM' : 'AM';
     return '${months[d.month - 1]} ${d.day}, ${d.year}  $hour:$minute $ampm';
   }
 
-  String get _shareText {
+  String _shareText(AppLocalizations l, Locale locale) {
     final buffer = StringBuffer();
-    buffer.writeln('AutoRide Trip Receipt');
-    if (rideId != null) buffer.writeln('Ride #$rideId');
+    buffer.writeln('${l.appName} ${l.tripReceipt}');
+    if (rideId != null) buffer.writeln('${l.ride} #$rideId');
     buffer.writeln();
-    buffer.writeln('From: $from');
+    buffer.writeln('${l.from}: $from');
     for (int i = 0; i < stops.length; i++) {
-      buffer.writeln('Stop ${i + 1}: ${stops[i]}');
+      buffer.writeln('${l.stop} ${i + 1}: ${stops[i]}');
     }
-    buffer.writeln('To:   $to');
-    buffer.writeln('Date: $_formattedDate');
-    if (distanceKm != null) buffer.writeln('Distance: ${distanceKm!.toStringAsFixed(1)} km');
-    if (durationMin != null) buffer.writeln('Duration: $durationMin min');
+    buffer.writeln('${l.to}: $to');
+    buffer.writeln('${l.date}: ${_formattedDate(locale)}');
+    if (distanceKm != null) {
+      buffer.writeln('${l.distance}: ${distanceKm!.toStringAsFixed(1)} km');
+    }
+    if (durationMin != null) {
+      buffer.writeln('${l.duration}: $durationMin ${l.minShort}');
+    }
     buffer.writeln();
-    buffer.writeln('Fare Breakdown');
-    buffer.writeln('Base fare:     ${AppTheme.khr(baseFareKhr)}');
-    buffer.writeln('Distance fee:  ${AppTheme.khr(distanceFeeKhr)}');
-    if (surgeKhr > 0) buffer.writeln('Surge:         ${AppTheme.khr(surgeKhr)}');
-    if (promoDiscountKhr > 0) buffer.writeln('Promo:        -${AppTheme.khr(promoDiscountKhr)}');
-    buffer.writeln('Total:         $fareTotal');
+    buffer.writeln(l.fareBreakdown);
+    buffer.writeln('${l.baseFare}: ${AppTheme.khr(baseFareKhr)}');
+    buffer.writeln('${l.distanceFee}: ${AppTheme.khr(distanceFeeKhr)}');
+    if (surgeKhr > 0) buffer.writeln('${l.surge}: ${AppTheme.khr(surgeKhr)}');
+    if (promoDiscountKhr > 0) {
+      buffer.writeln('${l.promo}: -${AppTheme.khr(promoDiscountKhr)}');
+    }
+    buffer.writeln('${l.total}: $fareTotal');
     buffer.writeln();
-    buffer.writeln('Driver: $driverName');
-    buffer.writeln('Your rating: ${'★' * starsGiven}${'☆' * (5 - starsGiven)}');
-    buffer.writeln('Payment: $_paymentLabel');
+    buffer.writeln('${l.driver}: $driverName');
+    buffer.writeln(
+        '${l.yourRating}: ${'★' * starsGiven}${'☆' * (5 - starsGiven)}');
+    buffer.writeln('${l.payment}: ${_paymentLabel(l)}');
     return buffer.toString();
   }
 
@@ -155,7 +169,7 @@ class TripReceiptScreen extends StatelessWidget {
         ),
         SizedBox(height: 14),
         Text(
-          'Trip Complete',
+          AppLocalizations.of(context).tripComplete,
           style: TextStyle(
             color: context.appTextPrimary,
             fontSize: 24,
@@ -166,7 +180,7 @@ class TripReceiptScreen extends StatelessWidget {
         if (rideId != null) ...[
           SizedBox(height: 4),
           Text(
-            'Ride #$rideId',
+            '${AppLocalizations.of(context).ride} #$rideId',
             style: TextStyle(
               color: context.appTextSecondary,
               fontSize: 13,
@@ -183,7 +197,7 @@ class TripReceiptScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Fare Breakdown',
+            AppLocalizations.of(context).fareBreakdown,
             style: TextStyle(
               color: context.appTextPrimary,
               fontSize: 15,
@@ -192,18 +206,22 @@ class TripReceiptScreen extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           if (baseFareKhr > 0)
-            _FareRow(label: 'Base fare', amount: AppTheme.khr(baseFareKhr)),
+            _FareRow(
+                label: AppLocalizations.of(context).baseFare,
+                amount: AppTheme.khr(baseFareKhr)),
           if (distanceFeeKhr > 0)
-            _FareRow(label: 'Distance fee', amount: AppTheme.khr(distanceFeeKhr)),
+            _FareRow(
+                label: AppLocalizations.of(context).distanceFee,
+                amount: AppTheme.khr(distanceFeeKhr)),
           if (surgeKhr > 0)
             _FareRow(
-              label: 'Surge fee',
+              label: AppLocalizations.of(context).surgeFee,
               amount: AppTheme.khr(surgeKhr),
               amountColor: AppTheme.warning,
             ),
           if (promoDiscountKhr > 0)
             _FareRow(
-              label: 'Promo discount',
+              label: AppLocalizations.of(context).promoDiscount,
               amount: '-${AppTheme.khr(promoDiscountKhr)}',
               amountColor: AppTheme.success,
             ),
@@ -216,7 +234,7 @@ class TripReceiptScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Total',
+                AppLocalizations.of(context).total,
                 style: TextStyle(
                   color: context.appTextPrimary,
                   fontSize: 16,
@@ -244,7 +262,7 @@ class TripReceiptScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Trip Details',
+            AppLocalizations.of(context).tripDetails,
             style: TextStyle(
               color: context.appTextPrimary,
               fontSize: 15,
@@ -252,7 +270,7 @@ class TripReceiptScreen extends StatelessWidget {
             ),
           ),
           SizedBox(height: 14),
-          _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: 'Pickup', address: from),
+          _TripAddressRow(icon: Icons.radio_button_checked, color: AppTheme.success, label: AppLocalizations.of(context).pickup, address: from),
           for (int i = 0; i < stops.length; i++) ...[
             Padding(
               padding: EdgeInsets.only(left: 9),
@@ -265,7 +283,7 @@ class TripReceiptScreen extends StatelessWidget {
             _TripAddressRow(
               icon: Icons.location_on,
               color: AppTheme.warning,
-              label: 'Stop ${i + 1}',
+              label: '${AppLocalizations.of(context).stop} ${i + 1}',
               address: stops[i],
             ),
           ],
@@ -277,28 +295,31 @@ class TripReceiptScreen extends StatelessWidget {
               color: context.appCardBg,
             ),
           ),
-          _TripAddressRow(icon: Icons.location_on, color: AppTheme.danger, label: 'Dropoff', address: to),
+          _TripAddressRow(icon: Icons.location_on, color: AppTheme.danger, label: AppLocalizations.of(context).dropoff, address: to),
           Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(color: context.appCardBg, height: 1),
           ),
-          _DetailRow(icon: Icons.calendar_today_outlined, label: 'Date & Time', value: _formattedDate),
+          _DetailRow(
+              icon: Icons.calendar_today_outlined,
+              label: AppLocalizations.of(context).dateAndTime,
+              value: _formattedDate(Localizations.localeOf(context))),
           if (distanceKm != null)
             _DetailRow(
               icon: Icons.route_outlined,
-              label: 'Distance',
+              label: AppLocalizations.of(context).distance,
               value: '${distanceKm!.toStringAsFixed(1)} km',
             ),
           if (durationMin != null)
             _DetailRow(
               icon: Icons.timer_outlined,
-              label: 'Duration',
-              value: '$durationMin min',
+              label: AppLocalizations.of(context).duration,
+              value: '$durationMin ${AppLocalizations.of(context).minShort}',
             ),
           _DetailRow(
             icon: Icons.payments_outlined,
-            label: 'Payment',
-            value: '$_paymentIcon  $_paymentLabel',
+            label: AppLocalizations.of(context).payment,
+            value: '$_paymentIcon  ${_paymentLabel(AppLocalizations.of(context))}',
           ),
         ],
       ),
@@ -329,7 +350,7 @@ class TripReceiptScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 4),
                 Text(
-                  'Your Driver',
+                  AppLocalizations.of(context).yourDriver,
                   style: TextStyle(
                     color: context.appTextSecondary,
                     fontSize: 12,
@@ -352,7 +373,7 @@ class TripReceiptScreen extends StatelessWidget {
               ),
               SizedBox(height: 4),
               Text(
-                'Your rating',
+                AppLocalizations.of(context).yourRating,
                 style: TextStyle(
                   color: context.appTextSecondary,
                   fontSize: 11,
@@ -391,18 +412,20 @@ class TripReceiptScreen extends StatelessWidget {
               ),
               onPressed: () async {
                 final box = context.findRenderObject() as RenderBox?;
-                await Share.share(_shareText,
-                    subject: 'AutoRide Trip Receipt #$rideId',
+                final l = AppLocalizations.of(context);
+                await Share.share(
+                    _shareText(l, Localizations.localeOf(context)),
+                    subject: '${l.appName} ${l.tripReceipt} #$rideId',
                     sharePositionOrigin: box != null
                         ? box.localToGlobal(Offset.zero) & box.size
                         : null);
               },
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.share_outlined, size: 18),
-                  SizedBox(width: 8),
-                  Text('Share Receipt'),
+                  const Icon(Icons.share_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  Text(AppLocalizations.of(context).shareReceipt),
                 ],
               ),
             ),
@@ -421,7 +444,7 @@ class TripReceiptScreen extends StatelessWidget {
               onPressed: () {
                 Navigator.of(context).popUntil((r) => r.isFirst);
               },
-              child: const Text('Done'),
+              child: Text(AppLocalizations.of(context).done),
             ),
           ),
         ],

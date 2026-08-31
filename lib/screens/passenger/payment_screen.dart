@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'rate_driver_screen.dart';
@@ -46,12 +47,14 @@ class _PaymentScreenState extends State<PaymentScreen> {
   double get _timeFare     => (widget.durationMin * 150).roundToDouble();
   double get _total        => widget.baseFare + _distanceFare + _timeFare + widget.serviceFee;
 
-  static const _methods = [
-    _PayMethod(key: 'cash',    label: 'Cash',       subtitle: 'Pay driver directly',   color: Color(0xFF6B7280), icon: Icons.payments_outlined),
-    _PayMethod(key: 'aba',     label: 'ABA Pay',    subtitle: 'ABA Mobile / QR',       color: Color(0xFF004B87), icon: Icons.account_balance),
-    _PayMethod(key: 'acleda',  label: 'ACLEDA',     subtitle: 'ACLEDA Mobile Banking', color: Color(0xFF006B3F), icon: Icons.account_balance),
-    _PayMethod(key: 'wing',    label: 'Wing Money', subtitle: 'Wing Mobile Wallet',    color: Color(0xFFFF6B00), icon: Icons.flutter_dash),
-    _PayMethod(key: 'wallet',  label: 'ROTEH Pay',subtitle: 'Your wallet balance',  color: _kGreen,           icon: Icons.account_balance_wallet_outlined),
+  // Built per-frame rather than held as a `static const`, so the labels follow
+  // the active locale. Brand names (ABA, ACLEDA, Wing, ROTEH Pay) stay as-is.
+  List<_PayMethod> _methodsFor(AppLocalizations l) => [
+    _PayMethod(key: 'cash',    label: l.cash,        subtitle: l.payDriverDirectly,      color: const Color(0xFF6B7280), icon: Icons.payments_outlined),
+    _PayMethod(key: 'aba',     label: 'ABA Pay',     subtitle: 'ABA Mobile / QR',        color: const Color(0xFF004B87), icon: Icons.account_balance),
+    _PayMethod(key: 'acleda',  label: 'ACLEDA',      subtitle: 'ACLEDA Mobile Banking',  color: const Color(0xFF006B3F), icon: Icons.account_balance),
+    _PayMethod(key: 'wing',    label: 'Wing',        subtitle: l.wingMobileWallet2,      color: const Color(0xFFFF6B00), icon: Icons.flutter_dash),
+    _PayMethod(key: 'wallet',  label: 'ROTEH Pay',   subtitle: l.yourWalletBalance,      color: _kGreen,                 icon: Icons.account_balance_wallet_outlined),
   ];
 
   Future<void> _pay() async {
@@ -74,6 +77,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l       = AppLocalizations.of(context);
+    final methods = _methodsFor(l);
     return Scaffold(
       backgroundColor: _kBg,
       appBar: AppBar(
@@ -81,7 +86,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         elevation: 0.5,
         leading: const BackButton(color: _kTextMain),
         centerTitle: true,
-        title: const Text('Confirm & Pay',
+        title: Text(AppLocalizations.of(context).confirmAndPay,
             style: TextStyle(color: _kTextMain, fontSize: 17, fontWeight: FontWeight.w600)),
       ),
       body: SingleChildScrollView(
@@ -120,7 +125,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
           // ── Trip summary ─────────────────────────────────────────────────
           _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Trip Summary',
+            Text(AppLocalizations.of(context).tripSummary,
                 style: TextStyle(color: _kTextMain, fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 14),
 
@@ -161,7 +166,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             _FareRow('Time (${widget.durationMin} min)',                 AppTheme.khr(_timeFare)),
             const SizedBox(height: 8),
             Row(children: [
-              const Text('Service fee', style: TextStyle(color: _kTextSub, fontSize: 14)),
+              Text(AppLocalizations.of(context).serviceFee2, style: TextStyle(color: _kTextSub, fontSize: 14)),
               const SizedBox(width: 4),
               const Icon(Icons.info_outline, color: _kTextSub, size: 14),
               const Spacer(),
@@ -174,7 +179,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             const SizedBox(height: 14),
 
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              const Text('Total',
+              Text(AppLocalizations.of(context).total,
                   style: TextStyle(color: _kTextMain, fontSize: 16, fontWeight: FontWeight.w700)),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text(AppTheme.khr(_total),
@@ -189,15 +194,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
           // ── Payment method ───────────────────────────────────────────────
           _Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Payment Method',
+            Text(AppLocalizations.of(context).paymentMethod,
                 style: TextStyle(color: _kTextMain, fontSize: 15, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            const Text('Choose how you want to pay',
+            Text(AppLocalizations.of(context).chooseHowYouWantTo,
                 style: TextStyle(color: _kTextSub, fontSize: 12)),
             const SizedBox(height: 14),
 
-            ...List.generate(_methods.length, (i) {
-              final m = _methods[i];
+            ...List.generate(methods.length, (i) {
+              final m = methods[i];
               final isSelected = _selectedMethod == m.key;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -282,8 +287,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               child: Row(children: [
                 const Icon(Icons.local_offer_outlined, color: _kGreen, size: 20),
                 const SizedBox(width: 12),
-                const Expanded(
-                  child: Text('Have a promo code?',
+                Expanded(
+                  child: Text(AppLocalizations.of(context).haveAPromoCode,
                       style: TextStyle(color: _kTextMain, fontSize: 14, fontWeight: FontWeight.w500)),
                 ),
                 const Icon(Icons.chevron_right, color: _kTextSub),
@@ -306,7 +311,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             const Icon(Icons.payment, color: _kTextSub, size: 16),
             const SizedBox(width: 6),
             Text(
-              'Paying with ${_methods.firstWhere((m) => m.key == _selectedMethod).label}',
+              '${l.payingWith} ${methods.firstWhere((m) => m.key == _selectedMethod).label}',
               style: const TextStyle(color: _kTextSub, fontSize: 12),
             ),
             const Spacer(),
@@ -316,7 +321,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           const SizedBox(height: 10),
           Row(children: [
             Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Total to pay', style: TextStyle(color: _kTextSub, fontSize: 12)),
+              Text(AppLocalizations.of(context).totalToPay, style: TextStyle(color: _kTextSub, fontSize: 12)),
               Text(AppTheme.khr(_total),
                   style: const TextStyle(color: _kGreen, fontSize: 20, fontWeight: FontWeight.w800)),
             ]),

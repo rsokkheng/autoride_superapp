@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -13,10 +14,15 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  static const _periods = [
-    ('daily',   'Today'),
-    ('weekly',  'This Week'),
-    ('monthly', 'This Month'),
+  // Fixed at 3 regardless of locale — only the labels need `context`, so the
+  // keys stay a plain static list and the labels are resolved per-frame via
+  // [_periodLabels].
+  static const _periodKeys = ['daily', 'weekly', 'monthly'];
+
+  List<(String, String)> _periodLabels(AppLocalizations l) => [
+    ('daily',   l.today),
+    ('weekly',  l.thisWeek),
+    ('monthly', l.thisMonth),
   ];
 
   DriverEarningsModel? _data;
@@ -28,7 +34,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _periods.length, vsync: this);
+    _tabController = TabController(length: _periodKeys.length, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) _loadData();
     });
@@ -42,7 +48,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
     super.dispose();
   }
 
-  String get _currentPeriod => _periods[_tabController.index].$1;
+  String get _currentPeriod => _periodKeys[_tabController.index];
 
   Future<void> _loadData() async {
     setState(() { _loading = true; _error = null; });
@@ -70,10 +76,11 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
 
   Future<void> _refresh() => Future.wait([_loadData(), _loadHistory()]);
 
-  String _dayLabel(String isoDate) {
+  String _dayLabel(BuildContext context, String isoDate) {
     try {
       final dt = DateTime.parse(isoDate);
-      const wd = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final l  = AppLocalizations.of(context);
+      final wd = [l.mon, l.tue, l.wed, l.thu, l.fri, l.sat, l.sun];
       return wd[dt.weekday - 1];
     } catch (_) {
       return isoDate;
@@ -88,7 +95,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Earnings'),
+        title: Text(AppLocalizations.of(context).myEarnings),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: Container(
@@ -100,7 +107,8 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
               labelColor: AppTheme.accent,
               unselectedLabelColor: context.appTextSecondary,
               labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              tabs: _periods.map((p) => Tab(text: p.$2)).toList(),
+              tabs: _periodLabels(AppLocalizations.of(context))
+                  .map((p) => Tab(text: p.$2)).toList(),
             ),
           ),
         ),
@@ -146,8 +154,8 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                             ],
                           ),
                           child: Column(children: [
-                            const Text(
-                              'Total Earnings',
+                            Text(
+                              AppLocalizations.of(context).totalEarnings,
                               style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(height: 8),
@@ -162,19 +170,19 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 _SummaryItem(
-                                  label: 'Rides',
+                                  label: AppLocalizations.of(context).rides,
                                   value: AppTheme.khr(data?.rideEarnings ?? 0),
                                   icon: Icons.directions_car_outlined,
                                 ),
                                 Container(width: 1, height: 36, color: Colors.white24),
                                 _SummaryItem(
-                                  label: 'Deliveries',
+                                  label: AppLocalizations.of(context).deliveries,
                                   value: AppTheme.khr(data?.deliveryEarnings ?? 0),
                                   icon: Icons.local_shipping_outlined,
                                 ),
                                 Container(width: 1, height: 36, color: Colors.white24),
                                 _SummaryItem(
-                                  label: 'Avg / Trip',
+                                  label: AppLocalizations.of(context).avgTrip,
                                   value: AppTheme.khr(avgPerTrip),
                                   icon: Icons.trending_up_outlined,
                                 ),
@@ -187,13 +195,13 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 _SummaryItem(
-                                  label: 'Trips',
+                                  label: AppLocalizations.of(context).trips,
                                   value: '$tripCount',
                                   icon: Icons.confirmation_number_outlined,
                                 ),
                                 Container(width: 1, height: 36, color: Colors.white24),
                                 _SummaryItem(
-                                  label: 'Deliveries',
+                                  label: AppLocalizations.of(context).deliveries,
                                   value: '${data?.deliveryCount ?? 0}',
                                   icon: Icons.inventory_2_outlined,
                                 ),
@@ -205,7 +213,7 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
 
                         // 30-day chart
                         Text(
-                          'Last 30 Days',
+                          AppLocalizations.of(context).last30Days,
                           style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 12),
@@ -214,12 +222,12 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                                 padding: EdgeInsets.symmetric(vertical: 24),
                                 child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
                               )
-                            : _EarningsChart(history: _history, dayLabel: _dayLabel),
+                            : _EarningsChart(history: _history, dayLabel: (d) => _dayLabel(context, d)),
                         const SizedBox(height: 24),
 
                         // Breakdown header
                         Text(
-                          'Breakdown',
+                          AppLocalizations.of(context).breakdown,
                           style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w800),
                         ),
                         const SizedBox(height: 12),
@@ -237,8 +245,8 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
                               const SizedBox(height: 10),
                               Text(
                                 _currentPeriod == 'daily'
-                                    ? 'Breakdown is only available for weekly / monthly'
-                                    : 'No earnings in this period',
+                                    ? AppLocalizations.of(context).breakdownIsOnlyAvailableFor
+                                    : AppLocalizations.of(context).noEarningsInThisPeriod,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: context.appTextSecondary, fontSize: 14),
                               ),
@@ -338,7 +346,7 @@ class _EarningsChart extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
         child: Center(
-          child: Text('No earnings history yet', style: TextStyle(color: context.appTextSecondary)),
+          child: Text(AppLocalizations.of(context).noEarningsHistoryYet, style: TextStyle(color: context.appTextSecondary)),
         ),
       );
     }

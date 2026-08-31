@@ -1947,6 +1947,7 @@ class ApiService {
     String? recipientPhone,
     String? packageSize,
     int?    fee,
+    int?    packageAmount,
     String  paymentBy     = 'sender',   // 'sender' | 'recipient'
     String  paymentMethod = 'cash',     // 'cash' | 'wallet' | 'aba' | 'wing' | 'other_online'
     String  serviceOption = 'normal',   // 'normal' | 'express'
@@ -1972,6 +1973,10 @@ class ApiService {
       if (recipientPhone != null) 'recipient_phone': recipientPhone,
       if (packageSize    != null) 'package_size':    packageSize,
       if (fee            != null) 'fee':             fee,
+      if (packageAmount  != null) ...{
+        'package_amount': packageAmount,
+        'package_price':  packageAmount,
+      },
       if (scheduledAt    != null) 'scheduled_at':    scheduledAt,
       if (notes          != null) 'notes':           notes,
     };
@@ -3379,6 +3384,27 @@ class ApiService {
     if (raw.statusCode == 200 || raw.statusCode == 204) return;
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  static Future<ShareTripResult> shareDelivery(int deliveryId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$deliveryId/share', {}, token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      final data = (body['data'] as Map<String, dynamic>?) ?? body;
+      return ShareTripResult.fromJson(data);
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to share delivery.', raw.statusCode);
+  }
+
+  static Future<void> stopSharingDelivery(int deliveryId) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawDelete('/deliveries/$deliveryId/share', token: token);
+    if (raw.statusCode == 200 || raw.statusCode == 204) return;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    throw ApiException(body['message'] as String? ?? 'Failed to stop sharing delivery.', raw.statusCode);
   }
 
   static Future<String> getMaskedPhone(int rideId) async {
@@ -5737,8 +5763,8 @@ class ShareTripResult {
   final String shareUrl;
   const ShareTripResult({required this.shareToken, required this.shareUrl});
   factory ShareTripResult.fromJson(Map<String, dynamic> j) => ShareTripResult(
-    shareToken: j['share_token'] as String? ?? '',
-    shareUrl:   j['share_url']   as String? ?? '',
+    shareToken: j['share_token'] as String? ?? j['token'] as String? ?? '',
+    shareUrl:   j['share_url']   as String? ?? j['url']   as String? ?? '',
   );
 }
 
@@ -6251,6 +6277,8 @@ class PublicTripModel {
   final String  vehicleType;
   final String  plate;
   final int?    etaMinutes;
+  final String? serviceType;       // 'ride' | 'delivery' | 'moving'
+  final String? recipientName;
 
   const PublicTripModel({
     required this.rideId,
@@ -6269,6 +6297,8 @@ class PublicTripModel {
     required this.vehicleType,
     required this.plate,
     this.etaMinutes,
+    this.serviceType,
+    this.recipientName,
   });
 
   factory PublicTripModel.fromJson(Map<String, dynamic> j) {
@@ -6283,7 +6313,7 @@ class PublicTripModel {
         ? (driver['lng'] as num).toDouble() : null;
 
     return PublicTripModel(
-      rideId:          j['ride_id']        as int?    ?? j['id'] as int? ?? 0,
+      rideId:          j['ride_id']        as int?    ?? j['delivery_id'] as int? ?? j['id'] as int? ?? 0,
       status:          j['status']         as String? ?? '',
       isLive:          j['is_live']        as bool?   ?? false,
       pickupAddress:   j['pickup_address'] as String? ?? '',
@@ -6301,6 +6331,8 @@ class PublicTripModel {
       plate:           vehicle['plate']        as String?
                        ?? vehicle['license_plate'] as String? ?? '',
       etaMinutes:      j['eta_minutes'] as int?,
+      serviceType:     j['service_type'] as String?,
+      recipientName:   j['recipient_name'] as String?,
     );
   }
 }

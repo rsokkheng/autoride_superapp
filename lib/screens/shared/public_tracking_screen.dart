@@ -293,6 +293,50 @@ class _InfoPanel extends StatelessWidget {
       ),
       SizedBox(height: 12),
 
+      // Recipient / Service Info (for deliveries/moving)
+      if ((trip.recipientName != null && trip.recipientName!.isNotEmpty) ||
+          (trip.serviceType != null && trip.serviceType!.isNotEmpty)) ...[
+        Row(
+          children: [
+            if (trip.serviceType != null && trip.serviceType!.isNotEmpty) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  trip.serviceType == 'moving'
+                      ? 'Moving Service'
+                      : trip.serviceType == 'delivery'
+                          ? 'Delivery'
+                          : trip.serviceType!.toUpperCase(),
+                  style: const TextStyle(
+                    color: _green,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+            ],
+            if (trip.recipientName != null && trip.recipientName!.isNotEmpty)
+              Expanded(
+                child: Text(
+                  'Recipient: ${trip.recipientName}',
+                  style: TextStyle(
+                    color: context.appTextSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+      ],
+
       // Driver info
       if (trip.driverName.isNotEmpty)
         Row(children: [

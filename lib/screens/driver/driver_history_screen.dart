@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -17,12 +18,12 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
   bool _loadingMore = false;
   bool _hasMore     = true;
 
-  static const _filters = [
-    ('all',         'All'),
-    ('rides',       'Rides'),
-    ('deliveries',  'Deliveries'),
-    ('completed',   'Completed'),
-    ('cancelled',   'Cancelled'),
+  List<(String, String)> _filtersFor(AppLocalizations l) => [
+    ('all',         l.all),
+    ('rides',       l.rides),
+    ('deliveries',  l.deliveries),
+    ('completed',   l.completed),
+    ('cancelled',   l.cancelled2),
   ];
 
   @override
@@ -72,8 +73,8 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
     final now   = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final d     = DateTime(dt.year, dt.month, dt.day);
-    if (d == today) return 'Today';
-    if (d == today.subtract(const Duration(days: 1))) return 'Yesterday';
+    if (d == today) return AppLocalizations.of(context).today;
+    if (d == today.subtract(const Duration(days: 1))) return AppLocalizations.of(context).yesterday;
     const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const months   = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -101,7 +102,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
       try {
         label = _dateLabel(DateTime.parse(raw).toLocal());
       } catch (_) {
-        label = 'Unknown';
+        label = AppLocalizations.of(context).unknown;
       }
       grouped.putIfAbsent(label, () => []).add(trip);
     }
@@ -118,9 +119,9 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
 
   String _serviceLabel(String? type) {
     switch (type) {
-      case 'delivery': return 'Delivery';
-      case 'moving':   return 'Moving';
-      default:         return 'Ride';
+      case 'delivery': return AppLocalizations.of(context).delivery;
+      case 'moving':   return AppLocalizations.of(context).moving;
+      default:         return AppLocalizations.of(context).ride;
     }
   }
 
@@ -128,7 +129,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Trip'),
+        title: Text(AppLocalizations.of(context).trip),
       ),
       body: Column(children: [
         // Filter chips
@@ -138,7 +139,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: _filters.map((f) {
+              children: _filtersFor(AppLocalizations.of(context)).map((f) {
                 final selected = _filter == f.$1;
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -224,7 +225,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 child: Center(
                                   child: Text(
-                                    'No more trips',
+                                    AppLocalizations.of(context).noMoreTrips,
                                     style: TextStyle(
                                         color: context.appTextSecondary, fontSize: 13),
                                   ),
@@ -396,7 +397,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 20),
           Text(
-            'No trips yet',
+            AppLocalizations.of(context).noTripsYet,
             style: TextStyle(
               color: context.appTextPrimary,
               fontSize: 18,
@@ -405,7 +406,7 @@ class _EmptyState extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Your completed trips will appear here.',
+            AppLocalizations.of(context).yourCompletedTripsWillAppear,
             textAlign: TextAlign.center,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13),
           ),

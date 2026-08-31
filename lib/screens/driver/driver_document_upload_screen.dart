@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,15 +8,29 @@ import 'driver_approval_pending_screen.dart';
 
 const _green = Color(0xFF00C48C);
 
-// Document type definitions ordered by required first
+// Document type definitions ordered by required first. Stable/context-free
+// (used at field-init time, before a BuildContext exists) — the display
+// label is resolved separately via [_docLabel], since `.type` is all the
+// state map and the upload logic below actually need.
 const _kDocTypes = [
-  _DocDef('id_card',              'National ID / Passport',   Icons.badge_outlined,             true),
-  _DocDef('driver_license',       'Driver License',           Icons.credit_card_outlined,       true),
-  _DocDef('vehicle_registration', 'Vehicle Registration',     Icons.directions_car_outlined,    true),
-  _DocDef('selfie_with_id',       'Selfie with ID',           Icons.face_outlined,              true),
-  _DocDef('vehicle_insurance',    'Vehicle Insurance',        Icons.shield_outlined,            false),
-  _DocDef('other',                'Other Document',           Icons.insert_drive_file_outlined, false),
+  _DocDef('id_card',              Icons.badge_outlined,             true),
+  _DocDef('driver_license',       Icons.credit_card_outlined,       true),
+  _DocDef('vehicle_registration', Icons.directions_car_outlined,    true),
+  _DocDef('selfie_with_id',       Icons.face_outlined,              true),
+  _DocDef('vehicle_insurance',    Icons.shield_outlined,            false),
+  _DocDef('other',                Icons.insert_drive_file_outlined, false),
 ];
+
+String _docLabel(AppLocalizations l, String type) {
+  switch (type) {
+    case 'id_card':              return l.nationalIdPassport;
+    case 'driver_license':       return l.driverLicense;
+    case 'vehicle_registration': return l.vehicleRegistration;
+    case 'selfie_with_id':       return l.selfieWithId;
+    case 'vehicle_insurance':    return l.vehicleInsurance;
+    default:                     return l.otherDocument;
+  }
+}
 
 class DriverDocumentUploadScreen extends StatefulWidget {
   final int userId;
@@ -54,12 +69,12 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
           ),
           ListTile(
             leading: Icon(Icons.camera_alt_outlined, color: _green),
-            title: Text('Take Photo', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).takePhoto, style: TextStyle(color: context.appTextPrimary)),
             onTap: () => Navigator.pop(context, 'camera'),
           ),
           ListTile(
             leading: Icon(Icons.photo_library_outlined, color: _green),
-            title: Text('Choose from Gallery', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).chooseFromGallery, style: TextStyle(color: context.appTextPrimary)),
             onTap: () => Navigator.pop(context, 'gallery'),
           ),
           const SizedBox(height: 8),
@@ -115,7 +130,7 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
         backgroundColor: context.appSurface,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Text('Upload Documents',
+        title: Text(AppLocalizations.of(context).uploadDocuments,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: Column(children: [
@@ -126,11 +141,11 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
           child: Column(children: [
             Row(children: [
               Expanded(child: Text(
-                '${_kDocTypes.where((d) => d.required && _states[d.type]!.uploaded).length} / 4 required documents uploaded',
+                '${_kDocTypes.where((d) => d.required && _states[d.type]!.uploaded).length} / 4 ${AppLocalizations.of(context).requiredDocumentsUploadedSuffix}',
                 style: TextStyle(color: context.appTextSecondary, fontSize: 13),
               )),
               Text(
-                _requiredComplete ? 'Ready!' : 'Required',
+                _requiredComplete ? AppLocalizations.of(context).ready : AppLocalizations.of(context).required,
                 style: TextStyle(
                   color: _requiredComplete ? _green : AppTheme.warning,
                   fontWeight: FontWeight.w700, fontSize: 13,
@@ -156,7 +171,7 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
             children: [
               Padding(
                 padding: EdgeInsets.only(bottom: 12),
-                child: Text('Required Documents',
+                child: Text(AppLocalizations.of(context).requiredDocuments,
                     style: TextStyle(color: context.appTextPrimary,
                         fontSize: 15, fontWeight: FontWeight.w700)),
               ),
@@ -168,7 +183,7 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
 
               Padding(
                 padding: EdgeInsets.only(top: 20, bottom: 12),
-                child: Text('Optional Documents',
+                child: Text(AppLocalizations.of(context).optionalDocuments,
                     style: TextStyle(color: context.appTextSecondary,
                         fontSize: 14, fontWeight: FontWeight.w600)),
               ),
@@ -184,13 +199,13 @@ class _DriverDocumentUploadScreenState extends State<DriverDocumentUploadScreen>
                 child: ElevatedButton(
                   onPressed: _requiredComplete && !_anyUploading ? _continue : null,
                   style: AppTheme.confirmButtonStyle(background: _green),
-                  child: Text('Submit for Review'),
+                  child: Text(AppLocalizations.of(context).submitForReview),
                 ),
               ),
               SizedBox(height: 12),
               Center(
                 child: Text(
-                  'Your documents will be reviewed within 1–2 business days.',
+                  AppLocalizations.of(context).yourDocumentsWillBeReviewed,
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   textAlign: TextAlign.center,
                 ),
@@ -258,7 +273,7 @@ class _DocTile extends StatelessWidget {
 
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(doc.label,
+              Text(_docLabel(AppLocalizations.of(context), doc.type),
                   style: TextStyle(color: context.appTextPrimary,
                       fontWeight: FontWeight.w600, fontSize: 13)),
               if (doc.required) ...[
@@ -269,7 +284,7 @@ class _DocTile extends StatelessWidget {
                     color: AppTheme.danger.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text('Required',
+                  child: Text(AppLocalizations.of(context).required,
                       style: TextStyle(color: AppTheme.danger, fontSize: 9, fontWeight: FontWeight.w700)),
                 ),
               ],
@@ -278,9 +293,9 @@ class _DocTile extends StatelessWidget {
             if (error != null)
               Text(error, style: TextStyle(color: AppTheme.danger, fontSize: 11))
             else if (uploaded)
-              Text('Uploaded', style: TextStyle(color: _green, fontSize: 11))
+              Text(AppLocalizations.of(context).uploaded, style: TextStyle(color: _green, fontSize: 11))
             else
-              Text(doc.required ? 'Tap to upload' : 'Optional — tap to upload',
+              Text(doc.required ? AppLocalizations.of(context).tapToUpload : AppLocalizations.of(context).optionalTapToUpload,
                   style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
           ])),
 
@@ -302,10 +317,9 @@ class _DocTile extends StatelessWidget {
 
 class _DocDef {
   final String   type;
-  final String   label;
   final IconData icon;
   final bool     required;
-  const _DocDef(this.type, this.label, this.icon, this.required);
+  const _DocDef(this.type, this.icon, this.required);
 }
 
 class _UploadState {

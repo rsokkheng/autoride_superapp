@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 const _green = Color(0xFF00C48C);
 const _kPrefsKey = 'saved_payment_methods';
@@ -140,7 +141,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
         backgroundColor: context.appSurface,
         elevation: 0,
         leading: BackButton(color: context.appTextPrimary),
-        title: Text('Payment Methods',
+        title: Text(AppLocalizations.of(context).paymentMethods,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: _loading
@@ -151,10 +152,10 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                 _AddMethodTile(onTap: _openAddSheet),
                 const SizedBox(height: 20),
 
-                _SectionLabel('Cards'),
+                _SectionLabel(AppLocalizations.of(context).cardsSection),
                 const SizedBox(height: 8),
                 if (_cards.isEmpty)
-                  _EmptyRow(text: 'No cards added yet')
+                  _EmptyRow(text: AppLocalizations.of(context).noCardsAddedYet)
                 else
                   ..._cards.map((c) => _MethodTile(
                         method: c,
@@ -163,7 +164,7 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
                       )),
                 const SizedBox(height: 20),
 
-                _SectionLabel('Linked Accounts'),
+                _SectionLabel(AppLocalizations.of(context).linkedAccountsSection),
                 const SizedBox(height: 8),
                 _LinkedAccountTile(
                   label: 'ABA Pay',
@@ -240,8 +241,8 @@ class _AddMethodTile extends StatelessWidget {
               child: const Icon(Icons.add, color: _green, size: 20),
             ),
             const SizedBox(width: 12),
-            const Text('Add Method',
-                style: TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 14)),
+            Text(AppLocalizations.of(context).addMethodLabel,
+                style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 14)),
             const Spacer(),
             const Icon(Icons.chevron_right_rounded, color: _green, size: 20),
           ]),
@@ -299,15 +300,15 @@ class _MethodTile extends StatelessWidget {
                 margin: const EdgeInsets.only(right: 6),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(color: _green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                child: const Text('Default', style: TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w600)),
+                child: Text(AppLocalizations.of(context).defaultBadge, style: const TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w600)),
               ),
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: context.appTextSecondary, size: 20),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               itemBuilder: (_) => [
                 if (!method.isDefault)
-                  const PopupMenuItem(value: 'default', child: Text('Set as default')),
-                const PopupMenuItem(value: 'remove', child: Text('Remove', style: TextStyle(color: AppTheme.danger))),
+                  PopupMenuItem(value: 'default', child: Text(AppLocalizations.of(context).setAsDefaultOption)),
+                PopupMenuItem(value: 'remove', child: Text(AppLocalizations.of(context).removeOption, style: const TextStyle(color: AppTheme.danger))),
               ],
               onSelected: (v) {
                 if (v == 'default') onSetDefault();
@@ -352,7 +353,7 @@ class _LinkedAccountTile extends StatelessWidget {
           ),
           title: Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
           subtitle: Text(
-            linked ? (method!.label.isEmpty ? 'Linked' : method!.label) : 'Not linked',
+            linked ? (method!.label.isEmpty ? AppLocalizations.of(context).linkedLabel : method!.label) : AppLocalizations.of(context).notLinkedLabel,
             style: TextStyle(color: linked ? _green : context.appTextSecondary, fontSize: 12),
           ),
           trailing: linked
@@ -362,15 +363,15 @@ class _LinkedAccountTile extends StatelessWidget {
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(color: _green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                      child: const Text('Default', style: TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w600)),
+                      child: Text(AppLocalizations.of(context).defaultBadge, style: const TextStyle(color: _green, fontSize: 10, fontWeight: FontWeight.w600)),
                     ),
                   PopupMenuButton<String>(
                     icon: Icon(Icons.more_vert, color: context.appTextSecondary, size: 20),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     itemBuilder: (_) => [
                       if (!method!.isDefault)
-                        const PopupMenuItem(value: 'default', child: Text('Set as default')),
-                      const PopupMenuItem(value: 'remove', child: Text('Unlink', style: TextStyle(color: AppTheme.danger))),
+                        PopupMenuItem(value: 'default', child: Text(AppLocalizations.of(context).setAsDefaultOption)),
+                      PopupMenuItem(value: 'remove', child: Text(AppLocalizations.of(context).unlinkOption, style: const TextStyle(color: AppTheme.danger))),
                     ],
                     onSelected: (v) {
                       if (v == 'default') onSetDefault?.call();
@@ -435,12 +436,12 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
     final cvv = _cvvCtrl.text.trim();
 
     if (digits.length < 13 || digits.length > 19 || int.tryParse(digits) == null) {
-      setState(() => _error = 'Enter a valid card number');
+      setState(() => _error = AppLocalizations.of(context).enterValidCardNumber);
       return;
     }
     final expiryMatch = RegExp(r'^(0[1-9]|1[0-2])/(\d{2})$').firstMatch(expiry);
     if (expiryMatch == null) {
-      setState(() => _error = 'Enter expiry as MM/YY');
+      setState(() => _error = AppLocalizations.of(context).enterExpiryMMYY);
       return;
     }
     final expMonth = int.parse(expiryMatch.group(1)!);
@@ -448,11 +449,11 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
     final now = DateTime.now();
     final expiryEnd = DateTime(expYear, expMonth + 1);
     if (expiryEnd.isBefore(now)) {
-      setState(() => _error = 'This card has expired');
+      setState(() => _error = AppLocalizations.of(context).cardExpiredError);
       return;
     }
     if (cvv.length < 3 || cvv.length > 4 || int.tryParse(cvv) == null) {
-      setState(() => _error = 'Enter a valid CVV');
+      setState(() => _error = AppLocalizations.of(context).enterValidCvv);
       return;
     }
 
@@ -463,7 +464,7 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
       type: PayMethodType.card,
       brand: _detectBrand(digits),
       last4: digits.substring(digits.length - 4),
-      label: 'Expires $expiry',
+      label: '${AppLocalizations.of(context).expiresPrefix} $expiry',
       isDefault: _cardIsDefault,
     ));
   }
@@ -471,7 +472,7 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
   void _submitLinked(PayMethodType type) {
     final phone = _phoneCtrl.text.trim();
     if (phone.isEmpty) {
-      setState(() => _error = 'Enter the account phone number');
+      setState(() => _error = AppLocalizations.of(context).enterAccountPhoneNumber);
       return;
     }
     Navigator.pop(context, SavedPaymentMethod(
@@ -498,7 +499,7 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
           decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
         )),
         const SizedBox(height: 18),
-        Text(_picked == null ? 'Add Payment Method' : _titleFor(_picked!),
+        Text(_picked == null ? AppLocalizations.of(context).addPaymentMethodTitle : _titleFor(context, _picked!),
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A))),
         const SizedBox(height: 18),
 
@@ -506,8 +507,8 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
           _MethodOption(
             icon: Icons.credit_card,
             color: const Color(0xFF1A1F71),
-            label: 'Card',
-            subtitle: 'VISA, Mastercard, PayPal',
+            label: AppLocalizations.of(context).cardOptionLabel,
+            subtitle: AppLocalizations.of(context).cardOptionSubtitle,
             onTap: () => setState(() { _picked = PayMethodType.card; _error = null; }),
           ),
           const SizedBox(height: 10),
@@ -515,7 +516,7 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
             icon: Icons.account_balance,
             color: const Color(0xFF004B87),
             label: 'ABA Pay',
-            subtitle: widget.abaLinked ? 'Already linked' : 'Link your ABA account',
+            subtitle: widget.abaLinked ? AppLocalizations.of(context).alreadyLinked : AppLocalizations.of(context).linkYourAbaAccount,
             enabled: !widget.abaLinked,
             onTap: () => setState(() { _picked = PayMethodType.aba; _error = null; }),
           ),
@@ -524,28 +525,28 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
             icon: Icons.account_balance,
             color: const Color(0xFF006B3F),
             label: 'ACLEDA Pay',
-            subtitle: widget.acledaLinked ? 'Already linked' : 'Link your ACLEDA account',
+            subtitle: widget.acledaLinked ? AppLocalizations.of(context).alreadyLinked : AppLocalizations.of(context).linkYourAcledaAccount,
             enabled: !widget.acledaLinked,
             onTap: () => setState(() { _picked = PayMethodType.acleda; _error = null; }),
           ),
         ] else if (_picked == PayMethodType.card) ...[
-          _SheetTextField(ctrl: _cardNumberCtrl, label: 'Card Number', hint: '1234 5678 9012 3456',
+          _SheetTextField(ctrl: _cardNumberCtrl, label: AppLocalizations.of(context).cardNumberLabel, hint: '1234 5678 9012 3456',
               keyboardType: TextInputType.number, maxLength: 19,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly, _CardNumberFormatter()]),
           const SizedBox(height: 12),
           Row(children: [
-            Expanded(child: _SheetTextField(ctrl: _expiryCtrl, label: 'Expiry Date', hint: 'MM/YY',
+            Expanded(child: _SheetTextField(ctrl: _expiryCtrl, label: AppLocalizations.of(context).expiryDateLabel, hint: 'MM/YY',
                 keyboardType: TextInputType.number, maxLength: 5,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly, _ExpiryFormatter()])),
             const SizedBox(width: 12),
-            Expanded(child: _SheetTextField(ctrl: _cvvCtrl, label: 'CVV', hint: '123',
+            Expanded(child: _SheetTextField(ctrl: _cvvCtrl, label: AppLocalizations.of(context).cvvLabel, hint: '123',
                 keyboardType: TextInputType.number, maxLength: 4, obscureText: true,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly])),
           ]),
           const SizedBox(height: 14),
           Row(children: [
-            const Expanded(
-              child: Text('Set as Default', style: TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600, fontSize: 14)),
+            Expanded(
+              child: Text(AppLocalizations.of(context).setAsDefaultSwitch, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600, fontSize: 14)),
             ),
             Switch(
               value: _cardIsDefault,
@@ -565,11 +566,11 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: _green, foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Add Card', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(AppLocalizations.of(context).addCardBtn, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ),
         ] else ...[
-          _SheetTextField(ctrl: _phoneCtrl, label: 'Phone Number', hint: 'e.g. 012 345 678',
+          _SheetTextField(ctrl: _phoneCtrl, label: AppLocalizations.of(context).phoneNumber, hint: AppLocalizations.of(context).phoneNumberHintExample,
               keyboardType: TextInputType.phone),
           if (_error != null) ...[
             const SizedBox(height: 4),
@@ -583,7 +584,7 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
               style: ElevatedButton.styleFrom(
                   backgroundColor: _green, foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Link Account', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: Text(AppLocalizations.of(context).linkAccountBtn, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ),
         ],
@@ -591,10 +592,10 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
     );
   }
 
-  String _titleFor(PayMethodType t) => switch (t) {
-        PayMethodType.card => 'Add Card',
-        PayMethodType.aba => 'Link ABA Pay',
-        PayMethodType.acleda => 'Link ACLEDA Pay',
+  String _titleFor(BuildContext context, PayMethodType t) => switch (t) {
+        PayMethodType.card => AppLocalizations.of(context).addCardBtn,
+        PayMethodType.aba => AppLocalizations.of(context).linkAbaPayTitle,
+        PayMethodType.acleda => AppLocalizations.of(context).linkAcledaPayTitle,
       };
 }
 

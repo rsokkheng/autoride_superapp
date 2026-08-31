@@ -84,7 +84,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         title: Row(children: [
           const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.danger),
           const SizedBox(width: 10),
-          const Expanded(child: Text('Top Up Required', style: TextStyle(fontWeight: FontWeight.w800))),
+          Expanded(child: Text(AppLocalizations.of(context).topUpRequired, style: TextStyle(fontWeight: FontWeight.w800))),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
@@ -110,7 +110,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -123,7 +123,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Top Up Now'),
+            child: Text(AppLocalizations.of(context).topUpNow),
           ),
         ],
       ),
@@ -436,8 +436,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
     }
     if (parts.isNotEmpty) return parts.join(' · ');
     return info.youAreInside
-        ? (info.message ?? 'High demand in your area')
-        : 'Head there for higher earnings';
+        ? (info.message ?? AppLocalizations.of(context).highDemandInYourArea)
+        : AppLocalizations.of(context).headThereForHigherEarnings;
   }
 
   Future<void> _loadSurge() async {
@@ -565,8 +565,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
       if (_pendingRide != null && !rides.any((r) => r.id == _pendingRide!.id)) {
         setState(() => _pendingRide = null);
         NotificationService.instance.showTripUpdate(
-          title: 'Request cancelled',
-          body:  'The passenger cancelled that ride request.',
+          title: AppLocalizations.of(context).requestCancelled,
+          body:  AppLocalizations.of(context).thePassengerCancelledThatRide,
         );
       } else if (_pendingRide == null && rides.isNotEmpty) {
         setState(() => _pendingRide = rides.first);
@@ -609,12 +609,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
             // Header
             Row(children: [
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Driver Dashboard', style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
+                Text(AppLocalizations.of(context).driverDashboard, style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
                 Row(children: [
                   Icon(Icons.star, color: AppTheme.gold, size: 16),
                   SizedBox(width: 4),
                   Text('4.87', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
-                  Text(' · 1,204 trips', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                  Text(AppLocalizations.of(context).n1204Trips, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ]),
               ]),
               Spacer(),
@@ -626,7 +626,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                   activeTrackColor: (widget.isBusy ? AppTheme.warning : AppTheme.success).withValues(alpha: 0.4),
                 ),
                 Text(
-                  widget.isBusy ? 'Busy' : widget.isOnline ? 'Online' : 'Offline',
+                  widget.isBusy ? AppLocalizations.of(context).busy : widget.isOnline ? AppLocalizations.of(context).online : AppLocalizations.of(context).offline,
                   style: TextStyle(
                     color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : context.appTextSecondary,
                     fontSize: 11,
@@ -678,12 +678,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
               child: Row(children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   StatusBadge(
-                    label: widget.isBusy ? '🟡 Busy — On a Trip' : widget.isOnline ? '🟢 Online — Ready' : '⭕ Offline',
+                    label: widget.isBusy ? AppLocalizations.of(context).busyOnATrip : widget.isOnline ? AppLocalizations.of(context).onlineReady : AppLocalizations.of(context).offline2,
                     color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : context.appTextSecondary,
                   ),
                   SizedBox(height: 8),
                   Text(
-                    widget.isBusy ? 'Complete your trip to receive new requests' : widget.isOnline ? 'Waiting for requests...' : 'Toggle online to accept rides',
+                    widget.isBusy ? AppLocalizations.of(context).completeYourTripToReceive : widget.isOnline ? AppLocalizations.of(context).waitingForRequests : AppLocalizations.of(context).toggleOnlineToAcceptRides,
                     style: TextStyle(
                       color: (widget.isBusy || widget.isOnline) ? Colors.white : context.appTextPrimary,
                       fontSize: 14, fontWeight: FontWeight.w600,
@@ -779,11 +779,11 @@ class _DriverDashboardState extends State<_DriverDashboard>
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(
                           _activeDelivery != null
-                              ? (_activeDelivery!.isMoving ? 'Moving In Progress' : 'Delivery In Progress')
-                              : 'Ride In Progress',
+                              ? (_activeDelivery!.isMoving ? AppLocalizations.of(context).movingInProgress : AppLocalizations.of(context).deliveryInProgress)
+                              : AppLocalizations.of(context).rideInProgress,
                           style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700, fontSize: 15)),
                         SizedBox(height: 2),
-                        Text('Tap to open the map and see where to go.',
+                        Text(AppLocalizations.of(context).tapToOpenTheMap,
                             style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                       ])),
                       const SizedBox(width: 10),
@@ -793,7 +793,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                           color: AppTheme.warning,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Text('Resume',
+                        child: Text(AppLocalizations.of(context).resume,
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                       ),
                     ]),
@@ -803,7 +803,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
               ] else ...[
                 if (widget.modeRide) ...[
                   if (_pendingRide != null) ...[
-                    const SectionHeader(title: 'Incoming Ride Request'),
+                    SectionHeader(title: AppLocalizations.of(context).incomingRideRequest),
                     const SizedBox(height: 14),
                     _RideRequestCard(
                       ride: _pendingRide!,
@@ -824,15 +824,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     _ModeEmptyCard(
                       icon: Icons.electric_rickshaw,
                       color: AppTheme.accent,
-                      title: 'Looking for Ride Requests',
-                      subtitle: 'You\'ll be notified when a passenger nearby needs a ride.',
+                      title: AppLocalizations.of(context).lookingForRideRequests,
+                      subtitle: AppLocalizations.of(context).youLlBeNotifiedWhen,
                     ),
                   ],
                   const SizedBox(height: 14),
                 ],
                 if (widget.modeDelivery) ...[
                   if (_pendingDelivery != null) ...[
-                    const SectionHeader(title: 'Incoming Delivery Request'),
+                    SectionHeader(title: AppLocalizations.of(context).incomingDeliveryRequest),
                     const SizedBox(height: 14),
                     _DeliveryRequestCard(
                       delivery: _pendingDelivery!,
@@ -855,15 +855,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     _ModeEmptyCard(
                       icon: Icons.delivery_dining_outlined,
                       color: AppTheme.accentOrange,
-                      title: 'Delivery Mode Active',
-                      subtitle: 'Waiting for delivery orders in your area.',
+                      title: AppLocalizations.of(context).deliveryModeActive,
+                      subtitle: AppLocalizations.of(context).waitingForDeliveryOrdersIn,
                     ),
                   ],
                   const SizedBox(height: 14),
                 ],
                 if (widget.modeRental) ...[
                   if (_pendingRental != null) ...[
-                    const SectionHeader(title: 'Incoming Rental Request'),
+                    SectionHeader(title: AppLocalizations.of(context).incomingRentalRequest),
                     const SizedBox(height: 14),
                     _RentalRequestCard(
                       rental: _pendingRental!,
@@ -871,8 +871,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
                       onAccept: (rental) async {
                         setState(() => _pendingRental = null);
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('Rental request accepted.'),
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(AppLocalizations.of(context).rentalRequestAccepted),
                           backgroundColor: AppTheme.success,
                           behavior: SnackBarBehavior.floating,
                         ));
@@ -882,8 +882,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     _ModeEmptyCard(
                       icon: Icons.car_rental_outlined,
                       color: const Color(0xFF9C27B0),
-                      title: 'Rental Mode Active',
-                      subtitle: 'Your vehicle is listed for hourly rentals.',
+                      title: AppLocalizations.of(context).rentalModeActive,
+                      subtitle: AppLocalizations.of(context).yourVehicleIsListedFor,
                     ),
                   ],
                   const SizedBox(height: 14),
@@ -903,12 +903,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 Row(children: [
                   Icon(Icons.bolt, color: AppTheme.warning, size: 20),
                   SizedBox(width: 8),
-                  Text('Peak Hour Bonus', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                  Text(AppLocalizations.of(context).peakHourBonus, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
                   Spacer(),
                   Container(
                     padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(color: AppTheme.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                    child: Text('Active 6–9 PM', style: TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
+                    child: Text(AppLocalizations.of(context).active69Pm, style: TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
                   ),
                 ]),
                 SizedBox(height: 10),
@@ -926,12 +926,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
                       ),
                     ),
                     SizedBox(height: 4),
-                    Text('3 of 5 peak-hour trips completed today', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                    Text(AppLocalizations.of(context).n3Of5PeakHour, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                   ])),
                   SizedBox(width: 14),
                   Column(children: [
                     Text('+\$1.50', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w900, fontSize: 20)),
-                    Text('earned today', style: TextStyle(color: context.appTextSecondary, fontSize: 10)),
+                    Text(AppLocalizations.of(context).earnedToday, style: TextStyle(color: context.appTextSecondary, fontSize: 10)),
                   ]),
                 ]),
               ]),
@@ -954,8 +954,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 ),
                 SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('5-Star Streak 🔥', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-                  Text('4 consecutive 5-star ratings!', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                  Text(AppLocalizations.of(context).n5StarStreak, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+                  Text(AppLocalizations.of(context).n4Consecutive5StarRatings, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                   SizedBox(height: 4),
                   Text('1 more 5-star = Earn \$5 bonus', style: TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600)),
                 ])),
@@ -1057,7 +1057,7 @@ class _ModeEmptyCard extends StatelessWidget {
                 color: color, strokeWidth: 2),
           ),
           const SizedBox(width: 8),
-          Text('Waiting...', style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(AppLocalizations.of(context).waiting, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ]),
       ]),
     );
@@ -1195,7 +1195,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
             decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
-            child: Text(urgent ? '⚡ URGENT' : '🆕 NEW REQUEST',
+            child: Text(urgent ? AppLocalizations.of(context).urgent : AppLocalizations.of(context).newRequest,
                 style: TextStyle(color: accentColor,
                     fontWeight: FontWeight.w800, fontSize: 11)),
           ),
@@ -1232,7 +1232,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                   decoration: BoxDecoration(
                       color: AppTheme.accent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8)),
-                  child: const Text('Metered fare',
+                  child: Text(AppLocalizations.of(context).meteredFare,
                       style: TextStyle(color: AppTheme.accent, fontSize: 12, fontWeight: FontWeight.w700)),
                 )
               : Text(AppTheme.khr(widget.ride.fareKhr),
@@ -1262,7 +1262,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
               SizedBox(width: 8),
               Expanded(child: Text(
                   widget.ride.noDestination
-                      ? 'No destination — passenger will tell you'
+                      ? AppLocalizations.of(context).noDestinationPassengerWillTell
                       : widget.ride.dropoffAddress,
                   style: TextStyle(
                       color: widget.ride.noDestination ? AppTheme.accent : context.appTextSecondary,
@@ -1283,7 +1283,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
               decoration: BoxDecoration(
                   border: Border.all(color: context.appTextSecondary.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(10)),
-              child: Center(child: Text('Decline',
+              child: Center(child: Text(AppLocalizations.of(context).decline,
                   style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600))),
             ),
           )),
@@ -1297,7 +1297,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
               child: Center(child: _acting
                   ? const SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Accept Ride',
+                  : Text(AppLocalizations.of(context).acceptRide,
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             ),
           )),
@@ -1405,8 +1405,8 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                 color: cardColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
             child: Text(
-              urgent ? '⚡ URGENT'
-                  : widget.delivery.isMoving ? '🚚 NEW MOVING' : '📦 NEW DELIVERY',
+              urgent ? AppLocalizations.of(context).urgent
+                  : widget.delivery.isMoving ? AppLocalizations.of(context).newMoving : AppLocalizations.of(context).newDelivery,
               style: TextStyle(color: cardColor,
                   fontWeight: FontWeight.w800, fontSize: 11),
             ),
@@ -1485,7 +1485,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
               Row(children: [
                 Icon(Icons.local_shipping, color: cardColor, size: 14),
                 const SizedBox(width: 6),
-                Text('Moving Details', style: TextStyle(
+                Text(AppLocalizations.of(context).movingDetails, style: TextStyle(
                     color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 12)),
               ]),
               const SizedBox(height: 8),
@@ -1509,7 +1509,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                 if (widget.delivery.needsStairsCarry == true) ...[
                   const SizedBox(width: 8),
                   Icon(Icons.stairs_outlined, color: context.appTextSecondary, size: 14),
-                  Text(' Stairs carry',
+                  Text(AppLocalizations.of(context).stairsCarry,
                       style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                 ],
               ]),
@@ -1545,7 +1545,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
               decoration: BoxDecoration(
                   border: Border.all(color: context.appTextSecondary.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(10)),
-              child: Center(child: Text('Decline',
+              child: Center(child: Text(AppLocalizations.of(context).decline,
                   style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600))),
             ),
           )),
@@ -1559,7 +1559,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
               child: Center(child: _acting
                   ? const SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Accept Delivery',
+                  : Text(AppLocalizations.of(context).acceptDelivery,
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             ),
           )),
@@ -1680,7 +1680,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
                 color: cardColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(20)),
             child: Text(
-              urgent ? '⚡ URGENT' : '🚗 NEW RENTAL',
+              urgent ? AppLocalizations.of(context).urgent : AppLocalizations.of(context).newRental,
               style: TextStyle(color: cardColor,
                   fontWeight: FontWeight.w800, fontSize: 11),
             ),
@@ -1758,7 +1758,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
               decoration: BoxDecoration(
                   border: Border.all(color: context.appTextSecondary.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(10)),
-              child: Center(child: Text('Decline',
+              child: Center(child: Text(AppLocalizations.of(context).decline,
                   style: TextStyle(color: context.appTextSecondary, fontWeight: FontWeight.w600))),
             ),
           )),
@@ -1772,7 +1772,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
               child: Center(child: _acting
                   ? const SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('Accept Rental',
+                  : Text(AppLocalizations.of(context).acceptRental,
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
             ),
           )),
@@ -1818,19 +1818,34 @@ class _DriverEarningsState extends State<_DriverEarnings> {
       ? _transactions
       : _transactions.where((t) => _isToday(t.createdAt)).toList();
 
-  String _bank       = 'ABA Bank';
+  // No BuildContext at field-init time — resolved to the localized default
+  // in didChangeDependencies below.
+  String _bank       = '';
   bool   _withdrawing = false;
   final _payoutAccNumCtrl  = TextEditingController();
   final _payoutAccNameCtrl = TextEditingController();
 
-  static const _banks = [
-    {'name': 'ABA Bank',    'icon': Icons.account_balance,        'color': Color(0xFF00D4AA), 'method': 'aba'},
-    {'name': 'ACLEDA Bank', 'icon': Icons.account_balance_wallet, 'color': Color(0xFF2196F3), 'method': 'acleda'},
-    {'name': 'Wing Money',  'icon': Icons.phone_android,           'color': Color(0xFFFF6B35), 'method': 'wing'},
-    {'name': 'Canadia Bank','icon': Icons.credit_card,             'color': Color(0xFF9C27B0), 'method': 'bank_transfer'},
+  bool _bankDefaultApplied = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bankDefaultApplied) return;
+    _bankDefaultApplied = true;
+    _bank = AppLocalizations.of(context).abaBank;
+  }
+
+  List<Map<String, Object>> _banksFor(AppLocalizations l) => [
+    {'name': l.abaBank,    'icon': Icons.account_balance,        'color': const Color(0xFF00D4AA), 'method': 'aba'},
+    {'name': l.acledaBank, 'icon': Icons.account_balance_wallet, 'color': const Color(0xFF2196F3), 'method': 'acleda'},
+    {'name': l.wingMoney,  'icon': Icons.phone_android,          'color': const Color(0xFFFF6B35), 'method': 'wing'},
+    {'name': l.canadiaBank,'icon': Icons.credit_card,            'color': const Color(0xFF9C27B0), 'method': 'bank_transfer'},
   ];
 
-  String get _bankMethod => (_banks.firstWhere((b) => b['name'] == _bank)['method'] as String?) ?? 'bank_transfer';
+  String _bankMethod(AppLocalizations l) =>
+      (_banksFor(l).firstWhere((b) => b['name'] == _bank,
+              orElse: () => _banksFor(l).first)['method'] as String?) ??
+      'bank_transfer';
 
   @override
   void dispose() {
@@ -1859,12 +1874,12 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Select Bank', style: TextStyle(
+              child: Text(AppLocalizations.of(context).selectBank, style: TextStyle(
                   color: ctx.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
           Divider(height: 1, color: ctx.appCardBg),
-          ..._banks.map((b) {
+          ..._banksFor(AppLocalizations.of(context)).map((b) {
             final name = b['name'] as String;
             final isSel = name == _bank;
             return InkWell(
@@ -1988,7 +2003,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text('Confirm Withdrawal',
+          title: Text(AppLocalizations.of(context).confirmWithdrawal,
               style: TextStyle(fontWeight: FontWeight.w800)),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2015,8 +2030,8 @@ class _DriverEarningsState extends State<_DriverEarnings> {
               TextField(
                 controller: _payoutAccNumCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Account Number',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).accountNumber,
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
@@ -2024,8 +2039,8 @@ class _DriverEarningsState extends State<_DriverEarnings> {
               const SizedBox(height: 10),
               TextField(
                 controller: _payoutAccNameCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Account Holder Name',
+                decoration: InputDecoration(
+                  labelText: AppLocalizations.of(context).accountHolderName,
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
@@ -2039,12 +2054,12 @@ class _DriverEarningsState extends State<_DriverEarnings> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('No'),
+              child: Text(AppLocalizations.of(context).no),
             ),
             ElevatedButton(
               onPressed: () {
                 if (_payoutAccNumCtrl.text.trim().isEmpty || _payoutAccNameCtrl.text.trim().isEmpty) {
-                  setDialogState(() => fieldError = 'Please enter your account number and holder name.');
+                  setDialogState(() => fieldError = AppLocalizations.of(context).pleaseEnterYourAccountNumber);
                   return;
                 }
                 Navigator.pop(ctx, true);
@@ -2054,7 +2069,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
-              child: const Text('Yes, Withdraw'),
+              child: Text(AppLocalizations.of(context).yesWithdraw),
             ),
           ],
         ),
@@ -2073,7 +2088,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
       // wallet debit.
       await ApiService.requestWithdrawal(
         amountKhr:     balance,
-        paymentMethod: _bankMethod,
+        paymentMethod: _bankMethod(AppLocalizations.of(context)),
         accountNumber: _payoutAccNumCtrl.text.trim(),
         accountName:   _payoutAccNameCtrl.text.trim(),
         bankName:      _bank,
@@ -2122,7 +2137,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
           padding: EdgeInsets.all(20),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('Earnings',
+              Text(AppLocalizations.of(context).earnings,
                   style: TextStyle(
                       color: context.appTextPrimary,
                       fontSize: 22,
@@ -2132,7 +2147,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                 icon: Icon(Icons.refresh,
                     color: context.appTextSecondary, size: 20),
                 onPressed: _loadAll,
-                tooltip: 'Refresh',
+                tooltip: AppLocalizations.of(context).refresh,
               ),
             ]),
             const SizedBox(height: 16),
@@ -2151,7 +2166,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                           style: const TextStyle(
                               color: Colors.white70, fontSize: 13))
                       : Column(children: [
-                          const Text('Available Balance',
+                          Text(AppLocalizations.of(context).availableBalance,
                               style: TextStyle(
                                   color: Colors.white70, fontSize: 13)),
                           const SizedBox(height: 8),
@@ -2177,10 +2192,10 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                                 color: Colors.white.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
                                 Icon(Icons.add_circle_outline, color: Colors.white, size: 16),
                                 SizedBox(width: 6),
-                                Text('Top Up', style: TextStyle(
+                                Text(AppLocalizations.of(context).topUp, style: TextStyle(
                                     color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
                               ]),
                             ),
@@ -2219,7 +2234,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             // ── Transaction history ───────────────────────────────────────
             Row(children: [
               Expanded(child: SectionHeader(
-                  title: _showAllTx ? 'Transaction History' : "Today's Transactions")),
+                  title: _showAllTx ? AppLocalizations.of(context).transactionHistory : "Today's Transactions")),
               if (_showAllTx && _total > 0)
                 Text('$_total total',
                     style: TextStyle(
@@ -2230,7 +2245,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                   style: TextButton.styleFrom(padding: EdgeInsets.zero,
                       minimumSize: Size(0, 0),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                  child: Text('Show All',
+                  child: Text(AppLocalizations.of(context).showAll,
                       style: TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w600)),
                 ),
             ]),
@@ -2258,7 +2273,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                   SizedBox(height: 8),
                   TextButton(
                     onPressed: () => _loadTransactions(reset: true),
-                    child: Text('Retry',
+                    child: Text(AppLocalizations.of(context).retry,
                         style: TextStyle(color: AppTheme.accentOrange)),
                   ),
                 ]),
@@ -2270,7 +2285,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                     color: context.appSurface,
                     borderRadius: BorderRadius.circular(14)),
                 child: Center(
-                  child: Text(_showAllTx ? 'No transactions yet' : 'No transactions today',
+                  child: Text(_showAllTx ? AppLocalizations.of(context).noTransactionsYet : AppLocalizations.of(context).noTransactionsToday,
                       style: TextStyle(color: context.appTextSecondary)),
                 ),
               )
@@ -2288,7 +2303,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                                 _loadTransactions(reset: false),
                             icon: Icon(Icons.expand_more,
                                 color: AppTheme.accentOrange),
-                            label: Text('Load more',
+                            label: Text(AppLocalizations.of(context).loadMore,
                                 style: TextStyle(
                                     color: AppTheme.accentOrange)),
                           ),
@@ -2299,7 +2314,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             SizedBox(height: 20),
 
             // ── Instant withdrawal ────────────────────────────────────────
-            SectionHeader(title: 'Instant Withdrawal'),
+            SectionHeader(title: AppLocalizations.of(context).instantWithdrawal),
             SizedBox(height: 12),
             if (_wallet?.hasPendingWithdrawal ?? false) ...[
               Container(
@@ -2314,14 +2329,15 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                   const Icon(Icons.schedule_rounded, color: AppTheme.warning, size: 20),
                   const SizedBox(width: 10),
                   Expanded(child: Text(
-                      'You have a withdrawal request pending admin approval.',
+                      AppLocalizations.of(context).youHaveAWithdrawalRequest,
                       style: TextStyle(color: context.appTextPrimary, fontSize: 12, fontWeight: FontWeight.w600))),
                 ]),
               ),
               const SizedBox(height: 12),
             ],
             Builder(builder: (context) {
-              final selected = _banks.firstWhere((b) => b['name'] == _bank);
+              final selected = _banksFor(AppLocalizations.of(context))
+                  .firstWhere((b) => b['name'] == _bank);
               return GestureDetector(
                 onTap: () => _openBankSheet(context),
                 child: Container(
@@ -2336,7 +2352,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                         color: selected['color'] as Color, size: 22),
                     SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Bank', style: TextStyle(
+                      Text(AppLocalizations.of(context).bank, style: TextStyle(
                           color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
                       SizedBox(height: 2),
                       Text(selected['name'] as String,
@@ -2359,13 +2375,13 @@ class _DriverEarningsState extends State<_DriverEarnings> {
 
               String label;
               if (hasPending) {
-                label = 'Withdrawal pending approval';
+                label = AppLocalizations.of(context).withdrawalPendingApproval;
               } else if (balance == 0) {
-                label = 'No balance to withdraw';
+                label = AppLocalizations.of(context).noBalanceToWithdraw;
               } else if (belowMin) {
                 label = 'Minimum withdrawal: ${AppTheme.khr(minWithdrawal)}';
               } else if (!canWithdraw) {
-                label = 'Withdrawals unavailable';
+                label = AppLocalizations.of(context).withdrawalsUnavailable;
               } else {
                 label = '💸  Withdraw ${AppTheme.khr(balance)} to $_bank';
               }
@@ -2397,7 +2413,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             }),
             SizedBox(height: 8),
             Center(
-              child: Text('Reviewed by admin before funds are sent',
+              child: Text(AppLocalizations.of(context).reviewedByAdminBeforeFunds,
                   style: TextStyle(
                       color: context.appTextSecondary, fontSize: 12)),
             ),
@@ -2632,7 +2648,7 @@ class _DriverProfileState extends State<_DriverProfile> {
             SizedBox(width: 4),
             Text('4.87', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             SizedBox(width: 4),
-            Text('(1,204 trips)', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+            Text(AppLocalizations.of(context).n1204Trips2, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           ]),
           SizedBox(height: 20),
           if (_vehicleName.isNotEmpty)

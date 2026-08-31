@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../auth/login_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -41,43 +42,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   static const _stepKeys = ['welcome', 'booking', 'wallet', 'rewards'];
 
-  static const _pages = [
-    _OnboardPage(
-      icon: Icons.electric_rickshaw,
-      color: Color(0xFF00B14F),
-      title: 'Welcome to ROTEH',
-      subtitle:
-          'Your smart ride companion in Cambodia.\nFast, safe, and affordable rides at your fingertips.',
-    ),
-    _OnboardPage(
-      icon: Icons.route_outlined,
-      color: Color(0xFF2196F3),
-      title: 'Book in Seconds',
-      subtitle:
-          'Choose your vehicle type — Car, Bike, or Tuk-Tuk.\nGet a fare estimate before you confirm.',
-    ),
-    _OnboardPage(
-      icon: Icons.account_balance_wallet_outlined,
-      color: Color(0xFFFF6B2B),
-      title: 'ROTEH Pay',
-      subtitle:
-          'Pay by cash or use ROTEH Pay wallet.\nSend money to friends with QR code.',
-    ),
-    _OnboardPage(
-      icon: Icons.star_rounded,
-      color: Color(0xFFFFD700),
-      title: 'Earn Rewards',
-      subtitle:
-          'Collect ROTEH Points on every trip.\nClimb from Bronze to Platinum and unlock exclusive benefits.',
-    ),
-  ];
+  List<_OnboardPage> _pages(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [
+      _OnboardPage(
+        icon: Icons.electric_rickshaw,
+        color: const Color(0xFF00B14F),
+        title: l.onboardWelcomeTitle,
+        subtitle: l.onboardWelcomeSubtitle,
+      ),
+      _OnboardPage(
+        icon: Icons.route_outlined,
+        color: const Color(0xFF2196F3),
+        title: l.onboardBookTitle,
+        subtitle: l.onboardBookSubtitle,
+      ),
+      _OnboardPage(
+        icon: Icons.account_balance_wallet_outlined,
+        color: const Color(0xFFFF6B2B),
+        title: l.rotehPay,
+        subtitle: l.onboardPaySubtitle,
+      ),
+      _OnboardPage(
+        icon: Icons.star_rounded,
+        color: const Color(0xFFFFD700),
+        title: l.onboardRewardsTitle,
+        subtitle: l.onboardRewardsSubtitle,
+      ),
+    ];
+  }
 
-  void _next() {
+  void _next(int pageCount) {
     // Report step completion to server (fire-and-forget)
     if (_page < _stepKeys.length) {
       ApiService.completeOnboardingStep(_stepKeys[_page]).catchError((_) {});
     }
-    if (_page < _pages.length - 1) {
+    if (_page < pageCount - 1) {
       _controller.nextPage(duration: const Duration(milliseconds: 350), curve: Curves.easeOut);
     } else {
       _done(skip: false);
@@ -101,6 +101,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final pages = _pages(context);
     return Scaffold(
       backgroundColor: context.appBackground,
       body: SafeArea(
@@ -111,7 +113,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => _done(skip: true),
-                child: Text('Skip',
+                child: Text(l.skip,
                     style: TextStyle(
                         color: context.appTextSecondary,
                         fontWeight: FontWeight.w600)),
@@ -123,8 +125,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: PageView.builder(
                 controller: _controller,
                 onPageChanged: (i) => setState(() => _page = i),
-                itemCount: _pages.length,
-                itemBuilder: (context, i) => _PageView(page: _pages[i]),
+                itemCount: pages.length,
+                itemBuilder: (context, i) => _PageView(page: pages[i]),
               ),
             ),
 
@@ -135,7 +137,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 // Dots
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(_pages.length, (i) {
+                  children: List.generate(pages.length, (i) {
                     final active = i == _page;
                     return AnimatedContainer(
                       duration: Duration(milliseconds: 250),
@@ -155,7 +157,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _next,
+                    onPressed: () => _next(pages.length),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accent,
                       foregroundColor: Colors.white,
@@ -165,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       elevation: 0,
                     ),
                     child: Text(
-                      _page < _pages.length - 1 ? 'Next' : 'Get Started',
+                      _page < pages.length - 1 ? l.next : l.getStarted,
                       style: const TextStyle(
                           fontWeight: FontWeight.w800, fontSize: 16),
                     ),

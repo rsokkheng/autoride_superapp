@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import 'trip_receipt_screen.dart';
 
 class RateDriverScreen extends StatefulWidget {
@@ -47,18 +48,27 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
 
   static const _tipOptions = [0, 2000, 5000, 10000];
 
-  static const _positiveTags = ['Great driving', 'Very friendly', 'Clean car', 'On time', 'Safe ride'];
-  static const _negativeTags = ['Late pickup', 'Rude', 'Unsafe driving', 'Dirty car', 'Wrong route'];
+  List<String> _positiveTags(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [l.greatDrivingTag, l.veryFriendlyTag, l.cleanCarTag, l.onTimeTag, l.safeRideTag];
+  }
 
-  List<String> get _activeTags => _stars >= 4 ? _positiveTags : _negativeTags;
+  List<String> _negativeTags(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [l.latePickupTag, l.rudeTag, l.unsafeDrivingTag, l.dirtyCarTag, l.wrongRouteTag];
+  }
 
-  String _methodLabel(String method) {
+  List<String> _activeTags(BuildContext context) =>
+      _stars >= 4 ? _positiveTags(context) : _negativeTags(context);
+
+  String _methodLabel(BuildContext context, String method) {
+    final l = AppLocalizations.of(context);
     switch (method) {
-      case 'aba':    return 'ABA Pay';
-      case 'acleda': return 'ACLEDA';
-      case 'wing':   return 'Wing Money';
-      case 'wallet': return 'ROTEH Pay';
-      default:       return 'Cash';
+      case 'aba':    return l.abaPay;
+      case 'acleda': return l.acleda;
+      case 'wing':   return l.wingMoney;
+      case 'wallet': return l.rotehPay;
+      default:       return l.cash;
     }
   }
 
@@ -76,7 +86,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Rate Your Trip'),
+        title: Text(AppLocalizations.of(context).rateYourTripTitle),
         automaticallyImplyLeading: false,
         actions: [
           TextButton(
@@ -102,7 +112,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                 ),
               ),
             ),
-            child: Text('Skip', style: TextStyle(color: context.appTextSecondary)),
+            child: Text(AppLocalizations.of(context).skip, style: TextStyle(color: context.appTextSecondary)),
           ),
         ],
       ),
@@ -126,7 +136,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                 SizedBox(height: 12),
                 Text(widget.driverName,
                     style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
-                Text('${widget.fare}  •  ${_methodLabel(widget.paymentMethod)}',
+                Text('${widget.fare}  •  ${_methodLabel(context, widget.paymentMethod)}',
                     style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
                 SizedBox(height: 12),
 
@@ -149,7 +159,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             Text('${widget.distanceKm!.toStringAsFixed(1)} km',
                                 style: TextStyle(color: context.appTextPrimary,
                                     fontWeight: FontWeight.w700, fontSize: 15)),
-                            Text('Distance',
+                            Text(AppLocalizations.of(context).distance,
                                 style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                           ]),
                         ],
@@ -162,7 +172,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             Text('${widget.durationMin} min',
                                 style: TextStyle(color: context.appTextPrimary,
                                     fontWeight: FontWeight.w700, fontSize: 15)),
-                            Text('Duration',
+                            Text(AppLocalizations.of(context).duration,
                                 style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                           ]),
                         ],
@@ -170,7 +180,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     ),
                   ),
                 SizedBox(height: 12),
-                Text('How was your trip?',
+                Text(AppLocalizations.of(context).howWasYourTripQuestion,
                     style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 24),
 
@@ -195,11 +205,11 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  _stars == 0 ? 'Tap to rate' :
-                  _stars == 1 ? 'Terrible' :
-                  _stars == 2 ? 'Bad' :
-                  _stars == 3 ? 'Okay' :
-                  _stars == 4 ? 'Good' : 'Excellent!',
+                  _stars == 0 ? AppLocalizations.of(context).tapToRate :
+                  _stars == 1 ? AppLocalizations.of(context).ratingTerrible :
+                  _stars == 2 ? AppLocalizations.of(context).ratingBad :
+                  _stars == 3 ? AppLocalizations.of(context).ratingOkay :
+                  _stars == 4 ? AppLocalizations.of(context).ratingGood : AppLocalizations.of(context).ratingExcellent,
                   style: TextStyle(
                     color: _stars >= 4 ? AppTheme.success : _stars > 0 ? AppTheme.danger : context.appTextSecondary,
                     fontWeight: FontWeight.w700, fontSize: 15,
@@ -211,7 +221,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      _stars >= 4 ? 'What did you love?' : 'What went wrong?',
+                      _stars >= 4 ? AppLocalizations.of(context).whatDidYouLoveQuestion : AppLocalizations.of(context).whatWentWrongQuestion,
                       style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600),
                     ),
                   ),
@@ -219,7 +229,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _activeTags.map((tag) => GestureDetector(
+                    children: _activeTags(context).map((tag) => GestureDetector(
                       onTap: () => setState(() {
                         _tags.contains(tag) ? _tags.remove(tag) : _tags.add(tag);
                       }),
@@ -260,7 +270,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                       maxLines: 3,
                       style: TextStyle(color: context.appTextPrimary),
                       decoration: InputDecoration(
-                        hintText: 'Add a comment (optional)...',
+                        hintText: AppLocalizations.of(context).addCommentOptionalHint,
                         hintStyle: TextStyle(color: context.appTextSecondary),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.all(14),
@@ -272,14 +282,14 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   // Tip section
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: Text('Add a tip?',
+                    child: Text(AppLocalizations.of(context).addATipQuestion,
                         style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(height: 10),
                   Row(
                     children: _tipOptions.asMap().entries.map((entry) {
                       final amount   = entry.value;
-                      final label    = amount == 0 ? 'No tip' : '${amount ~/ 1000}k ៛';
+                      final label    = amount == 0 ? AppLocalizations.of(context).noTipLabel : '${amount ~/ 1000}k ៛';
                       final selected = _selectedTip == amount;
                       return Expanded(child: Padding(
                         padding: EdgeInsets.only(right: 8),
@@ -338,7 +348,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             } on ApiException catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                  content: Text('Tip failed: ${e.message}'),
+                                  content: Text('${AppLocalizations.of(context).tipFailedPrefix} ${e.message}'),
                                   backgroundColor: Colors.orange,
                                   behavior: SnackBarBehavior.floating,
                                 ));
@@ -378,7 +388,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                     child: (_submitting || _tipping)
                         ? const SizedBox(width: 22, height: 22,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                        : const Text('Submit Rating'),
+                        : Text(AppLocalizations.of(context).submitRatingBtn),
                   ),
                 ),
               ),
@@ -406,9 +416,9 @@ class _ThankYouScreen extends StatelessWidget {
               child: Icon(Icons.check_rounded, color: AppTheme.accent, size: 56),
             ),
             SizedBox(height: 24),
-            Text('Thank you!', style: TextStyle(color: context.appTextPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
+            Text(AppLocalizations.of(context).thankYouExcl, style: TextStyle(color: context.appTextPrimary, fontSize: 28, fontWeight: FontWeight.w800)),
             SizedBox(height: 8),
-            Text('Your feedback helps us improve the experience for everyone.',
+            Text(AppLocalizations.of(context).feedbackHelpsImprove,
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.appTextSecondary, height: 1.5)),
             const SizedBox(height: 32),
@@ -420,7 +430,7 @@ class _ThankYouScreen extends StatelessWidget {
                 minimumSize: const Size(double.infinity, 52),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: const Text('Back to Home', style: TextStyle(fontWeight: FontWeight.w800)),
+              child: Text(AppLocalizations.of(context).backToHome, style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ]),
         ),

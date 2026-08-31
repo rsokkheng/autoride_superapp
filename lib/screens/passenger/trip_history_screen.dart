@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../models/trip_model.dart';
+import '../../l10n/app_localizations.dart';
 import 'rate_driver_screen.dart';
 import 'trip_tracking_screen.dart';
 import 'delivery_tracking_screen.dart';
@@ -113,17 +114,16 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
   void _applyFilter() => _loadTrips(reset: true);
 
-  static const _typeLabels = {
-    'ride': 'Ride',
-    'delivery': 'Delivery',
-    'moving': 'Moving'
-  };
-  static const _statusLabels = {
-    'completed': 'Completed',
-    'cancelled': 'Cancelled'
-  };
+  Map<String, String> _typeLabels(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return {'ride': l.ride, 'delivery': l.delivery, 'moving': l.moving};
+  }
+  Map<String, String> _statusLabels(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return {'completed': l.completed, 'cancelled': l.cancelled2};
+  }
 
-  String _filterSummary() {
+  String _filterSummary(BuildContext context) {
     final parts = <String>[];
     if (_dateFilter == 'day' && _selectedDate != null) {
       parts.add(_selectedDate!);
@@ -131,10 +131,10 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       parts.add(_selectedMonthLabel);
     }
     if (_typeFilter != 'all')
-      parts.add(_typeLabels[_typeFilter] ?? _typeFilter);
+      parts.add(_typeLabels(context)[_typeFilter] ?? _typeFilter);
     if (_statusFilter != 'all')
-      parts.add(_statusLabels[_statusFilter] ?? _statusFilter);
-    return parts.isEmpty ? 'All trips' : parts.join(' · ');
+      parts.add(_statusLabels(context)[_statusFilter] ?? _statusFilter);
+    return parts.isEmpty ? AppLocalizations.of(context).allTripsLabel : parts.join(' · ');
   }
 
   Future<void> _openFilterSheet() async {
@@ -175,7 +175,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
       appBar: AppBar(
         backgroundColor: context.appBackground,
         elevation: 0,
-        title: Text('Trip',
+        title: Text(AppLocalizations.of(context).tripTitle,
             style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         iconTheme: IconThemeData(color: context.appTextPrimary),
@@ -193,7 +193,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
           // ── Filter bar (opens filter bottom sheet) ──────────────────────
           _FilterBar(
-            summary: _filterSummary(),
+            summary: _filterSummary(context),
             active: _dateFilter != 'recent' ||
                 _typeFilter != 'all' ||
                 _statusFilter != 'all',
@@ -226,8 +226,8 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
             ElevatedButton(
               onPressed: () => _loadTrips(reset: true),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-              child: const Text('Retry',
-                  style: TextStyle(color: AppTheme.primary)),
+              child: Text(AppLocalizations.of(context).retry,
+                  style: const TextStyle(color: AppTheme.primary)),
             ),
           ]),
         ),
@@ -251,7 +251,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     // Flat list for day / month / or recent without groups
     if (flat.isEmpty) {
       return Center(
-        child: Text('No trips found',
+        child: Text(AppLocalizations.of(context).noTripsFound,
             style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
       );
     }
@@ -271,7 +271,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
         MaterialPageRoute(
           builder: (_) => RateDriverScreen(
             rideId: trip.id,
-            driverName: trip.otherParty?.name ?? 'Driver',
+            driverName: trip.otherParty?.name ?? AppLocalizations.of(context).driver,
             fare: AppTheme.khr(trip.amount),
             distanceKm: 0,
             durationMin: 0,
@@ -297,14 +297,14 @@ class _StatsBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _Bubble('Total', '${stats?.totalTrips ?? '--'}',
+          _Bubble(AppLocalizations.of(context).total, '${stats?.totalTrips ?? '--'}',
               Icons.receipt_long_outlined),
           _Vdivider(),
-          _Bubble('Done', '${stats?.completed ?? '--'}',
+          _Bubble(AppLocalizations.of(context).done, '${stats?.completed ?? '--'}',
               Icons.check_circle_outline),
           _Vdivider(),
           _Bubble(
-              'Spent',
+              AppLocalizations.of(context).spentLabel,
               stats != null ? AppTheme.khr(stats!.totalSpentKhr) : '--',
               Icons.account_balance_wallet_outlined),
         ],
@@ -437,18 +437,24 @@ class _FilterSheetState extends State<_FilterSheet> {
   late String _type = widget.typeFilter;
   late String _status = widget.statusFilter;
 
-  static const _typeOptions = [
-    ('all', 'All', Icons.grid_view_rounded),
-    ('ride', 'Ride', Icons.directions_car_outlined),
-    ('delivery', 'Delivery', Icons.delivery_dining_outlined),
-    ('moving', 'Moving', Icons.local_shipping_outlined),
-  ];
+  List<(String, String, IconData)> _typeOptions(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [
+      ('all', l.all, Icons.grid_view_rounded),
+      ('ride', l.ride, Icons.directions_car_outlined),
+      ('delivery', l.delivery, Icons.delivery_dining_outlined),
+      ('moving', l.moving, Icons.local_shipping_outlined),
+    ];
+  }
 
-  static const _statusOptions = [
-    ('all', 'All', AppTheme.accent),
-    ('completed', 'Completed', AppTheme.success),
-    ('cancelled', 'Cancelled', AppTheme.danger),
-  ];
+  List<(String, String, Color)> _statusOptions(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return [
+      ('all', l.all, AppTheme.accent),
+      ('completed', l.completed, AppTheme.success),
+      ('cancelled', l.cancelled2, AppTheme.danger),
+    ];
+  }
 
   Future<void> _pickDay() async {
     final now = DateTime.now();
@@ -514,27 +520,27 @@ class _FilterSheetState extends State<_FilterSheet> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text('Filter Trips',
+              Text(AppLocalizations.of(context).filterTripsTitle,
                   style: TextStyle(
                       color: context.appTextPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w800)),
               const Spacer(),
-              TextButton(onPressed: _reset, child: const Text('Reset')),
+              TextButton(onPressed: _reset, child: Text(AppLocalizations.of(context).resetLabel)),
             ]),
             const SizedBox(height: 16),
-            _SheetSectionLabel('Date'),
+            _SheetSectionLabel(AppLocalizations.of(context).date),
             const SizedBox(height: 8),
             Wrap(spacing: 8, runSpacing: 8, children: [
               _Pill(
-                  label: 'Recent',
+                  label: AppLocalizations.of(context).recent,
                   active: _date == 'recent',
                   color: AppTheme.accent,
                   onTap: () => setState(() => _date = 'recent')),
               _Pill(
                   label: _date == 'day' && _selectedDate != null
                       ? _selectedDate!
-                      : 'By Day',
+                      : AppLocalizations.of(context).byDayLabel,
                   active: _date == 'day',
                   color: AppTheme.accent,
                   icon: Icons.calendar_today_outlined,
@@ -562,12 +568,12 @@ class _FilterSheetState extends State<_FilterSheet> {
                   }).toList()),
             ],
             const SizedBox(height: 20),
-            _SheetSectionLabel('Type'),
+            _SheetSectionLabel(AppLocalizations.of(context).type),
             const SizedBox(height: 8),
             Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _typeOptions.map((opt) {
+                children: _typeOptions(context).map((opt) {
                   final (value, label, icon) = opt;
                   return _Pill(
                     label: label,
@@ -578,12 +584,12 @@ class _FilterSheetState extends State<_FilterSheet> {
                   );
                 }).toList()),
             const SizedBox(height: 20),
-            _SheetSectionLabel('Status'),
+            _SheetSectionLabel(AppLocalizations.of(context).status),
             const SizedBox(height: 8),
             Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: _statusOptions.map((opt) {
+                children: _statusOptions(context).map((opt) {
                   final (value, label, color) = opt;
                   return _Pill(
                     label: label,
@@ -603,8 +609,8 @@ class _FilterSheetState extends State<_FilterSheet> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Apply Filters',
-                    style: TextStyle(
+                child: Text(AppLocalizations.of(context).applyFiltersBtn,
+                    style: const TextStyle(
                         color: AppTheme.primary, fontWeight: FontWeight.w800)),
               ),
             ),
@@ -782,7 +788,7 @@ class _LoadMoreButton extends StatelessWidget {
                     decoration: BoxDecoration(
                         color: context.appSurface,
                         borderRadius: BorderRadius.circular(20)),
-                    child: const Text('Load more',
+                    child: Text(AppLocalizations.of(context).loadMore,
                         style: TextStyle(
                             color: AppTheme.accent,
                             fontWeight: FontWeight.w600,
@@ -856,7 +862,7 @@ class _TripCard extends StatelessWidget {
               to: trip.dropoff,
               fareDisplay: AppTheme.khr(netAmount),
               serviceType: trip.type,
-              recipientName: trip.otherParty?.name ?? 'Recipient',
+              recipientName: trip.otherParty?.name ?? AppLocalizations.of(context).recipient,
             ),
           ));
       return;
@@ -867,7 +873,7 @@ class _TripCard extends StatelessWidget {
         MaterialPageRoute(
           builder: (_) => TripTrackingScreen(
             rideId: trip.id,
-            driverName: trip.otherParty?.name ?? 'Finding driver...',
+            driverName: trip.otherParty?.name ?? AppLocalizations.of(context).findingDriver,
             vehicle: trip.vehicle?.type ?? '--',
             vehicleType: trip.vehicle?.type ?? 'motorbike',
             plate: trip.vehicle?.plate ?? '--',
@@ -977,7 +983,7 @@ class _TripCard extends StatelessWidget {
                         style: const TextStyle(
                             color: AppTheme.success, fontSize: 11)),
                   if (trip.tip > 0)
-                    Text('+${AppTheme.khr(trip.tip)} tip',
+                    Text('+${AppTheme.khr(trip.tip)} ${AppLocalizations.of(context).tipSuffix2}',
                         style:
                             TextStyle(color: AppTheme.warning, fontSize: 11)),
                 ]),
@@ -1043,8 +1049,8 @@ class _TripCard extends StatelessWidget {
                       child: GestureDetector(
                     onTap: () {
                       if (trip.dropoffLat == null || trip.dropoffLng == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('This trip has no destination to rebook.'),
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text(AppLocalizations.of(context).thisTripNoDestinationRebook),
                           behavior: SnackBarBehavior.floating,
                         ));
                         return;
@@ -1068,7 +1074,7 @@ class _TripCard extends StatelessWidget {
                             Icon(Icons.replay_rounded,
                                 color: AppTheme.accent, size: 14),
                             SizedBox(width: 5),
-                            Text('Book Again',
+                            Text(AppLocalizations.of(context).bookAgainBtn,
                                 style: TextStyle(
                                     color: AppTheme.accent,
                                     fontWeight: FontWeight.w600,
@@ -1082,16 +1088,16 @@ class _TripCard extends StatelessWidget {
                   Expanded(
                       child: GestureDetector(
                     onTap: () => onRate(trip),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.star_outline_rounded,
+                            const Icon(Icons.star_outline_rounded,
                                 color: AppTheme.warning, size: 14),
-                            SizedBox(width: 5),
-                            Text('Rate',
-                                style: TextStyle(
+                            const SizedBox(width: 5),
+                            Text(AppLocalizations.of(context).rateBtn,
+                                style: const TextStyle(
                                     color: AppTheme.warning,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13)),

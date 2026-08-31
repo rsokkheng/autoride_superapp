@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class MyRentalsScreen extends StatefulWidget {
   const MyRentalsScreen({super.key});
@@ -13,18 +14,19 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tc;
 
-  static const _tabs = [
-    (label: 'All',       status: null),
-    (label: 'Pending',   status: 'pending'),
-    (label: 'Confirmed', status: 'confirmed'),
-    (label: 'Completed', status: 'completed'),
-    (label: 'Cancelled', status: 'cancelled'),
-  ];
+  static const _statuses = [null, 'pending', 'confirmed', 'completed', 'cancelled'];
+
+  List<({String label, String? status})> _tabs(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final labels = [l.all, l.pendingStatus, l.confirmed, l.completed, l.cancelled2];
+    return List.generate(_statuses.length,
+        (i) => (label: labels[i], status: _statuses[i]));
+  }
 
   @override
   void initState() {
     super.initState();
-    _tc = TabController(length: _tabs.length, vsync: this);
+    _tc = TabController(length: _statuses.length, vsync: this);
   }
 
   @override
@@ -42,8 +44,8 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: const Text('My Rentals',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
+        title: Text(AppLocalizations.of(context).myRentals,
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
         bottom: TabBar(
           controller: _tc,
           isScrollable: true,
@@ -53,12 +55,12 @@ class _MyRentalsScreenState extends State<MyRentalsScreen>
           labelColor: AppTheme.accent,
           unselectedLabelColor: Colors.grey,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          tabs: _tabs.map((t) => Tab(text: t.label)).toList(),
+          tabs: _tabs(context).map((t) => Tab(text: t.label)).toList(),
         ),
       ),
       body: TabBarView(
         controller: _tc,
-        children: _tabs
+        children: _tabs(context)
             .map((t) => _RentalList(status: t.status))
             .toList(),
       ),
@@ -118,7 +120,7 @@ class _RentalListState extends State<_RentalList>
         Text(_error!, textAlign: TextAlign.center,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         const SizedBox(height: 12),
-        TextButton(onPressed: _load, child: const Text('Retry')),
+        TextButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_rentals.isEmpty) {
@@ -126,7 +128,7 @@ class _RentalListState extends State<_RentalList>
         Icon(Icons.directions_car_outlined,
             color: context.appTextSecondary.withValues(alpha: 0.4), size: 56),
         const SizedBox(height: 14),
-        Text('No rentals found',
+        Text(AppLocalizations.of(context).noRentalsFound,
             style: TextStyle(color: context.appTextSecondary,
                 fontWeight: FontWeight.w600, fontSize: 15)),
       ]));
@@ -184,16 +186,16 @@ class _RentalCard extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Cancel Rental',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('Are you sure you want to cancel this rental?'),
+        title: Text(AppLocalizations.of(context).cancelRentalTitle,
+            style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(AppLocalizations.of(context).cancelRentalConfirmMsg),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('No')),
+              child: Text(AppLocalizations.of(context).no)),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Yes, Cancel',
+              child: Text(AppLocalizations.of(context).yesCancelBtn,
                   style: TextStyle(color: AppTheme.danger))),
         ],
       ),
@@ -220,7 +222,7 @@ class _RentalCard extends StatelessWidget {
     final product   = r['product']  as Map<String, dynamic>?;
     final user      = r['user']     as Map<String, dynamic>?;
     final title     = product?['title'] as String?
-                          ?? _titleFor(r['vehicle_type'] as String?);
+                          ?? _titleFor(context, r['vehicle_type'] as String?);
     final image     = product?['image'] as String?;
     final status    = r['status']   as String? ?? 'pending';
     final sc        = _statusColor(status);
@@ -271,7 +273,7 @@ class _RentalCard extends StatelessWidget {
                   color: sc.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(status[0].toUpperCase() + status.substring(1),
+                child: Text(_statusLabel(context, status),
                     style: TextStyle(color: sc,
                         fontWeight: FontWeight.w700, fontSize: 11)),
               ),
@@ -279,7 +281,7 @@ class _RentalCard extends StatelessWidget {
             const SizedBox(height: 5),
             // ID + source badge
             Row(children: [
-              Text(isOrder ? 'Order #$id' : 'Rental #$id',
+              Text(isOrder ? '${AppLocalizations.of(context).orderHashPrefix}$id' : '${AppLocalizations.of(context).rentalHashPrefix}$id',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               const SizedBox(width: 8),
               Container(
@@ -289,7 +291,7 @@ class _RentalCard extends StatelessWidget {
                       .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: Text(isOrder ? 'Marketplace' : 'Rental Vehicle',
+                child: Text(isOrder ? AppLocalizations.of(context).marketplace : AppLocalizations.of(context).rentalVehicleBadge,
                     style: TextStyle(
                       color: isOrder ? AppTheme.accent : const Color(0xFF7C3AED),
                       fontSize: 10, fontWeight: FontWeight.w700,
@@ -366,8 +368,8 @@ class _RentalCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                   ),
-                  child: const Text('Cancel Rental',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  child: Text(AppLocalizations.of(context).cancelRentalTitle,
+                      style: const TextStyle(fontWeight: FontWeight.w700)),
                 ),
               ),
             ],
@@ -377,21 +379,34 @@ class _RentalCard extends StatelessWidget {
     );
   }
 
+  String _statusLabel(BuildContext context, String status) {
+    final l = AppLocalizations.of(context);
+    return switch (status) {
+      'confirmed' => l.confirmed,
+      'completed' => l.completed,
+      'cancelled' => l.cancelled2,
+      _           => l.pendingStatus,
+    };
+  }
+
   Widget _placeholder(BuildContext context, String? vtype) => Container(
     height: 120, color: context.appCardBg,
     child: Center(child: Icon(_vehicleIcon(vtype),
         size: 52, color: context.appTextSecondary.withValues(alpha: 0.35))),
   );
 
-  String _titleFor(String? type) => switch (type) {
-    'suv'        => 'SUV',
-    'van'        => 'Van',
-    'motorcycle' => 'Motorcycle',
-    'truck'      => 'Truck',
-    'tuk_tuk'   => 'Tuk Tuk',
-    'electric'   => 'Electric Vehicle',
-    _            => 'Sedan',
-  };
+  String _titleFor(BuildContext context, String? type) {
+    final l = AppLocalizations.of(context);
+    return switch (type) {
+      'suv'        => l.suvLabel,
+      'van'        => l.van,
+      'motorcycle' => l.motorcycle,
+      'truck'      => l.truck,
+      'tuk_tuk'    => l.tukTuk,
+      'electric'   => l.electricVehicleLabel,
+      _            => l.sedanLabel,
+    };
+  }
 }
 
 class _InfoRow extends StatelessWidget {

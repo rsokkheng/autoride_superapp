@@ -89,21 +89,36 @@ class _SplashScreenState extends State<SplashScreen>
         systemNavigationBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: AppTheme.accent,
+        backgroundColor: AppTheme.white,
         extendBodyBehindAppBar: true,
         body: Center(
-          child: AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, child) => Opacity(
-              opacity: _logoOpacity.value,
-              child: Transform.scale(scale: _logoScale.value, child: child),
+         child: Column(
+          mainAxisSize: MainAxisSize.min, // Keeps the column wrapped tightly around its children
+          children: [
+            AnimatedBuilder(
+              animation: _ctrl,
+              builder: (_, child) => Opacity(
+                opacity: _logoOpacity.value,
+                child: Transform.scale(scale: _logoScale.value, child: child),
+              ),
+              child: Image.asset(
+                'assets/library/icon_fa.png',
+                width: 120,
+                height: 120,
+              ),
             ),
-            child: Image.asset(
-              'assets/library/icon_fa.png',
-              width: 120,
-              height: 120,
+            
+          const SizedBox(height: 8), // Adds spacing between the logo and the text
+           const Text(
+            'ROTEH APP',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.accent, // <-- Add your desired color here
             ),
           ),
+          ],
+        ),
         ),
       ),
     );

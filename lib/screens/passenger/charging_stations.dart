@@ -8,6 +8,7 @@ import '../../services/api_service.dart';
 import '../../services/maps_service.dart';
 import '../../services/locale_service.dart';
 import '../../utils/location_display.dart';
+import '../../l10n/app_localizations.dart';
 import 'ride_booking.dart';
 
 // Restrict the map to Cambodia only.
@@ -172,6 +173,16 @@ const _kLightMapStyle = '''
 ''';
 
 const _kFilters = ['All', 'Fast Charging', 'Available', 'Favorites'];
+
+String _filterLabel(BuildContext context, String f) {
+  final l = AppLocalizations.of(context);
+  return switch (f) {
+    'Fast Charging' => l.fastChargingLabel,
+    'Available'     => l.available,
+    'Favorites'     => l.favoritesLabel,
+    _               => l.all,
+  };
+}
 
 class ChargingStationsScreen extends StatefulWidget {
   // Drivers only browse station locations on the map — they don't book
@@ -608,7 +619,7 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
     setState(() {
       _currentLocationName = address != null
           ? getDisplayLocation(name: '', address: address)
-          : 'My location';
+          : AppLocalizations.of(context).myLocationLabel;
       _routeLoading = false;
       if (route != null) {
         _routePolylines = {
@@ -661,7 +672,7 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
             ElevatedButton(
               onPressed: _load,
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-              child: Text('Retry', style: TextStyle(color: AppTheme.primary)),
+              child: Text(AppLocalizations.of(context).retry, style: TextStyle(color: AppTheme.primary)),
             ),
           ]),
         )),
@@ -769,9 +780,9 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                           controller: _searchCtrl,
                           onChanged: (_) => setState(() {}),
                           style: const TextStyle(color: _kTextPri, fontSize: 14),
-                          decoration: const InputDecoration(
-                            hintText: 'Search charging station, location...',
-                            hintStyle: TextStyle(color: _kTextSec, fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(context).searchChargingStation,
+                            hintStyle: const TextStyle(color: _kTextSec, fontSize: 13),
                             border: InputBorder.none,
                             isDense: true,
                           ),
@@ -826,7 +837,7 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                                   ? Colors.white
                                   : (f == 'Available' ? AppTheme.accent : _kTextSec)),
                           const SizedBox(width: 6),
-                          Text(f,
+                          Text(_filterLabel(context, f),
                               style: TextStyle(
                                   color: selected ? Colors.white : _kTextPri,
                                   fontSize: 12.5,
@@ -844,8 +855,8 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                   const SizedBox(width: 4),
                   Text(
                       _position != null
-                          ? 'Sorted by distance from your location'
-                          : 'Sorted by distance from Phnom Penh (location unavailable)',
+                          ? AppLocalizations.of(context).sortedByDistanceFromLocation
+                          : AppLocalizations.of(context).sortedByDistanceFromPhnomPenh,
                       style: const TextStyle(color: _kTextSec, fontSize: 11)),
                 ]),
               ],
@@ -902,8 +913,8 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(
                           _routeLoading
-                              ? 'Finding your location…'
-                              : (_currentLocationName ?? 'My location unavailable'),
+                              ? AppLocalizations.of(context).findingYourLocation
+                              : (_currentLocationName ?? AppLocalizations.of(context).myLocationUnavailable),
                           style: const TextStyle(color: _kTextPri, fontWeight: FontWeight.w600, fontSize: 13),
                           maxLines: 1, overflow: TextOverflow.ellipsis,
                         ),
@@ -958,11 +969,11 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
                   child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    const Text('Nearby Charging Stations',
-                        style: TextStyle(color: _kTextPri, fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(AppLocalizations.of(context).nearbyChargingStationsTitle,
+                        style: const TextStyle(color: _kTextPri, fontSize: 16, fontWeight: FontWeight.w700)),
                     GestureDetector(
                       onTap: () => setState(() => _showAll = !_showAll),
-                      child: Text(_showAll ? 'Show less' : 'See all',
+                      child: Text(_showAll ? AppLocalizations.of(context).showLess : AppLocalizations.of(context).seeAll,
                           style: const TextStyle(
                               color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
@@ -970,10 +981,10 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
                 ),
                 Flexible(
                   child: filtered.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text('No charging stations found.',
-                              style: TextStyle(color: _kTextSec)),
+                      ? Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(AppLocalizations.of(context).noChargingStationsFound,
+                              style: const TextStyle(color: _kTextSec)),
                         )
                       : ListView.builder(
                           shrinkWrap: true,
@@ -1043,7 +1054,7 @@ class _StationCard extends StatelessWidget {
       if (station.connectorTypes.isNotEmpty)
         station.connectorTypes.join('/')
       else if (station.fastCharging)
-        'Fast Charging',
+        AppLocalizations.of(context).fastChargingLabel,
       if (station.hours.isNotEmpty) station.hours,
     ].join(' · ');
 
@@ -1087,8 +1098,8 @@ class _StationCard extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               station.totalPorts != null
-                  ? '${station.availablePorts}/${station.totalPorts} Available'
-                  : '${station.availablePorts} Available',
+                  ? '${station.availablePorts}/${station.totalPorts} ${AppLocalizations.of(context).availableSuffix}'
+                  : '${station.availablePorts} ${AppLocalizations.of(context).availableSuffix}',
               style: const TextStyle(color: AppTheme.accent, fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ]),

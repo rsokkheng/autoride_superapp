@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
@@ -68,7 +69,7 @@ class _DriverApprovalPendingScreenState extends State<DriverApprovalPendingScree
         backgroundColor: context.appSurface,
         elevation: 0,
         automaticallyImplyLeading: false,
-        title: Text('Application Status',
+        title: Text(AppLocalizations.of(context).applicationStatus,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
@@ -112,7 +113,9 @@ class _Body extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              status.isRejected ? 'Document Review Results' : 'Document Status',
+              status.isRejected
+                  ? AppLocalizations.of(context).documentReviewResults
+                  : AppLocalizations.of(context).documentStatus,
               style: TextStyle(color: context.appTextPrimary,
                   fontSize: 15, fontWeight: FontWeight.w700),
             ),
@@ -134,13 +137,13 @@ class _Body extends StatelessWidget {
               Row(children: [
                 Icon(Icons.info_outline, color: AppTheme.danger, size: 18),
                 SizedBox(width: 8),
-                Text('What to do next',
+                Text(AppLocalizations.of(context).whatToDoNext,
                     style: TextStyle(color: AppTheme.danger,
                         fontWeight: FontWeight.w700, fontSize: 13)),
               ]),
               SizedBox(height: 8),
               Text(
-                'Please review the feedback on your documents above, then re-submit with corrected photos. Contact support if you need help.',
+                AppLocalizations.of(context).pleaseReviewTheFeedbackOn,
                 style: TextStyle(color: context.appTextSecondary, fontSize: 12, height: 1.5),
               ),
               SizedBox(height: 12),
@@ -152,7 +155,7 @@ class _Body extends StatelessWidget {
                     MaterialPageRoute(builder: (_) => DriverDocumentUploadScreen(userId: 0)),
                   ),
                   icon: Icon(Icons.upload_rounded, size: 18),
-                  label: Text('Re-upload Documents'),
+                  label: Text(AppLocalizations.of(context).reUploadDocuments),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                     side: BorderSide(color: AppTheme.danger),
@@ -168,7 +171,7 @@ class _Body extends StatelessWidget {
         SizedBox(height: 20),
         if (status.isPending)
           Text(
-            'We\'ll notify you once your documents have been reviewed.\nTypically 1–2 business days.',
+            AppLocalizations.of(context).weLlNotifyYouOnce,
             style: TextStyle(color: context.appTextSecondary, fontSize: 12, height: 1.6),
             textAlign: TextAlign.center,
           ),
@@ -179,7 +182,7 @@ class _Body extends StatelessWidget {
               ? const SizedBox(width: 14, height: 14,
                   child: CircularProgressIndicator(strokeWidth: 2, color: _green))
               : const Icon(Icons.refresh_rounded, size: 16, color: _green),
-          label: const Text('Refresh Status', style: TextStyle(color: _green)),
+          label: Text(AppLocalizations.of(context).refreshStatus, style: TextStyle(color: _green)),
         ),
         const SizedBox(height: 24),
       ]),
@@ -195,11 +198,12 @@ class _StatusHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final (icon, color, title, subtitle) = status.isApproved
-        ? (Icons.check_circle_rounded, _green,  'Approved!',        'You can now go online and accept rides.')
+        ? (Icons.check_circle_rounded, _green, l.approvedExcl, l.youCanNowGoOnline)
         : status.isRejected
-        ? (Icons.cancel_rounded,       AppTheme.danger,  'Application Rejected', 'Please review your documents and re-submit.')
-        : (Icons.hourglass_top_rounded, _orange, 'Under Review',    'Our team is reviewing your application.');
+        ? (Icons.cancel_rounded, AppTheme.danger, l.applicationRejected, l.pleaseReviewDocsResubmit)
+        : (Icons.hourglass_top_rounded, _orange, l.underReview, l.ourTeamIsReviewing);
 
     return Container(
       width: double.infinity,
@@ -239,9 +243,9 @@ class _InfoCard extends StatelessWidget {
       ),
       child: Column(children: [
         if (status.city != null)
-          _Row(context, Icons.location_city_outlined, 'City', status.city!),
+          _Row(context, Icons.location_city_outlined, AppLocalizations.of(context).city, status.city!),
         if (status.serviceZone != null)
-          _Row(context, Icons.map_outlined, 'Service Zone', status.serviceZone!),
+          _Row(context, Icons.map_outlined, AppLocalizations.of(context).serviceZone, status.serviceZone!),
       ]),
     );
   }
@@ -264,14 +268,16 @@ class _DocumentStatusTile extends StatelessWidget {
   final DriverDocument doc;
   const _DocumentStatusTile({required this.doc});
 
-  static const _labels = {
-    'id_card':              'National ID / Passport',
-    'driver_license':       'Driver License',
-    'vehicle_registration': 'Vehicle Registration',
-    'selfie_with_id':       'Selfie with ID',
-    'vehicle_insurance':    'Vehicle Insurance',
-    'other':                'Other Document',
-  };
+  static String _label(AppLocalizations l, String type) {
+    switch (type) {
+      case 'id_card':              return l.nationalIdPassport;
+      case 'driver_license':       return l.driverLicense;
+      case 'vehicle_registration': return l.vehicleRegistration;
+      case 'selfie_with_id':       return l.selfieWithId;
+      case 'vehicle_insurance':    return l.vehicleInsurance;
+      default:                     return l.otherDocument;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -299,7 +305,7 @@ class _DocumentStatusTile extends StatelessWidget {
         Icon(icon, color: color, size: 22),
         SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_labels[doc.type] ?? doc.type,
+          Text(_label(AppLocalizations.of(context), doc.type),
               style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 13)),
           if (doc.note != null && doc.note!.isNotEmpty) ...[
@@ -314,7 +320,11 @@ class _DocumentStatusTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Text(
-            doc.isApproved ? 'Approved' : doc.isRejected ? 'Rejected' : 'Pending',
+            doc.isApproved
+                ? AppLocalizations.of(context).approvedStatus
+                : doc.isRejected
+                    ? AppLocalizations.of(context).rejectedStatus
+                    : AppLocalizations.of(context).pendingStatus,
             style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
           ),
         ),
@@ -344,7 +354,7 @@ class _ErrorBody extends StatelessWidget {
           ElevatedButton(
             onPressed: onRetry,
             style: ElevatedButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white),
-            child: const Text('Retry'),
+            child: Text(AppLocalizations.of(context).retry),
           ),
         ]),
       ),

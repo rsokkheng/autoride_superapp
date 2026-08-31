@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 import 'trip_tracking_screen.dart';
 
 // Vehicle options
@@ -74,6 +75,14 @@ class _AirportTripScreenState extends State<AirportTripScreen>
   // Booking
   bool    _booking   = false;
   String? _bookError;
+
+  String _vehicleLabel(BuildContext context, String type) => type == 'car'
+      ? AppLocalizations.of(context).sedanLabel
+      : AppLocalizations.of(context).suvVanLabel;
+
+  String _vehicleDesc(BuildContext context, String type) => type == 'car'
+      ? AppLocalizations.of(context).upTo4Pax
+      : AppLocalizations.of(context).upTo6Pax;
 
   bool get _toAirport => _direction == 0;
 
@@ -197,13 +206,13 @@ class _AirportTripScreenState extends State<AirportTripScreen>
 
   Future<void> _book() async {
     if (!_canBook) {
-      setState(() => _bookError = 'Please fill in your address, flight number, and flight time.');
+      setState(() => _bookError = AppLocalizations.of(context).fillAddressFlightDetailsError);
       return;
     }
     setState(() { _booking = true; _bookError = null; });
 
     final userAddress = _addressCtrl.text.trim();
-    final zoneName    = _zone?.name ?? 'Airport';
+    final zoneName    = _zone?.name ?? AppLocalizations.of(context).airportFallback;
 
     try {
       final ride = await ApiService.createRide(
@@ -252,15 +261,15 @@ class _AirportTripScreenState extends State<AirportTripScreen>
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Airport Transfer'),
+        title: Text(AppLocalizations.of(context).airportTransferTitle),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.flight_takeoff_rounded), text: 'To Airport'),
-            Tab(icon: Icon(Icons.flight_land_rounded),    text: 'From Airport'),
+          tabs: [
+            Tab(icon: const Icon(Icons.flight_takeoff_rounded), text: AppLocalizations.of(context).toAirportTab),
+            Tab(icon: const Icon(Icons.flight_land_rounded),    text: AppLocalizations.of(context).fromAirportTab),
           ],
         ),
       ),
@@ -276,13 +285,13 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                   _InfoBanner(
                     icon: Icons.access_time_rounded,
                     color: AppTheme.accent,
-                    message: '60 minutes free wait included — we track your flight and adjust pickup automatically.',
+                    message: AppLocalizations.of(context).freeWaitBannerMessage,
                   ),
                   const SizedBox(height: 16),
                 ],
 
                 // ── Airport selector ─────────────────────────────────────
-                _SectionLabel(label: _toAirport ? 'Drop-off Airport' : 'Pick-up Airport'),
+                _SectionLabel(label: _toAirport ? AppLocalizations.of(context).dropoffAirportLabel : AppLocalizations.of(context).pickupAirportLabel),
                 const SizedBox(height: 10),
                 _zonesLoading
                     ? const Center(child: Padding(
@@ -338,13 +347,13 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                 const SizedBox(height: 20),
 
                 // ── Your address ─────────────────────────────────────────
-                _SectionLabel(label: _toAirport ? 'Pick-up Address' : 'Drop-off Address'),
+                _SectionLabel(label: _toAirport ? AppLocalizations.of(context).pickupAddressLabel : AppLocalizations.of(context).dropoffAddressLabel),
                 const SizedBox(height: 8),
                 _AddressField(
                   controller: _addressCtrl,
                   hint: _toAirport
-                      ? 'Enter your home / hotel address'
-                      : 'Enter your destination address',
+                      ? AppLocalizations.of(context).enterHomeHotelAddressHint
+                      : AppLocalizations.of(context).enterDestinationAddressHint,
                   onChanged: (v) {
                     if (v.trim().isNotEmpty && _userLatLng == null) {
                       // In production, geocode via a places API.
@@ -360,13 +369,13 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                 SizedBox(height: 20),
 
                 // ── Flight details ───────────────────────────────────────
-                _SectionLabel(label: 'Flight Details'),
+                _SectionLabel(label: AppLocalizations.of(context).flightDetailsLabel),
                 SizedBox(height: 10),
                 Row(children: [
                   Expanded(
                     child: _InputField(
                       controller: _flightCtrl,
-                      hint: 'Flight no. (e.g. QH101)',
+                      hint: AppLocalizations.of(context).flightNumberHint,
                       icon: Icons.confirmation_number_outlined,
                       inputFormatters: [UpperCaseFormatter()],
                     ),
@@ -375,7 +384,7 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                   Expanded(
                     child: _InputField(
                       controller: _terminalCtrl,
-                      hint: 'Terminal (e.g. T1)',
+                      hint: AppLocalizations.of(context).terminalHint,
                       icon: Icons.door_front_door_outlined,
                     ),
                   ),
@@ -397,7 +406,7 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                       Text(
                         _flightTime != null
                             ? _formatDateTime(_flightTime!)
-                            : _toAirport ? 'Departure time' : 'Arrival time',
+                            : _toAirport ? AppLocalizations.of(context).departureTime : AppLocalizations.of(context).arrivalTime,
                         style: TextStyle(
                           color: _flightTime != null
                               ? context.appTextPrimary
@@ -412,7 +421,7 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                 const SizedBox(height: 20),
 
                 // ── Vehicle type ─────────────────────────────────────────
-                _SectionLabel(label: 'Vehicle Type'),
+                _SectionLabel(label: AppLocalizations.of(context).vehicleTypeLabel),
                 const SizedBox(height: 10),
                 Row(
                   children: _kVehicles.map((v) {
@@ -446,12 +455,12 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                                   size: 22),
                               SizedBox(width: 10),
                               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                Text(v.label,
+                                Text(_vehicleLabel(context, v.type),
                                     style: TextStyle(
                                       color: sel ? AppTheme.accent : context.appTextPrimary,
                                       fontWeight: FontWeight.w700, fontSize: 14,
                                     )),
-                                Text(v.desc,
+                                Text(_vehicleDesc(context, v.type),
                                     style: TextStyle(
                                         color: context.appTextSecondary, fontSize: 11)),
                               ]),
@@ -466,7 +475,7 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                 SizedBox(height: 20),
 
                 // ── Passengers & luggage ─────────────────────────────────
-                _SectionLabel(label: 'Passengers & Luggage'),
+                _SectionLabel(label: AppLocalizations.of(context).passengersAndLuggageLabel),
                 SizedBox(height: 10),
                 Container(
                   padding: EdgeInsets.all(16),
@@ -477,7 +486,7 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                   child: Column(children: [
                     _CounterRow(
                       icon: Icons.person_outline_rounded,
-                      label: 'Passengers',
+                      label: AppLocalizations.of(context).passengersLabel,
                       value: _passengers,
                       min: 1,
                       max: _vehicle.maxPax,
@@ -486,7 +495,7 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                     Divider(height: 20, color: context.appCardBg),
                     _CounterRow(
                       icon: Icons.luggage_rounded,
-                      label: 'Luggage bags',
+                      label: AppLocalizations.of(context).luggageBagsLabel,
                       value: _luggage,
                       min: 0,
                       max: 6,
@@ -555,8 +564,8 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                           const SizedBox(width: 8),
                           Text(
                             _estimate != null
-                                ? 'Book Transfer · ${AppTheme.khr(_estimate!.totalKhr)}'
-                                : 'Book Airport Transfer',
+                                ? '${AppLocalizations.of(context).bookTransferPrefix} ${AppTheme.khr(_estimate!.totalKhr)}'
+                                : AppLocalizations.of(context).bookAirportTransfer,
                             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                           ),
                         ]),
@@ -739,7 +748,7 @@ class _FareCard extends StatelessWidget {
         child: Row(children: [
           Icon(Icons.info_outline, color: context.appTextSecondary, size: 16),
           SizedBox(width: 8),
-          Expanded(child: Text('Enter your address to see the estimated fare.',
+          Expanded(child: Text(AppLocalizations.of(context).enterAddressForFareEstimate,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13))),
         ]),
       );
@@ -759,7 +768,7 @@ class _FareCard extends StatelessWidget {
         Row(children: [
           const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 14),
           const SizedBox(width: 6),
-          const Text('Fare Breakdown',
+          Text(AppLocalizations.of(context).fareBreakdown,
               style: TextStyle(color: AppTheme.accent, fontSize: 12,
                   fontWeight: FontWeight.w700)),
           const Spacer(),
@@ -767,15 +776,15 @@ class _FareCard extends StatelessWidget {
               style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
         Divider(height: 16, color: context.appCardBg),
-        _row(context, 'Base fare', est.baseFareKhr),
-        _row(context, 'Airport surcharge', est.surchargKhr),
+        _row(context, AppLocalizations.of(context).baseFare, est.baseFareKhr),
+        _row(context, AppLocalizations.of(context).airportSurcharge, est.surchargKhr),
         if (est.luggageCount > 0)
-          _row(context, 'Luggage (${est.luggageCount} bag${est.luggageCount > 1 ? "s" : ""})',
+          _row(context, '${AppLocalizations.of(context).luggageBagsCountLabel} (${est.luggageCount})',
               est.luggageFeeKhr),
         Divider(height: 16, color: context.appCardBg),
-        _row(context, 'Total', est.totalKhr, bold: true, color: AppTheme.accent),
+        _row(context, AppLocalizations.of(context).total, est.totalKhr, bold: true, color: AppTheme.accent),
         SizedBox(height: 6),
-        Text('Fixed price · No surge',
+        Text(AppLocalizations.of(context).fixedPriceNoSurge,
             style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
       ]),
     );

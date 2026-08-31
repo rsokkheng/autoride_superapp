@@ -10,6 +10,7 @@ class DeliveryModel {
   final String? recipientName;
   final String? recipientPhone;
   final String? packageSize;
+  final int?    packageAmount;
   final String pickupAddress;
   final String dropoffAddress;
   final String? scheduledAt;
@@ -49,6 +50,14 @@ class DeliveryModel {
   final String? partnerCode;      // for 'partner' and 'split'
   final int?    splitPercent;     // customer's share 0–100, for 'split'
 
+  // ── Driver payout ─────────────────────────────────────────────────────────
+  // Only populated on driver-facing responses. All three are optional and the
+  // backend may send any one of them, so `netDriverFee` derives from whichever
+  // arrived rather than assuming a fixed commission rate.
+  final int?    commissionAmount;   // platform's cut, in KHR
+  final double? commissionPercent;  // platform's cut as a % of `fee`
+  final int?    driverNetFee;       // fee minus commission, as settled server-side
+
   const DeliveryModel({
     required this.id,
     required this.senderId,
@@ -58,6 +67,7 @@ class DeliveryModel {
     this.recipientName,
     this.recipientPhone,
     this.packageSize,
+    this.packageAmount,
     required this.pickupAddress,
     required this.dropoffAddress,
     this.scheduledAt,
@@ -93,9 +103,33 @@ class DeliveryModel {
     this.paymentModel,
     this.partnerCode,
     this.splitPercent,
+    // driver payout
+    this.commissionAmount,
+    this.commissionPercent,
+    this.driverNetFee,
   });
 
   bool get isMoving => serviceType == 'moving';
+
+  /// What the platform keeps out of [fee], in KHR. Null when the response
+  /// carried no payout information at all — callers must not fall back to a
+  /// hard-coded rate, since the commission is configured server-side.
+  int? get platformCommission {
+    if (commissionAmount != null) return commissionAmount!.clamp(0, fee);
+    if (driverNetFee != null)     return (fee - driverNetFee!).clamp(0, fee);
+    if (commissionPercent != null) {
+      return (fee * commissionPercent! / 100).round().clamp(0, fee);
+    }
+    return null;
+  }
+
+  /// What the driver actually keeps out of [fee], in KHR. Null when the
+  /// response carried no payout information.
+  int? get netDriverFee {
+    if (driverNetFee != null) return driverNetFee!.clamp(0, fee);
+    final cut = platformCommission;
+    return cut == null ? null : (fee - cut).clamp(0, fee);
+  }
 
   factory DeliveryModel.fromJson(Map<String, dynamic> json) {
     return DeliveryModel(
@@ -107,6 +141,7 @@ class DeliveryModel {
       recipientName:  json['recipient_name'] as String?,
       recipientPhone: json['recipient_phone'] as String?,
       packageSize:    json['package_size'] as String?,
+      packageAmount:  json['package_amount'] != null ? _toInt(json['package_amount']) : (json['package_price'] != null ? _toInt(json['package_price']) : null),
       pickupAddress:  json['pickup_address'] as String,
       dropoffAddress: json['dropoff_address'] as String,
       scheduledAt:    json['scheduled_at'] as String?,
@@ -148,8 +183,22 @@ class DeliveryModel {
       paymentModel:     json['payment_model'] as String?,
       partnerCode:      json['partner_code'] as String?,
       splitPercent:     json['split_percent'] as int?,
+      // driver payout — key naming varies across the delivery, moving and
+      // driver-job endpoints, so accept every spelling the API has used.
+      commissionAmount: _optInt(json['commission_amount'] ??
+          json['commission'] ?? json['platform_fee']),
+      commissionPercent: _optDouble(json['commission_percent'] ??
+          json['commission_pct'] ?? json['commission_rate']),
+      driverNetFee: _optInt(json['driver_net_fee'] ??
+          json['net_fee'] ?? json['driver_earning'] ?? json['driver_amount']),
     );
   }
+
+  static int? _optInt(dynamic v) => v == null ? null : _toInt(v);
+
+  static double? _optDouble(dynamic v) => v == null
+      ? null
+      : v is num ? v.toDouble() : double.tryParse(v.toString());
 
   static int _toInt(dynamic v) =>
       v == null ? 0 : v is int ? v : (v is num ? v.round() : int.tryParse(v.toString()) ?? 0);

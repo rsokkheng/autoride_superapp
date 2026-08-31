@@ -1,3 +1,4 @@
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -151,7 +152,7 @@ class _WalletScreenState extends State<WalletScreen> {
           if (approved == true) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('Balance updated'),
+                content: Text(AppLocalizations.of(context).balanceUpdated),
                 backgroundColor: AppTheme.success,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -178,7 +179,7 @@ class _WalletScreenState extends State<WalletScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('Sent successfully'),
+                content: Text(AppLocalizations.of(context).sentSuccessfully),
                 backgroundColor: AppTheme.success,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -202,7 +203,7 @@ class _WalletScreenState extends State<WalletScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadAll,
-            tooltip: 'Refresh',
+            tooltip: AppLocalizations.of(context).refresh,
           ),
         ],
       ),
@@ -267,13 +268,13 @@ class _WalletScreenState extends State<WalletScreen> {
                     border: Border.all(
                         color: Colors.white.withValues(alpha: 0.4)),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.add, color: Colors.white, size: 14),
                       SizedBox(width: 4),
                       Text(
-                        'Reload',
+                        AppLocalizations.of(context).reload,
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -306,8 +307,8 @@ class _WalletScreenState extends State<WalletScreen> {
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: _loadBalance,
-                  child: const Text(
-                    'Tap to retry',
+                  child: Text(
+                    AppLocalizations.of(context).tapToRetry,
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -350,19 +351,19 @@ class _WalletScreenState extends State<WalletScreen> {
         children: [
           _QuickActionButton(
             icon: Icons.add_circle_outline,
-            label: 'Top Up',
+            label: AppLocalizations.of(context).topUp,
             color: AppTheme.accent,
             onTap: _showTopUpSheet,
           ),
           _QuickActionButton(
             icon: Icons.send,
-            label: 'Send',
+            label: AppLocalizations.of(context).send,
             color: AppTheme.accentOrange,
             onTap: _showSendSheet,
           ),
           _QuickActionButton(
             icon: Icons.history,
-            label: 'History',
+            label: AppLocalizations.of(context).history,
             color: AppTheme.success,
             onTap: () => _loadTransactions(reset: true),
           ),
@@ -378,7 +379,7 @@ class _WalletScreenState extends State<WalletScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Recent Transactions',
+            AppLocalizations.of(context).recentTransactions,
             style: TextStyle(
                 color: context.appTextPrimary,
                 fontSize: 16,
@@ -410,7 +411,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                     SizedBox(height: 12),
                     Text(
-                      'No transactions yet',
+                      AppLocalizations.of(context).noTransactionsYet,
                       style: TextStyle(color: context.appTextSecondary),
                     ),
                   ],
@@ -449,8 +450,8 @@ class _WalletScreenState extends State<WalletScreen> {
                         child: CircularProgressIndicator(
                             color: AppTheme.accent, strokeWidth: 2),
                       )
-                    : const Text(
-                        'View all',
+                    : Text(
+                        AppLocalizations.of(context).viewAll,
                         style: TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 14),
                       ),
@@ -613,7 +614,7 @@ class _TxErrorBanner extends StatelessWidget {
           TextButton(
             onPressed: onRetry,
             child:
-                const Text('Retry', style: TextStyle(color: AppTheme.accent)),
+                Text(AppLocalizations.of(context).retry, style: TextStyle(color: AppTheme.accent)),
           ),
         ],
       ),
@@ -663,8 +664,8 @@ class _TopUpSheetState extends State<_TopUpSheet> {
   Future<void> _submit() async {
     final amount = _effectiveAmount;
     if (amount == null || amount < 1000) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Minimum top-up amount is 1,000 KHR.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).minimumTopUpAmountIs),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -717,7 +718,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
             ),
             SizedBox(height: 20),
             Text(
-              'Top Up ROTEH Pay',
+              AppLocalizations.of(context).topUpRotehPay,
               style: TextStyle(
                   color: context.appTextPrimary,
                   fontSize: 18,
@@ -775,7 +776,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
               onChanged: (_) => setState(() => _useCustom = true),
               onTap: () => setState(() => _useCustom = true),
               decoration: InputDecoration(
-                hintText: 'Custom amount (KHR)',
+                hintText: AppLocalizations.of(context).customAmountKhr,
                 hintStyle: TextStyle(color: context.appTextSecondary),
                 filled: true,
                 fillColor: _useCustom
@@ -798,7 +799,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
 
             // Payment method chips
             Text(
-              'Payment Method',
+              AppLocalizations.of(context).paymentMethod,
               style: TextStyle(
                   color: context.appTextSecondary,
                   fontSize: 12,
@@ -843,7 +844,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                         child: CircularProgressIndicator(
                             color: Colors.white, strokeWidth: 2.5),
                       )
-                    : const Text('Confirm Top Up'),
+                    : Text(AppLocalizations.of(context).confirmTopUp),
               ),
             ),
           ],
@@ -912,7 +913,7 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
           backgroundColor: context.appBackground,
           elevation: 0,
           automaticallyImplyLeading: false,
-          title: Text('Top Up Status',
+          title: Text(AppLocalizations.of(context).topUpStatus,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         ),
         body: Center(
@@ -922,13 +923,13 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
               if (r == null) ...[
                 const CircularProgressIndicator(color: AppTheme.accent),
                 const SizedBox(height: 16),
-                Text('Loading…', style: TextStyle(color: context.appTextSecondary)),
+                Text(AppLocalizations.of(context).loading, style: TextStyle(color: context.appTextSecondary)),
               ] else if (r.isPending) ...[
                 const SizedBox(
                     width: 64, height: 64,
                     child: CircularProgressIndicator(color: AppTheme.warning, strokeWidth: 3)),
                 const SizedBox(height: 20),
-                Text('Waiting for admin approval…',
+                Text(AppLocalizations.of(context).waitingForAdminApproval,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 8),
@@ -937,12 +938,12 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
                 const SizedBox(height: 24),
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Check later'),
+                  child: Text(AppLocalizations.of(context).checkLater),
                 ),
               ] else if (r.isApproved) ...[
                 const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 64),
                 const SizedBox(height: 20),
-                Text('Top-up approved!',
+                Text(AppLocalizations.of(context).topUpApproved,
                     style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 Text('${AppTheme.khr(r.amount)} has been added to your wallet.',
@@ -959,13 +960,13 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text(AppLocalizations.of(context).done, style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ] else ...[
                 const Icon(Icons.cancel_rounded, color: AppTheme.danger, size: 64),
                 const SizedBox(height: 20),
-                Text('Top-up rejected',
+                Text(AppLocalizations.of(context).topUpRejected,
                     style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
                 if (r.adminNote != null && r.adminNote!.isNotEmpty) ...[
                   const SizedBox(height: 8),
@@ -982,7 +983,7 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Close', style: TextStyle(fontWeight: FontWeight.w700)),
+                    child: Text(AppLocalizations.of(context).close, style: TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],
@@ -1027,8 +1028,8 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
         int.tryParse(_amountCtrl.text.trim().replaceAll(',', ''));
 
     if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Enter recipient phone number.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).enterRecipientPhoneNumber),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -1043,8 +1044,8 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
       return;
     }
     if (amount == null || amount < 1000) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Minimum transfer amount is 1,000 KHR.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).minimumTransferAmountIs1),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -1097,7 +1098,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
           ),
           SizedBox(height: 20),
           Text(
-            'Send Money',
+            AppLocalizations.of(context).sendMoney,
             style: TextStyle(
                 color: context.appTextPrimary,
                 fontSize: 18,
@@ -1135,7 +1136,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
             keyboardType: TextInputType.number,
             style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
-              hintText: 'Amount (KHR, min 1,000)',
+              hintText: AppLocalizations.of(context).amountKhrMin1000,
               hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true,
               fillColor: context.appCardBg,
@@ -1166,7 +1167,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2.5),
                     )
-                  : const Text('Send'),
+                  : Text(AppLocalizations.of(context).send),
             ),
           ),
         ],

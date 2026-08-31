@@ -5,6 +5,7 @@ import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import '../../services/api_service.dart';
 import '../../utils/phone_utils.dart';
+import '../../l10n/app_localizations.dart';
 
 // ── Tokens ──────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
@@ -50,11 +51,11 @@ class _SafetyScreenState extends State<SafetyScreen> {
       if (rideId != null) {
         final r = await ApiService.sendSos(rideId);
         if (!mounted) return;
-        _snack('🆘 SOS sent to ${r.contactsNotified} contact(s)', _red);
+        _snack('${AppLocalizations.of(context).sosSentToPrefix} ${r.contactsNotified} ${AppLocalizations.of(context).contactsSuffix}', _red);
       } else {
-        await ApiService.sendSosAlert(rideId: 0, message: 'Emergency SOS');
+        await ApiService.sendSosAlert(rideId: 0, message: AppLocalizations.of(context).emergencySosLabel);
         if (!mounted) return;
-        _snack('🆘 SOS alert sent', _red);
+        _snack(AppLocalizations.of(context).sosAlertSent, _red);
       }
     } on ApiException catch (e) {
       if (mounted) _snack(e.message, _red);
@@ -83,7 +84,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
   // ── Share trip ────────────────────────────────────────────────────────────
   Future<void> _shareTrip() async {
     final rideId = widget.activeRideId;
-    if (rideId == null) { _snack('No active ride to share', Colors.orange); return; }
+    if (rideId == null) { _snack(AppLocalizations.of(context).noActiveRideToShare, Colors.orange); return; }
     setState(() => _sharing = true);
     try {
       final r = await ApiService.shareTrip(rideId);
@@ -102,7 +103,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
     if (rideId == null) return;
     try {
       await ApiService.stopSharingTrip(rideId);
-      if (mounted) { setState(() => _shareUrl = null); _snack('Sharing stopped', _green); }
+      if (mounted) { setState(() => _shareUrl = null); _snack(AppLocalizations.of(context).sharingStopped, _green); }
     } on ApiException catch (e) {
       if (mounted) _snack(e.message, _red);
     }
@@ -146,7 +147,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Trip Link Shared', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context).tripLinkSharedTitle, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
             padding: const EdgeInsets.all(12),
@@ -154,20 +155,20 @@ class _SafetyScreenState extends State<SafetyScreen> {
             child: Text(url, style: TextStyle(color: context.appTextPrimary, fontSize: 12)),
           ),
           SizedBox(height: 12),
-          Text('Share this link so others can track your trip in real time.',
+          Text(AppLocalizations.of(context).shareLinkTrackDesc,
               style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: Text('Close', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).close, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton.icon(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: url));
               Navigator.pop(ctx);
-              _snack('Link copied!', _green);
+              _snack(AppLocalizations.of(context).linkCopied, _green);
             },
             icon: const Icon(Icons.copy_rounded, size: 16),
-            label: const Text('Copy Link'),
+            label: Text(AppLocalizations.of(context).copyLink),
             style: ElevatedButton.styleFrom(
                 backgroundColor: _green, foregroundColor: _white, elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
@@ -183,19 +184,19 @@ class _SafetyScreenState extends State<SafetyScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('🆘 Send SOS?', style: TextStyle(color: _red, fontWeight: FontWeight.w800)),
+        title: Text(AppLocalizations.of(context).sendSOSQuestion, style: const TextStyle(color: _red, fontWeight: FontWeight.w800)),
         content: Text(
           _contacts.isEmpty
-              ? 'An SOS alert will be sent immediately. No emergency contacts added yet.'
-              : 'SOS will be sent to ${_contacts.length} emergency contact(s) immediately.',
+              ? AppLocalizations.of(context).sosWillBeSentNoContacts
+              : '${AppLocalizations.of(context).sosWillBeSentToContactsPrefix} ${_contacts.length} ${AppLocalizations.of(context).emergencyContactsImmediatelySuffix}',
           style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () { Navigator.pop(ctx); _sendSos(); },
             style: AppTheme.confirmButtonStyle(background: _red),
-            child: const Text('Send SOS'),
+            child: Text(AppLocalizations.of(context).sendSOS),
           ),
         ],
       ),
@@ -215,15 +216,15 @@ class _SafetyScreenState extends State<SafetyScreen> {
             MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Report Incident',
+          Text(AppLocalizations.of(context).reportIncidentLabel,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
           SizedBox(height: 16),
           Wrap(spacing: 8, children: [
             for (final t in [
-              ('harassment', 'Harassment'),
-              ('unsafe_driving', 'Unsafe Driving'),
-              ('overcharge', 'Overcharge'),
-              ('other', 'Other'),
+              ('harassment', AppLocalizations.of(context).harassmentTag),
+              ('unsafe_driving', AppLocalizations.of(context).unsafeDrivingTitleTag),
+              ('overcharge', AppLocalizations.of(context).overchargeTag),
+              ('other', AppLocalizations.of(context).otherTag),
             ])
               GestureDetector(
                 onTap: () => setLocal(() => type = t.$1),
@@ -245,7 +246,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
             controller: descCtrl, maxLines: 3,
             style: TextStyle(color: context.appTextPrimary, fontSize: 13),
             decoration: InputDecoration(
-              hintText: 'Describe what happened…',
+              hintText: AppLocalizations.of(context).describeWhatHappenedHint,
               hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true, fillColor: context.appCardBg,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
@@ -264,7 +265,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                   await ApiService.reportSafetyIncident(
                       type: type, description: desc,
                       rideId: widget.activeRideId);
-                  if (mounted) _snack('Incident reported. Thank you.', _green);
+                  if (mounted) _snack(AppLocalizations.of(context).incidentReportedThanks, _green);
                 } on ApiException catch (e) {
                   if (mounted) _snack(e.message, _red);
                 } catch (e) {
@@ -272,7 +273,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                 }
               },
               style: AppTheme.confirmButtonStyle(background: _red),
-              child: const Text('Submit Report'),
+              child: Text(AppLocalizations.of(context).submitReportBtn),
             ),
           ),
         ]),
@@ -295,18 +296,18 @@ class _SafetyScreenState extends State<SafetyScreen> {
             MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Add Emergency Contact',
+          Text(AppLocalizations.of(context).addEmergencyContactTitle,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 16),
-          _ModalField(ctrl: nameCtrl, hint: 'Full name', icon: Icons.person_outline),
+          _ModalField(ctrl: nameCtrl, hint: AppLocalizations.of(context).fullNameHint, icon: Icons.person_outline),
           const SizedBox(height: 10),
-          _ModalField(ctrl: phoneCtrl, hint: 'Phone number', icon: Icons.phone_outlined,
+          _ModalField(ctrl: phoneCtrl, hint: AppLocalizations.of(context).phoneNumberHint2, icon: Icons.phone_outlined,
               type: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
           const SizedBox(height: 10),
-          _ModalField(ctrl: relCtrl, hint: 'Relationship (e.g. Mom)', icon: Icons.people_outline),
+          _ModalField(ctrl: relCtrl, hint: AppLocalizations.of(context).relationshipHintExample, icon: Icons.people_outline),
           const SizedBox(height: 10),
-          _NotifyRow('Notify on SOS', sos, (v) => setLocal(() => sos = v)),
-          _NotifyRow('Notify on trip share', share, (v) => setLocal(() => share = v)),
+          _NotifyRow(AppLocalizations.of(context).notifyOnSos, sos, (v) => setLocal(() => sos = v)),
+          _NotifyRow(AppLocalizations.of(context).notifyOnTripShare, share, (v) => setLocal(() => share = v)),
           const SizedBox(height: 14),
           SizedBox(width: double.infinity,
             child: ElevatedButton(
@@ -327,7 +328,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                     notifyOnSos: sos, notifyOnTripShare: share,
                   );
                   _loadContacts();
-                  if (mounted) _snack('Contact added!', _green);
+                  if (mounted) _snack(AppLocalizations.of(context).contactAddedExcl, _green);
                 } on ApiException catch (e) {
                   if (mounted) _snack(e.message, _red);
                 } catch (e) {
@@ -338,8 +339,8 @@ class _SafetyScreenState extends State<SafetyScreen> {
                   foregroundColor: _white, elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Add Contact',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+              child: Text(AppLocalizations.of(context).addContactBtn,
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
           ),
         ]),
@@ -361,16 +362,16 @@ class _SafetyScreenState extends State<SafetyScreen> {
             MediaQuery.of(ctx).viewInsets.bottom + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Edit Contact',
+          Text(AppLocalizations.of(context).editContactTitle,
               style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
           const SizedBox(height: 16),
-          _ModalField(ctrl: nameCtrl, hint: 'Full name', icon: Icons.person_outline),
+          _ModalField(ctrl: nameCtrl, hint: AppLocalizations.of(context).fullNameHint, icon: Icons.person_outline),
           const SizedBox(height: 10),
-          _ModalField(ctrl: phoneCtrl, hint: 'Phone number', icon: Icons.phone_outlined,
+          _ModalField(ctrl: phoneCtrl, hint: AppLocalizations.of(context).phoneNumberHint2, icon: Icons.phone_outlined,
               type: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
           const SizedBox(height: 10),
-          _NotifyRow('Notify on SOS', sos, (v) => setLocal(() => sos = v)),
-          _NotifyRow('Notify on trip share', share, (v) => setLocal(() => share = v)),
+          _NotifyRow(AppLocalizations.of(context).notifyOnSos, sos, (v) => setLocal(() => sos = v)),
+          _NotifyRow(AppLocalizations.of(context).notifyOnTripShare, share, (v) => setLocal(() => share = v)),
           const SizedBox(height: 14),
           SizedBox(width: double.infinity,
             child: ElevatedButton(
@@ -388,13 +389,13 @@ class _SafetyScreenState extends State<SafetyScreen> {
                     notifyOnSos: sos, notifyOnTripShare: share,
                   );
                   _loadContacts();
-                  if (mounted) _snack('Contact updated!', _green);
+                  if (mounted) _snack(AppLocalizations.of(context).contactUpdatedExcl, _green);
                 } on ApiException catch (e) {
                   if (mounted) _snack(e.message, _red);
                 }
               },
               style: AppTheme.confirmButtonStyle(background: _green),
-              child: const Text('Save Changes'),
+              child: Text(AppLocalizations.of(context).saveChanges),
             ),
           ),
         ]),
@@ -407,15 +408,15 @@ class _SafetyScreenState extends State<SafetyScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Remove contact?',
+        title: Text(AppLocalizations.of(context).removeContactQuestion,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('${c.name} will be removed from your emergency contacts.',
+        content: Text('${c.name} ${AppLocalizations.of(context).willBeRemovedFromContactsSuffix}',
             style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           TextButton(onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove', style: TextStyle(color: _red, fontWeight: FontWeight.w700))),
+              child: Text(AppLocalizations.of(context).remove, style: const TextStyle(color: _red, fontWeight: FontWeight.w700))),
         ],
       ),
     );
@@ -423,7 +424,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
     try {
       await ApiService.deleteEmergencyContact(c.id);
       _loadContacts();
-      if (mounted) _snack('Contact removed', _green);
+      if (mounted) _snack(AppLocalizations.of(context).contactRemoved, _green);
     } on ApiException catch (e) {
       if (mounted) _snack(e.message, _red);
     }
@@ -438,7 +439,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
-        title: Text('Safety Center',
+        title: Text(AppLocalizations.of(context).safetyCenterTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
       ),
       body: RefreshIndicator(
@@ -470,10 +471,10 @@ class _SafetyScreenState extends State<SafetyScreen> {
                               shape: BoxShape.circle),
                           child: Icon(Icons.sos_rounded, color: _white, size: 40)),
                   SizedBox(height: 12),
-                  Text('Emergency SOS',
+                  Text(AppLocalizations.of(context).emergencySosLabel,
                       style: TextStyle(color: _white, fontSize: 20, fontWeight: FontWeight.w800)),
                   SizedBox(height: 4),
-                  Text('Hold for 1 second to activate',
+                  Text(AppLocalizations.of(context).holdToActivate,
                       style: TextStyle(color: _white.withValues(alpha: 0.8), fontSize: 13)),
                 ]),
               ),
@@ -484,7 +485,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
             Row(children: [
               Expanded(child: _ActionCard(
                 icon: Icons.phone_callback_rounded,
-                label: 'Fake Call',
+                label: AppLocalizations.of(context).fakeCallLabel,
                 color: _green,
                 loading: _fakeCallLoading,
                 onTap: _showFakeCallPicker,
@@ -493,7 +494,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
               Expanded(child: _ActionCard(
                 icon: _shareUrl != null
                     ? Icons.link_off_rounded : Icons.share_location_rounded,
-                label: _shareUrl != null ? 'Stop Sharing' : 'Share Trip',
+                label: _shareUrl != null ? AppLocalizations.of(context).stopSharingLabel : AppLocalizations.of(context).shareTrip,
                 color: _shareUrl != null ? Colors.orange : AppTheme.accent,
                 loading: _sharing,
                 onTap: _shareUrl != null ? _stopSharing : _shareTrip,
@@ -501,7 +502,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
               SizedBox(width: 12),
               Expanded(child: _ActionCard(
                 icon: Icons.report_outlined,
-                label: 'Report',
+                label: AppLocalizations.of(context).reportLabel,
                 color: AppTheme.warning,
                 onTap: _showReportIncident,
               )),
@@ -510,11 +511,11 @@ class _SafetyScreenState extends State<SafetyScreen> {
 
             // ── Emergency contacts ─────────────────────────────────────────
             Row(children: [
-              Expanded(child: SectionHeader(title: 'Emergency Contacts')),
+              Expanded(child: SectionHeader(title: AppLocalizations.of(context).emergencyContactsTitle)),
               TextButton.icon(
                 onPressed: _showAddContact,
                 icon: Icon(Icons.person_add_outlined, size: 16, color: _green),
-                label: Text('Add', style: TextStyle(color: _green, fontWeight: FontWeight.w700)),
+                label: Text(AppLocalizations.of(context).add, style: TextStyle(color: _green, fontWeight: FontWeight.w700)),
               ),
             ]),
             SizedBox(height: 10),
@@ -531,7 +532,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.people_outline, color: context.appTextSecondary, size: 36),
                     SizedBox(height: 8),
-                    Text('No emergency contacts yet',
+                    Text(AppLocalizations.of(context).noEmergencyContactsYet,
                         style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                   ]),
                 ),
@@ -545,12 +546,12 @@ class _SafetyScreenState extends State<SafetyScreen> {
             SizedBox(height: 24),
 
             // ── Safety resources ───────────────────────────────────────────
-            SectionHeader(title: 'Safety Resources'),
+            SectionHeader(title: AppLocalizations.of(context).safetyResourcesTitle),
             SizedBox(height: 12),
             ...[
-              ('Emergency: 117 / 119', Icons.phone_in_talk_outlined, _red),
-              ('Report Incident',       Icons.report_outlined,         AppTheme.warning),
-              ('Safety Guidelines',     Icons.menu_book_outlined,       AppTheme.accent),
+              (AppLocalizations.of(context).emergencyPhoneNumbers, Icons.phone_in_talk_outlined, _red),
+              (AppLocalizations.of(context).reportIncidentLabel,       Icons.report_outlined,         AppTheme.warning),
+              (AppLocalizations.of(context).safetyGuidelinesLabel,     Icons.menu_book_outlined,       AppTheme.accent),
             ].map((item) => Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
@@ -653,9 +654,9 @@ class _ContactTile extends StatelessWidget {
           const SizedBox(height: 6),
           Wrap(spacing: 6, children: [
             if (c.notifyOnSos)
-              _MiniTag('SOS', _red),
+              _MiniTag(AppLocalizations.of(context).sosTagLabel, _red),
             if (c.notifyOnTripShare)
-              _MiniTag('Trip Share', AppTheme.accent),
+              _MiniTag(AppLocalizations.of(context).tripShareTagLabel, AppTheme.accent),
           ]),
         ])),
         IconButton(icon: const Icon(Icons.edit_outlined, color: _green, size: 18),
@@ -691,20 +692,21 @@ class _FakeCallPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final options = [
-      (5,  'Now (5 sec)'),
-      (10, 'In 10 sec'),
-      (30, 'In 30 sec'),
-      (60, 'In 1 min'),
+      (5,  l.nowSecLabel),
+      (10, l.inSecLabel10),
+      (30, l.inSecLabel30),
+      (60, l.inMinLabel1),
     ];
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 30),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Fake Call — Choose Delay',
+        Text(AppLocalizations.of(context).fakeCallChooseDelayTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
         SizedBox(height: 6),
-        Text('Your phone will ring after the selected delay.',
+        Text(AppLocalizations.of(context).phoneWillRingDesc,
             style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         SizedBox(height: 16),
         if (loading)
@@ -785,7 +787,7 @@ class _FakeCallOverlayState extends State<_FakeCallOverlay> {
                   color: _white, size: 32)),
           const SizedBox(height: 16),
           Text(
-            _ringing ? 'Incoming Call…' : 'Fake call in $_remaining s…',
+            _ringing ? AppLocalizations.of(context).incomingCallEllipsis : '${AppLocalizations.of(context).fakeCallInPrefix} $_remaining ${AppLocalizations.of(context).secondsSuffix}',
             style: const TextStyle(color: _white, fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),

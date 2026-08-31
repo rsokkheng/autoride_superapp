@@ -30,7 +30,7 @@ const _kGreen = Color(0xFF00B14F);
 class TripStop {
   final String address;
   final LatLng latLng;
-  const TripStop({required this.address, required this.latLng});
+  TripStop({required this.address, required this.latLng});
 }
 
 class TripTrackingScreen extends StatefulWidget {
@@ -55,11 +55,14 @@ class TripTrackingScreen extends StatefulWidget {
   /// Intermediate stops between pickup and destination (in order).
   final List<TripStop> wayStops;
 
-  const TripTrackingScreen({
+  TripTrackingScreen({
     super.key,
     this.rideId,
     this.driverId      = '',
-    this.driverName    = 'Finding driver...',
+    // Constructor defaults can't call AppLocalizations.of (no BuildContext
+    // yet) — empty string is a sentinel resolved to the localized
+    // placeholder in initState below.
+    this.driverName    = '',
     this.driverRating  = '--',
     this.driverTrips   = '--',
     this.vehicle       = '--',
@@ -186,7 +189,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   @override
   void initState() {
     super.initState();
-    _driverName      = widget.driverName;
+    _driverName      = widget.driverName.isNotEmpty
+        ? widget.driverName
+        : AppLocalizations.of(context).findingDriver;
     _driverRating    = widget.driverRating;
     _driverTrips     = widget.driverTrips;
     _vehicle         = widget.vehicle;
@@ -516,8 +521,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     // before _fetchDriverDetails()/_applyDriverDetails() resolve, so
     // _driverName may still be the "Finding driver..." placeholder here.
     NotificationService.instance.showTripUpdate(
-      title: '🚗 Driver found!',
-      body:  'Your driver is on the way to pick you up.',
+      title: AppLocalizations.of(context).driverFound,
+      body:  AppLocalizations.of(context).yourDriverIsOnThe2,
       payload: 'picking_up',
     );
   }
@@ -531,7 +536,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (dist <= 50) {
       _arrivingAlertShown = true;
       NotificationService.instance.showTripUpdate(
-        title: '🚗 Your driver is almost here',
+        title: AppLocalizations.of(context).yourDriverIsAlmostHere,
         body: '$_driverName is arriving at your pickup point.',
         payload: 'arriving_soon',
       );
@@ -561,8 +566,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           body  = '下车前，请检查您的随身物品。';
           break;
         default:
-          title = '🔔 You\'re almost at your destination';
-          body  = 'Please check your belongings before getting off the Tuk Tuk.';
+          title = AppLocalizations.of(context).youReAlmostAtYour;
+          body  = AppLocalizations.of(context).pleaseCheckYourBelongingsBefore;
       }
       NotificationService.instance.showTripUpdate(
         title: title,
@@ -605,8 +610,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (!_canCancel) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(_rideStatus == 'in_progress'
-            ? 'Cannot cancel a ride in progress.'
-            : 'This ride cannot be cancelled.'),
+            ? AppLocalizations.of(context).cannotCancelARideIn
+            : AppLocalizations.of(context).thisRideCannotBeCancelled),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -651,8 +656,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _serverCancellationHandled = true;
 
     final message = reason == 'no_driver_available'
-        ? 'No driver was available for this ride. Please try booking again.'
-        : 'This ride was cancelled.';
+        ? AppLocalizations.of(context).noDriverWasAvailableFor
+        : AppLocalizations.of(context).thisRideWasCancelled;
 
     showDialog<void>(
       context: context,
@@ -732,7 +737,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         !_driverArrivedAlertShown) {
       _driverArrivedAlertShown = true;
       NotificationService.instance.showTripUpdate(
-        title: '✅ Driver Arrived!',
+        title: AppLocalizations.of(context).driverArrived,
         body: '$_driverName is waiting at ${widget.from}',
         payload: 'arrived',
       );
@@ -862,7 +867,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   }
 
   String get _etaCountdownText {
-    if (_etaSecondsLeft <= 0) return 'Arriving now';
+    if (_etaSecondsLeft <= 0) return AppLocalizations.of(context).arrivingNow;
     final m = _etaSecondsLeft ~/ 60;
     final s = _etaSecondsLeft % 60;
     return m > 0
@@ -1018,11 +1023,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _driverAssigned && !_isArrived && _rideStatus != 'in_progress';
 
   String get _statusTitle {
-    if (!_driverAssigned)                return 'Finding your driver...';
-    if (_rideStatus == 'driver_arrived') return 'Driver has arrived!';
-    if (_rideStatus == 'in_progress')    return 'Trip in progress';
-    if (_rideStatus == 'accepted')       return 'Your driver is on the way';
-    return 'Driver assigned — connecting...';
+    if (!_driverAssigned)                return AppLocalizations.of(context).findingYourDriver;
+    if (_rideStatus == 'driver_arrived') return AppLocalizations.of(context).driverHasArrived;
+    if (_rideStatus == 'in_progress')    return AppLocalizations.of(context).tripInProgress2;
+    if (_rideStatus == 'accepted')       return AppLocalizations.of(context).yourDriverIsOnThe;
+    return AppLocalizations.of(context).driverAssignedConnecting;
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -1255,7 +1260,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           strokeWidth: 2, color: _kGreen),
                     ),
                     const SizedBox(width: 8),
-                    Text('Locating your driver…',
+                    Text(AppLocalizations.of(context).locatingYourDriver,
                         style: TextStyle(
                             color: context.appTextPrimary,
                             fontSize: 12,
@@ -1394,9 +1399,9 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           const SizedBox(height: 4),
                           Text(
                             !_driverAssigned
-                                ? 'Looking for a nearby driver…'
+                                ? AppLocalizations.of(context).lookingForANearbyDriver
                                 : (!_driverPositionKnown
-                                    ? 'Locating your driver…'
+                                    ? AppLocalizations.of(context).locatingYourDriver
                                     : (_hasWayStops &&
                                             _rideStatus == 'in_progress' &&
                                             _nextStopIndex < widget.wayStops.length
@@ -1533,20 +1538,20 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                         children: [
                           _ActionBtn(
                             icon:  Icons.call_outlined,
-                            label: 'Call',
+                            label: AppLocalizations.of(context).call,
                             onTap: _driverAssigned ? _callDriver : () {},
                             disabled: !_driverAssigned,
                           ),
                           _ActionBtn(
                             icon:  Icons.chat_bubble_outline,
-                            label: 'Chat',
+                            label: AppLocalizations.of(context).chat,
                             onTap: _openRideChat,
                           ),
                           _ActionBtn(
                             icon:  _shareUrl != null
                                 ? Icons.share_location
                                 : Icons.share_outlined,
-                            label: _shareUrl != null ? 'Sharing' : 'Share',
+                            label: _shareUrl != null ? AppLocalizations.of(context).sharing : AppLocalizations.of(context).share,
                             onTap: _sharing
                                 ? () {}
                                 : !_canShare
@@ -1561,7 +1566,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                           if (_canCancel)
                             _ActionBtn(
                               icon:    Icons.cancel_outlined,
-                              label:   _cancelling ? '...' : 'Cancel',
+                              label:   _cancelling ? '...' : AppLocalizations.of(context).cancel,
                               onTap:   _cancelling ? () {} : _cancelRide,
                               danger:  true,
                               loading: _cancelling,
@@ -1597,7 +1602,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         driverId:    int.tryParse(_currentDriverId) ?? 0,
         passengerId: saved?.id ?? 0,
         myId:        saved?.id   ?? 0,
-        myName:      saved?.name ?? 'Passenger',
+        myName:      saved?.name ?? AppLocalizations.of(context).passenger,
         otherName:   _driverName,
         isDriver:    false,
       ),
@@ -1620,8 +1625,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(AppLocalizations.of(context).sendSOSQuestion,
             style: TextStyle(color: Colors.red, fontWeight: FontWeight.w800)),
-        content: const Text(
-            'An SOS alert will be sent to all your emergency contacts immediately.'),
+        content: Text(
+            AppLocalizations.of(context).anSosAlertWillBe),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -1642,7 +1647,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(result.contactsNotified > 0
             ? '🆘 SOS sent to ${result.contactsNotified} contact(s)'
-            : '🆘 SOS alert sent'),
+            : AppLocalizations.of(context).sosAlertSent),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
       ));
@@ -1745,12 +1750,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   void _shareLocationFallback() {
     final pickup = _pickupPoint;
-    final text = 'I\'m on my way!\n'
+    final text = AppLocalizations.of(context).iMOnMyWay +
         'From: ${widget.from}\nTo: ${widget.to}\n'
-        'Track pickup: https://maps.google.com/?q=${pickup.latitude},${pickup.longitude}';
+            'Track pickup: https://maps.google.com/?q=${pickup.latitude},${pickup.longitude}';
     final box = context.findRenderObject() as RenderBox?;
     Share.share(text,
-        subject: 'My ROTEH Trip',
+        subject: AppLocalizations.of(context).myRotehTrip,
         sharePositionOrigin:
             box != null ? box.localToGlobal(Offset.zero) & box.size : null);
   }
@@ -1816,7 +1821,7 @@ class _StopEtaList extends StatelessWidget {
     }
     // Destination
     rows.add(_EtaRow(
-      label: 'Destination',
+      label: AppLocalizations.of(context).destination,
       address: destination,
       etaMinutes: etaIdx < stopEtas.length ? stopEtas[etaIdx] : null,
       isCurrent: false,
@@ -2012,10 +2017,10 @@ class _TripShareSheet extends StatelessWidget {
   void _shareNative(BuildContext context) {
     final box = context.findRenderObject() as RenderBox?;
     Share.share(
-      'Track my ROTEH trip live 🚗\n'
-      'Driver: $driverName · ETA: $etaMinutes min\n'
-      'From: $from\nTo: $to\n\n$url',
-      subject: 'Track my ride live',
+      AppLocalizations.of(context).trackMyRotehTripLive +
+          'Driver: $driverName · ETA: $etaMinutes min\n'
+              'From: $from\nTo: $to\n\n$url',
+      subject: AppLocalizations.of(context).trackMyRideLive,
       sharePositionOrigin:
           box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
@@ -2124,14 +2129,14 @@ class _TripShareSheet extends StatelessWidget {
                 border: Border.all(color: _kGreen.withValues(alpha: 0.25)),
               ),
               child: Row(children: [
-                const Icon(Icons.link_rounded, color: _kGreen, size: 18),
+                Icon(Icons.link_rounded, color: _kGreen, size: 18),
                 const SizedBox(width: 10),
                 Expanded(child: Text(url,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: _kGreen, fontSize: 12, fontWeight: FontWeight.w500),
                     maxLines: 1, overflow: TextOverflow.ellipsis)),
                 const SizedBox(width: 8),
-                const Icon(Icons.copy_rounded, color: _kGreen, size: 16),
+                Icon(Icons.copy_rounded, color: _kGreen, size: 16),
               ]),
             ),
           ),
@@ -2146,7 +2151,7 @@ class _TripShareSheet extends StatelessWidget {
                 label: Text(AppLocalizations.of(context).copyLink),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _kGreen,
-                  side: const BorderSide(color: _kGreen),
+                  side: BorderSide(color: _kGreen),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -2199,13 +2204,15 @@ class _CancelReasonDialog extends StatefulWidget {
 }
 
 class _CancelReasonDialogState extends State<_CancelReasonDialog> {
-  static const _reasons = [
-    'Changed my mind',
-    'Driver is taking too long',
-    'Wrong pickup location',
-    'Found another ride',
-    'Emergency came up',
-    'Other',
+  // Built per-frame rather than held as a static, so the reasons follow the
+  // active locale.
+  List<String> _reasonsFor(AppLocalizations l) => [
+    l.changedMyMind,
+    l.driverIsTakingTooLong,
+    l.wrongPickupLocation,
+    l.foundAnotherRide,
+    l.emergencyCameUp,
+    l.other,
   ];
 
   String? _selected;
@@ -2227,8 +2234,8 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
           SizedBox(height: 4),
           Text(
             widget.hasFee
-                ? 'Driver has arrived — a 2,000 ៛ fee applies.'
-                : 'Please tell us why you\'re cancelling.',
+                ? AppLocalizations.of(context).driverHasArrivedA2
+                : AppLocalizations.of(context).pleaseTellUsWhyYou,
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ]),
@@ -2236,7 +2243,8 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
       contentPadding: EdgeInsets.symmetric(vertical: 8),
       content: Column(
         mainAxisSize: MainAxisSize.min,
-        children: _reasons.map((r) => RadioListTile<String>(
+        children: _reasonsFor(AppLocalizations.of(context))
+            .map((r) => RadioListTile<String>(
           value: r,
           groupValue: _selected,
           onChanged: (v) => setState(() => _selected = v),
@@ -2262,7 +2270,7 @@ class _CancelReasonDialogState extends State<_CancelReasonDialog> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: Text(
-            widget.hasFee ? 'Cancel (2,000 ៛ fee)' : 'Cancel Ride',
+            widget.hasFee ? AppLocalizations.of(context).cancel2000Fee : AppLocalizations.of(context).cancelRide,
             style: const TextStyle(fontWeight: FontWeight.w700),
           ),
         ),
