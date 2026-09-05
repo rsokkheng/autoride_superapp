@@ -186,12 +186,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     zoom: 14.5,
   );
 
+  bool _l10nDefaultsApplied = false;
+
   @override
   void initState() {
     super.initState();
-    _driverName      = widget.driverName.isNotEmpty
-        ? widget.driverName
-        : AppLocalizations.of(context).findingDriver;
+    _driverName      = widget.driverName;
     _driverRating    = widget.driverRating;
     _driverTrips     = widget.driverTrips;
     _vehicle         = widget.vehicle;
@@ -219,6 +219,16 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _fetchStaticFullRoute();
     _startTracking();
     _startRidePoll();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_l10nDefaultsApplied) return;
+    _l10nDefaultsApplied = true;
+    if (_driverName.isEmpty) {
+      _driverName = AppLocalizations.of(context).findingDriver;
+    }
   }
 
   void _initMarkers() {

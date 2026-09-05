@@ -224,16 +224,20 @@ class PromoEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final imageUrl = event.imageUrl;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         height: 150,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppTheme.accent, Color(0xFF00863B)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: imageUrl == null
+              ? const LinearGradient(
+                  colors: [AppTheme.accent, Color(0xFF00863B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
@@ -243,72 +247,66 @@ class PromoEventCard extends StatelessWidget {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: Stack(children: [
-          // Decorative circles, same treatment as the marketplace hero banner.
-          Positioned(right: -30, top: -40,
-            child: Container(width: 140, height: 140,
-                decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle))),
-          Positioned(right: 40, bottom: -60,
-            child: Container(width: 110, height: 110,
-                decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle))),
+        child: imageUrl != null
+            ? CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                height: double.infinity,
+                placeholder: (_, __) => const SizedBox.shrink(),
+                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+              )
+            : Stack(children: [
+                // Decorative circles, same treatment as the marketplace hero banner.
+                Positioned(right: -30, top: -40,
+                  child: Container(width: 140, height: 140,
+                      decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.08), shape: BoxShape.circle))),
+                Positioned(right: 40, bottom: -60,
+                  child: Container(width: 110, height: 110,
+                      decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.06), shape: BoxShape.circle))),
 
-          // Event photo, bleeding off the right edge.
-          if (event.imageUrl != null)
-            Positioned(
-              right: -10, top: 0, bottom: 0, width: 150,
-              child: ClipRRect(
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
-                child: CachedNetworkImage(
-                  imageUrl: event.imageUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => const SizedBox.shrink(),
-                  errorWidget: (_, __, ___) => const SizedBox.shrink(),
-                ),
-              ),
-            ),
-
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(event.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(event.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 19,
+                                fontWeight: FontWeight.w800,
+                                height: 1.15)),
+                        const SizedBox(height: 6),
+                        Text(event.body,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500)),
+                      ]),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
                           color: Colors.white,
-                          fontSize: 19,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15)),
-                  const SizedBox(height: 6),
-                  Text(event.body,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500)),
-                ]),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('View',
+                            style: TextStyle(
+                                color: AppTheme.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ],
                   ),
-                  child: const Text('View',
-                      style: TextStyle(
-                          color: AppTheme.accent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700)),
                 ),
-              ],
-            ),
-          ),
-        ]),
+              ]),
       ),
     );
   }
@@ -353,9 +351,70 @@ class _PromoEventsSectionState extends State<PromoEventsSection> {
       children: _events
           .map((e) => Padding(
                 padding: const EdgeInsets.only(bottom: 10),
-                child: PromoEventCard(event: e),
+                child: PromoEventCard(
+                  event: e,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => PromoEventDetailScreen(events: _events),
+                  )),
+                ),
               ))
           .toList(),
+    );
+  }
+}
+
+class PromoEventDetailScreen extends StatelessWidget {
+  final List<PromoEventModel> events;
+  const PromoEventDetailScreen({super.key, required this.events});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      appBar: AppBar(title: const Text('Promotions')),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: events.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 20),
+        itemBuilder: (_, i) => _PromoEventDetailCard(event: events[i]),
+      ),
+    );
+  }
+}
+
+class _PromoEventDetailCard extends StatelessWidget {
+  final PromoEventModel event;
+  const _PromoEventDetailCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        color: context.appSurface,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if (event.imageUrl != null)
+            CachedNetworkImage(
+              imageUrl: event.imageUrl!,
+              width: double.infinity,
+              height: 180,
+              fit: BoxFit.cover,
+              placeholder: (_, __) => const SizedBox(height: 180),
+              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(event.title,
+                  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 17)),
+              if (event.body.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(event.body, style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.5)),
+              ],
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }

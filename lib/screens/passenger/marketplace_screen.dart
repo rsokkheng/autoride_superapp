@@ -34,6 +34,38 @@ Color _condColor(String? c) => switch (c) {
   _             => const Color(0xFFFF9500),
 };
 
+// ── Localized label helpers ──────────────────────────────────────────────
+// Backend values ('new'/'used'/'refurbished', 'sale'/'rent'/'both',
+// 'active'/'paused'/'sold'/'draft', order/rental statuses) stay as-is for
+// comparisons/filtering — only the displayed label is translated.
+String _conditionLabel(AppLocalizations l, String? cond) => switch (cond) {
+  'new'         => l.conditionNewLabel,
+  'refurbished' => l.conditionRefurbishedLabel,
+  'used'        => l.conditionUsedLabel,
+  _             => cond ?? '',
+};
+
+String _listingTypeLabel(AppLocalizations l, String type) => switch (type) {
+  'rent' => l.rent,
+  'both' => l.saleAndRentLabel,
+  _      => l.saleTypeLabel,
+};
+
+String _productStatusLabel(AppLocalizations l, String status) => switch (status) {
+  'active' => l.active,
+  'paused' => l.pausedStatusLabel,
+  'sold'   => l.soldStatusLabel,
+  'draft'  => l.draftStatusLabel,
+  _        => status,
+};
+
+String _orderStatusLabel(AppLocalizations l, String status) => switch (status) {
+  'confirmed' => l.confirmed,
+  'completed' => l.completed,
+  'cancelled' => l.cancelled2,
+  _           => l.pendingStatus,
+};
+
 Color _statusColor(String s) => switch (s) {
   'active'    => _green,
   'paused'    => const Color(0xFFFF9500),
@@ -184,7 +216,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
             unselectedLabelColor: Colors.grey,
             labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
             unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-            tabs: const [Tab(text: 'Browse'), Tab(text: 'My Orders')],
+            tabs: [
+              Tab(text: AppLocalizations.of(context).browseTab),
+              Tab(text: AppLocalizations.of(context).myOrdersTab),
+            ],
           ),
         ),
       ),
@@ -356,7 +391,7 @@ class _BrowseTabState extends State<_BrowseTab> {
           ),
 
           // Services
-          _SectionTitle('Services'),
+          _SectionTitle(AppLocalizations.of(context).services),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: GestureDetector(
@@ -404,7 +439,7 @@ class _BrowseTabState extends State<_BrowseTab> {
 
           // Featured grid
           if (featured.isNotEmpty) ...[
-            _SectionTitle('Popular Listings',
+            _SectionTitle(AppLocalizations.of(context).popularListings,
                 onSeeAll: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const _AllListingsScreen()))),
             Padding(
@@ -424,7 +459,7 @@ class _BrowseTabState extends State<_BrowseTab> {
 
           // Recent list
           if (recent.isNotEmpty) ...[
-            _SectionTitle('Recent Listings',
+            _SectionTitle(AppLocalizations.of(context).recentListings,
                 onSeeAll: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const _AllListingsScreen()))),
             ...recent.take(4).map((p) => Padding(
@@ -470,8 +505,7 @@ class _GridCard extends StatelessWidget {
                 _NetImage(url: p.images.isNotEmpty ? p.images.first : null),
                 Positioned(top: 8, left: 8,
                   child: _Pill(
-                    label: p.listingType == 'rent' ? 'Rent'
-                        : p.listingType == 'both' ? 'Sale & Rent' : 'Sale',
+                    label: _listingTypeLabel(AppLocalizations.of(context), p.listingType),
                     color: p.listingType == 'rent'
                         ? const Color(0xFF7C3AED) : _green,
                   ),
@@ -542,11 +576,10 @@ class _ListCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Wrap(spacing: 6, children: [
                   if (p.condition != null)
-                    _Pill(label: p.condition![0].toUpperCase() + p.condition!.substring(1),
+                    _Pill(label: _conditionLabel(AppLocalizations.of(context), p.condition),
                         color: _condColor(p.condition)),
                   _Pill(
-                    label: p.listingType == 'rent' ? 'Rent'
-                        : p.listingType == 'both' ? 'Sale & Rent' : 'Sale',
+                    label: _listingTypeLabel(AppLocalizations.of(context), p.listingType),
                     color: p.listingType == 'rent'
                         ? const Color(0xFF7C3AED) : _green,
                   ),
@@ -768,7 +801,7 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
         leading: _BackBtn(),
-        title: Text(widget.categoryName ?? 'All Listings',
+        title: Text(widget.categoryName ?? AppLocalizations.of(context).allListingsTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
         actions: [
           IconButton(
@@ -797,7 +830,7 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
               scrollDirection: Axis.horizontal,
               child: Row(children: [
                 _VehicleTypePill(
-                  label: 'All',
+                  label: AppLocalizations.of(context).all,
                   active: _vTypeId == null,
                   onTap: () { setState(() => _vTypeId = null); _load(); },
                 ),
@@ -831,11 +864,13 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
                         onClear: () { setState(() => _selCat = null); _load(); }),
                   if (_type != null)
                     _ActiveFilterChip(
-                        label: _type == 'rent' ? 'For Rent' : 'For Sale',
+                        label: _type == 'rent'
+                            ? AppLocalizations.of(context).forRentLabel
+                            : AppLocalizations.of(context).forSaleLabel,
                         onClear: () { setState(() => _type = null); _load(); }),
                   if (_cond != null)
                     _ActiveFilterChip(
-                        label: _cond![0].toUpperCase() + _cond!.substring(1),
+                        label: _conditionLabel(AppLocalizations.of(context), _cond),
                         onClear: () { setState(() => _cond = null); _load(); }),
                   if (_vTypeId != null)
                     _ActiveFilterChip(
@@ -1106,12 +1141,12 @@ class _FilterSheetState extends State<_FilterSheet> {
               controller: scrollCtrl,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _sectionTitle('Listing Type'),
-                _checkboxRow('For Sale', _type == 'sale', () => setState(() => _type = _type == 'sale' ? null : 'sale')),
-                _checkboxRow('For Rent', _type == 'rent', () => setState(() => _type = _type == 'rent' ? null : 'rent')),
+                _sectionTitle(l.listingTypeLabel),
+                _checkboxRow(l.forSaleLabel, _type == 'sale', () => setState(() => _type = _type == 'sale' ? null : 'sale')),
+                _checkboxRow(l.forRentLabel, _type == 'rent', () => setState(() => _type = _type == 'rent' ? null : 'rent')),
 
-                _sectionTitle('Condition'),
-                for (final c in [('new', 'New'), ('used', 'Used'), ('refurbished', 'Refurbished')])
+                _sectionTitle(l.condition),
+                for (final c in [('new', l.conditionNewLabel), ('used', l.conditionUsedLabel), ('refurbished', l.conditionRefurbishedLabel)])
                   _checkboxRow(c.$2, _cond == c.$1, () => setState(() => _cond = _cond == c.$1 ? null : c.$1)),
 
                 if (widget.vehicleTypes.isNotEmpty) ...[
@@ -1389,17 +1424,18 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                     // Badges
                     Wrap(spacing: 8, runSpacing: 6, children: [
                       _Pill(
-                        label: _p.listingType == 'sale' ? 'For Sale'
-                            : _p.listingType == 'rent' ? 'For Rent' : 'Sale & Rent',
+                        label: _p.listingType == 'sale' ? AppLocalizations.of(context).forSaleLabel
+                            : _p.listingType == 'rent' ? AppLocalizations.of(context).forRentLabel
+                                : AppLocalizations.of(context).saleAndRentLabel,
                         color: _p.listingType == 'rent'
                             ? const Color(0xFF7C3AED) : _green,
                       ),
                       if (_p.condition != null)
                         _Pill(
-                          label: _p.condition![0].toUpperCase() + _p.condition!.substring(1),
+                          label: _conditionLabel(AppLocalizations.of(context), _p.condition),
                           color: _condColor(_p.condition),
                         ),
-                      _Pill(label: '${_p.viewsCount} views',
+                      _Pill(label: '${_p.viewsCount} ${AppLocalizations.of(context).viewsCountSuffix}',
                           color: Colors.grey, icon: Icons.visibility_outlined),
                     ]),
                     const SizedBox(height: 12),
@@ -1483,7 +1519,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                 // Seller card
                 if (_p.sellerName != null)
                   _DetailSection(
-                    title: 'Seller',
+                    title: AppLocalizations.of(context).seller,
                     child: Row(children: [
                       CircleAvatar(radius: 22,
                           backgroundColor: _green.withValues(alpha: 0.12),
@@ -1507,29 +1543,30 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                 // Description
                 if (_p.description != null && _p.description!.isNotEmpty)
                   _DetailSection(
-                    title: 'Description',
+                    title: AppLocalizations.of(context).description,
                     child: Text(_p.description!,
                         style: const TextStyle(
                             color: Colors.grey, fontSize: 13, height: 1.35)),
                   ),
 
                 // Specs grid
-                _DetailSection(
-                  title: 'Specifications',
-                  child: _SpecGrid(cells: [
-                    if (_p.condition != null)
-                      _SpecCell('Condition',
-                          _p.condition![0].toUpperCase() + _p.condition!.substring(1)),
-                    _SpecCell('Quantity', '${_p.quantity}'),
-                    _SpecCell('Type',
-                        _p.listingType[0].toUpperCase() + _p.listingType.substring(1)),
-                    _SpecCell('Views', '${_p.viewsCount}'),
-                    if (_p.rentPricePerDay != null)
-                      _SpecCell('Per Day', _usd(_p.rentPricePerDay!)),
-                    if (_p.locationText != null)
-                      _SpecCell('Location', _p.locationText!),
-                  ]),
-                ),
+                Builder(builder: (context) {
+                  final l = AppLocalizations.of(context);
+                  return _DetailSection(
+                    title: l.specifications,
+                    child: _SpecGrid(cells: [
+                      if (_p.condition != null)
+                        _SpecCell(l.condition, _conditionLabel(l, _p.condition)),
+                      _SpecCell(l.quantity, '${_p.quantity}'),
+                      _SpecCell(l.type, _listingTypeLabel(l, _p.listingType)),
+                      _SpecCell(l.viewsSpecLabel, '${_p.viewsCount}'),
+                      if (_p.rentPricePerDay != null)
+                        _SpecCell(l.perDaySpecLabel, _usd(_p.rentPricePerDay!)),
+                      if (_p.locationText != null)
+                        _SpecCell(l.location, _p.locationText!),
+                    ]),
+                  );
+                }),
 
                 const SizedBox(height: 16),
               ]),
@@ -1566,7 +1603,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                 )
               : Row(children: [
                   if (canSell) Expanded(child: _CTA(
-                    label: canRent ? 'Buy' : 'Buy Now',
+                    label: canRent ? AppLocalizations.of(context).buy : AppLocalizations.of(context).buyNowLabel,
                     icon: Icons.shopping_bag_rounded,
                     color: _green,
                     onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -1574,7 +1611,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                   )),
                   if (canSell && canRent) const SizedBox(width: 10),
                   if (canRent) Expanded(child: _CTA(
-                    label: canSell ? 'Rent' : 'Rent Now',
+                    label: canSell ? AppLocalizations.of(context).rent : AppLocalizations.of(context).rentNowLabel,
                     icon: Icons.key_rounded,
                     color: const Color(0xFF7C3AED),
                     onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -1651,7 +1688,10 @@ class _PurchaseScreenState extends State<_PurchaseScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => _LocationPickerScreen(
-          title: _locType == 'pickup' ? 'Pick-up Location' : 'Delivery Location',
+          title: _locType == 'pickup'
+              ? AppLocalizations.of(context).pickupLocation
+              : AppLocalizations.of(context).setDeliveryLocationTitle,
+          isPickup: _locType == 'pickup',
           initial: _locLatLng,
           initialAddress: _locAddress,
         ),
@@ -2082,10 +2122,15 @@ class _LocationTile extends StatelessWidget {
 
 class _LocationPickerScreen extends StatefulWidget {
   final String title;
+  // Drives which confirm-button caption is shown — kept as an explicit flag
+  // instead of comparing the (now localized) `title` string, which broke
+  // once `title` stopped being a fixed English literal.
+  final bool isPickup;
   final LatLng? initial;
   final String initialAddress;
   const _LocationPickerScreen({
     required this.title,
+    this.isPickup = true,
     this.initial,
     this.initialAddress = '',
   });
@@ -2240,7 +2285,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                       onChanged: _onSearchChanged,
                       style: TextStyle(color: context.appTextPrimary, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Search location…',
+                        hintText: AppLocalizations.of(context).searchLocationHint,
                         hintStyle: TextStyle(
                             color: context.appTextSecondary, fontSize: 14),
                         prefixIcon: _searching
@@ -2353,7 +2398,7 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                         ])
                       : Text(
                           _address.isEmpty
-                              ? 'Drag map to set location'
+                              ? AppLocalizations.of(context).dragMapToSetLocation
                               : _address,
                           maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -2381,9 +2426,9 @@ class _LocationPickerScreenState extends State<_LocationPickerScreen> {
                         borderRadius: BorderRadius.circular(14)),
                     elevation: 0,
                   ),
-                  child: Text(widget.title == 'Pick-up Location'
-                      ? 'Set Pick-up Here'
-                      : 'Set Drop-off Here',
+                  child: Text(widget.isPickup
+                      ? AppLocalizations.of(context).setPickupHere
+                      : AppLocalizations.of(context).setDropoffHere,
                       style: const TextStyle(
                           fontSize: 15, fontWeight: FontWeight.w800)),
                 ),
@@ -2710,13 +2755,13 @@ class _SpecCell extends StatelessWidget {
 enum _RentDur { m1, m2, m3, m6, y1, y2 }
 
 extension _RentDurX on _RentDur {
-  String get label => switch (this) {
-    _RentDur.m1 => '1 Month',
-    _RentDur.m2 => '2 Months',
-    _RentDur.m3 => '3 Months',
-    _RentDur.m6 => '6 Months',
-    _RentDur.y1 => '1 Year',
-    _RentDur.y2 => '2 Years',
+  String labelFor(AppLocalizations l) => switch (this) {
+    _RentDur.m1 => l.durMonth1,
+    _RentDur.m2 => l.durMonth2,
+    _RentDur.m3 => l.durMonth3,
+    _RentDur.m6 => l.durMonth6,
+    _RentDur.y1 => l.durYear1,
+    _RentDur.y2 => l.durYear2,
   };
   int get months => switch (this) {
     _RentDur.m1 => 1,  _RentDur.m2 => 2,  _RentDur.m3 => 3,
@@ -2734,16 +2779,17 @@ extension _RentDurX on _RentDur {
 enum _LocType { pickup, delivery }
 
 extension _LocTypeX on _LocType {
-  String get label    => this == _LocType.pickup ? 'Pick Up' : 'Delivery';
-  String get subtitle => this == _LocType.pickup
-      ? "I'll collect it myself"
-      : 'Deliver the car to my address';
+  String labelFor(AppLocalizations l) =>
+      this == _LocType.pickup ? l.pickUpShortLabel : l.delivery;
+  String subtitleFor(AppLocalizations l) => this == _LocType.pickup
+      ? l.collectMyself
+      : l.deliverCarToMyAddress;
   IconData get icon   => this == _LocType.pickup
       ? Icons.directions_walk_rounded
       : Icons.local_shipping_outlined;
-  String get mapTitle => this == _LocType.pickup
-      ? 'Pick-up Location'
-      : 'Set Delivery Location';
+  String mapTitleFor(AppLocalizations l) => this == _LocType.pickup
+      ? l.pickupLocation
+      : l.setDeliveryLocationTitle;
 }
 
 // Bottom-sheet picker for adding another product to the current order.
@@ -2835,7 +2881,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text('Add Item', style: TextStyle(
+            child: Text(AppLocalizations.of(context).addItemTitle, style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
           ),
           Padding(
@@ -2844,7 +2890,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
               controller: _search,
               style: TextStyle(color: context.appTextPrimary, fontSize: 14),
               decoration: InputDecoration(
-                hintText: 'Search listings…',
+                hintText: AppLocalizations.of(context).searchListingsHint,
                 hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
                 prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey, size: 20),
                 filled: true, fillColor: context.appCardBg,
@@ -2860,7 +2906,7 @@ class _AddItemSheetState extends State<_AddItemSheet> {
                 : _error != null
                     ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
                     : _results.isEmpty
-                        ? Center(child: Text('No other listings found',
+                        ? Center(child: Text(AppLocalizations.of(context).noOtherListingsFound,
                             style: TextStyle(color: context.appTextSecondary)))
                         : ListView.builder(
                             controller: scrollCtrl,
@@ -3107,7 +3153,7 @@ class _OrderScreenState extends State<_OrderScreen> {
       setState(() { _couponError = e.message; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _couponError = 'Failed to apply coupon.'; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
+      setState(() { _couponError = AppLocalizations.of(context).failedToApplyCoupon; _applyingCoupon = false; _discountKhr = 0; _appliedCode = null; });
     }
   }
 
@@ -3163,7 +3209,7 @@ class _OrderScreenState extends State<_OrderScreen> {
     final result = await Navigator.push<LocationPickResult>(
       context,
       MaterialPageRoute(builder: (_) => LocationPickerScreen(
-        title:    _locType.mapTitle,
+        title:    _locType.mapTitleFor(AppLocalizations.of(context)),
         pinColor: _color,
         initial:  _deliveryLatLng,
       )),
@@ -3176,7 +3222,7 @@ class _OrderScreenState extends State<_OrderScreen> {
     final result = await Navigator.push<LocationPickResult>(
       context,
       MaterialPageRoute(builder: (_) => LocationPickerScreen(
-        title:    'Pick-up Location',
+        title:    AppLocalizations.of(context).pickupLocation,
         pinColor: _color,
         initial:  _manualPickupLatLng,
       )),
@@ -3234,9 +3280,9 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(t.label, style: TextStyle(
+                    Text(t.labelFor(AppLocalizations.of(ctx)), style: TextStyle(
                         color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-                    Text(t.subtitle, style: TextStyle(color: ctx.appTextSecondary, fontSize: 12)),
+                    Text(t.subtitleFor(AppLocalizations.of(ctx)), style: TextStyle(color: ctx.appTextSecondary, fontSize: 12)),
                   ])),
                   if (isSel) Icon(Icons.check_circle_rounded, color: _color, size: 20),
                 ]),
@@ -3277,8 +3323,8 @@ class _OrderScreenState extends State<_OrderScreen> {
           ..._RentDur.values.map((d) {
             final isSel = d == _duration;
             final endsLabel = _start != null
-                ? 'Ends ${_fmt(_start!.add(Duration(days: d.days)))}'
-                : '${d.days} day${d.days == 1 ? '' : 's'}';
+                ? '${AppLocalizations.of(ctx).endsPrefix} ${_fmt(_start!.add(Duration(days: d.days)))}'
+                : '${d.days} ${AppLocalizations.of(ctx).daysLabel}';
             return InkWell(
               onTap: () { setState(() => _duration = d); Navigator.pop(ctx); },
               child: Padding(
@@ -3294,7 +3340,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(d.label, style: TextStyle(
+                    Text(d.labelFor(AppLocalizations.of(ctx)), style: TextStyle(
                         color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                     Text(endsLabel, style: TextStyle(color: ctx.appTextSecondary, fontSize: 12)),
                   ])),
@@ -3311,11 +3357,11 @@ class _OrderScreenState extends State<_OrderScreen> {
 
   Future<void> _submit() async {
     if (_isRent && (_start == null || _end == null)) {
-      setState(() => _err = 'Please select rental start and end dates.');
+      setState(() => _err = AppLocalizations.of(context).selectRentalDatesError);
       return;
     }
     if (_isVehicleRental && _locType == _LocType.delivery && _deliveryAddress.isEmpty) {
-      setState(() => _err = 'Please set a delivery location.');
+      setState(() => _err = AppLocalizations.of(context).setDeliveryLocationError);
       return;
     }
     setState(() { _busy = true; _err = null; });
@@ -3439,7 +3485,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             ),
           ),
           Divider(height: 1, color: ctx.appCardBg),
-          ..._pays.map((o) {
+          ..._pays(AppLocalizations.of(ctx)).map((o) {
             final (id, label, icon, subtitle) = o;
             final isSel = id == _pay;
             return InkWell(
@@ -3472,12 +3518,12 @@ class _OrderScreenState extends State<_OrderScreen> {
     );
   }
 
-  static const _pays = [
-    ('cash',         'Cash',   Icons.money_rounded,             'Pay in cash on pickup'),
-    ('aba',          'ABA',    Icons.account_balance_rounded,   'ABA mobile banking'),
-    ('wing',         'Wing',   Icons.account_balance_wallet_rounded, 'Wing mobile wallet'),
-    ('wallet',       'Wallet', Icons.wallet_rounded,            'In-app wallet balance'),
-    ('other_online', 'Online', Icons.phone_android_rounded,     'Other online payment'),
+  List<(String, String, IconData, String)> _pays(AppLocalizations l) => [
+    ('cash',         l.cash,          Icons.money_rounded,             l.payInCashOnPickup),
+    ('aba',          'ABA',           Icons.account_balance_rounded,   l.abaMobileBanking),
+    ('wing',         'Wing',          Icons.account_balance_wallet_rounded, l.wingMobileWallet),
+    ('wallet',       l.walletLabel,   Icons.wallet_rounded,            l.inAppWalletBalance),
+    ('other_online', l.onlineLabel,   Icons.phone_android_rounded,     l.otherOnlinePayment),
   ];
 
   @override
@@ -3489,7 +3535,7 @@ class _OrderScreenState extends State<_OrderScreen> {
         backgroundColor: context.appSurface, elevation: 0,
         scrolledUnderElevation: 0.5, shadowColor: Colors.black12,
         leading: _BackBtn(),
-        title: Text(_isRent ? 'Rent Item' : 'Buy Item',
+        title: Text(_isRent ? AppLocalizations.of(context).rentItemTitle : AppLocalizations.of(context).buyItemTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
       ),
       body: Column(children: [
@@ -3710,13 +3756,13 @@ class _OrderScreenState extends State<_OrderScreen> {
             // Location (vehicle rentals only — books via /rentals), matching
             // the Car Rental page's Location Type + embedded map.
             if (_isVehicleRental) ...[
-              _FormLabel('Location'),
+              _FormLabel(AppLocalizations.of(context).location),
               const SizedBox(height: 10),
               _OrderDropdownTile(
                 icon: _locType.icon,
-                label: 'Location Type',
-                value: _locType.label,
-                subtitle: _locType.subtitle,
+                label: AppLocalizations.of(context).locationType,
+                value: _locType.labelFor(AppLocalizations.of(context)),
+                subtitle: _locType.subtitleFor(AppLocalizations.of(context)),
                 color: _color,
                 onTap: _openLocTypeSheet,
               ),
@@ -3736,7 +3782,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                       // Never fall back to RotehLocationMap's own default label
                       // (the ROTEH HQ address) — this is the listing's own
                       // pickup point, not the company office.
-                      addressLabel: widget.product.locationText ?? 'Pickup location',
+                      addressLabel: widget.product.locationText ?? AppLocalizations.of(context).pickupLocation,
                     ),
                   )
                 else if (_manualPickupLatLng != null)
@@ -3787,7 +3833,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                       Icon(Icons.location_on_rounded, color: _color, size: 18),
                       const SizedBox(width: 10),
                       Expanded(child: Text(
-                          _deliveryAddress.isEmpty ? 'Tap to set delivery location' : _deliveryAddress,
+                          _deliveryAddress.isEmpty ? AppLocalizations.of(context).tapToSetDelivery : _deliveryAddress,
                           maxLines: 2, overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               color: _deliveryAddress.isEmpty
@@ -3804,7 +3850,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             // Rental period — Duration dropdown + Start Date / End Date (auto),
             // same pattern as the Car Rental page.
             if (_isRent) ...[
-              _FormLabel('Rental Period'),
+              _FormLabel(AppLocalizations.of(context).rentalPeriodLabel),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(14),
@@ -3817,11 +3863,11 @@ class _OrderScreenState extends State<_OrderScreen> {
                 child: Column(children: [
                   _OrderDropdownTile(
                     icon: _duration.icon,
-                    label: 'Duration',
-                    value: _duration.label,
+                    label: AppLocalizations.of(context).durationLabel,
+                    value: _duration.labelFor(AppLocalizations.of(context)),
                     subtitle: _start != null
-                        ? '$_days days  ·  ends ${_fmt(_end!)}'
-                        : '$_days day${_days == 1 ? '' : 's'}',
+                        ? '$_days ${AppLocalizations.of(context).daysLabel}  ·  ${AppLocalizations.of(context).endsLabel} ${_fmt(_end!)}'
+                        : '$_days ${AppLocalizations.of(context).daysLabel}',
                     color: _color,
                     onTap: _openDurationSheet,
                   ),
@@ -3843,7 +3889,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                           Row(children: [
                             Icon(Icons.calendar_today_outlined, color: _color, size: 13),
                             const SizedBox(width: 5),
-                            Expanded(child: Text(_start == null ? 'Select' : _fmt(_start!),
+                            Expanded(child: Text(_start == null ? AppLocalizations.of(context).selectLabel : _fmt(_start!),
                                 maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: TextStyle(color: context.appTextPrimary,
                                     fontWeight: FontWeight.w700, fontSize: 12))),
@@ -3898,7 +3944,7 @@ class _OrderScreenState extends State<_OrderScreen> {
 
             // Quantity (not applicable to a single vehicle-rental booking)
             if (!_isVehicleRental) ...[
-              _FormLabel('Quantity'),
+              _FormLabel(AppLocalizations.of(context).quantity),
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -3965,7 +4011,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                   child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                     Icon(Icons.add_rounded, color: _color, size: 18),
                     const SizedBox(width: 6),
-                    Text('Add Another Item', style: TextStyle(color: _color, fontWeight: FontWeight.w700, fontSize: 13)),
+                    Text(AppLocalizations.of(context).addAnotherItem, style: TextStyle(color: _color, fontWeight: FontWeight.w700, fontSize: 13)),
                   ]),
                 ),
               ),
@@ -3973,13 +4019,14 @@ class _OrderScreenState extends State<_OrderScreen> {
             ],
 
             // Payment
-            _FormLabel('Payment Method'),
+            _FormLabel(AppLocalizations.of(context).paymentMethod),
             const SizedBox(height: 10),
             Builder(builder: (context) {
-              final selected = _pays.firstWhere((o) => o.$1 == _pay);
+              final l = AppLocalizations.of(context);
+              final selected = _pays(l).firstWhere((o) => o.$1 == _pay);
               return _OrderDropdownTile(
                 icon: selected.$3,
-                label: 'Payment Method',
+                label: l.paymentMethod,
                 value: selected.$2,
                 subtitle: selected.$4,
                 color: _color,
@@ -3989,13 +4036,13 @@ class _OrderScreenState extends State<_OrderScreen> {
             const SizedBox(height: 16),
 
             // Notes
-            _FormLabel('Notes (optional)'),
+            _FormLabel(AppLocalizations.of(context).notesOptional),
             const SizedBox(height: 10),
             TextField(
               controller: _notes, maxLines: 2,
               style: TextStyle(color: context.appTextPrimary, fontSize: 13),
               decoration: InputDecoration(
-                hintText: 'Any special instructions…',
+                hintText: AppLocalizations.of(context).anySpecialInstructionsHint,
                 hintStyle: const TextStyle(color: Colors.grey),
                 filled: true, fillColor: context.appSurface,
                 border: OutlineInputBorder(
@@ -4006,7 +4053,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             const SizedBox(height: 16),
 
             // Coupon code (buy & rent, matching Car Rental)
-            _FormLabel('Coupon Code'),
+            _FormLabel(AppLocalizations.of(context).couponCode),
               const SizedBox(height: 10),
               if (_appliedCode != null) ...[
                 Container(
@@ -4047,7 +4094,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                       style: TextStyle(color: context.appTextPrimary, fontSize: 14,
                           fontWeight: FontWeight.w600, letterSpacing: 1.2),
                       decoration: InputDecoration(
-                        hintText: 'Enter coupon code',
+                        hintText: AppLocalizations.of(context).enterCouponCodeOptional,
                         hintStyle: TextStyle(color: context.appTextSecondary,
                             fontWeight: FontWeight.w400, letterSpacing: 0),
                         filled: true,
@@ -4100,7 +4147,7 @@ class _OrderScreenState extends State<_OrderScreen> {
               child: Column(children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(_isRent ? 'Booking Summary' : 'Order Summary',
+                  child: Text(_isRent ? AppLocalizations.of(context).bookingSummaryLabel : AppLocalizations.of(context).orderSummaryLabel,
                       style: TextStyle(color: context.appTextPrimary,
                           fontSize: 15, fontWeight: FontWeight.w700)),
                 ),
@@ -4113,10 +4160,10 @@ class _OrderScreenState extends State<_OrderScreen> {
                         _usd(item.price * (_extraQty[item.id] ?? 1))),
                 ] else ...[
                   // Matches the Car Rental page's summary rows exactly.
-                  _SumRow('Vehicle', p.title),
-                  _SumRow('Duration', _duration.label),
-                  _SumRow('Daily Rate', p.rentPricePerDay != null ? _usd(p.rentPricePerDay!) : '—'),
-                  _SumRow('Days', _datesOk ? '$_days days' : '—'),
+                  _SumRow(AppLocalizations.of(context).vehicleLabel, p.title),
+                  _SumRow(AppLocalizations.of(context).durationLabel, _duration.labelFor(AppLocalizations.of(context))),
+                  _SumRow(AppLocalizations.of(context).dailyRateLabel, p.rentPricePerDay != null ? _usd(p.rentPricePerDay!) : '—'),
+                  _SumRow(AppLocalizations.of(context).daysCapLabel, _datesOk ? '$_days ${AppLocalizations.of(context).daysLabel}' : '—'),
                 ],
                 if (_isRent) ...[
                   const SizedBox(height: 8),
@@ -4125,7 +4172,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                       Icon(Icons.local_offer_outlined, size: 14, color: _color),
                       const SizedBox(width: 4),
                       Text(
-                        _appliedCode != null ? 'Discount ($_appliedCode)' : 'Discount',
+                        _appliedCode != null ? '${AppLocalizations.of(context).discountLabel} ($_appliedCode)' : AppLocalizations.of(context).discountLabel,
                         style: TextStyle(color: context.appTextSecondary, fontSize: 14),
                       ),
                     ]),
@@ -4169,7 +4216,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             if (!_isRent || _datesOk) ...[
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Total Summary', style: TextStyle(
+                  Text(AppLocalizations.of(context).totalSummaryLabel, style: TextStyle(
                       color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
                   Text(_usd(_total), style: TextStyle(
                       color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
@@ -4186,8 +4233,8 @@ class _OrderScreenState extends State<_OrderScreen> {
                         child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
                     : Text(
                         _isRent
-                            ? (_datesOk ? 'Confirm Rental' : 'Select Dates to Continue')
-                            : 'Proceed to Checkout'),
+                            ? (_datesOk ? AppLocalizations.of(context).confirmRentalLabel : AppLocalizations.of(context).selectDatesToContinue)
+                            : AppLocalizations.of(context).proceedToCheckout),
               ),
             ),
           ]),
@@ -4353,10 +4400,10 @@ class _MyListingsTabState extends State<_MyListingsTab> {
                 color: _green.withValues(alpha: 0.08), shape: BoxShape.circle),
             child: const Icon(Icons.storefront_outlined, color: _green, size: 48)),
         const SizedBox(height: 16),
-        Text("No listings yet",
+        Text(AppLocalizations.of(context).noListingsYetTitle,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 17)),
         const SizedBox(height: 6),
-        const Text("Post something to start selling",
+        Text(AppLocalizations.of(context).postSomethingToStartSelling,
             style: TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(height: 24),
         ElevatedButton.icon(
@@ -4407,7 +4454,7 @@ class _MyListingsTabState extends State<_MyListingsTab> {
                     Container(width: 7, height: 7,
                         decoration: BoxDecoration(color: sc, shape: BoxShape.circle)),
                     const SizedBox(width: 5),
-                    Text(p.status[0].toUpperCase() + p.status.substring(1),
+                    Text(_productStatusLabel(AppLocalizations.of(context), p.status),
                         style: TextStyle(color: sc, fontSize: 11, fontWeight: FontWeight.w600)),
                   ]),
                 ]),
@@ -4507,8 +4554,8 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
           labelColor: _green, unselectedLabelColor: Colors.grey,
           labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
           tabs: [
-            Tab(text: 'Buying (${_buying.length})'),
-            Tab(text: 'Rental (${_selling.length})'),
+            Tab(text: '${AppLocalizations.of(context).buyingTab} (${_buying.length})'),
+            Tab(text: '${AppLocalizations.of(context).rental} (${_selling.length})'),
           ],
         ),
       ),
@@ -4603,7 +4650,7 @@ class _OrderCard extends StatelessWidget {
                     color: sc.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(o.status[0].toUpperCase() + o.status.substring(1),
+                  child: Text(_orderStatusLabel(AppLocalizations.of(context), o.status),
                       style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
                 ),
               ]),
@@ -4615,7 +4662,7 @@ class _OrderCard extends StatelessWidget {
                     color: typeClr.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Text(isRent ? 'Rental' : 'Purchase',
+                  child: Text(isRent ? AppLocalizations.of(context).rental : AppLocalizations.of(context).purchaseLabel,
                       style: TextStyle(color: typeClr, fontSize: 10, fontWeight: FontWeight.w700)),
                 ),
                 const SizedBox(width: 8),
@@ -4658,14 +4705,14 @@ class _OrderCard extends StatelessWidget {
             const Spacer(),
             if (canAct) ...[
               if (isSeller && o.status == 'pending') ...[
-                _ActionPill('Confirm', AppTheme.confirmBlue, Icons.check_circle_outline_rounded,
+                _ActionPill(AppLocalizations.of(context).confirm, AppTheme.confirmBlue, Icons.check_circle_outline_rounded,
                     () => onAction(o, 'confirm')),
                 const SizedBox(width: 8),
               ],
-              _ActionPill('Done', const Color(0xFF007AFF), Icons.task_alt_rounded,
+              _ActionPill(AppLocalizations.of(context).done, const Color(0xFF007AFF), Icons.task_alt_rounded,
                   () => onAction(o, 'complete')),
               const SizedBox(width: 8),
-              _ActionPill('Cancel', Colors.red, Icons.cancel_outlined,
+              _ActionPill(AppLocalizations.of(context).cancel, Colors.red, Icons.cancel_outlined,
                   () => onAction(o, 'cancel')),
             ],
           ]),
@@ -4856,8 +4903,8 @@ class _PostProductScreenState extends State<_PostProductScreen> {
   Future<void> _submit() async {
     final t = _title.text.trim();
     final p = double.tryParse(_price.text.trim());
-    if (t.isEmpty) { setState(() => _err = 'Title is required.'); return; }
-    if (p == null) { setState(() => _err = 'Price must be a number.'); return; }
+    if (t.isEmpty) { setState(() => _err = AppLocalizations.of(context).titleIsRequiredError); return; }
+    if (p == null) { setState(() => _err = AppLocalizations.of(context).priceMustBeNumberError); return; }
     final r = double.tryParse(_rent.text.trim());
 
     // Drop rows the seller started but never filled in — nothing to submit
@@ -4866,7 +4913,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
     final accessoryRows = _accessories.where((a) => a.nameEnCtrl.text.trim().isNotEmpty).toList();
     for (final a in accessoryRows) {
       if (double.tryParse(a.priceCtrl.text.trim()) == null) {
-        setState(() => _err = 'Enter a valid price for "${a.nameEnCtrl.text.trim()}".');
+        setState(() => _err = '${AppLocalizations.of(context).enterValidPricePrefix} "${a.nameEnCtrl.text.trim()}".');
         return;
       }
     }
@@ -4899,7 +4946,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(_isEdit ? 'Updated!' : 'Posted!'), backgroundColor: _green));
+          content: Text(_isEdit ? AppLocalizations.of(context).updatedExclaim : AppLocalizations.of(context).postedExclaim), backgroundColor: _green));
       Navigator.pop(context);
     } on ApiException catch (e) {
       if (mounted) setState(() { _err = e.message; _busy = false; });
@@ -4982,7 +5029,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               ),
 
             _Card(title: loc.productInfo, child: Column(children: [
-              _FF(ctrl: _title, label: loc.productTitle, hint: 'e.g. iPhone 14 Pro'),
+              _FF(ctrl: _title, label: loc.productTitle, hint: loc.egIphone14Pro),
               const SizedBox(height: 12),
               _FF(ctrl: _desc, label: loc.description,
                   hint: loc.describeProduct, maxLines: 3),
@@ -5067,7 +5114,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           _FF(ctrl: _accessories[i].nameEnCtrl, label: loc.nameEn,
-                              hint: 'e.g. Removable Canopy'),
+                              hint: loc.egRemovableCanopy),
                           const SizedBox(height: 8),
                           _FF(ctrl: _accessories[i].nameKmCtrl, label: loc.nameKm,
                               hint: 'e.g. ក្រណាត់ដំបូល'),
@@ -5109,7 +5156,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: _Card(title: loc.type,
                 child: Column(children: [
-                  for (final t in [('sale', 'Sale'), ('rent', 'Rent'), ('both', 'Both')])
+                  for (final t in [('sale', loc.saleTypeLabel), ('rent', loc.rent), ('both', loc.bothTypeLabel)])
                     _SelBtn(t.$2, _type == t.$1, _green,
                         () => setState(() => _type = t.$1)),
                 ]),
@@ -5117,7 +5164,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               const SizedBox(width: 12),
               Expanded(child: _Card(title: loc.condition,
                 child: Column(children: [
-                  for (final c in [('new', 'New'), ('used', 'Used'), ('refurbished', 'Refurb')])
+                  for (final c in [('new', loc.conditionNewLabel), ('used', loc.conditionUsedLabel), ('refurbished', loc.conditionRefurbAbbrev)])
                     _SelBtn(c.$2, _cond == c.$1, _condColor(c.$1),
                         () => setState(() => _cond = c.$1)),
                 ]),
@@ -5139,12 +5186,12 @@ class _PostProductScreenState extends State<_PostProductScreen> {
 
             _Card(title: loc.location, child:
               _FF(ctrl: _location, label: loc.areaDistrictOptional,
-                  hint: 'e.g. BKK1, Phnom Penh')),
+                  hint: loc.egBkk1PhnomPenh)),
 
             if (_isEdit)
               _Card(title: loc.status, child: Wrap(spacing: 8, runSpacing: 8,
                 children: ['draft', 'active', 'paused', 'sold'].map((s) =>
-                  _SelBtn(s[0].toUpperCase() + s.substring(1),
+                  _SelBtn(_productStatusLabel(loc, s),
                       _status == s, _statusColor(s),
                       () => setState(() => _status = s)),
                 ).toList(),
@@ -5166,7 +5213,7 @@ class _PostProductScreenState extends State<_PostProductScreen> {
               child: _busy
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
-                  : Text(_isEdit ? 'Save Changes' : 'Post Listing'),
+                  : Text(_isEdit ? loc.saveChanges : loc.postListingBtn),
             ),
           ),
         ),

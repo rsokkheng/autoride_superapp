@@ -31,13 +31,10 @@ class _BannerCarouselState extends State<BannerCarousel> {
     try {
       final list = await ApiService.getBanners();
       if (!mounted) return;
-      // Skip banners with no image and no text — they'd render as an empty
-      // colored box.
+      // Only show banners that have an image.
       final usable = list.where((b) {
-        final image    = (b['image_url'] as String?) ?? (b['image'] as String?) ?? '';
-        final title    = (b['title']     as String?) ?? '';
-        final subtitle = (b['subtitle']  as String?) ?? (b['description'] as String?) ?? '';
-        return image.isNotEmpty || title.isNotEmpty || subtitle.isNotEmpty;
+        final image = (b['image_url'] as String?) ?? (b['image'] as String?) ?? '';
+        return image.isNotEmpty;
       }).toList();
       setState(() { _banners = usable; _loading = false; });
     } catch (_) {
@@ -86,64 +83,23 @@ class _BannerItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imageUrl = banner['image_url'] as String? ?? banner['image'] as String? ?? '';
-    final title    = banner['title']     as String? ?? '';
-    final subtitle = banner['subtitle']  as String? ?? banner['description'] as String? ?? '';
-    final bgColor  = _parseColor(banner['bg_color'] as String?) ?? AppTheme.accent.withValues(alpha: 0.12);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: bgColor,
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+      child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, __, ___) => Center(
+            child: Icon(Icons.image_not_supported_outlined,
+                color: AppTheme.accent.withValues(alpha: 0.4), size: 32),
+          ),
+        ),
       ),
-      child: Stack(fit: StackFit.expand, children: [
-        if (imageUrl.isNotEmpty)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Center(
-                child: Icon(Icons.image_not_supported_outlined,
-                    color: AppTheme.accent.withValues(alpha: 0.4), size: 32),
-              ),
-            ),
-          ),
-        if (title.isNotEmpty || subtitle.isNotEmpty)
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [Colors.black.withValues(alpha: 0.6), Colors.transparent],
-              ),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (title.isNotEmpty)
-                  Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12, height: 1.4)),
-                ],
-              ],
-            ),
-          ),
-      ]),
     );
-  }
-
-  Color? _parseColor(String? hex) {
-    if (hex == null || hex.isEmpty) return null;
-    try {
-      final cleaned = hex.replaceFirst('#', '');
-      return Color(int.parse(cleaned.length == 6 ? 'FF$cleaned' : cleaned, radix: 16));
-    } catch (_) {
-      return null;
-    }
   }
 }

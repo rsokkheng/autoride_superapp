@@ -528,7 +528,6 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _searchCtrl.addListener(_onSearchChanged);
     _pickupSearchCtrl.addListener(_onPickupSearchChanged);
     appLocale.addListener(_onLocaleChanged);
-    _detectGps();
     _loadSurge();
     _loadSavedPlaces();
     _loadVehicleTypes();
@@ -551,6 +550,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     _visibleRideTypes = _fallbackRideTypesFor(l);
     _selectedRide     = l.tukTuk3;
     _pickupAddress    = l.detectingLocation;
+    _detectGps();
   }
 
   Future<void> _loadSurge() async {

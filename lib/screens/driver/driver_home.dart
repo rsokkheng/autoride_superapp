@@ -892,80 +892,99 @@ class _DriverDashboardState extends State<_DriverDashboard>
             ],
 
             // Peak hour bonus tracker
-            Container(
-              padding: EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.appSurface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Icon(Icons.bolt, color: AppTheme.warning, size: 20),
-                  SizedBox(width: 8),
-                  Text(AppLocalizations.of(context).peakHourBonus, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-                  Spacer(),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: AppTheme.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
-                    child: Text(AppLocalizations.of(context).active69Pm, style: TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
+            if (_stats != null) ...[
+              Builder(builder: (context) {
+                final peak = _stats!.peakHour;
+                return Container(
+                  padding: EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.warning.withValues(alpha: 0.4)),
                   ),
-                ]),
-                SizedBox(height: 10),
-                Row(children: [
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Extra \$0.50 per trip during peak hours', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-                    SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: 0.6,
-                        backgroundColor: context.appCardBg,
-                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warning),
-                        minHeight: 6,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Icon(Icons.bolt, color: AppTheme.warning, size: 20),
+                      SizedBox(width: 8),
+                      Text(AppLocalizations.of(context).peakHourBonus, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                      Spacer(),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: (peak.active ? AppTheme.warning : context.appTextSecondary).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${peak.active ? "Active" : "Inactive"} ${peak.windowStart}–${peak.windowEnd}',
+                          style: TextStyle(color: peak.active ? AppTheme.warning : context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(AppLocalizations.of(context).n3Of5PeakHour, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
-                  ])),
-                  SizedBox(width: 14),
-                  Column(children: [
-                    Text('+\$1.50', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w900, fontSize: 20)),
-                    Text(AppLocalizations.of(context).earnedToday, style: TextStyle(color: context.appTextSecondary, fontSize: 10)),
+                    ]),
+                    SizedBox(height: 10),
+                    Row(children: [
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Extra ${AppTheme.khr(peak.bonusPerTripKhr)} per trip during peak hours', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                        SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: peak.progress,
+                            backgroundColor: context.appCardBg,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.warning),
+                            minHeight: 6,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text('${peak.tripsToday} of ${peak.tripTarget} peak-hour trips completed today', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                      ])),
+                      SizedBox(width: 14),
+                      Column(children: [
+                        Text('+${AppTheme.khr(peak.earnedTodayKhr)}', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w900, fontSize: 20)),
+                        Text(AppLocalizations.of(context).earnedToday, style: TextStyle(color: context.appTextSecondary, fontSize: 10)),
+                      ]),
+                    ]),
                   ]),
-                ]),
-              ]),
-            ),
-            SizedBox(height: 14),
+                );
+              }),
+              SizedBox(height: 14),
 
-            // 5-star streak rewards
-            Container(
-              padding: EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.appSurface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
-              ),
-              child: Row(children: [
-                Container(
-                  padding: EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: AppTheme.gold.withValues(alpha: 0.15), shape: BoxShape.circle),
-                  child: Icon(Icons.emoji_events, color: AppTheme.gold, size: 26),
-                ),
-                SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(AppLocalizations.of(context).n5StarStreak, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-                  Text(AppLocalizations.of(context).n4Consecutive5StarRatings, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-                  SizedBox(height: 4),
-                  Text('1 more 5-star = Earn \$5 bonus', style: TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600)),
-                ])),
-                Row(children: List.generate(5, (i) => Icon(
-                  i < 4 ? Icons.star_rounded : Icons.star_outline_rounded,
-                  color: i < 4 ? AppTheme.gold : context.appTextSecondary, size: 18,
-                ))),
-              ]),
-            ),
-            SizedBox(height: 20),
+              // 5-star streak rewards
+              Builder(builder: (context) {
+                final streak = _stats!.ratingStreak;
+                return Container(
+                  padding: EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.gold.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: AppTheme.gold.withValues(alpha: 0.15), shape: BoxShape.circle),
+                      child: Icon(Icons.emoji_events, color: AppTheme.gold, size: 26),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(AppLocalizations.of(context).n5StarStreak, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+                      Text('${streak.current} consecutive 5-star ratings!', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                      SizedBox(height: 4),
+                      Text(
+                        streak.remaining > 0
+                            ? '${streak.remaining} more 5-star = Earn ${AppTheme.khr(streak.bonusKhr)} bonus'
+                            : 'Streak bonus unlocked — ${AppTheme.khr(streak.bonusKhr)}!',
+                        style: TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ])),
+                    Row(children: List.generate(5, (i) => Icon(
+                      i < streak.current.clamp(0, 5) ? Icons.star_rounded : Icons.star_outline_rounded,
+                      color: i < streak.current.clamp(0, 5) ? AppTheme.gold : context.appTextSecondary, size: 18,
+                    ))),
+                  ]),
+                );
+              }),
+              SizedBox(height: 20),
+            ],
 
             SectionHeader(title: AppLocalizations.of(context).promotions),
             const SizedBox(height: 14),
