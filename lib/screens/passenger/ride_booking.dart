@@ -13,6 +13,7 @@ import '../../main.dart' show appLocale;
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../models/ride_model.dart' show NearbyMapDriverModel;
+import '../../models/trip_model.dart' show TripModel;
 import '../../l10n/app_localizations.dart';
 import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
@@ -507,6 +508,9 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   // Saved places (Home / Work shortcuts)
   List<SavedPlaceModel> _savedPlaces = [];
 
+  // Recent destinations (for the "Recent" where-to tab)
+  List<TripModel> _recentTrips = [];
+
   // Promo code
   String? _promoCode;
   double? _promoDiscount;   // discount amount in KHR
@@ -530,6 +534,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     appLocale.addListener(_onLocaleChanged);
     _loadSurge();
     _loadSavedPlaces();
+    _loadRecentTrips();
     _loadVehicleTypes();
     if (widget.skipDestination) _skipDestination();
     if (widget.initialDestAddress != null && widget.initialDestLatLng != null) {
@@ -581,6 +586,31 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         setState(() => _pickupAddress = match.label);
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadRecentTrips() async {
+    try {
+      final result = await ApiService.getTrips(filter: 'recent', type: 'ride', status: 'completed');
+      if (!mounted) return;
+      // De-dupe by dropoff address, keep the most recent 5.
+      final seen = <String>{};
+      final unique = <TripModel>[];
+      for (final t in result.trips) {
+        if (t.dropoff.isEmpty || t.dropoffLat == null || t.dropoffLng == null) continue;
+        if (seen.add(t.dropoff)) unique.add(t);
+        if (unique.length == 5) break;
+      }
+      setState(() => _recentTrips = unique);
+    } catch (_) {}
+  }
+
+  void _selectRecentTrip(TripModel trip) {
+    if (_activeStopIdx < 0 || trip.dropoffLat == null || trip.dropoffLng == null) return;
+    setState(() {
+      _stops[_activeStopIdx].address = trip.dropoff;
+      _stops[_activeStopIdx].latLng  = LatLng(trip.dropoffLat!, trip.dropoffLng!);
+    });
+    _afterStopFilled();
   }
 
   @override
@@ -2584,13 +2614,24 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   Widget _buildTabContent() {
     switch (_whereToTab) {
       case 0:
-        return Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.history, color: context.appTextSecondary, size: 40),
-            SizedBox(height: 12),
-            Text(AppLocalizations.of(context).noRecentTrips,
-                style: TextStyle(color: context.appTextSecondary)),
-          ]),
+        if (_recentTrips.isEmpty) {
+          return Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.history, color: context.appTextSecondary, size: 40),
+              SizedBox(height: 12),
+              Text(AppLocalizations.of(context).noRecentTrips,
+                  style: TextStyle(color: context.appTextSecondary)),
+            ]),
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: _recentTrips.map((t) => _DestTile(
+                icon: Icons.history,
+                iconColor: context.appTextSecondary,
+                title: t.dropoff,
+                onTap: () => _selectRecentTrip(t),
+              )).toList(),
         );
       case 1:
         return ListView(
@@ -2611,13 +2652,29 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
               .toList(),
         );
       case 2:
-        return Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.bookmark_border, color: context.appTextSecondary, size: 40),
-            SizedBox(height: 12),
-            Text(AppLocalizations.of(context).noSavedPlaces,
-                style: TextStyle(color: context.appTextSecondary)),
-          ]),
+        if (_savedPlaces.isEmpty) {
+          return Center(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.bookmark_border, color: context.appTextSecondary, size: 40),
+              SizedBox(height: 12),
+              Text(AppLocalizations.of(context).noSavedPlaces,
+                  style: TextStyle(color: context.appTextSecondary)),
+            ]),
+          );
+        }
+        return ListView(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          children: _savedPlaces.map((p) => _DestTile(
+                icon: p.label.toLowerCase().contains('home')
+                    ? Icons.home_outlined
+                    : p.label.toLowerCase().contains('work') ||
+                            p.label.toLowerCase().contains('office')
+                        ? Icons.work_outline
+                        : Icons.bookmark_outline,
+                iconColor: AppTheme.accent,
+                title: p.label,
+                onTap: () => _selectSavedPlace(p),
+              )).toList(),
         );
       default:
         return const SizedBox();

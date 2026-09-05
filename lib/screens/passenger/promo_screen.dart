@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter/services.dart' show Clipboard, ClipboardData;
+import 'package:share_plus/share_plus.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/widgets/common_widgets.dart';
 import 'package:autoride_superapp/services/api_service.dart';
@@ -66,17 +67,41 @@ class _PromosTabState extends State<_PromosTab> {
   final _codeController = TextEditingController();
   String? _applyError;
   String? _applySuccess;
+  String? _appliedShareUrl;
+  String? _appliedCode;
   bool _applying = false;
 
-  List<_Promo> _promos(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return [
-      _Promo(code: 'NEWUSER50', title: l.promo1Title, desc: l.promo1Desc, expiry: '${l.expiresPrefix} Jun 30, 2026', discount: '50%', type: 'ride', color: const Color(0xFF00D4AA), icon: Icons.directions_car),
-      _Promo(code: 'ROTEH15', title: l.promo2Title, desc: l.promo2Desc, expiry: '${l.expiresPrefix} May 31, 2026', discount: '15%', type: 'ride', color: const Color(0xFF2196F3), icon: Icons.percent),
-      _Promo(code: 'DELIVER10', title: l.promo3Title, desc: l.promo3Desc, expiry: '${l.expiresPrefix} Jun 15, 2026', discount: '\$1', type: 'delivery', color: const Color(0xFFFF6B35), icon: Icons.delivery_dining),
-      _Promo(code: 'EVCHARGE', title: l.promo4Title, desc: l.promo4Desc, expiry: l.noExpiry, discount: l.freeLabel, type: 'ev', color: const Color(0xFFFFB300), icon: Icons.ev_station),
-      _Promo(code: 'WEEKEND20', title: l.promo5Title, desc: l.promo5Desc, expiry: '${l.expiresPrefix} Jun 30, 2026', discount: '20%', type: 'ride', color: const Color(0xFF9C27B0), icon: Icons.weekend),
-    ];
+  List<PromoModel> _promos = [];
+  bool _loadingPromos = true;
+  String? _promoError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPromos();
+  }
+
+  Future<void> _loadPromos() async {
+    setState(() { _loadingPromos = true; _promoError = null; });
+    try {
+      final list = await ApiService.getActivePromos();
+      if (!mounted) return;
+      setState(() { _promos = list; _loadingPromos = false; });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() { _promoError = e.toString().replaceFirst('Exception: ', ''); _loadingPromos = false; });
+    }
+  }
+
+  void _useCode(String code) {
+    Clipboard.setData(ClipboardData(text: code));
+    setState(() => _codeController.text = code);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${AppLocalizations.of(context).codeCopiedPrefix} "$code" ${AppLocalizations.of(context).copiedSuffix}'),
+      backgroundColor: AppTheme.success,
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 2),
+    ));
   }
 
   @override
@@ -90,9 +115,11 @@ class _PromosTabState extends State<_PromosTab> {
     if (code.isEmpty) return;
 
     setState(() {
-      _applyError   = null;
-      _applySuccess = null;
-      _applying     = true;
+      _applyError      = null;
+      _applySuccess    = null;
+      _appliedShareUrl = null;
+      _appliedCode     = null;
+      _applying        = true;
     });
 
     try {
@@ -109,8 +136,11 @@ class _PromosTabState extends State<_PromosTab> {
             : result.discountAmount != null
                 ? '${AppTheme.khr(result.discountAmount!)} ${l.offSuffix}'
                 : l.discountAppliedFallback;
-        setState(() => _applySuccess =
-            '${l.promoAppliedDashPrefix} "$code" ${l.appliedDashSuffix} $discount${result.description != null ? '\n${result.description}' : ''}');
+        setState(() {
+          _applySuccess = '${l.promoAppliedDashPrefix} "$code" ${l.appliedDashSuffix} $discount${result.description != null ? '\n${result.description}' : ''}';
+          _appliedShareUrl = result.shareUrl;
+          _appliedCode = code;
+        });
         _codeController.clear();
       } else {
         setState(() => _applyError = AppLocalizations.of(context).invalidExpiredPromoCode);
@@ -176,6 +206,21 @@ class _PromosTabState extends State<_PromosTab> {
             if (_applySuccess != null) ...[
               const SizedBox(height: 8),
               Text(_applySuccess!, style: const TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600)),
+              if (_appliedShareUrl != null) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => Share.share(
+                    'Use my code $_appliedCode for a discount on ROTEH!\n$_appliedShareUrl',
+                  ),
+                  icon: const Icon(Icons.share_outlined, size: 16),
+                  label: Text(AppLocalizations.of(context).shareWithFriends),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.accent,
+                    side: const BorderSide(color: AppTheme.accent),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  ),
+                ),
+              ],
             ],
           ]),
         ),
@@ -184,115 +229,130 @@ class _PromosTabState extends State<_PromosTab> {
         SectionHeader(title: AppLocalizations.of(context).availableVouchersTitle),
         const SizedBox(height: 12),
 
-        ..._promos(context).map((p) => _PromoCard(
-          promo: p,
-          onCopy: () {
-            Clipboard.setData(ClipboardData(text: p.code));
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('${AppLocalizations.of(context).codeCopiedPrefix} "${p.code}" ${AppLocalizations.of(context).copiedSuffix}'),
-              backgroundColor: AppTheme.success,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              duration: const Duration(seconds: 2),
-            ));
-          },
-        )),
+        if (_loadingPromos)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: CircularProgressIndicator(color: AppTheme.accent)),
+          )
+        else if (_promoError != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(children: [
+              Text(_promoError!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              ElevatedButton(onPressed: _loadPromos, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
+            ]),
+          )
+        else if (_promos.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(child: Text(AppLocalizations.of(context).noVouchersAvailable, style: TextStyle(color: context.appTextSecondary))),
+          )
+        else
+          ..._promos.map((p) => _PromoCard(promo: p, onUseCode: () => _useCode(p.code))),
       ],
     );
   }
 }
 
 class _PromoCard extends StatelessWidget {
-  final _Promo promo;
-  final VoidCallback onCopy;
-  const _PromoCard({required this.promo, required this.onCopy});
+  final PromoModel promo;
+  final VoidCallback onUseCode;
+  const _PromoCard({required this.promo, required this.onUseCode});
+
+  static const _color = Color(0xFF00D4AA);
+
+  static const _serviceIcons = {
+    'rides':      Icons.directions_car,
+    'deliveries': Icons.delivery_dining_outlined,
+    'moving':     Icons.local_shipping_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final discount = promo.type == 'percent'
+        ? '${promo.value.toStringAsFixed(0)}%'
+        : AppTheme.khr(promo.value);
+    final minOrder = promo.minOrder;
+    final desc = minOrder != null && minOrder > 0
+        ? '${l.minOrderPrefix} ${AppTheme.khr(minOrder)}'
+        : promo.description;
+    final expiresAt = promo.expiresAt;
+    final expiry = expiresAt != null && expiresAt.length >= 10
+        ? '${l.expiresPrefix} ${expiresAt.substring(0, 10)}'
+        : l.noExpiry;
+
     return Container(
       margin: EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: context.appSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: promo.color.withValues(alpha: 0.25)),
+        border: Border.all(color: _color.withValues(alpha: 0.25)),
       ),
       child: Column(children: [
-        // Top band
         Container(
           padding: EdgeInsets.all(16),
           child: Row(children: [
             Container(
               padding: EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: promo.color.withValues(alpha: 0.12),
+                color: _color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(promo.icon, color: promo.color, size: 26),
+              child: Icon(_serviceIcons[promo.serviceType] ?? Icons.local_offer_outlined, color: _color, size: 26),
             ),
             SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(promo.title,
+              Text(promo.description,
                   style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 15)),
               SizedBox(height: 4),
-              Text(promo.desc, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+              if (desc.isNotEmpty) Text(desc, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               const SizedBox(height: 4),
-              Text(promo.expiry, style: TextStyle(color: promo.color, fontSize: 11, fontWeight: FontWeight.w600)),
+              Text(expiry, style: TextStyle(color: _color, fontSize: 11, fontWeight: FontWeight.w600)),
             ])),
-            // Discount badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: promo.color,
+                color: _color,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text(promo.discount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+              child: Text(discount, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
             ),
           ]),
         ),
-
-        // Dashed divider
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(children: List.generate(28, (i) => Expanded(child: Container(
-            height: 1,
-            color: i.isEven ? promo.color.withValues(alpha: 0.3) : Colors.transparent,
-          )))),
-        ),
-
-        // Code + copy
-        Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
           child: Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: promo.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: promo.color.withValues(alpha: 0.3), style: BorderStyle.solid),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _color.withValues(alpha: 0.3)),
+                ),
+                child: Text(promo.code,
+                    style: TextStyle(color: _color, fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 13)),
               ),
-              child: Text(promo.code,
-                  style: TextStyle(color: promo.color, fontWeight: FontWeight.w800, letterSpacing: 1.5, fontSize: 13)),
             ),
-            const Spacer(),
-            GestureDetector(
-              onTap: onCopy,
-              child: Row(children: [
-                Icon(Icons.copy, color: promo.color, size: 16),
-                const SizedBox(width: 4),
-                Text(AppLocalizations.of(context).copy, style: TextStyle(color: promo.color, fontWeight: FontWeight.w600, fontSize: 13)),
-              ]),
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 36,
+              child: ElevatedButton(
+                onPressed: onUseCode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _color.withValues(alpha: 0.12),
+                  foregroundColor: _color,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text(l.copy, style: const TextStyle(fontWeight: FontWeight.w800)),
+              ),
             ),
           ]),
         ),
       ]),
     );
   }
-}
-
-class _Promo {
-  final String code, title, desc, expiry, discount, type;
-  final Color color;
-  final IconData icon;
-  const _Promo({required this.code, required this.title, required this.desc, required this.expiry,
-    required this.discount, required this.type, required this.color, required this.icon});
 }

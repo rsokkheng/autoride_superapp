@@ -16,6 +16,7 @@ class TripReceiptScreen extends StatelessWidget {
   final int     distanceFeeKhr;
   final int     surgeKhr;
   final int     promoDiscountKhr;
+  final String? promoCode;
   final double? distanceKm;
   final int?    durationMin;
   final String  paymentMethod;
@@ -34,6 +35,7 @@ class TripReceiptScreen extends StatelessWidget {
     required this.distanceFeeKhr,
     required this.surgeKhr,
     required this.promoDiscountKhr,
+    this.promoCode,
     this.distanceKm,
     this.durationMin,
     required this.paymentMethod,
@@ -221,7 +223,9 @@ class TripReceiptScreen extends StatelessWidget {
             ),
           if (promoDiscountKhr > 0)
             _FareRow(
-              label: AppLocalizations.of(context).promoDiscount,
+              label: promoCode != null && promoCode!.isNotEmpty
+                  ? '${AppLocalizations.of(context).promoDiscount} ($promoCode)'
+                  : AppLocalizations.of(context).promoDiscount,
               amount: '-${AppTheme.khr(promoDiscountKhr)}',
               amountColor: AppTheme.success,
             ),

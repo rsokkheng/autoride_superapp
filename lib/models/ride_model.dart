@@ -57,6 +57,8 @@ class RideModel {
   final double? dropoffLng;
   // Pricing
   final double? surgeMultiplier;
+  final String? promoCode;
+  final int?    discountAmountKhr;
   // Status timestamps — returned after backend improvement (Issue #9)
   final String? acceptedAt;
   final String? startedAt;
@@ -95,6 +97,8 @@ class RideModel {
     this.dropoffLat,
     this.dropoffLng,
     this.surgeMultiplier,
+    this.promoCode,
+    this.discountAmountKhr,
     this.acceptedAt,
     this.startedAt,
     this.completedAt,
@@ -147,6 +151,8 @@ class RideModel {
       dropoffLat:     _toDoubleOrNull(json['dropoff_lat']),
       dropoffLng:     _toDoubleOrNull(json['dropoff_lng']),
       surgeMultiplier: _toDoubleOrNull(json['surge_multiplier']),
+      promoCode:      json['promo_code']?.toString(),
+      discountAmountKhr: _toIntOrNull(json['discount_amount']),
       acceptedAt:     json['accepted_at']?.toString(),
       startedAt:      json['started_at']?.toString(),
       completedAt:    json['completed_at']?.toString(),

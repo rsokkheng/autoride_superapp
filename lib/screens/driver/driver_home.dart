@@ -354,6 +354,7 @@ class _DriverDashboard extends StatefulWidget {
 class _DriverDashboardState extends State<_DriverDashboard>
     with WidgetsBindingObserver {
   DriverStatsModel? _stats;
+  UserModel? _user;
   RideModel?     _pendingRide;
   DeliveryModel? _pendingDelivery;
   Map<String, dynamic>? _pendingRental;
@@ -477,6 +478,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
         ApiService.getAvailableDeliveries(),
         ApiService.getActiveRide(),
         ApiService.getActiveDelivery(),
+        ApiService.getMe(),
       ]);
       if (!mounted) return;
       final rawRide     = results[3] as RideModel?;
@@ -497,6 +499,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
         _pendingDelivery = deliveries.isNotEmpty ? deliveries.first : null;
         _activeRide     = activeRide;
         _activeDelivery = activeDelivery;
+        _user           = results[5] as UserModel;
       });
       if ((activeRide != null || activeDelivery != null) && !widget.isBusy) {
         widget.onBusy();
@@ -613,8 +616,10 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 Row(children: [
                   Icon(Icons.star, color: AppTheme.gold, size: 16),
                   SizedBox(width: 4),
-                  Text('4.87', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
-                  Text(AppLocalizations.of(context).n1204Trips, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                  Text(_user?.rating != null ? _user!.rating!.toStringAsFixed(2) : '--',
+                      style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+                  Text(' · ${_user?.totalTrips ?? 0} Trips',
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ]),
               ]),
               Spacer(),

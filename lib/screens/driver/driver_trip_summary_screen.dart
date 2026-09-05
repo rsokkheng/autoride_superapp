@@ -194,6 +194,19 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     SizedBox(height: 8),
                     Divider(color: Theme.of(context).dividerColor, height: 16),
                   ],
+                  if (ride.promoCode != null && ride.promoCode!.isNotEmpty) ...[
+                    Row(children: [
+                      Icon(Icons.local_offer_outlined, color: _kGreen, size: 14),
+                      SizedBox(width: 6),
+                      Text('Promo (${ride.promoCode})', style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Spacer(),
+                      Text(
+                        ride.discountAmountKhr != null ? '-${AppTheme.khr(ride.discountAmountKhr!)}' : '',
+                        style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
+                  ],
                   Row(children: [
                     Text(AppLocalizations.of(context).totalFare,
                         style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),

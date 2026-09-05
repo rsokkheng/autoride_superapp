@@ -227,11 +227,12 @@ class _HomeTabState extends State<_HomeTab> {
     } catch (_) {}
   }
 
-  String _greeting() {
+  String _greeting(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final h = DateTime.now().hour;
-    if (h < 12) return '';
-    if (h < 18) return '';
-    return '';
+    if (h < 12) return l.goodMorning;
+    if (h < 18) return l.goodAfternoon;
+    return l.goodEvening;
   }
 
   void _resumeActiveRide() {
@@ -289,7 +290,7 @@ class _HomeTabState extends State<_HomeTab> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_greeting(),
+                    Text(_greeting(context),
                         style: TextStyle(
                             color: context.appTextSecondary,
                             fontSize: 13,
@@ -751,6 +752,8 @@ class _ProfileTabState extends State<_ProfileTab> {
   String _name  = '';
   String _phone = '';
   String? _photoUrl;
+  double? _rating;
+  int? _totalTrips;
   bool _loadingProfile = true;
 
   @override
@@ -767,6 +770,8 @@ class _ProfileTabState extends State<_ProfileTab> {
         _name  = user.name;
         _phone = user.phone;
         _photoUrl = user.photoUrl;
+        _rating = user.rating;
+        _totalTrips = user.totalTrips;
         _loadingProfile = false;
       });
     } catch (_) {
@@ -811,9 +816,10 @@ class _ProfileTabState extends State<_ProfileTab> {
               children: [
                 Icon(Icons.star, color: AppTheme.gold, size: 18),
                 SizedBox(width: 4),
-                Text('4.9', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+                Text(_rating != null ? _rating!.toStringAsFixed(1) : '--',
+                    style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                 SizedBox(width: 4),
-                Text(AppLocalizations.of(context).n128Trips, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                Text('${_totalTrips ?? 0} Trips', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
               ],
             ),
             const SizedBox(height: 24),

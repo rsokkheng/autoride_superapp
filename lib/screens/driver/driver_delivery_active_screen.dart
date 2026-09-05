@@ -5,6 +5,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
@@ -897,7 +898,12 @@ class _RecipientRow extends StatelessWidget {
       ])),
       if (phone != null)
         GestureDetector(
-          onTap: () {/* dial phone */},
+          onTap: () async {
+            final uri = Uri(scheme: 'tel', path: phone);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri);
+            }
+          },
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(

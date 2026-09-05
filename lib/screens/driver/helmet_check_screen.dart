@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -74,8 +75,8 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                     ])
                   : ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: Image.network(
-                        _image!.path,
+                      child: Image.file(
+                        File(_image!.path),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Center(
                           child: Column(mainAxisSize: MainAxisSize.min, children: [

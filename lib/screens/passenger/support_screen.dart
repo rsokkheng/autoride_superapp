@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
@@ -6,7 +7,8 @@ import '../../l10n/app_localizations.dart';
 const _green = Color(0xFF00C48C);
 
 class SupportScreen extends StatefulWidget {
-  const SupportScreen({super.key});
+  final String? initialSubject;
+  const SupportScreen({super.key, this.initialSubject});
 
   @override
   State<SupportScreen> createState() => _SupportScreenState();
@@ -24,6 +26,9 @@ class _SupportScreenState extends State<SupportScreen>
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
     _load();
+    if (widget.initialSubject != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showNewTicket(subject: widget.initialSubject));
+    }
   }
 
   @override
@@ -79,12 +84,13 @@ class _SupportScreenState extends State<SupportScreen>
     );
   }
 
-  void _showNewTicket() {
+  void _showNewTicket({String? subject}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _NewTicketSheet(
+        initialSubject: subject,
         onCreated: (t) => setState(() => _tickets.insert(0, t)),
       ),
     );
@@ -356,16 +362,17 @@ class _FaqTileState extends State<_FaqTile> {
 
 class _NewTicketSheet extends StatefulWidget {
   final ValueChanged<SupportTicketModel> onCreated;
-  const _NewTicketSheet({required this.onCreated});
+  final String? initialSubject;
+  const _NewTicketSheet({required this.onCreated, this.initialSubject});
 
   @override
   State<_NewTicketSheet> createState() => _NewTicketSheetState();
 }
 
 class _NewTicketSheetState extends State<_NewTicketSheet> {
-  final _subCtrl  = TextEditingController();
+  late final _subCtrl = TextEditingController(text: widget.initialSubject ?? '');
   final _msgCtrl  = TextEditingController();
-  String  _priority = 'normal';
+  String  _priority = 'medium';
   bool    _saving   = false;
   String? _error;
 
@@ -420,7 +427,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
         Text(AppLocalizations.of(context).priorityColonLabel,
             style: TextStyle(color: context.appTextSecondary,
                 fontWeight: FontWeight.w600, fontSize: 13)),
-        ...[('normal', AppLocalizations.of(context).normal), ('high', AppLocalizations.of(context).highPriority), ('urgent', AppLocalizations.of(context).urgentPriority)]
+        ...[('medium', AppLocalizations.of(context).normal), ('high', AppLocalizations.of(context).highPriority), ('urgent', AppLocalizations.of(context).urgentPriority)]
             .map((p) => Padding(
           padding: EdgeInsets.only(right: 8),
           child: ChoiceChip(
@@ -724,4 +731,240 @@ class _ReplyBubble extends StatelessWidget {
     if (diff.inHours > 0) return '${diff.inHours}${l.hAgoSuffix}';
     return '${diff.inMinutes}${l.mAgoSuffix}';
   }
+}
+
+// ─── Hotline chat — type straight to support, no ticket form ─────────────────
+//
+// Reuses the same backend as the ticket system (createSupportTicket /
+// getSupportTickets / replySupportTicket): the first message a passenger
+// types opens a ticket behind the scenes, further messages reply to it, and
+// once staff close it, sending again just starts a fresh one — all invisible
+// to the passenger, who only ever sees a normal chat thread.
+class SupportChatScreen extends StatefulWidget {
+  const SupportChatScreen({super.key});
+
+  @override
+  State<SupportChatScreen> createState() => _SupportChatScreenState();
+}
+
+class _SupportChatScreenState extends State<SupportChatScreen> {
+  final _msgCtrl    = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  SupportTicketModel? _ticket;
+  bool    _loading = true;
+  bool    _sending = false;
+  String? _error;
+  Timer?  _pollTimer;
+  // The message that opened the current ticket: the backend stores it as
+  // the ticket's own subject/description, never as a reply row, so it would
+  // never appear (and would vanish on the next poll if we faked a reply for
+  // it) unless we pin it here and prepend it at render time instead.
+  int?    _pinnedTicketId;
+  String? _pinnedFirstMessage;
+
+  List<SupportReplyModel> get _displayReplies => [
+    if (_ticket != null && _pinnedTicketId == _ticket!.id)
+      SupportReplyModel(id: -1, message: _pinnedFirstMessage!, isStaff: false, createdAt: _ticket!.createdAt),
+    ...?_ticket?.replies,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _msgCtrl.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _init() async {
+    await _load();
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _load(silent: true));
+  }
+
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() { _loading = true; _error = null; });
+    try {
+      final tickets = await ApiService.getSupportTickets();
+      if (!mounted) return;
+      final open = tickets.where((t) => t.isOpen).toList();
+      setState(() {
+        _ticket  = open.isNotEmpty ? open.first : (_ticket != null
+            ? tickets.where((t) => t.id == _ticket!.id).firstOrNull ?? _ticket
+            : null);
+        _loading = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted || silent) return;
+      setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(_scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
+    });
+  }
+
+  Future<void> _send() async {
+    final text = _msgCtrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    _msgCtrl.clear();
+
+    try {
+      if (_ticket == null || _ticket!.isClosed) {
+        final t = await ApiService.createSupportTicket(subject: 'Chat with Support', message: text);
+        if (!mounted) return;
+        setState(() {
+          _ticket             = t;
+          _pinnedTicketId     = t.id;
+          _pinnedFirstMessage = text;
+          _sending            = false;
+        });
+      } else {
+        await ApiService.replySupportTicket(_ticket!.id, text);
+        if (!mounted) return;
+        setState(() {
+          _sending = false;
+          _ticket = SupportTicketModel(
+            id: _ticket!.id, subject: _ticket!.subject,
+            status: _ticket!.status, priority: _ticket!.priority,
+            createdAt: _ticket!.createdAt,
+            replies: [
+              ..._ticket!.replies,
+              SupportReplyModel(
+                id: DateTime.now().millisecondsSinceEpoch,
+                message: text, isStaff: false, createdAt: DateTime.now(),
+              ),
+            ],
+          );
+        });
+      }
+      _scrollToBottom();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _sending = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message), backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (_) {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      appBar: AppBar(
+        backgroundColor: context.appSurface,
+        elevation: 0,
+        leading: BackButton(color: context.appTextPrimary),
+        titleSpacing: 0,
+        title: Row(children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: _green.withValues(alpha: 0.2),
+            child: Icon(Icons.support_agent, color: _green, size: 20),
+          ),
+          SizedBox(width: 10),
+          Text('ROTEH Support',
+              style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
+        ]),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.list_alt_outlined, color: context.appTextSecondary),
+            tooltip: AppLocalizations.of(context).myTicketsTab,
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen())),
+          ),
+        ],
+      ),
+      body: Column(children: [
+        Expanded(
+          child: _loading
+              ? Center(child: CircularProgressIndicator(color: _green))
+              : _error != null
+                  ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.wifi_off, color: context.appTextSecondary, size: 48),
+                      SizedBox(height: 12),
+                      Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
+                      const SizedBox(height: 16),
+                      ElevatedButton(onPressed: () => _load(),
+                          style: ElevatedButton.styleFrom(backgroundColor: _green, foregroundColor: Colors.white),
+                          child: Text(l.retry)),
+                    ]))
+                  : _displayReplies.isEmpty
+                      ? Center(child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Column(mainAxisSize: MainAxisSize.min, children: [
+                            Icon(Icons.chat_bubble_outline, color: context.appTextSecondary.withValues(alpha: 0.4), size: 56),
+                            SizedBox(height: 12),
+                            Text('Say hello! Our team typically replies within a few minutes.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: context.appTextSecondary)),
+                          ]),
+                        ))
+                      : ListView(
+                          controller: _scrollCtrl,
+                          padding: EdgeInsets.all(16),
+                          children: _displayReplies.map((r) => _ReplyBubble(reply: r)).toList(),
+                        ),
+        ),
+        Container(
+          padding: EdgeInsets.fromLTRB(12, 8, 12, 12),
+          color: context.appSurface,
+          child: SafeArea(
+            top: false,
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _msgCtrl,
+                  style: TextStyle(color: context.appTextPrimary),
+                  maxLines: 3,
+                  minLines: 1,
+                  textInputAction: TextInputAction.newline,
+                  decoration: InputDecoration(
+                    hintText: 'Type a message...',
+                    hintStyle: TextStyle(color: context.appTextSecondary),
+                    filled: true,
+                    fillColor: context.appCardBg,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _send,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: _green, shape: BoxShape.circle),
+                  child: _sending
+                      ? const SizedBox(width: 18, height: 18,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.send, color: Colors.white, size: 18),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

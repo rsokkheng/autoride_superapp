@@ -76,6 +76,8 @@ class AppLocalizations {
       'selectLanguage': 'Select Language',
       'language': 'Language',
       'goodMorning': 'Good morning,',
+      'goodAfternoon': 'Good afternoon,',
+      'goodEvening': 'Good evening,',
       'hello': 'Hello',
       'welcome': 'Welcome!',
       'online': 'Online',
@@ -1258,6 +1260,7 @@ class AppLocalizations {
       'cardExpiredError': 'This card has expired',
       'enterValidCvv': 'Enter a valid CVV',
       'expiresPrefix': 'Expires',
+      'minOrderPrefix': 'Min order',
       'enterAccountPhoneNumber': 'Enter the account phone number',
       // ── promo_screen ──
       'promosTabLabel': 'Promos',
@@ -2868,6 +2871,7 @@ class AppLocalizations {
       'cardExpiredError': 'កាតនេះបានផុតកំណត់',
       'enterValidCvv': 'សូមបញ្ចូល CVV ត្រឹមត្រូវ',
       'expiresPrefix': 'ផុតកំណត់',
+      'minOrderPrefix': 'កម្រិតអប្បបរមា',
       'enterAccountPhoneNumber': 'សូមបញ្ចូលលេខទូរស័ព្ទគណនី',
       // ── promo_screen ──
       'promosTabLabel': 'ប្រូម៉ូសិន',
@@ -4478,6 +4482,7 @@ class AppLocalizations {
       'cardExpiredError': '此卡已过期',
       'enterValidCvv': '请输入有效的CVV',
       'expiresPrefix': '有效期至',
+      'minOrderPrefix': '最低订单',
       'enterAccountPhoneNumber': '请输入账户电话号码',
       // ── promo_screen ──
       'promosTabLabel': '优惠',
@@ -4912,6 +4917,8 @@ class AppLocalizations {
   String get selectLanguage => tr('selectLanguage');
   String get language => tr('language');
   String get goodMorning => tr('goodMorning');
+  String get goodAfternoon => tr('goodAfternoon');
+  String get goodEvening => tr('goodEvening');
   String get hello       => tr('hello');
   String get welcome     => tr('welcome');
   String get online => tr('online');
@@ -6106,6 +6113,7 @@ class AppLocalizations {
   String get cardExpiredError => tr('cardExpiredError');
   String get enterValidCvv => tr('enterValidCvv');
   String get expiresPrefix => tr('expiresPrefix');
+  String get minOrderPrefix => tr('minOrderPrefix');
   String get enterAccountPhoneNumber => tr('enterAccountPhoneNumber');
   // ── promo_screen ──
   String get promosTabLabel => tr('promosTabLabel');

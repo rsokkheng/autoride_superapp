@@ -5,6 +5,7 @@ import 'dart:ui' show lerpDouble;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/app_log.dart';
 import '../../services/notification_service.dart';
@@ -1157,12 +1158,34 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     );
   }
 
-  void _sendSOS() {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(AppLocalizations.of(context).sosSentHelpIsOn),
-      backgroundColor: AppTheme.danger,
-      behavior: SnackBarBehavior.floating,
-    ));
+  Future<void> _sendSOS() async {
+    if (widget.ride == null) return;
+    try {
+      await ApiService.sendSosAlert(
+        rideId: widget.ride!.id,
+        message: 'Driver-initiated SOS during active trip.',
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).sosSentHelpIsOn),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('SOS failed: ${e.message}'),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Text('SOS failed to send. Please call emergency services directly.'),
+        backgroundColor: AppTheme.danger,
+        behavior: SnackBarBehavior.floating,
+      ));
+    }
   }
 
   Future<void> _openRideChat() async {
@@ -1213,7 +1236,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () async {
+                Navigator.pop(context);
+                final uri = Uri(scheme: 'tel', path: phone);
+                if (await canLaunchUrl(uri)) {
+                  await launchUrl(uri);
+                }
+              },
               icon: const Icon(Icons.call),
               label: Text(AppLocalizations.of(context).callNow,
                   style: TextStyle(fontWeight: FontWeight.w800)),

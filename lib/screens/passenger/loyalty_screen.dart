@@ -22,6 +22,7 @@ class LoyaltyScreen extends StatefulWidget {
 
 class _LoyaltyScreenState extends State<LoyaltyScreen> {
   Map<String, dynamic> _data = {};
+  List<Map<String, dynamic>> _tiers = [];
   bool _loading = true;
   String? _error;
   bool _redeeming = false;
@@ -35,13 +36,40 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final data = await ApiService.getMembership();
+      final results = await Future.wait([
+        ApiService.getMembership(),
+        ApiService.getPublicTiers(),
+      ]);
       if (!mounted) return;
-      setState(() { _data = data; _loading = false; });
+      final tiers = (results[1] as List<Map<String, dynamic>>)
+        ..sort((a, b) => ((a['min_points'] as num?) ?? 0).compareTo((b['min_points'] as num?) ?? 0));
+      setState(() {
+        _data = results[0] as Map<String, dynamic>;
+        _tiers = tiers;
+        _loading = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() { _error = e.toString().replaceFirst('Exception: ', ''); _loading = false; });
     }
+  }
+
+  /// The current tier's row from [_tiers] matching [_points], or null before tiers load.
+  Map<String, dynamic>? get _currentTierRow {
+    if (_tiers.isEmpty) return null;
+    Map<String, dynamic>? match;
+    for (final t in _tiers) {
+      if (_points >= ((t['min_points'] as num?) ?? 0)) match = t;
+    }
+    return match ?? _tiers.first;
+  }
+
+  /// The next tier above the current one, or null if already at the top tier.
+  Map<String, dynamic>? get _nextTierRow {
+    final current = _currentTierRow;
+    if (current == null) return null;
+    final idx = _tiers.indexOf(current);
+    return idx >= 0 && idx + 1 < _tiers.length ? _tiers[idx + 1] : null;
   }
 
   int get _points {
@@ -53,16 +81,22 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
 
   String get _tier {
     final t = _data['current_tier'];
-    if (t is String && t.isNotEmpty) {
-      return t[0].toUpperCase() + t.substring(1).toLowerCase();
-    }
-    if (_points >= 10000) return 'Platinum';
-    if (_points >= 5000)  return 'Gold';
-    if (_points >= 1000)  return 'Silver';
-    return 'Bronze';
+    final slug = (t is String && t.isNotEmpty)
+        ? t.toLowerCase()
+        : (_currentTierRow?['slug'] as String? ?? 'bronze');
+    return slug[0].toUpperCase() + slug.substring(1);
+  }
+
+  Color? _parseHexColor(String? hex) {
+    if (hex == null || hex.isEmpty) return null;
+    final cleaned = hex.replaceFirst('#', '');
+    final value = int.tryParse(cleaned.length == 6 ? 'FF$cleaned' : cleaned, radix: 16);
+    return value != null ? Color(value) : null;
   }
 
   Color get _tierColor {
+    final fromApi = _parseHexColor(_currentTierRow?['badge_color'] as String?);
+    if (fromApi != null) return fromApi;
     switch (_tier) {
       case 'Platinum': return const Color(0xFF00BCD4);
       case 'Gold':     return AppTheme.gold;
@@ -72,25 +106,32 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   int get _nextTierPoints {
-    if (_points < 1000)  return 1000;
-    if (_points < 5000)  return 5000;
-    if (_points < 10000) return 10000;
-    return 10000;
+    final next = _nextTierRow;
+    if (next != null) return (next['min_points'] as num?)?.toInt() ?? _points;
+    return _points; // already at (or above) the top tier
   }
 
   double get _tierProgress {
-    if (_points >= 10000) return 1.0;
-    if (_points >= 5000)  return (_points - 5000) / 5000;
-    if (_points >= 1000)  return (_points - 1000) / 4000;
-    return _points / 1000;
+    final next = _nextTierRow;
+    if (next == null) return 1.0;
+    final curMin = (_currentTierRow?['min_points'] as num?)?.toInt() ?? 0;
+    final nextMin = (next['min_points'] as num?)?.toInt() ?? (curMin + 1);
+    if (nextMin <= curMin) return 1.0;
+    return ((_points - curMin) / (nextMin - curMin)).clamp(0.0, 1.0);
   }
 
   String _nextTierLabel(BuildContext context) {
     final l = AppLocalizations.of(context);
-    if (_points >= 10000) return l.maxTierReached;
-    if (_points >= 5000)  return '${_nextTierPoints - _points} ${l.ptsToPlatinumSuffix}';
-    if (_points >= 1000)  return '${_nextTierPoints - _points} ${l.ptsToGoldSuffix}';
-    return '${_nextTierPoints - _points} ${l.ptsToSilverSuffix}';
+    final next = _nextTierRow;
+    if (next == null) return l.maxTierReached;
+    final remaining = _nextTierPoints - _points;
+    final suffix = switch (next['slug'] as String? ?? '') {
+      'platinum' => l.ptsToPlatinumSuffix,
+      'gold'     => l.ptsToGoldSuffix,
+      'silver'   => l.ptsToSilverSuffix,
+      _          => '${l.ptsSuffix} to ${next['name'] ?? ''}',
+    };
+    return '$remaining $suffix';
   }
 
   Future<void> _showRedeemDialog() async {
@@ -250,37 +291,23 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   Widget _buildTierBenefits() {
-    final l = AppLocalizations.of(context);
-    final tiers = [
-      _TierDef(
-        name: 'Bronze',
-        color: const Color(0xFFCD7F32),
-        minPts: 0,
-        maxPts: 999,
-        benefits: [l.ptsPer1000Spent10, l.birthdayBonus100pts, l.basicSupport],
-      ),
-      _TierDef(
-        name: 'Silver',
-        color: Colors.grey,
-        minPts: 1000,
-        maxPts: 4999,
-        benefits: [l.ptsPer1000Spent12, l.priorityMatching, l.fareDiscount5pct],
-      ),
-      _TierDef(
-        name: 'Gold',
-        color: const Color(0xFFFFD700),
-        minPts: 5000,
-        maxPts: 9999,
-        benefits: [l.ptsPer1000Spent15, l.fareDiscount10pct, l.freeCancellation3perMo],
-      ),
-      _TierDef(
-        name: 'Platinum',
-        color: const Color(0xFF00BCD4),
-        minPts: 10000,
-        maxPts: null,
-        benefits: [l.ptsPer1000Spent20, l.fareDiscount15pct, l.dedicatedSupportLine, l.freeCancellationUnlimited],
-      ),
-    ];
+    final tiers = List<_TierDef>.generate(_tiers.length, (i) {
+      final row = _tiers[i];
+      final nextMin = i + 1 < _tiers.length ? (_tiers[i + 1]['min_points'] as num?)?.toInt() : null;
+      final benefits = ((row['benefits'] as List<dynamic>?) ?? [])
+          .map((b) => b.toString())
+          .toList();
+      return _TierDef(
+        name: (row['slug'] as String? ?? row['name'] as String? ?? '').isNotEmpty
+            ? '${(row['slug'] as String? ?? row['name'] as String)[0].toUpperCase()}${(row['slug'] as String? ?? row['name'] as String).substring(1)}'
+            : (row['name'] as String? ?? ''),
+        displayName: row['name'] as String? ?? '',
+        color: _parseHexColor(row['badge_color'] as String?) ?? AppTheme.accent,
+        minPts: (row['min_points'] as num?)?.toInt() ?? 0,
+        maxPts: nextMin != null ? nextMin - 1 : null,
+        benefits: benefits,
+      );
+    });
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16),
@@ -312,7 +339,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                   child: Icon(Icons.star_rounded, color: tier.color, size: 22),
                 ),
                 title: Row(children: [
-                  Text(_tierLabel(context, tier.name),
+                  Text(tier.displayName,
                       style: TextStyle(
                           color: context.appTextPrimary,
                           fontWeight: FontWeight.w700,
@@ -449,12 +476,14 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
 
 class _TierDef {
   final String name;
+  final String displayName;
   final Color color;
   final int minPts;
   final int? maxPts;
   final List<String> benefits;
   const _TierDef({
     required this.name,
+    required this.displayName,
     required this.color,
     required this.minPts,
     this.maxPts,

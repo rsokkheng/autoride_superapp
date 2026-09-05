@@ -741,7 +741,7 @@ class ApiService {
   static Future<SupportTicketModel> createSupportTicket({
     required String subject,
     required String message,
-    String  priority = 'normal',
+    String  priority = 'medium',
     String? rideId,
   }) async {
     final token = await getToken();
@@ -3799,6 +3799,20 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Invalid promo code.', raw.statusCode);
   }
 
+  /// GET /promos/active — public list of currently redeemable coupons.
+  static Future<List<PromoModel>> getActivePromos() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/promos/active', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) {
+      final data   = (body['data'] as Map<String, dynamic>?) ?? body;
+      final promos = (data['promos'] as List<dynamic>?) ?? [];
+      return promos.whereType<Map<String, dynamic>>().map(PromoModel.fromJson).toList();
+    }
+    throw ApiException(body['message'] as String? ?? 'Failed to load promos.', raw.statusCode);
+  }
+
   // ── Driver earnings ────────────────────────────────────────────────────────
 
   /// GET /driver/earnings/summary — dashboard summary card.
@@ -5969,27 +5983,64 @@ class DriverLocationModel {
 
 class PromoValidationResult {
   final bool   valid;
+  final int?   promoCodeId;
   final String code;
   final String? type;
   final double? discountAmount;
   final double? discountPercent;
   final double? maxDiscount;
+  final double? finalAmount;
   final String? description;
+  final String? shareUrl;
 
   const PromoValidationResult({
     required this.valid, required this.code,
-    this.type, this.discountAmount, this.discountPercent,
-    this.maxDiscount, this.description,
+    this.promoCodeId, this.type, this.discountAmount, this.discountPercent,
+    this.maxDiscount, this.finalAmount, this.description, this.shareUrl,
   });
 
   factory PromoValidationResult.fromJson(Map<String, dynamic> j) => PromoValidationResult(
     valid:           j['valid'] == true || j['valid'] == 1,
+    promoCodeId:     (j['promo_code_id'] as num?)?.toInt(),
     code:            j['code'] as String? ?? '',
     type:            j['type'] as String?,
     discountAmount:  j['discount_amount']  != null ? (j['discount_amount']  as num).toDouble() : null,
     discountPercent: j['discount_percent'] != null ? (j['discount_percent'] as num).toDouble() : null,
     maxDiscount:     j['max_discount']     != null ? (j['max_discount']     as num).toDouble() : null,
+    finalAmount:     j['final_amount']     != null ? (j['final_amount']     as num).toDouble() : null,
     description:     j['description'] as String?,
+    shareUrl:        j['share_url'] as String?,
+  );
+}
+
+/// A browsable coupon from GET /promos/active.
+class PromoModel {
+  final int     id;
+  final String  code;
+  final String  description;
+  final String  type;  // 'percent' | 'fixed'
+  final double  value;
+  final int?    minOrder;
+  final int?    maxDiscount;
+  final String? expiresAt;
+  final String  serviceType; // 'rides' | 'deliveries' | 'moving'
+
+  const PromoModel({
+    required this.id, required this.code, required this.description,
+    required this.type, required this.value, this.minOrder, this.maxDiscount,
+    this.expiresAt, required this.serviceType,
+  });
+
+  factory PromoModel.fromJson(Map<String, dynamic> j) => PromoModel(
+    id:          (j['id'] as num?)?.toInt() ?? 0,
+    code:        j['code'] as String? ?? '',
+    description: j['description'] as String? ?? '',
+    type:        j['type'] as String? ?? 'percent',
+    value:       (j['value'] as num?)?.toDouble() ?? 0,
+    minOrder:    (j['min_order'] as num?)?.toInt(),
+    maxDiscount: (j['max_discount'] as num?)?.toInt(),
+    expiresAt:   j['expires_at'] as String?,
+    serviceType: j['service_type'] as String? ?? 'rides',
   );
 }
 

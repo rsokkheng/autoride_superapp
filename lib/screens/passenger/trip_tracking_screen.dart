@@ -777,6 +777,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     // the real fare isn't known until completion, so this starts as a
     // placeholder. Overwritten below once the fresh fare comes back.
     String  fareText = widget.fare;
+    String? promoCode;
+    int?    promoDiscountKhr;
     if (widget.rideId != null) {
       try {
         final r = await ApiService.getRide(widget.rideId!);
@@ -787,6 +789,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         if (r.paymentMethod != null && r.paymentMethod!.isNotEmpty) {
           payMethod = r.paymentMethod!;
         }
+        promoCode        = r.promoCode;
+        promoDiscountKhr = r.discountAmountKhr;
         // Derive base fare and distance fee from total. Base fare is ~40%
         // of total; distance fee is the remainder (both pre-surge).
         final totalKhr = r.fareKhr;
@@ -823,6 +827,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                 paymentMethod:  payMethod,
                 baseFareKhr:    baseFareKhr,
                 distanceFeeKhr: distFeeKhr,
+                promoCode:        promoCode,
+                promoDiscountKhr: promoDiscountKhr,
               )),
     );
   }

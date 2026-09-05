@@ -4,6 +4,7 @@ import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 import 'package:autoride_superapp/models/conversation_model.dart';
 import 'package:autoride_superapp/models/chat_message_model.dart';
+import '../passenger/support_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final bool isDriver;
@@ -95,6 +96,16 @@ class _ConversationsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Column(children: [
+      if (!isDriver) ...[
+        _SupportTile(),
+        Divider(height: 1, color: context.appCardBg),
+      ],
+      Expanded(child: _buildBody(context)),
+    ]);
+  }
+
+  Widget _buildBody(BuildContext context) {
     if (loading) {
       return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     }
@@ -179,6 +190,27 @@ class _ConversationsTab extends StatelessWidget {
       ),
     );
   }
+}
+
+// Persistent entry point so a passenger can always reach the company —
+// regardless of whether they have any ride conversations yet.
+class _SupportTile extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => ListTile(
+    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    leading: CircleAvatar(
+      radius: 24,
+      backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
+      child: Icon(Icons.support_agent, color: AppTheme.accent, size: 24),
+    ),
+    title: Text('ROTEH Support',
+        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
+    subtitle: Text('Chat with our team',
+        style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+    trailing: Icon(Icons.chevron_right, color: context.appTextSecondary),
+    onTap: () => Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const SupportChatScreen())),
+  );
 }
 
 // ── Conversation detail (messages thread) ─────────────────────────────────────
@@ -468,7 +500,8 @@ class _SupportTab extends StatelessWidget {
                 leading: Icon(item.$2, color: item.$3, size: 20),
                 title: Text(item.$1, style: TextStyle(color: context.appTextPrimary, fontSize: 14)),
                 trailing: Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
-                onTap: () {},
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => SupportScreen(initialSubject: item.$1))),
               ),
             ),
           )),
@@ -486,17 +519,21 @@ class _SupportTab extends StatelessWidget {
               ),
               SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('24/7 Live Support',
+                Text('24/7 Support',
                     style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                 SizedBox(height: 4),
-                Text('Average response: 2 minutes',
+                Text('Open a ticket and our team will reply here',
                     style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ])),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(10)),
-                child: const Text('Chat Now',
-                    style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+              GestureDetector(
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const SupportChatScreen())),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(10)),
+                  child: const Text('Chat Now',
+                      style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
+                ),
               ),
             ]),
           ),

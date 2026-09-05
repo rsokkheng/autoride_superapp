@@ -28,6 +28,8 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
   bool    _loadingRides = true;
   String? _errorRides;
 
+  RideModel? _activeRide;
+
   @override
   void initState() {
     super.initState();
@@ -35,6 +37,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     _loadDeliveries();
     _loadMovings();
     _loadRideHistory();
+    _loadActiveRide();
   }
 
   Future<void> _loadRideHistory() async {
@@ -47,6 +50,14 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
     } catch (_) {
       if (mounted) setState(() { _errorRides = AppLocalizations.of(context).failedToLoadRideHistory; _loadingRides = false; });
     }
+  }
+
+  Future<void> _loadActiveRide() async {
+    try {
+      final ride = await ApiService.getActiveRide();
+      if (!mounted) return;
+      setState(() => _activeRide = (ride != null && !ride.isCompleted && !ride.isCancelled) ? ride : null);
+    } catch (_) {}
   }
 
   @override
@@ -87,7 +98,8 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final totalActive = _activeDeliveries.length + _activeMovings.length;
+    final activeRideCount = _activeRide != null ? 1 : 0;
+    final totalActive = activeRideCount + _activeDeliveries.length + _activeMovings.length;
 
     return Scaffold(
       backgroundColor: context.appBackground,
@@ -120,7 +132,7 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
           unselectedLabelColor: context.appTextSecondary,
           tabs: [
             Tab(
-              child: _TabLabel(icon: Icons.electric_rickshaw, label: AppLocalizations.of(context).ride, count: 0),
+              child: _TabLabel(icon: Icons.electric_rickshaw, label: AppLocalizations.of(context).ride, count: activeRideCount),
             ),
             Tab(
               child: _TabLabel(
