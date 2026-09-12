@@ -14,9 +14,11 @@ import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../models/ride_model.dart' show NearbyMapDriverModel;
 import '../../models/trip_model.dart' show TripModel;
+import '../../models/wallet_model.dart' show WalletModel;
 import '../../l10n/app_localizations.dart';
 import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
+import 'wallet_screen.dart' show showTopUpSheet, TopUpStatusScreen;
 import 'saved_places_screen.dart';
 
 const _kCambodiaSW = LatLng(10.4, 102.3);
@@ -1013,120 +1015,235 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       backgroundColor: context.appSurface,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (sheetCtx) => StatefulBuilder(
-        builder: (_, setLocal) {
-          Future<void> apply() async {
-            final code = ctrl.text.trim().toUpperCase();
-            if (code.isEmpty) return;
-            setLocal(() { _promoLoading = true; _promoError = null; });
-            bool success = false;
-            try {
-              final fare = _fareByType[_visibleRideTypes
-                  .firstWhere((r) => r.name == _selectedRide,
-                      orElse: () => _visibleRideTypes.first)
-                  .serviceType];
-              final result = await ApiService.validatePromoCode(
-                code:        code,
-                serviceType: 'rides',
-                orderAmount: fare?.total ?? 0,
-              );
-              if (!mounted) return;
-              setState(() {
-                _promoCode     = code;
-                _promoDiscount = result.discountAmount;
-                _promoError    = null;
-              });
-              success = true;
-              Navigator.pop(sheetCtx);
-            } on ApiException catch (e) {
-              setLocal(() { _promoError = e.message; _promoLoading = false; });
-            } catch (_) {
-              setLocal(() { _promoError = AppLocalizations.of(context).invalidOrExpiredCode; _promoLoading = false; });
-            } finally {
-              if (!success) setLocal(() => _promoLoading = false);
+      builder: (sheetCtx) => DefaultTabController(
+        length: 2,
+        child: StatefulBuilder(
+          builder: (_, setLocal) {
+            Future<void> apply() async {
+              final code = ctrl.text.trim().toUpperCase();
+              if (code.isEmpty) return;
+              setLocal(() { _promoLoading = true; _promoError = null; });
+              bool success = false;
+              try {
+                final fare = _fareByType[_visibleRideTypes
+                    .firstWhere((r) => r.name == _selectedRide,
+                        orElse: () => _visibleRideTypes.first)
+                    .serviceType];
+                final result = await ApiService.validatePromoCode(
+                  code:        code,
+                  serviceType: 'rides',
+                  orderAmount: fare?.total ?? 0,
+                );
+                if (!mounted) return;
+                setState(() {
+                  _promoCode     = code;
+                  _promoDiscount = result.discountAmount;
+                  _promoError    = null;
+                });
+                success = true;
+                Navigator.pop(sheetCtx);
+              } on ApiException catch (e) {
+                setLocal(() { _promoError = e.message; _promoLoading = false; });
+              } catch (_) {
+                setLocal(() { _promoError = AppLocalizations.of(context).invalidOrExpiredCode; _promoLoading = false; });
+              } finally {
+                if (!success) setLocal(() => _promoLoading = false);
+              }
             }
-          }
 
-          return Padding(
-            padding: EdgeInsets.only(
-                left: 20, right: 20, top: 20,
-                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
-            child: Column(mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(
-                width: 40, height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2)),
-              )),
-              SizedBox(height: 16),
-              Text(AppLocalizations.of(context).promoCodeTitle,
-                  style: TextStyle(color: context.appTextPrimary,
-                      fontWeight: FontWeight.w800, fontSize: 17)),
-              SizedBox(height: 14),
-              Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: ctrl,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.characters,
-                    style: TextStyle(
-                        color: context.appTextPrimary,
-                        fontWeight: FontWeight.w700, letterSpacing: 1.5),
-                    decoration: InputDecoration(
-                      hintText: AppLocalizations.of(context).eGSave10,
-                      hintStyle: TextStyle(
-                          color: context.appTextSecondary,
-                          fontWeight: FontWeight.normal, letterSpacing: 0),
-                      filled: true, fillColor: context.appCardBg,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                    ),
-                    onSubmitted: (_) => apply(),
-                  ),
+            return Padding(
+              padding: EdgeInsets.only(
+                  left: 20, right: 20, top: 20,
+                  bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+              child: Column(mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Center(child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2)),
+                )),
+                SizedBox(height: 16),
+                Text(AppLocalizations.of(context).promoCodeTitle,
+                    style: TextStyle(color: context.appTextPrimary,
+                        fontWeight: FontWeight.w800, fontSize: 17)),
+                SizedBox(height: 14),
+                TabBar(
+                  labelColor: AppTheme.accent,
+                  unselectedLabelColor: context.appTextSecondary,
+                  indicatorColor: AppTheme.accent,
+                  tabs: [
+                    Tab(text: AppLocalizations.of(context).byCodeTab),
+                    Tab(text: AppLocalizations.of(context).byRotehPayTab),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  onPressed: _promoLoading ? null : apply,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
-                    foregroundColor: AppTheme.primary,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _promoLoading
-                      ? const SizedBox(width: 18, height: 18,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : Text(AppLocalizations.of(context).apply,
-                          style: TextStyle(fontWeight: FontWeight.w800)),
+                SizedBox(
+                  height: 340,
+                  child: TabBarView(children: [
+                    // ── By code ──────────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Row(children: [
+                          Expanded(
+                            child: TextField(
+                              controller: ctrl,
+                              autofocus: true,
+                              textCapitalization: TextCapitalization.characters,
+                              style: TextStyle(
+                                  color: context.appTextPrimary,
+                                  fontWeight: FontWeight.w700, letterSpacing: 1.5),
+                              decoration: InputDecoration(
+                                hintText: AppLocalizations.of(context).eGSave10,
+                                hintStyle: TextStyle(
+                                    color: context.appTextSecondary,
+                                    fontWeight: FontWeight.normal, letterSpacing: 0),
+                                filled: true, fillColor: context.appCardBg,
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none),
+                              ),
+                              onSubmitted: (_) => apply(),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          ElevatedButton(
+                            onPressed: _promoLoading ? null : apply,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accent,
+                              foregroundColor: AppTheme.primary,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20, vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: _promoLoading
+                                ? const SizedBox(width: 18, height: 18,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2))
+                                : Text(AppLocalizations.of(context).apply,
+                                    style: TextStyle(fontWeight: FontWeight.w800)),
+                          ),
+                        ]),
+                        if (_promoError != null) ...[
+                          const SizedBox(height: 8),
+                          Text(_promoError!,
+                              style: const TextStyle(
+                                  color: AppTheme.danger, fontSize: 13)),
+                        ],
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(sheetCtx);
+                            Navigator.push(ctx,
+                                MaterialPageRoute(
+                                    builder: (_) => const PromoScreen()));
+                          },
+                          child: Text(AppLocalizations.of(context).browseVouchers,
+                              style: TextStyle(
+                                  color: AppTheme.accent,
+                                  fontWeight: FontWeight.w600, fontSize: 13)),
+                        ),
+                      ]),
+                    ),
+                    // ── By ROTEH Pay ─────────────────────────────────────
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: FutureBuilder<WalletModel>(
+                        future: ApiService.getWallet(),
+                        builder: (context, snap) {
+                          if (snap.connectionState != ConnectionState.done) {
+                            return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+                          }
+                          if (snap.hasError) {
+                            return Center(child: Text(AppLocalizations.of(context).couldNotValidateCode,
+                                style: TextStyle(color: context.appTextSecondary)));
+                          }
+                          final balanceKhr = snap.data!.balance;
+                          return SingleChildScrollView(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.accent.withValues(alpha: 0.08),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                Row(children: [
+                                  Icon(Icons.account_balance_wallet_outlined, color: AppTheme.accent, size: 20),
+                                  SizedBox(width: 8),
+                                  Text(AppLocalizations.of(context).rotehPay,
+                                      style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+                                ]),
+                                SizedBox(height: 10),
+                                Text(AppTheme.usd(balanceKhr / 4000),
+                                    style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w900, fontSize: 24)),
+                                Text(AppTheme.khr(balanceKhr),
+                                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                              ]),
+                            ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  setState(() => _paymentMethod = 'wallet');
+                                  Navigator.pop(sheetCtx);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.accent,
+                                  foregroundColor: AppTheme.primary,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: Text(AppLocalizations.of(context).payWithRotehPay,
+                                    style: TextStyle(fontWeight: FontWeight.w800)),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(AppLocalizations.of(context).topUpRotehPay,
+                                style: TextStyle(color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 8),
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              for (final usd in [1, 2, 5, 10, 15, 20, 25])
+                                GestureDetector(
+                                  onTap: () => showTopUpSheet(
+                                    ctx,
+                                    initialAmountKhr: usd * 4000,
+                                    onSubmitted: (request) async {
+                                      final approved = await Navigator.push<bool>(
+                                        ctx,
+                                        MaterialPageRoute(builder: (_) => TopUpStatusScreen(topUpId: request.id)),
+                                      );
+                                      if (approved == true) {
+                                        setLocal(() {});
+                                      }
+                                    },
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: context.appCardBg,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+                                    ),
+                                    child: Text('\$$usd',
+                                        style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 13)),
+                                  ),
+                                ),
+                            ]),
+                            ]),
+                          );
+                        },
+                      ),
+                    ),
+                  ]),
                 ),
               ]),
-              if (_promoError != null) ...[
-                const SizedBox(height: 8),
-                Text(_promoError!,
-                    style: const TextStyle(
-                        color: AppTheme.danger, fontSize: 13)),
-              ],
-              const SizedBox(height: 12),
-              GestureDetector(
-                onTap: () {
-                  Navigator.pop(sheetCtx);
-                  Navigator.push(ctx,
-                      MaterialPageRoute(
-                          builder: (_) => const PromoScreen()));
-                },
-                child: Text(AppLocalizations.of(context).browseVouchers,
-                    style: TextStyle(
-                        color: AppTheme.accent,
-                        fontWeight: FontWeight.w600, fontSize: 13)),
-              ),
-            ]),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

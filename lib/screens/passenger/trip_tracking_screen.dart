@@ -139,6 +139,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   String? _driverAvatarUrl;
   String? _vehiclePhotoUrl;
   Timer? _ridePollTimer;
+  // Auto-cancels the request if no driver has accepted within 5 minutes,
+  // so the passenger isn't left waiting indefinitely on a ride nobody is
+  // going to pick up.
+  Timer? _noDriverTimeoutTimer;
 
   // One-shot guard so the "driver is arriving" alert fires only once per
   // driver, the moment they first come within 50m of the pickup point.
@@ -219,6 +223,18 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     _fetchStaticFullRoute();
     _startTracking();
     _startRidePoll();
+    if (!_driverAssigned && !widget.isScheduled) {
+      _noDriverTimeoutTimer = Timer(const Duration(minutes: 5), _autoCancelNoDriver);
+    }
+  }
+
+  Future<void> _autoCancelNoDriver() async {
+    if (!mounted || _driverAssigned || widget.rideId == null) return;
+    try {
+      await ApiService.cancelRideWithReason(widget.rideId!, reason: 'no_driver_available');
+    } catch (_) {}
+    if (!mounted || _driverAssigned) return;
+    _handleServerCancellation('no_driver_available');
   }
 
   @override
@@ -857,6 +873,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (status == 'accepted' && driverId.isNotEmpty &&
         driverId != _currentDriverId) {
       // New driver assigned — re-subscribe to their live position
+      _noDriverTimeoutTimer?.cancel();
       _currentDriverId = driverId;
       _arrivingAlertShown = false;
       _driverPositionKnown = false;
@@ -894,6 +911,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   @override
   void dispose() {
     _ridePollTimer?.cancel();
+    _noDriverTimeoutTimer?.cancel();
     _etaCountdownTimer?.cancel();
     _firestoreSub?.cancel();
     _rideStatusSub?.cancel();
@@ -931,6 +949,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (ride.driverId == null) return;
       final newId = ride.driverId.toString();
       if (newId == _currentDriverId) return;
+      _noDriverTimeoutTimer?.cancel();
       setState(() {
         _currentDriverId = newId;
         _arrivingAlertShown = false;
@@ -1337,7 +1356,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
             bottom: 302,
             child: GestureDetector(
               onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const SafetyScreen())),
+                  MaterialPageRoute(builder: (_) => SafetyScreen(activeRideId: widget.rideId))),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(

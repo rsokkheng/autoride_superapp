@@ -42,9 +42,11 @@ class _ReferralScreenState extends State<ReferralScreen> {
     }
   }
 
-  String get _code => _data['code'] as String? ?? 'ROTEH';
+  String get _code => (_data['referral_code'] ?? _data['code']) as String? ?? 'ROTEH';
   int get _referredCount => _data['referred_count'] as int? ?? 0;
-  int get _pointsEarned => _data['points_earned'] as int? ?? 0;
+  int get _totalEarnedKhr =>
+      (_data['stats'] as Map<String, dynamic>?)?['total_earned_khr'] as int? ??
+      _data['points_earned'] as int? ?? 0;
   List<dynamic> get _referrals => _data['referrals'] as List<dynamic>? ?? [];
 
   Future<void> _copyCode() async {
@@ -213,7 +215,7 @@ class _ReferralScreenState extends State<ReferralScreen> {
         Container(width: 1, height: 48, color: context.appCardBg),
         Expanded(child: _StatItem(
           label: AppLocalizations.of(context).pointsEarnedLabel,
-          value: '$_pointsEarned ${AppLocalizations.of(context).ptsSuffix}',
+          value: AppTheme.khr(_totalEarnedKhr),
           icon: Icons.star_outline,
         )),
       ]),
@@ -269,10 +271,11 @@ class _ReferralRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name   = item['name'] as String? ?? AppLocalizations.of(context).friend;
-    final date   = item['joined_at'] as String? ?? item['created_at'] as String? ?? '';
-    final short  = date.length >= 10 ? date.substring(0, 10) : date;
-    final pts    = item['points_awarded'] as int? ?? 500;
+    final name       = item['name'] as String? ?? AppLocalizations.of(context).friend;
+    final date       = item['joined_at'] as String? ?? item['created_at'] as String? ?? '';
+    final short      = date.length >= 10 ? date.substring(0, 10) : date;
+    final bonusKhr   = item['bonus_khr'] as int? ?? item['points_awarded'] as int? ?? 0;
+    final isComplete = item['status'] == 'completed';
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -294,9 +297,13 @@ class _ReferralRow extends StatelessWidget {
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
           ]),
         ),
-        Text('+$pts ${AppLocalizations.of(context).ptsSuffix}',
-            style: const TextStyle(color: AppTheme.success,
-                fontWeight: FontWeight.w700)),
+        Text(
+          isComplete ? '+${AppTheme.khr(bonusKhr)}' : 'Pending first ride',
+          style: TextStyle(
+              color: isComplete ? AppTheme.success : context.appTextSecondary,
+              fontWeight: FontWeight.w700,
+              fontSize: isComplete ? 14 : 12),
+        ),
       ]),
     );
   }

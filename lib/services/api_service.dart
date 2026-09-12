@@ -3494,7 +3494,7 @@ class ApiService {
   }) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final payload = <String, dynamic>{'type': type, 'description': description};
+    final payload = <String, dynamic>{'incident_type': type, 'description': description};
     if (rideId != null) payload['ride_id'] = rideId;
     final raw = await _rawPost('/safety-incidents', payload, token: token);
     if (raw.statusCode == 200 || raw.statusCode == 201) return;

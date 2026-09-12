@@ -203,83 +203,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
     );
   }
 
-  void _showReportIncident() {
-    final descCtrl = TextEditingController();
-    String type = 'harassment';
-    showModalBottomSheet(
-      context: context, isScrollControlled: true,
-      backgroundColor: context.appSurface,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20,
-            MediaQuery.of(ctx).viewInsets.bottom + 20),
-        child: Column(mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(AppLocalizations.of(context).reportIncidentLabel,
-              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
-          SizedBox(height: 16),
-          Wrap(spacing: 8, children: [
-            for (final t in [
-              ('harassment', AppLocalizations.of(context).harassmentTag),
-              ('unsafe_driving', AppLocalizations.of(context).unsafeDrivingTitleTag),
-              ('overcharge', AppLocalizations.of(context).overchargeTag),
-              ('other', AppLocalizations.of(context).otherTag),
-            ])
-              GestureDetector(
-                onTap: () => setLocal(() => type = t.$1),
-                child: AnimatedContainer(
-                  duration: Duration(milliseconds: 150),
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: type == t.$1 ? _red : context.appCardBg,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(t.$2, style: TextStyle(
-                      color: type == t.$1 ? _white : context.appTextSecondary,
-                      fontWeight: FontWeight.w600, fontSize: 12)),
-                ),
-              ),
-          ]),
-          SizedBox(height: 14),
-          TextField(
-            controller: descCtrl, maxLines: 3,
-            style: TextStyle(color: context.appTextPrimary, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: AppLocalizations.of(context).describeWhatHappenedHint,
-              hintStyle: TextStyle(color: context.appTextSecondary),
-              filled: true, fillColor: context.appCardBg,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none),
-              contentPadding: const EdgeInsets.all(14),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () async {
-                final desc = descCtrl.text.trim();
-                if (desc.isEmpty) return;
-                Navigator.pop(ctx);
-                try {
-                  await ApiService.reportSafetyIncident(
-                      type: type, description: desc,
-                      rideId: widget.activeRideId);
-                  if (mounted) _snack(AppLocalizations.of(context).incidentReportedThanks, _green);
-                } on ApiException catch (e) {
-                  if (mounted) _snack(e.message, _red);
-                } catch (e) {
-                  if (mounted) _snack(e.toString(), _red);
-                }
-              },
-              style: AppTheme.confirmButtonStyle(background: _red),
-              child: Text(AppLocalizations.of(context).submitReportBtn),
-            ),
-          ),
-        ]),
-      )),
-    );
-  }
+  void _showReportIncident() => showReportIncidentSheet(context, rideId: widget.activeRideId);
 
   void _showAddContact() {
     final nameCtrl = TextEditingController();
@@ -549,10 +473,12 @@ class _SafetyScreenState extends State<SafetyScreen> {
             SectionHeader(title: AppLocalizations.of(context).safetyResourcesTitle),
             SizedBox(height: 12),
             ...[
-              (AppLocalizations.of(context).emergencyPhoneNumbers, Icons.phone_in_talk_outlined, _red),
-              (AppLocalizations.of(context).reportIncidentLabel,       Icons.report_outlined,         AppTheme.warning),
-              (AppLocalizations.of(context).safetyGuidelinesLabel,     Icons.menu_book_outlined,       AppTheme.accent),
-            ].map((item) => Container(
+              (AppLocalizations.of(context).emergencyPhoneNumbers, Icons.phone_in_talk_outlined, _red, null),
+              (AppLocalizations.of(context).reportIncidentLabel,       Icons.report_outlined,         AppTheme.warning, _showReportIncident),
+              (AppLocalizations.of(context).safetyGuidelinesLabel,     Icons.menu_book_outlined,       AppTheme.accent, null),
+            ].map((item) => GestureDetector(
+              onTap: item.$4,
+              child: Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
@@ -568,7 +494,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
                 Spacer(),
                 Icon(Icons.chevron_right, color: context.appTextSecondary, size: 18),
               ]),
-            )),
+            ))),
             const SizedBox(height: 20),
           ],
         ),
@@ -858,4 +784,90 @@ class _NotifyRow extends StatelessWidget {
     Switch(value: value, onChanged: onChanged,
         activeColor: _green, activeTrackColor: _green.withValues(alpha: 0.4)),
   ]);
+}
+
+/// Report-an-incident sheet — shared by the live Safety Centre and any past
+/// trip in Trip History, so a passenger can flag an unsafe driver either
+/// mid-ride or after the fact. Pass the ride the report is about, if any.
+void showReportIncidentSheet(BuildContext context, {int? rideId}) {
+  final descCtrl = TextEditingController();
+  String type = 'harassment';
+  showModalBottomSheet(
+    context: context, isScrollControlled: true,
+    backgroundColor: context.appSurface,
+    shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20,
+          MediaQuery.of(ctx).viewInsets.bottom + 20),
+      child: Column(mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(AppLocalizations.of(context).reportIncidentLabel,
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+        SizedBox(height: 16),
+        Wrap(spacing: 8, children: [
+          for (final t in [
+            ('harassment', AppLocalizations.of(context).harassmentTag),
+            ('unsafe_driving', AppLocalizations.of(context).unsafeDrivingTitleTag),
+            ('overcharge', AppLocalizations.of(context).overchargeTag),
+            ('other', AppLocalizations.of(context).otherTag),
+          ])
+            GestureDetector(
+              onTap: () => setLocal(() => type = t.$1),
+              child: AnimatedContainer(
+                duration: Duration(milliseconds: 150),
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: type == t.$1 ? _red : context.appCardBg,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(t.$2, style: TextStyle(
+                    color: type == t.$1 ? _white : context.appTextSecondary,
+                    fontWeight: FontWeight.w600, fontSize: 12)),
+              ),
+            ),
+        ]),
+        SizedBox(height: 14),
+        TextField(
+          controller: descCtrl, maxLines: 3,
+          style: TextStyle(color: context.appTextPrimary, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context).describeWhatHappenedHint,
+            hintStyle: TextStyle(color: context.appTextSecondary),
+            filled: true, fillColor: context.appCardBg,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none),
+            contentPadding: const EdgeInsets.all(14),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () async {
+              final desc = descCtrl.text.trim();
+              if (desc.isEmpty) return;
+              Navigator.pop(ctx);
+              final messenger = ScaffoldMessenger.of(context);
+              void snack(String msg, Color color) => messenger.showSnackBar(SnackBar(
+                content: Text(msg), backgroundColor: color,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ));
+              try {
+                await ApiService.reportSafetyIncident(
+                    type: type, description: desc, rideId: rideId);
+                snack(AppLocalizations.of(context).incidentReportedThanks, _green);
+              } on ApiException catch (e) {
+                snack(e.message, _red);
+              } catch (e) {
+                snack(e.toString(), _red);
+              }
+            },
+            style: AppTheme.confirmButtonStyle(background: _red),
+            child: Text(AppLocalizations.of(context).submitReportBtn),
+          ),
+        ),
+      ]),
+    )),
+  );
 }

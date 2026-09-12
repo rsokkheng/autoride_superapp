@@ -135,34 +135,27 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   void _showTopUpSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.appSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => _TopUpSheet(
-        onSubmitted: (request) async {
-          final approved = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(builder: (_) => TopUpStatusScreen(topUpId: request.id)),
+    showTopUpSheet(
+      context,
+      onSubmitted: (request) async {
+        final approved = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(builder: (_) => TopUpStatusScreen(topUpId: request.id)),
+        );
+        if (!mounted) return;
+        if (approved == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).balanceUpdated),
+              backgroundColor: AppTheme.success,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
           );
-          if (!mounted) return;
-          if (approved == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(AppLocalizations.of(context).balanceUpdated),
-                backgroundColor: AppTheme.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-            );
-          }
-          _loadAll();
-        },
-      ),
+        }
+        _loadAll();
+      },
     );
   }
 
@@ -624,10 +617,33 @@ class _TxErrorBanner extends StatelessWidget {
 
 // ── Top Up bottom sheet ───────────────────────────────────────────────────────
 
+/// Opens the ROTEH Pay top-up sheet. Shared by the Wallet screen and any
+/// other flow (e.g. paying for a ride via ROTEH Pay) that wants to send the
+/// passenger straight into topping up, optionally with an amount pre-picked.
+void showTopUpSheet(
+  BuildContext context, {
+  required void Function(TopUpRequestModel request) onSubmitted,
+  int? initialAmountKhr,
+}) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: context.appSurface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => _TopUpSheet(
+      onSubmitted: onSubmitted,
+      initialAmountKhr: initialAmountKhr,
+    ),
+  );
+}
+
 class _TopUpSheet extends StatefulWidget {
   final void Function(TopUpRequestModel request) onSubmitted;
+  final int? initialAmountKhr;
 
-  const _TopUpSheet({required this.onSubmitted});
+  const _TopUpSheet({required this.onSubmitted, this.initialAmountKhr});
 
   @override
   State<_TopUpSheet> createState() => _TopUpSheetState();
@@ -647,6 +663,20 @@ class _TopUpSheetState extends State<_TopUpSheet> {
   final _customCtrl = TextEditingController();
   bool _useCustom = false;
   bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final preset = widget.initialAmountKhr;
+    if (preset != null) {
+      if (_amounts.contains(preset)) {
+        _selectedAmount = preset;
+      } else {
+        _useCustom = true;
+        _customCtrl.text = preset.toString();
+      }
+    }
+  }
 
   @override
   void dispose() {

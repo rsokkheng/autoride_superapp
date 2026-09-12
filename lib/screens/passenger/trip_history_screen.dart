@@ -8,6 +8,7 @@ import 'rate_driver_screen.dart';
 import 'trip_tracking_screen.dart';
 import 'delivery_tracking_screen.dart';
 import 'ride_booking.dart';
+import 'safety_screen.dart' show showReportIncidentSheet;
 
 class TripHistoryScreen extends StatefulWidget {
   const TripHistoryScreen({super.key});
@@ -1035,8 +1036,8 @@ class _TripCard extends StatelessWidget {
             ]),
           ),
 
-          // Action row (Rebook / Rate)
-          if (trip.canRebook || trip.canRate)
+          // Action row (Rebook / Rate / Report)
+          if (trip.canRebook || trip.canRate || trip.otherParty != null)
             Container(
               decoration: BoxDecoration(
                 color: context.appCardBg,
@@ -1099,6 +1100,28 @@ class _TripCard extends StatelessWidget {
                             Text(AppLocalizations.of(context).rateBtn,
                                 style: const TextStyle(
                                     color: AppTheme.warning,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13)),
+                          ]),
+                    ),
+                  )),
+                if ((trip.canRebook || trip.canRate) && trip.otherParty != null)
+                  Container(width: 1, height: 36, color: context.appSurface),
+                if (trip.otherParty != null)
+                  Expanded(
+                      child: GestureDetector(
+                    onTap: () => showReportIncidentSheet(context, rideId: trip.id),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.report_outlined,
+                                color: AppTheme.danger, size: 14),
+                            const SizedBox(width: 5),
+                            Text(AppLocalizations.of(context).reportLabel,
+                                style: const TextStyle(
+                                    color: AppTheme.danger,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 13)),
                           ]),

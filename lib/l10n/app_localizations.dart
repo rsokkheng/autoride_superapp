@@ -1261,6 +1261,9 @@ class AppLocalizations {
       'enterValidCvv': 'Enter a valid CVV',
       'expiresPrefix': 'Expires',
       'minOrderPrefix': 'Min order',
+      'byCodeTab': 'By Code',
+      'byRotehPayTab': 'By ROTEH Pay',
+      'payWithRotehPay': 'Pay with ROTEH Pay',
       'enterAccountPhoneNumber': 'Enter the account phone number',
       // ── promo_screen ──
       'promosTabLabel': 'Promos',
@@ -1791,7 +1794,7 @@ class AppLocalizations {
       'whereToTitle': 'ទៅណា?',
       'noSavedPlaces': 'គ្មានទីតាំងដែលបានរក្សាទុក',
       'confirmDestination': 'បញ្ជាក់ទីតាំងទៅ',
-      'whereToOptional': 'ទៅណា? (មិនតម្រូវ)',
+      'whereToOptional': 'អ្នកចង់ទៅណា? (សូមបញ្ជាក់ទីតាំងទៅកាន់អ្នកបើកបរ)',
       'chooseRideTitle': 'ជ្រើសរើសយានជំនិះ',
       'scrollUpForMore': 'អូសទៅលើដើម្បីឃើញជម្រើសយានជំនិះបន្ថែម',
       'discountSuffix': 'បញ្ចុះតម្លៃ',
@@ -1992,7 +1995,7 @@ class AppLocalizations {
       'cash': 'សាច់ប្រាក់',
       'sender': 'អ្នកផ្ញើ',
       'recipient': 'អ្នកទទួល',
-      'moving': 'ដឹកជញ្ជូនផ្លាស់ប្តូរទីលំនៅ',
+      'moving': 'ការផ្លាស់ទី',
       'topUpRequired': 'តម្រូវឱ្យបញ្ចូលប្រាក់',
       'topUpNow': 'បញ្ចូលប្រាក់ឥឡូវនេះ',
       'lookingForRideRequests': 'កំពុងស្វែងរកអ្នកធ្វើដំណើរ',
@@ -2027,7 +2030,7 @@ class AppLocalizations {
       'verifyAndSignIn': 'ផ្ទៀងផ្ទាត់ & ចូលគណនី',
       'resendOtp': 'ផ្ញើ OTP ម្តងទៀត',
       'family': 'គ្រួសារ',
-      'wallet': 'កាបូបអេឡិចត្រូនិច',
+      'wallet': 'កាបូប',
       'rewards': 'រង្វាន់',
       'refer': 'ណែនាំ',
       // ── Delivery / moving summary screens ──
@@ -2872,6 +2875,9 @@ class AppLocalizations {
       'enterValidCvv': 'សូមបញ្ចូល CVV ត្រឹមត្រូវ',
       'expiresPrefix': 'ផុតកំណត់',
       'minOrderPrefix': 'កម្រិតអប្បបរមា',
+      'byCodeTab': 'តាមកូដ',
+      'byRotehPayTab': 'តាម ROTEH Pay',
+      'payWithRotehPay': 'បង់ប្រាក់ដោយ ROTEH Pay',
       'enterAccountPhoneNumber': 'សូមបញ្ចូលលេខទូរស័ព្ទគណនី',
       // ── promo_screen ──
       'promosTabLabel': 'ប្រូម៉ូសិន',
@@ -4483,6 +4489,9 @@ class AppLocalizations {
       'enterValidCvv': '请输入有效的CVV',
       'expiresPrefix': '有效期至',
       'minOrderPrefix': '最低订单',
+      'byCodeTab': '按代码',
+      'byRotehPayTab': '按 ROTEH Pay',
+      'payWithRotehPay': '使用 ROTEH Pay 支付',
       'enterAccountPhoneNumber': '请输入账户电话号码',
       // ── promo_screen ──
       'promosTabLabel': '优惠',
@@ -6114,6 +6123,9 @@ class AppLocalizations {
   String get enterValidCvv => tr('enterValidCvv');
   String get expiresPrefix => tr('expiresPrefix');
   String get minOrderPrefix => tr('minOrderPrefix');
+  String get byCodeTab => tr('byCodeTab');
+  String get byRotehPayTab => tr('byRotehPayTab');
+  String get payWithRotehPay => tr('payWithRotehPay');
   String get enterAccountPhoneNumber => tr('enterAccountPhoneNumber');
   // ── promo_screen ──
   String get promosTabLabel => tr('promosTabLabel');
