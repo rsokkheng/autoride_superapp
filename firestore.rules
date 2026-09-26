@@ -2,19 +2,63 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Driver live GPS location
+    // Clients sign in with a backend-issued custom token (POST
+    // /api/v1/auth/firebase-token): uid "user_{id}" with claim app_uid = the
+    // Laravel user id. Anonymous sessions have no app_uid and get nothing.
+    // The backend writes through the Admin SDK, which bypasses these rules.
+    function isAppUser() {
+      return request.auth != null && request.auth.token.app_uid is int;
+    }
+
+    function uid() {
+      return request.auth.token.app_uid;
+    }
+
+    function chat(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId)).data;
+    }
+
+    // Driver live GPS. Any signed-in user may read (passenger tracking their
+    // driver); only the driver themself may write their own doc.
     match /drivers_live/{driverId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAppUser();
+      allow write: if isAppUser() && string(uid()) == driverId;
     }
 
-    // Ride chat conversations (keyed by ride_id inside the document)
+    // Ride/delivery status mirrored by the backend (FirestoreService) —
+    // readable only by the people on that booking.
+    match /bookings/{bookingId} {
+      allow read: if isAppUser() && uid() in [
+        resource.data.get('passenger_id', null),
+        resource.data.get('sender_id', null),
+        resource.data.get('driver_id', null),
+      ];
+      allow write: if false;
+    }
+
+    // Ride chat conversations.
     match /chats/{chatId} {
-      allow read, write: if request.auth != null;
+      // OR form (not `in [...]`) so the client's `where(driver_id == me)` /
+      // `where(passenger_id == me)` query is provably within this rule.
+      allow read: if isAppUser()
+        && (resource.data.driver_id == uid() || resource.data.passenger_id == uid());
+      allow create: if isAppUser()
+        && uid() in [request.resource.data.driver_id, request.resource.data.passenger_id];
+      allow update, delete: if false;
     }
 
-    // Individual chat messages (chat_id field references a chats document)
+    // Chat messages. `participants` is denormalized from the chat so reads
+    // (and the client's array-contains query) can be checked per message.
     match /messages/{messageId} {
-      allow read, write: if request.auth != null;
+      allow read: if isAppUser() && uid() in resource.data.participants;
+      allow create: if isAppUser()
+        && request.resource.data.sender_id == uid()
+        && request.resource.data.participants == [
+             chat(request.resource.data.conversation_id).driver_id,
+             chat(request.resource.data.conversation_id).passenger_id,
+           ]
+        && uid() in request.resource.data.participants;
+      allow update, delete: if false;
     }
 
     // Block everything else by default.

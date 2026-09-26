@@ -2,11 +2,20 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/firestore_message.dart';
+import 'api_service.dart';
 import 'auth_service.dart';
 
 class FirestoreChatService {
   static final _db = FirebaseFirestore.instance;
   static final _storage = FirebaseStorage.instance;
+
+  /// Messages loaded per chat. Ride chats are short-lived, so this is a cap
+  /// on read cost rather than something users will scroll past.
+  static const int _messageLimit = 100;
+
+  // chatId → [driverId, passengerId], stamped onto every message so the
+  // security rules (and the read query) can check membership per message.
+  static final Map<String, List<int>> _participants = {};
 
   // Finds the existing chat doc for a ride, or creates one.
   // Returns the Firestore chat document ID.
@@ -15,41 +24,49 @@ class FirestoreChatService {
     required int    driverId,
     required int    passengerId,
   }) async {
-    await AuthService.signInAnon();
+    await AuthService.ensureSignedIn();
+    final myId = await ApiService.getUserId();
 
+    // Rules only allow reading chats you're in, so the query must say so
+    // too — Firestore rejects a query that *could* return someone else's doc.
+    final myField = myId == driverId ? 'driver_id' : 'passenger_id';
     final query = await _db
         .collection('chats')
         .where('ride_id', isEqualTo: rideId)
+        .where(myField, isEqualTo: myId)
         .limit(1)
         .get();
 
-    if (query.docs.isNotEmpty) return query.docs.first.id;
-
-    final ref = await _db.collection('chats').add({
-      'ride_id':      rideId,
-      'driver_id':    driverId,
-      'passenger_id': passengerId,
-      'status':       'active',
-      'created_at':   FieldValue.serverTimestamp(),
-    });
-    return ref.id;
+    final String chatId;
+    if (query.docs.isNotEmpty) {
+      chatId = query.docs.first.id;
+    } else {
+      final ref = await _db.collection('chats').add({
+        'ride_id':      rideId,
+        'driver_id':    driverId,
+        'passenger_id': passengerId,
+        'status':       'active',
+        'created_at':   FieldValue.serverTimestamp(),
+      });
+      chatId = ref.id;
+    }
+    _participants[chatId] = [driverId, passengerId];
+    return chatId;
   }
 
-  // Real-time stream of messages for a chat document, ordered oldest → newest.
-  // Sorting is done client-side to avoid needing a composite Firestore index.
-  static Stream<List<FirestoreMessage>> messagesStream(String chatId) {
-    return _db
+  // Real-time stream of the latest messages for a chat, oldest → newest.
+  // Needs the composite index in firestore.indexes.json.
+  static Stream<List<FirestoreMessage>> messagesStream(String chatId) async* {
+    await AuthService.ensureSignedIn();
+    final myId = await ApiService.getUserId();
+    yield* _db
         .collection('messages')
         .where('conversation_id', isEqualTo: chatId)
+        .where('participants', arrayContains: myId)
+        .orderBy('created_at')
+        .limitToLast(_messageLimit)
         .snapshots()
-        .map((snap) {
-          final msgs =
-              snap.docs.map((d) => FirestoreMessage.fromDoc(d)).toList();
-          msgs.sort((a, b) =>
-              (a.timestamp ?? DateTime(0))
-                  .compareTo(b.timestamp ?? DateTime(0)));
-          return msgs;
-        });
+        .map((snap) => snap.docs.map((d) => FirestoreMessage.fromDoc(d)).toList());
   }
 
   // Append a message to the messages collection.
@@ -60,9 +77,10 @@ class FirestoreChatService {
     String?         senderAvatar,
     required String message,
   }) async {
-    await AuthService.signInAnon();
+    await AuthService.ensureSignedIn();
     await _db.collection('messages').add({
       'conversation_id': chatId,
+      'participants':     await _participantsOf(chatId),
       'sender_id':        senderId,
       'sender_name':      senderName,
       'sender_avatar':    senderAvatar,
@@ -85,14 +103,16 @@ class FirestoreChatService {
     String?         senderAvatar,
     required File   image,
   }) async {
-    await AuthService.signInAnon();
+    await AuthService.ensureSignedIn();
     final fileName =
         '${DateTime.now().millisecondsSinceEpoch}_$senderId.jpg';
     final ref = _storage.ref().child('chat_images/$chatId/$fileName');
-    await ref.putFile(image);
+    // Storage rules only accept image/* uploads.
+    await ref.putFile(image, SettableMetadata(contentType: 'image/jpeg'));
     final url = await ref.getDownloadURL();
     await _db.collection('messages').add({
       'conversation_id': chatId,
+      'participants':     await _participantsOf(chatId),
       'sender_id':        senderId,
       'sender_name':      senderName,
       'sender_avatar':    senderAvatar,
@@ -103,5 +123,16 @@ class FirestoreChatService {
       'read_at':          null,
       'created_at':       FieldValue.serverTimestamp(),
     });
+  }
+
+  static Future<List<int>> _participantsOf(String chatId) async {
+    final cached = _participants[chatId];
+    if (cached != null) return cached;
+    final chat = (await _db.collection('chats').doc(chatId).get()).data() ?? const {};
+    final ids = [
+      (chat['driver_id'] as num?)?.toInt() ?? 0,
+      (chat['passenger_id'] as num?)?.toInt() ?? 0,
+    ];
+    return _participants[chatId] = ids;
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/realtime_service.dart';
 import '../../theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -754,7 +755,13 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
   bool    _loading = true;
   bool    _sending = false;
   String? _error;
-  Timer?  _pollTimer;
+  // Staff replies are pushed over Reverb (user.{id} → support.updated);
+  // polling is the fallback while the socket is down.
+  late final AdaptivePoller _poller = AdaptivePoller(
+    onPoll:       () => _load(silent: true),
+    fastInterval: const Duration(seconds: 5),
+  );
+  RealtimeSubscription? _supportSub;
   // The message that opened the current ticket: the backend stores it as
   // the ticket's own subject/description, never as a reply row, so it would
   // never appear (and would vanish on the next poll if we faked a reply for
@@ -776,7 +783,8 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _poller.stop();
+    _supportSub?.cancel();
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -784,7 +792,13 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 
   Future<void> _init() async {
     await _load();
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _load(silent: true));
+    if (!mounted) return;
+    _poller.start();
+    final id = await ApiService.getUserId();
+    if (!mounted || id == null) return;
+    _supportSub = RealtimeService.instance.subscribe('user.$id', (event, _) {
+      if (event == 'support.updated') _poller.pokeNow();
+    });
   }
 
   Future<void> _load({bool silent = false}) async {

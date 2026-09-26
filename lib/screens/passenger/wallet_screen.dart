@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../models/wallet_model.dart';
 import '../../services/api_service.dart';
+import '../../services/realtime_service.dart';
 import '../../utils/phone_utils.dart';
 
 class WalletScreen extends StatefulWidget {
@@ -902,19 +903,36 @@ class TopUpStatusScreen extends StatefulWidget {
 class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
   TopUpRequestModel? _request;
   String? _error;
-  Timer? _pollTimer;
+  // Admin approval is pushed over Reverb (user.{id} → topup.updated);
+  // polling every 4s remains the fallback while the socket is down.
+  late final AdaptivePoller _poller = AdaptivePoller(
+    onPoll:       _check,
+    fastInterval: const Duration(seconds: 4),
+  );
+  RealtimeSubscription? _topUpSub;
 
   @override
   void initState() {
     super.initState();
-    _check();
-    _pollTimer = Timer.periodic(const Duration(seconds: 4), (_) => _check());
+    _poller.start(immediately: true);
+    ApiService.getUserId().then((id) {
+      if (!mounted || id == null || !_poller.isRunning) return;
+      _topUpSub = RealtimeService.instance.subscribe('user.$id', (event, data) {
+        if (event == 'topup.updated' && data['topup_id'] == widget.topUpId) _poller.pokeNow();
+      });
+    });
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _stopPolling();
     super.dispose();
+  }
+
+  void _stopPolling() {
+    _poller.stop();
+    _topUpSub?.cancel();
+    _topUpSub = null;
   }
 
   Future<void> _check() async {
@@ -922,7 +940,7 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
       final r = await ApiService.getTopUpRequest(widget.topUpId);
       if (!mounted) return;
       setState(() { _request = r; _error = null; });
-      if (!r.isPending) _pollTimer?.cancel();
+      if (!r.isPending) _stopPolling();
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());

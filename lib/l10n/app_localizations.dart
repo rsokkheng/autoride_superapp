@@ -540,8 +540,8 @@ class AppLocalizations {
       'destination': 'Destination',
       'locatingYourDriver': 'Locating your driver…',
       'driverArrived': '✅ Driver Arrived!',
-      'driverFound': '🚗 Driver found!',
-      'yourDriverIsAlmostHere': '🚗 Your driver is almost here',
+      'driverFound': '🛺 Driver found!',
+      'yourDriverIsAlmostHere': '🛺 Your driver is almost here',
       // ── ride_booking screen ──
       'airport': 'Airport',
       'chooseOnMap': 'Choose on Map',

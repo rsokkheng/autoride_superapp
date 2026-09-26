@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import 'package:autoride_superapp/services/realtime_service.dart';
 import 'package:autoride_superapp/models/conversation_model.dart';
 import 'package:autoride_superapp/models/chat_message_model.dart';
 import '../passenger/support_screen.dart';
@@ -231,7 +232,12 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
   bool _loading = true;
   bool _sending = false;
   int? _myId;
-  Timer? _pollTimer;
+  // New messages are pushed over Reverb (conversation.{id}); polling is the fallback.
+  late final AdaptivePoller _poller = AdaptivePoller(
+    onPoll:       () => _loadMessages(silent: true),
+    fastInterval: const Duration(seconds: 5),
+  );
+  RealtimeSubscription? _messageSub;
 
   @override
   void initState() {
@@ -241,7 +247,8 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _poller.stop();
+    _messageSub?.cancel();
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -251,8 +258,12 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
     final saved = await ApiService.getSavedUser();
     _myId = saved?.id;
     await _loadMessages();
-    // Poll every 5 seconds for new messages
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) => _loadMessages(silent: true));
+    if (!mounted) return;
+    _poller.start();
+    _messageSub = RealtimeService.instance.subscribe(
+      'conversation.${widget.conversation.id}',
+      (_, __) => _poller.pokeNow(),
+    );
   }
 
   Future<void> _loadMessages({bool silent = false}) async {

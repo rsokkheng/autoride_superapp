@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/realtime_service.dart';
 import '../../l10n/app_localizations.dart';
 
 class QrPaymentScreen extends StatefulWidget {
@@ -73,12 +74,15 @@ class _MyQrTabState extends State<_MyQrTab> {
   bool _polling    = false;
   String? _error;
   String? _status;
-  Timer? _pollTimer;
+  // Payment confirmation is pushed over Reverb (user.{id} → payment.updated);
+  // polling every 3s remains the fallback while the socket is down.
+  AdaptivePoller? _poller;
+  RealtimeSubscription? _paymentSub;
 
   @override
   void dispose() {
     _amtCtrl.dispose();
-    _pollTimer?.cancel();
+    _stopPolling();
     super.dispose();
   }
 
@@ -90,7 +94,7 @@ class _MyQrTabState extends State<_MyQrTab> {
       return;
     }
     setState(() { _generating = true; _error = null; _qrData = null; _status = null; });
-    _pollTimer?.cancel();
+    _stopPolling();
     try {
       final data = await ApiService.generateQrPayment(amountKhr: amount);
       if (!mounted) return;
@@ -104,22 +108,41 @@ class _MyQrTabState extends State<_MyQrTab> {
 
   void _startPolling(String reference) {
     if (reference.isEmpty) return;
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (!mounted) return;
-      try {
-        final s = await ApiService.getQrPaymentStatus(reference);
-        if (!mounted) return;
-        final newStatus = s['status'] as String? ?? 'pending';
-        setState(() { _status = newStatus; _polling = false; });
-        if (newStatus == 'paid' || newStatus == 'expired' || newStatus == 'cancelled') {
-          _pollTimer?.cancel();
-        }
-      } catch (_) {}
+    final poller = _poller = AdaptivePoller(
+      onPoll:       () => _checkStatus(reference),
+      fastInterval: const Duration(seconds: 3),
+      slowInterval: const Duration(seconds: 15),
+    )..start();
+    ApiService.getUserId().then((id) {
+      if (!mounted || id == null || !poller.isRunning) return;
+      _paymentSub = RealtimeService.instance.subscribe('user.$id', (event, data) {
+        if (event == 'payment.updated' && data['reference'] == reference) poller.pokeNow();
+      });
     });
   }
 
+  Future<void> _checkStatus(String reference) async {
+    if (!mounted) return;
+    try {
+      final s = await ApiService.getQrPaymentStatus(reference);
+      if (!mounted) return;
+      final newStatus = s['status'] as String? ?? 'pending';
+      setState(() { _status = newStatus; _polling = false; });
+      if (newStatus == 'paid' || newStatus == 'expired' || newStatus == 'cancelled') {
+        _stopPolling();
+      }
+    } catch (_) {}
+  }
+
+  void _stopPolling() {
+    _poller?.stop();
+    _poller = null;
+    _paymentSub?.cancel();
+    _paymentSub = null;
+  }
+
   void _reset() {
-    _pollTimer?.cancel();
+    _stopPolling();
     setState(() { _qrData = null; _status = null; _error = null; _amtCtrl.clear(); });
   }
 

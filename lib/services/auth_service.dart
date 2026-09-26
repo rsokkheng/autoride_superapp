@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import '../utils/app_log.dart';
+import 'api_service.dart';
 import '../l10n/app_localizations.dart';
 import '../main.dart' show navigatorKey;
 
@@ -16,23 +17,41 @@ class AuthService {
     }
   }
 
-  /// Returns true once a Firebase user (anonymous or otherwise) is signed
-  /// in. Callers that are about to write to Firestore under rules gated on
-  /// `request.auth != null` (e.g. drivers_live location updates) should
-  /// await this and check the result — previously this failed silently, so
-  /// a driver's live-location writes could permission-deny forever with no
-  /// trace anywhere, leaving the passenger's map stuck on "Locating your
-  /// driver…" indefinitely.
-  static Future<bool> signInAnon() async {
+  static Future<bool>? _signingIn;
+
+  /// Returns true once Firebase is signed in as the *current Laravel user*
+  /// (uid `user_{id}`, via a backend-issued custom token). Firestore/Storage
+  /// rules authorize on that token's `app_uid` claim — e.g. a driver may only
+  /// write their own drivers_live doc — so callers about to touch Firestore
+  /// should await this and check the result.
+  ///
+  /// Concurrent callers share one in-flight sign-in.
+  static Future<bool> ensureSignedIn() =>
+      _signingIn ??= _ensureSignedIn().whenComplete(() => _signingIn = null);
+
+  static Future<bool> _ensureSignedIn() async {
     try {
-      if (FirebaseAuth.instance.currentUser != null) return true;
-      await FirebaseAuth.instance.signInAnonymously();
+      final userId = await ApiService.getUserId();
+      if (userId == null) return false;
+
+      // Also replaces a leftover anonymous / phone-auth / other-account session.
+      final current = FirebaseAuth.instance.currentUser;
+      if (current != null && current.uid == 'user_$userId') return true;
+
+      final token = await ApiService.getFirebaseCustomToken();
+      await FirebaseAuth.instance.signInWithCustomToken(token);
       return true;
     } catch (e, s) {
-      // Anonymous auth not enabled or network error — Firestore writes will
-      // fail with permission-denied until enabled in the Firebase Console.
-      AppLog.e('AuthService', 'signInAnonymously failed', e, s);
+      AppLog.e('AuthService', 'Firebase custom-token sign-in failed', e, s);
       return false;
+    }
+  }
+
+  static Future<void> signOutFirebase() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      AppLog.w('AuthService', 'Firebase signOut failed: $e');
     }
   }
 

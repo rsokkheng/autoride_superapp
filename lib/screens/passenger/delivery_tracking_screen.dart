@@ -6,6 +6,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import 'package:autoride_superapp/services/realtime_service.dart';
 import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'passenger_delivery_summary_screen.dart';
@@ -57,7 +58,12 @@ class DeliveryTrackingScreen extends StatefulWidget {
 
 class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   GoogleMapController? _mapController;
-  Timer?               _pollTimer;
+  // Status changes are pushed over Reverb (delivery.{id}); polling is the fallback.
+  late final AdaptivePoller _poller = AdaptivePoller(
+    onPoll:       _fetchDelivery,
+    fastInterval: const Duration(seconds: 5),
+  );
+  RealtimeSubscription? _deliverySub;
 
   DeliveryModel? _delivery;
   bool           _loading  = true;
@@ -86,16 +92,17 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   void initState() {
     super.initState();
     _initMarkers();
-    _fetchDelivery();
-    _pollTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) => _fetchDelivery(),
+    _poller.start(immediately: true);
+    _deliverySub = RealtimeService.instance.subscribe(
+      'delivery.${widget.deliveryId}',
+      (_, __) => _poller.pokeNow(),
     );
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    _poller.stop();
+    _deliverySub?.cancel();
     _mapController?.dispose();
     super.dispose();
   }

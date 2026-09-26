@@ -9,6 +9,8 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_log.dart';
+import 'auth_service.dart';
+import 'realtime_service.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/vehicle_type_model.dart';
@@ -3166,6 +3168,15 @@ class ApiService {
     await prefs.remove(_keyEmail);
     await prefs.remove(_keyPhone);
     await prefs.remove(_keyId);
+    // Drop the realtime socket and the Firebase session tied to this user —
+    // both are keyed to the Laravel user, so the next login must start fresh.
+    RealtimeService.instance.disconnect();
+    await AuthService.signOutFirebase();
+  }
+
+  static Future<int?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyId);
   }
 
   static Future<String?> getToken() async {
@@ -3198,6 +3209,52 @@ class ApiService {
   }
 
   static Future<bool> isLoggedIn() async => (await getToken()) != null;
+
+  // ── Realtime / Firebase session ───────────────────────────────────────────
+
+  /// POST /broadcasting/auth — signs a private Reverb channel subscription.
+  /// Returns the `auth` string to send with `pusher:subscribe`.
+  static Future<String> authorizeChannel({
+    required String socketId,
+    required String channelName,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost('/broadcasting/auth', {
+      'socket_id':    socketId,
+      'channel_name': channelName,
+    }, token: token);
+
+    if (raw.statusCode != 200) {
+      throw ApiException('Channel authorization failed.', raw.statusCode);
+    }
+    final auth = (jsonDecode(raw.body) as Map<String, dynamic>)['auth'] as String?;
+    if (auth == null) throw const ApiException('Channel authorization failed.', 500);
+    return auth;
+  }
+
+  /// POST /auth/firebase-token — custom token to sign in to Firebase as this
+  /// user; Firestore/Storage rules authorize on its `app_uid` claim.
+  static Future<String> getFirebaseCustomToken() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final raw = await _rawPost('/auth/firebase-token', {}, token: token);
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Could not get Firebase token.', raw.statusCode);
+    }
+    final data = body['data'] as Map<String, dynamic>? ?? body;
+    final firebaseToken = data['firebase_token'] as String?;
+    if (firebaseToken == null) throw const ApiException('No Firebase token in response.', 500);
+    return firebaseToken;
+  }
 
   static Future<String?> getEmail() async {
     final prefs = await SharedPreferences.getInstance();

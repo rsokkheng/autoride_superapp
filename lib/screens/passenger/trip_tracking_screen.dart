@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
+import '../../services/realtime_service.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../services/location_service.dart';
 import '../../services/maps_service.dart';
@@ -138,7 +139,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   String  _currentDriverId = '';
   String? _driverAvatarUrl;
   String? _vehiclePhotoUrl;
-  Timer? _ridePollTimer;
+  AdaptivePoller? _ridePoller;
+  RealtimeSubscription? _rideSub;
   // Auto-cancels the request if no driver has accepted within 5 minutes,
   // so the passenger isn't left waiting indefinitely on a ride nobody is
   // going to pick up.
@@ -772,8 +774,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _navigateToRating();
     }
     if (status == 'completed' || status == 'cancelled') {
-      _ridePollTimer?.cancel();
-      _ridePollTimer = null;
+      _stopRidePoll();
     }
   }
 
@@ -855,7 +856,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final status   = data['status'] as String? ?? '';
     final driverId = data['driver_id']?.toString() ?? '';
 
-    // Deliberately NOT cancelling _ridePollTimer here — Firestore firing
+    // Deliberately NOT stopping _ridePoller here — Firestore firing
     // once doesn't guarantee it'll fire again for later transitions (e.g.
     // "completed"), so the REST poll stays as the reliable fallback for
     // the whole trip.
@@ -910,7 +911,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   @override
   void dispose() {
-    _ridePollTimer?.cancel();
+    _stopRidePoll();
     _noDriverTimeoutTimer?.cancel();
     _etaCountdownTimer?.cancel();
     _firestoreSub?.cancel();
@@ -929,10 +930,25 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // Firestore never fires. Only stops once the ride reaches a terminal
   // status (see _setRideStatus) or the screen is disposed.
 
+  //
+  // Status changes are also pushed over Reverb (ride.{id}), so while the
+  // socket is up this backs off to a slow safety-net poll.
   void _startRidePoll() {
     if (widget.rideId == null) return;
-    _ridePollTimer =
-        Timer.periodic(const Duration(seconds: 5), (_) => _pollRide());
+    final poller = _ridePoller = AdaptivePoller(
+      onPoll:       _pollRide,
+      fastInterval: const Duration(seconds: 5),
+    )..start();
+    _rideSub = RealtimeService.instance.subscribe('ride.${widget.rideId}', (event, _) {
+      if (event == 'ride.updated') poller.pokeNow();
+    });
+  }
+
+  void _stopRidePoll() {
+    _ridePoller?.stop();
+    _ridePoller = null;
+    _rideSub?.cancel();
+    _rideSub = null;
   }
 
   Future<void> _pollRide() async {

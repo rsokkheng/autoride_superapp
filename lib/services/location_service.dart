@@ -64,7 +64,7 @@ class LocationService {
     // the Admin SDK — its own Firestore sync) doesn't depend on this
     // client's Firebase Auth state at all. Only the direct `.set()` below
     // needs it, and that's already best-effort with its own .catchError.
-    AuthService.signInAnon();
+    AuthService.ensureSignedIn();
     _onlineSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy:       LocationAccuracy.medium,
@@ -155,7 +155,7 @@ class LocationService {
     // Auth hiccup killed the REST channel too, when the two are
     // independent — the direct `.set()` below is just a best-effort extra
     // and already logs its own failures via .catchError.
-    AuthService.signInAnon();
+    AuthService.ensureSignedIn();
     _tripSub?.cancel();
     _tripSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -202,8 +202,11 @@ class LocationService {
   // Includes heading and vehicle_type so callers can rotate + icon-swap
   // the marker without any extra API round-trips.
 
-  Stream<DriverMarkerModel> listenDriver(String driverId) {
-    return _db
+  // Both listeners wait for the custom-token sign-in first — a snapshot
+  // listener started before it gets permission-denied and never recovers.
+  Stream<DriverMarkerModel> listenDriver(String driverId) async* {
+    await AuthService.ensureSignedIn();
+    yield* _db
         .collection('drivers_live')
         .doc(driverId)
         .snapshots()
@@ -234,8 +237,9 @@ class LocationService {
   // Falls back gracefully if the document doesn't exist: the stream just
   // never emits, and the caller's timer remains the safety net.
 
-  Stream<Map<String, dynamic>> listenRideStatus(String rideId) {
-    return _db
+  Stream<Map<String, dynamic>> listenRideStatus(String rideId) async* {
+    await AuthService.ensureSignedIn();
+    yield* _db
         .collection('bookings')
         .doc('ride_$rideId')
         .snapshots()

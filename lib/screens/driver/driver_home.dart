@@ -8,6 +8,7 @@ import '../../widgets/common_widgets.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/realtime_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
 import '../../services/maps_service.dart';
 import '../../services/location_service.dart' show LocationService, DriverStatus;
@@ -362,8 +363,33 @@ class _DriverDashboardState extends State<_DriverDashboard>
   DeliveryModel? _activeDelivery;
   SurgeInfo?     _surgeInfo;
   String?        _locationZone;
-  Timer? _pollTimer;
+  // Ride offers arrive instantly over Reverb (driver.{id} channel); the poll
+  // stays as a fallback — fast when the socket is down, slower otherwise
+  // (still needed for self-serve rides and delivery offers, which aren't pushed).
+  late final AdaptivePoller _requestPoller = AdaptivePoller(
+    onPoll:       _pollRequests,
+    fastInterval: const Duration(seconds: 5),
+    slowInterval: const Duration(seconds: 10),
+  );
+  RealtimeSubscription? _offerSub;
   Timer? _surgeTimer;
+
+  void _startRequestPolling({bool immediately = false}) {
+    _requestPoller.start(immediately: immediately);
+    ApiService.getUserId().then((id) {
+      if (!mounted || id == null || !_requestPoller.isRunning || _offerSub != null) return;
+      _offerSub = RealtimeService.instance.subscribe(
+        'driver.$id',
+        (_, __) => _requestPoller.pokeNow(),
+      );
+    });
+  }
+
+  void _stopRequestPolling() {
+    _requestPoller.stop();
+    _offerSub?.cancel();
+    _offerSub = null;
+  }
 
   @override
   void initState() {
@@ -372,7 +398,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
     _loadData();
     _loadSurge();
     if (widget.driverStatus == DriverStatus.online) {
-      _pollTimer  = Timer.periodic(const Duration(seconds: 5),  (_) => _pollRequests());
+      _startRequestPolling();
       _surgeTimer = Timer.periodic(const Duration(minutes: 2),  (_) => _loadSurge());
     }
   }
@@ -380,14 +406,14 @@ class _DriverDashboardState extends State<_DriverDashboard>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      _pollTimer?.cancel();  _pollTimer  = null;
+      _stopRequestPolling();
       _surgeTimer?.cancel(); _surgeTimer = null;
     } else if (state == AppLifecycleState.resumed) {
       if (widget.driverStatus == DriverStatus.online) {
         _loadData();
         _loadSurge();
-        _pollTimer?.cancel();
-        _pollTimer  = Timer.periodic(const Duration(seconds: 5),  (_) => _pollRequests());
+        _startRequestPolling(immediately: true);
+        _surgeTimer?.cancel();
         _surgeTimer = Timer.periodic(const Duration(minutes: 2),  (_) => _loadSurge());
       }
     }
@@ -398,17 +424,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
     super.didUpdateWidget(old);
     if (old.driverStatus != widget.driverStatus) {
       if (widget.driverStatus == DriverStatus.busy) {
-        _pollTimer?.cancel();
+        _stopRequestPolling();
         _surgeTimer?.cancel();
       } else if (widget.driverStatus == DriverStatus.online) {
-        _pollTimer?.cancel();
         _surgeTimer?.cancel();
-        _pollTimer  = Timer.periodic(const Duration(seconds: 5),  (_) => _pollRequests());
+        _startRequestPolling(immediately: true);
         _surgeTimer = Timer.periodic(const Duration(minutes: 2),  (_) => _loadSurge());
-        _pollRequests();
         _loadSurge();
       } else {
-        _pollTimer?.cancel();
+        _stopRequestPolling();
         _surgeTimer?.cancel();
       }
     }
@@ -417,7 +441,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _pollTimer?.cancel();
+    _stopRequestPolling();
     _surgeTimer?.cancel();
     super.dispose();
   }
