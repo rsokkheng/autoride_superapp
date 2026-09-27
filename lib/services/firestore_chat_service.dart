@@ -104,15 +104,20 @@ class FirestoreChatService {
     required File   image,
   }) async {
     await AuthService.ensureSignedIn();
+    final participants = await _participantsOf(chatId);
     final fileName =
         '${DateTime.now().millisecondsSinceEpoch}_$senderId.jpg';
-    final ref = _storage.ref().child('chat_images/$chatId/$fileName');
+    // Storage rules authorize on the "{driverId}_{passengerId}" folder, so the
+    // path itself says who may read/write it (no cross-service Firestore read).
+    final ref = _storage
+        .ref()
+        .child('chat_images/$chatId/${participants[0]}_${participants[1]}/$fileName');
     // Storage rules only accept image/* uploads.
     await ref.putFile(image, SettableMetadata(contentType: 'image/jpeg'));
     final url = await ref.getDownloadURL();
     await _db.collection('messages').add({
       'conversation_id': chatId,
-      'participants':     await _participantsOf(chatId),
+      'participants':     participants,
       'sender_id':        senderId,
       'sender_name':      senderName,
       'sender_avatar':    senderAvatar,

@@ -2,17 +2,25 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // Ride chat image attachments (chat_images/{chatId}/{fileName}) — only
-    // the two people in that Firestore chat. See firestore.rules for how
+    // Ride chat image attachments:
+    //   chat_images/{chatId}/{driverId}_{passengerId}/{fileName}
+    // The two participant ids live in the path, so the rule checks them
+    // directly. (It used to look them up in the Firestore chat doc with
+    // firestore.get(), a cross-service read that failed at runtime and
+    // refused every upload with storage/unauthorized.)
+    //
+    // Someone can only ever write to / read folders that carry their own id,
+    // and the image message itself is still created in Firestore, where the
+    // rules check the sender against the real chat doc — so nobody can
+    // attach a picture to someone else's chat. See firestore.rules for how
     // app_uid is issued.
-    match /chat_images/{chatId}/{fileName} {
+    match /chat_images/{chatId}/{pair}/{fileName} {
       function isParticipant() {
+        let ids = pair.split('_');
         return request.auth != null
           && request.auth.token.app_uid is int
-          && request.auth.token.app_uid in [
-               firestore.get(/databases/(default)/documents/chats/$(chatId)).data.driver_id,
-               firestore.get(/databases/(default)/documents/chats/$(chatId)).data.passenger_id,
-             ];
+          && ids.size() == 2
+          && string(request.auth.token.app_uid) in ids;
       }
 
       allow read: if isParticipant();
