@@ -186,8 +186,13 @@ class MapsService {
         AppLog.w('Maps', 'reverseGeocode: no results (status=${body['status']})');
         return null;
       }
-      return (results.first as Map<String, dynamic>)['formatted_address']
-          as String?;
+      // Google often lists a Plus Code ("GRWV+FH Phnom Penh") first — prefer
+      // the first result that is a real address or place name.
+      final best = results.cast<Map<String, dynamic>>().firstWhere(
+            (r) => !((r['types'] as List<dynamic>?) ?? const []).contains('plus_code'),
+            orElse: () => results.first as Map<String, dynamic>,
+          );
+      return best['formatted_address'] as String?;
     } catch (e, s) {
       AppLog.e('Maps', 'reverseGeocode failed', e, s);
       return null;

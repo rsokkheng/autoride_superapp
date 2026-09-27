@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../main.dart' show navigatorKey;
+import '../main.dart' show navigatorKey, appLocale;
 import '../screens/auth/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import '../utils/app_log.dart';
 import 'auth_service.dart';
 import 'realtime_service.dart';
@@ -41,6 +42,15 @@ class ApiService {
   static const String _keyId           = 'user_id';
 
   // ── Raw HTTP helpers (dart:io — allows Host header override) ─────────────
+
+  // One client for the app's lifetime, so requests reuse keep-alive
+  // connections instead of paying a fresh TCP + TLS handshake on every call
+  // (and every poll) — cheaper for the phone and for the server's nginx.
+  // idleTimeout stays below nginx's default keepalive_timeout (75s) so we
+  // drop idle sockets before the server does.
+  static final HttpClient _client = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 10)
+    ..idleTimeout = const Duration(seconds: 30);
 
   // Dedupes concurrent refresh attempts so a burst of 401s only triggers
   // one /auth/refresh call; all callers await the same in-flight Future.
@@ -86,13 +96,13 @@ class ApiService {
     String path, {
     String? token,
   }) async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
+    final client = _client;
     try {
       final uri = Uri.parse('$_baseUrl$path');
       final req = await client.getUrl(uri);
 
       req.headers.set('Accept', 'application/json');
+      req.headers.set('X-Locale', appLocale.value.languageCode);
       if (token != null) req.headers.set('Authorization', 'Bearer $token');
 
       final res     = await req.close();
@@ -105,23 +115,45 @@ class ApiService {
     } catch (e, s) {
       AppLog.e('API', 'GET $path network error', e, s);
       rethrow;
-    } finally {
-      client.close(force: true);
     }
   }
 
+  // Idempotency keys for writes whose outcome is still unknown (network error
+  // or 5xx), keyed by path + body. Retrying the same action — the user tapping
+  // "Pay" again after a timeout — reuses the key, so the backend replays the
+  // first result instead of charging / booking twice. Dropped as soon as the
+  // server gives a definite answer, so a later identical action is new.
+  static final Map<String, ({String key, DateTime at})> _pendingIdempotencyKeys = {};
+  static const _idempotencyKeyTtl = Duration(minutes: 10);
+
+  static String _idempotencyKeyFor(String fingerprint) {
+    final now = DateTime.now();
+    _pendingIdempotencyKeys.removeWhere((_, v) => now.difference(v.at) > _idempotencyKeyTtl);
+    return (_pendingIdempotencyKeys[fingerprint] ??= (key: const Uuid().v4(), at: now)).key;
+  }
+
+  /// [idempotent]: send an Idempotency-Key so a retry can never apply this
+  /// write twice. Use for anything that moves money or creates a booking.
   static Future<_RawResponse> _rawPost(
     String path,
     Map<String, dynamic> body, {
     String? token,
+    bool idempotent = false,
   }) async {
-    final res = await _rawPostOnce(path, body, token: token);
+    final fingerprint = idempotent ? '$path|${jsonEncode(body)}' : null;
+    final key = fingerprint != null ? _idempotencyKeyFor(fingerprint) : null;
+    // A network error throws out of here with the key still pending — the
+    // outcome is unknown, so the user's retry must reuse it.
+    var res = await _rawPostOnce(path, body, token: token, idempotencyKey: key);
     if (res.statusCode == 401 && token != null) {
       try {
         final newToken = await _refreshAccessToken();
-        if (newToken != null) return _rawPostOnce(path, body, token: newToken);
+        if (newToken != null) {
+          res = await _rawPostOnce(path, body, token: newToken, idempotencyKey: key);
+        }
       } catch (_) {}
     }
+    if (fingerprint != null && res.statusCode < 500) _pendingIdempotencyKeys.remove(fingerprint);
     return res;
   }
 
@@ -129,16 +161,18 @@ class ApiService {
     String path,
     Map<String, dynamic> body, {
     String? token,
+    String? idempotencyKey,
   }) async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
+    final client = _client;
     try {
       final uri = Uri.parse('$_baseUrl$path');
       final req  = await client.postUrl(uri);
 
       req.headers.set('Content-Type', 'application/json; charset=utf-8');
       req.headers.set('Accept',       'application/json');
+      req.headers.set('X-Locale',     appLocale.value.languageCode);
       if (token != null) req.headers.set('Authorization', 'Bearer $token');
+      if (idempotencyKey != null) req.headers.set('Idempotency-Key', idempotencyKey);
 
       final bytes = utf8.encode(jsonEncode(body));
       req.headers.contentLength = bytes.length;
@@ -154,8 +188,6 @@ class ApiService {
     } catch (e, s) {
       AppLog.e('API', 'POST $path network error', e, s);
       rethrow;
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -186,6 +218,7 @@ class ApiService {
     final uri = Uri.parse('$_baseUrl$path');
     final req = http.MultipartRequest('POST', uri);
     req.headers['Accept'] = 'application/json';
+    req.headers['X-Locale'] = appLocale.value.languageCode;
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
     req.fields.addAll(fields);
     for (final e in files) {
@@ -217,14 +250,14 @@ class ApiService {
     Map<String, dynamic> body, {
     String? token,
   }) async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
+    final client = _client;
     try {
       final uri = Uri.parse('$_baseUrl$path');
       final req = await client.putUrl(uri);
 
       req.headers.set('Content-Type', 'application/json; charset=utf-8');
       req.headers.set('Accept', 'application/json');
+      req.headers.set('X-Locale', appLocale.value.languageCode);
       if (token != null) req.headers.set('Authorization', 'Bearer $token');
 
       final bytes = utf8.encode(jsonEncode(body));
@@ -241,8 +274,6 @@ class ApiService {
     } catch (e, s) {
       AppLog.e('API', 'PUT $path network error', e, s);
       rethrow;
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -266,14 +297,14 @@ class ApiService {
     Map<String, dynamic> body, {
     String? token,
   }) async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
+    final client = _client;
     try {
       final uri = Uri.parse('$_baseUrl$path');
       final req = await client.patchUrl(uri);
 
       req.headers.set('Content-Type', 'application/json; charset=utf-8');
       req.headers.set('Accept', 'application/json');
+      req.headers.set('X-Locale', appLocale.value.languageCode);
       if (token != null) req.headers.set('Authorization', 'Bearer $token');
 
       final bytes = utf8.encode(jsonEncode(body));
@@ -290,8 +321,6 @@ class ApiService {
     } catch (e, s) {
       AppLog.e('API', 'PATCH $path network error', e, s);
       rethrow;
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -313,13 +342,13 @@ class ApiService {
     String path, {
     String? token,
   }) async {
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 10);
+    final client = _client;
     try {
       final uri = Uri.parse('$_baseUrl$path');
       final req = await client.deleteUrl(uri);
 
       req.headers.set('Accept', 'application/json');
+      req.headers.set('X-Locale', appLocale.value.languageCode);
       if (token != null) req.headers.set('Authorization', 'Bearer $token');
 
       final res     = await req.close();
@@ -332,8 +361,6 @@ class ApiService {
     } catch (e, s) {
       AppLog.e('API', 'DELETE $path network error', e, s);
       rethrow;
-    } finally {
-      client.close(force: true);
     }
   }
 
@@ -1167,6 +1194,41 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  /// GET /rides/{id}/meter — a metered ("no destination") trip in progress,
+  /// measured from the GPS track actually driven, and the fare it prices to.
+  /// [lat]/[lng]: the driver's current position (the trip's end point).
+  static Future<({int fare, double distanceKm, int durationMin})> getRideMeter(
+    int rideId, {
+    double? lat,
+    double? lng,
+  }) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+
+    final qs = (lat != null && lng != null) ? '?lat=$lat&lng=$lng' : '';
+    final raw = await _rawGet('/rides/$rideId/meter$qs', token: token);
+
+    final Map<String, dynamic> resBody;
+    try {
+      resBody = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+
+    if (raw.statusCode == 200) {
+      final data = (resBody['data'] as Map<String, dynamic>?) ?? resBody;
+      return (
+        fare:        (data['fare'] as num?)?.toInt() ?? 0,
+        distanceKm:  (data['distance_km'] as num?)?.toDouble() ?? 0.0,
+        durationMin: (data['duration_min'] as num?)?.toInt() ?? 0,
+      );
+    }
+
+    throw ApiException(
+        resBody['message'] as String? ?? 'Failed to read trip meter (${raw.statusCode}).',
+        raw.statusCode);
+  }
+
   // ── Create ride ───────────────────────────────────────────────────────────
 
   static Future<RideModel> createRide({
@@ -1237,7 +1299,7 @@ class ApiService {
       if (familyMemberId  != null)  'family_member_id': familyMemberId,
     };
 
-    final raw = await _rawPost('/rides', body, token: token);
+    final raw = await _rawPost('/rides', body, token: token, idempotent: true);
 
     final Map<String, dynamic> resBody;
     try {
@@ -1984,7 +2046,7 @@ class ApiService {
     };
 
     AppLog.d('Delivery', 'POST /deliveries body: ${jsonEncode(body)}');
-    final raw = await _rawPost('/deliveries', body, token: token);
+    final raw = await _rawPost('/deliveries', body, token: token, idempotent: true);
     AppLog.d('Delivery', 'POST /deliveries → ${raw.statusCode}: ${raw.body}');
     return _parseDeliveryResponse(raw);
   }
@@ -2038,7 +2100,7 @@ class ApiService {
     };
 
     AppLog.d('Moving', 'POST /movings body: ${jsonEncode(body)}');
-    final raw = await _rawPost('/movings', body, token: token);
+    final raw = await _rawPost('/movings', body, token: token, idempotent: true);
     AppLog.d('Moving', 'POST /movings → ${raw.statusCode}: ${raw.body}');
     return _parseDeliveryResponse(raw);
   }
@@ -2794,7 +2856,7 @@ class ApiService {
       if (promoCode     != null) 'promo_code':      promoCode,
       if (accessoryIds.isNotEmpty) 'accessory_ids': accessoryIds,
     };
-    final raw = await _rawPost('/marketplace/$productId/order', body, token: token);
+    final raw = await _rawPost('/marketplace/$productId/order', body, token: token, idempotent: true);
     final Map<String, dynamic> decoded;
     try {
       decoded = jsonDecode(raw.body) as Map<String, dynamic>;
@@ -2827,7 +2889,7 @@ class ApiService {
       if (notes     != null) 'notes':      notes,
       if (promoCode != null) 'promo_code': promoCode,
     };
-    final raw = await _rawPost('/marketplace/checkout', body, token: token);
+    final raw = await _rawPost('/marketplace/checkout', body, token: token, idempotent: true);
     final Map<String, dynamic> decoded;
     try {
       decoded = jsonDecode(raw.body) as Map<String, dynamic>;
@@ -3229,6 +3291,13 @@ class ApiService {
     if (raw.statusCode != 200) {
       throw ApiException('Channel authorization failed.', raw.statusCode);
     }
+    // Laravel answers 200 with an empty body when its broadcaster isn't
+    // Reverb (e.g. BROADCAST_CONNECTION=log) — say so instead of a JSON error.
+    if (raw.body.trim().isEmpty) {
+      throw const ApiException(
+          'Channel authorization returned an empty body — the server broadcaster is not Reverb (check BROADCAST_CONNECTION).',
+          200);
+    }
     final auth = (jsonDecode(raw.body) as Map<String, dynamic>)['auth'] as String?;
     if (auth == null) throw const ApiException('Channel authorization failed.', 500);
     return auth;
@@ -3298,7 +3367,7 @@ class ApiService {
     final body = <String, dynamic>{'amount': amount, 'method': method};
     if (note != null && note.trim().isNotEmpty) body['note'] = note.trim();
 
-    final raw = await _rawPost('/wallet/topup', body, token: token);
+    final raw = await _rawPost('/wallet/topup', body, token: token, idempotent: true);
 
     final Map<String, dynamic> resBody;
     try {
@@ -3350,7 +3419,7 @@ class ApiService {
     final body = <String, dynamic>{'amount': amount};
     if (note != null && note.trim().isNotEmpty) body['note'] = note.trim();
 
-    final raw = await _rawPost('/wallet/withdraw', body, token: token);
+    final raw = await _rawPost('/wallet/withdraw', body, token: token, idempotent: true);
 
     final Map<String, dynamic> resBody;
     try {
@@ -4119,7 +4188,7 @@ class ApiService {
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final payload = <String, dynamic>{'phone': phone, 'amount': amountKhr};
     if (note != null && note.isNotEmpty) payload['note'] = note;
-    final raw  = await _rawPost('/wallet/transfer', payload, token: token);
+    final raw  = await _rawPost('/wallet/transfer', payload, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
       return WalletTransferResult.fromJson(body['data'] as Map<String, dynamic>? ?? {});
@@ -4188,7 +4257,7 @@ class ApiService {
   static Future<void> redeemPoints(int points) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw  = await _rawPost('/loyalty/redeem', {'points': points}, token: token);
+    final raw  = await _rawPost('/loyalty/redeem', {'points': points}, token: token, idempotent: true);
     if (raw.statusCode != 200 && raw.statusCode != 201) {
       final body = jsonDecode(raw.body) as Map<String, dynamic>;
       throw ApiException(body['message'] as String? ?? 'Redemption failed', raw.statusCode);
@@ -4250,7 +4319,7 @@ class ApiService {
       'end_date':         _fmtDate(endDate),
       if (paymentMethod != null) 'payment_method': paymentMethod,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
-    }, token: token);
+    }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode != 200 && raw.statusCode != 201) {
       throw ApiException(body['message'] as String? ?? 'Booking failed.', raw.statusCode);
@@ -4550,7 +4619,7 @@ class ApiService {
       if (paymentType != null) 'payment_type': paymentType,
       if (payableType != null) 'payable_type':  payableType,
       if (payableId   != null) 'payable_id':    payableId,
-    }, token: token);
+    }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
       return (body['data'] as Map<String, dynamic>?) ?? body;
@@ -4621,7 +4690,7 @@ class ApiService {
   static Future<void> claimVoucher(int id) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw  = await _rawPost('/vouchers/$id/claim', {}, token: token);
+    final raw  = await _rawPost('/vouchers/$id/claim', {}, token: token, idempotent: true);
     if (raw.statusCode == 200 || raw.statusCode == 201) return;
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     throw ApiException(body['message'] as String? ?? 'Claim failed.', raw.statusCode);
@@ -4766,7 +4835,7 @@ class ApiService {
       'account_number': accountNumber,
       'account_name':   accountName,
       if (bankName != null) 'bank_name': bankName,
-    }, token: token);
+    }, token: token, idempotent: true);
     if (raw.statusCode == 200 || raw.statusCode == 201) return;
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     throw ApiException(body['message'] as String? ?? 'Withdrawal failed.', raw.statusCode);
@@ -5615,7 +5684,7 @@ class ApiService {
       'plan_slug':      planSlug,
       'payment_method': paymentMethod,
       'auto_renew':     autoRenew,
-    }, token: token);
+    }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
       return body['message'] as String? ?? 'Subscribed!';
@@ -5632,7 +5701,7 @@ class ApiService {
     final raw = await _rawPost('/subscriptions/upgrade', {
       'plan_slug':      planSlug,
       'payment_method': paymentMethod,
-    }, token: token);
+    }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
       return body['message'] as String? ?? 'Plan upgraded!';
@@ -5870,30 +5939,52 @@ class RideEstimate {
 }
 
 class FareInfo {
+  /// Final price — already includes every surcharge and surge (never
+  /// multiply it by the surge multiplier again).
   final int  total;
   final int  minimumFare;
   final bool surgeActive;
+  final double surgeMultiplier;
   final bool nightRate;
+  final bool weekendRate;
+  /// e.g. "Khmer New Year" when today is an admin-configured holiday.
+  final String? holidayLabel;
   final Map<String, int> breakdown;
 
   const FareInfo({
     required this.total,
     required this.minimumFare,
     required this.surgeActive,
+    this.surgeMultiplier = 1.0,
     required this.nightRate,
+    this.weekendRate = false,
+    this.holidayLabel,
     required this.breakdown,
   });
 
   factory FareInfo.fromJson(Map<String, dynamic> json) {
     final bd = json['breakdown'] as Map<String, dynamic>? ?? {};
+    final holiday = json['holiday'] as Map<String, dynamic>?;
     return FareInfo(
-      total:       (json['total']        as num?)?.toInt() ?? 0,
-      minimumFare: (json['minimum_fare'] as num?)?.toInt() ?? 0,
-      surgeActive:  json['surge_active'] as bool? ?? false,
-      nightRate:    json['night_rate']   as bool? ?? false,
-      breakdown:   bd.map((k, v) => MapEntry(k, (v as num).toInt())),
+      total:           (json['total']            as num?)?.toInt() ?? 0,
+      minimumFare:     (json['minimum_fare']     as num?)?.toInt() ?? 0,
+      surgeActive:      json['surge_active']     as bool? ?? false,
+      surgeMultiplier: (json['surge_multiplier'] as num?)?.toDouble() ?? 1.0,
+      nightRate:        json['night_rate']       as bool? ?? false,
+      weekendRate:      json['weekend_rate']     as bool? ?? false,
+      holidayLabel:     holiday?['label']        as String?,
+      breakdown:       bd.map((k, v) => MapEntry(k, (v as num).toInt())),
     );
   }
+
+  /// Any surcharge on top of the normal fare (night/weekend/holiday/surge).
+  /// (Not surge_amount > 0 — the backend's surge_amount is total − subtotal,
+  /// which also carries rounding to 100 ៛ and the minimum fare.)
+  bool get hasSurcharge =>
+      (breakdown['night_surcharge'] ?? 0) > 0 ||
+      (breakdown['weekend_surcharge'] ?? 0) > 0 ||
+      (breakdown['holiday_surcharge'] ?? 0) > 0 ||
+      surgeMultiplier > 1.0;
 
   // e.g. 12200 → "12,200 ៛"
   String get formattedTotal {

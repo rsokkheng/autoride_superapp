@@ -363,9 +363,10 @@ class _DriverDashboardState extends State<_DriverDashboard>
   DeliveryModel? _activeDelivery;
   SurgeInfo?     _surgeInfo;
   String?        _locationZone;
-  // Ride offers arrive instantly over Reverb (driver.{id} channel); the poll
-  // stays as a fallback — fast when the socket is down, slower otherwise
-  // (still needed for self-serve rides and delivery offers, which aren't pushed).
+  // Ride and delivery offers (and their withdrawal) arrive instantly over
+  // Reverb (driver.{id} channel); the poll stays as a fallback — fast when the
+  // socket is down, slower otherwise (still needed for self-serve rides, which
+  // aren't pushed to anyone in particular).
   late final AdaptivePoller _requestPoller = AdaptivePoller(
     onPoll:       _pollRequests,
     fastInterval: const Duration(seconds: 5),

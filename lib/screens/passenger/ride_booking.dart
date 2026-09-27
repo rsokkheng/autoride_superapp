@@ -16,6 +16,7 @@ import '../../models/ride_model.dart' show NearbyMapDriverModel;
 import '../../models/trip_model.dart' show TripModel;
 import '../../models/wallet_model.dart' show WalletModel;
 import '../../l10n/app_localizations.dart';
+import '../../widgets/fare_breakdown_sheet.dart';
 import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
 import 'wallet_screen.dart' show showTopUpSheet, TopUpStatusScreen;
@@ -1393,9 +1394,19 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
       setState(() {
         _fareByType  = estimate.fares;
         _fareLoading = false;
+        _bookError   = null; // e.g. clears an earlier "outside service area"
         // Use backend route data to pre-fill distance/ETA before Google Maps responds
         if (_distanceKm == 0 && estimate.distanceKm > 0) _distanceKm = estimate.distanceKm;
         if (_etaMinutes == 0 && estimate.etaMinutes > 0) _etaMinutes = estimate.etaMinutes;
+      });
+    } on ApiException catch (e, s) {
+      AppLog.e('Fare', 'estimateRide failed', e, s);
+      if (!mounted) return;
+      setState(() {
+        _fareLoading = false;
+        // Outside the service area (e.g. a simulator's default location):
+        // tell the passenger why there's no price, in their language.
+        if (e.statusCode == 422) _bookError = e.message;
       });
     } catch (e, s) {
       AppLog.e('Fare', 'estimateRide failed', e, s);
@@ -4234,16 +4245,16 @@ class _RideTypeCard extends StatelessWidget {
       // as a starting-price indicator instead of a generic label.
       priceText = type.base > 0 ? ' ${AppTheme.khr(type.base)}' : AppLocalizations.of(context).meteredFare;
     } else if (fareInfo != null) {
-      if (surgeMultiplier > 1.0) {
-        final surgedTotal = (fareInfo!.total * surgeMultiplier).round();
-        priceText = AppTheme.khr(surgedTotal);
-      } else {
-        priceText = fareInfo!.formattedTotal;
-      }
+      // The quote already includes surge — multiplying it again here showed
+      // e.g. 15,000 ៛ on the card for a 10,000 ៛ ride at 1.5× surge (while
+      // the Confirm button showed the real 10,000 ៛).
+      priceText = fareInfo!.formattedTotal;
     } else {
       priceText = fareLoading ? '...' : '—';
     }
-    final hasSurge = surgeMultiplier > 1.0;
+    final shownMultiplier = (!metered && fareInfo != null) ? fareInfo!.surgeMultiplier : surgeMultiplier;
+    final hasSurge = shownMultiplier > 1.0;
+    final surchargeNote = (!metered && fareInfo != null) ? fareSurchargeSummary(context, fareInfo!) : null;
 
     return GestureDetector(
       onTap: onTap,
@@ -4292,7 +4303,7 @@ class _RideTypeCard extends StatelessWidget {
                     color: AppTheme.warning.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: Text('${surgeMultiplier.toStringAsFixed(1)}×',
+                  child: Text('${shownMultiplier.toStringAsFixed(1)}×',
                       style: TextStyle(color: AppTheme.warning,
                           fontSize: 9, fontWeight: FontWeight.w700)),
                 ),
@@ -4301,7 +4312,22 @@ class _RideTypeCard extends StatelessWidget {
                   style: TextStyle(
                       color: selected ? AppTheme.accent : context.appTextPrimary,
                       fontWeight: FontWeight.w700)),
+              if (!metered && fareInfo != null)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => showFareBreakdownSheet(context, fare: fareInfo!, title: type.name),
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4),
+                    child: Icon(Icons.info_outline, size: 16, color: context.appTextSecondary),
+                  ),
+                ),
             ]),
+            if (surchargeNote != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(surchargeNote,
+                    style: const TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
+              ),
             if (etaMinutes > 0)
               Text('$etaMinutes ${AppLocalizations.of(context).min}',
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),

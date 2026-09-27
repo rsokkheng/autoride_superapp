@@ -774,6 +774,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       int?    finalFareKhr;
       double? meteredDistanceKm;
       int?    meteredDurationMin;
+      // The dropoff the fare was priced against — already checked to be in
+      // Cambodia. Sending the raw GPS fix instead stored a simulator's
+      // default location (Cupertino) as the ride's dropoff.
+      LatLng? meteredDropoff;
       if (_isMetered) {
         setState(() => _completing = true);
         final suggested = await _estimateMeteredFare();
@@ -781,9 +785,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         setState(() => _completing = false);
         if (suggested != null) {
           meteredDistanceKm  = suggested.distanceKm;
-          meteredDurationMin = _tripStartTime != null
-              ? DateTime.now().difference(_tripStartTime!).inMinutes
-              : null;
+          meteredDropoff     = suggested.dropoff;
+          meteredDurationMin = suggested.durationMin ??
+              (_tripStartTime != null
+                  ? DateTime.now().difference(_tripStartTime!).inMinutes
+                  : null);
           finalFareKhr = await _confirmTripSummary(
             fareKhr: suggested.amount,
             distanceKm: suggested.distanceKm,
@@ -797,14 +803,25 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       }
 
       setState(() => _completing = true);
+      // Place name for the metered dropoff, so receipts / history show
+      // "Aeon Mall" rather than raw coordinates. Best-effort: the backend
+      // falls back to its own lookup (or the coordinates) if this fails.
+      String? meteredDropoffAddress;
+      if (_isMetered && meteredDropoff != null) {
+        try {
+          meteredDropoffAddress = await MapsService.reverseGeocode(meteredDropoff)
+              .timeout(const Duration(seconds: 5));
+        } catch (_) {}
+      }
       RideModel? completedRide;
       if (widget.ride != null) {
         try {
           completedRide = await ApiService.completeRide(
             widget.ride!.id,
             fareKhr:        finalFareKhr,
-            dropoffLat:     _isMetered ? _driverLatLng?.latitude  : null,
-            dropoffLng:     _isMetered ? _driverLatLng?.longitude : null,
+            dropoffAddress: meteredDropoffAddress,
+            dropoffLat:     _isMetered ? meteredDropoff?.latitude  : null,
+            dropoffLng:     _isMetered ? meteredDropoff?.longitude : null,
           );
           // The complete endpoint may not return distance/duration —
           // fetch the finalized ride to get server-computed values.
@@ -883,7 +900,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     // When trip starts (inProgress), record start time and snapshot route distance
     if (_phase == _TripPhase.inProgress) {
       _tripStartTime   = DateTime.now();
-      _tripDistanceKm  = _distanceKm > 0 ? _distanceKm : null;
+      // The route distance from booking (pickup → dropoff). _distanceKm here
+      // is still the driver's leg *to the pickup*, and for metered trips it's
+      // never refreshed — using it showed that leg (17,145 km from a
+      // simulator's location) as the trip distance.
+      _tripDistanceKm  = (widget.ride?.distanceKm ?? 0) > 0 ? widget.ride!.distanceKm : null;
       if (_driverLatLng != null) {
         _lastRouteFetch = null;
         _fetchLiveRoute(_driverLatLng!);
@@ -911,10 +932,11 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   // when the person hitting this has no console/log access.
   String? _meteredFareError;
 
-  // Uses the same admin-configured rate table as normal ride estimates —
-  // pickup → driver's current position stands in for the actual distance
-  // travelled, since there was no destination to route against.
-  Future<({int amount, double distanceKm})?> _estimateMeteredFare() async {
+  // Prefers the backend's trip meter — the GPS track actually driven (posted
+  // every ~10 s during the trip), priced with the admin rate table. Falls
+  // back to a straight-line pickup → current-position estimate if the meter
+  // is unavailable (older backend, network error).
+  Future<({int amount, double distanceKm, LatLng? dropoff, int? durationMin})?> _estimateMeteredFare() async {
     _meteredFareError = null;
     if (widget.ride == null) {
       _meteredFareError = AppLocalizations.of(context).noActiveRide;
@@ -962,10 +984,32 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       pos = null;
     }
 
+    final hasGpsFix = pos != null;
+
     // No usable GPS position — fall back to pickup-as-dropoff (distance ≈
     // 0) so the driver still gets an automatically-calculated base fare
     // from the same rate table, rather than a blank manual-entry field.
     pos ??= _pickupLatLng;
+
+    try {
+      final meter = await ApiService.getRideMeter(
+        widget.ride!.id,
+        lat: hasGpsFix ? pos.latitude  : null,
+        lng: hasGpsFix ? pos.longitude : null,
+      );
+      if (meter.fare > 0 && meter.distanceKm <= 500) {
+        return (
+          amount:      meter.fare,
+          distanceKm:  meter.distanceKm,
+          // Pickup stand-in (no GPS fix) is not a dropoff — send nothing and
+          // let the server use the driver's last known position instead.
+          dropoff:     hasGpsFix ? pos : null,
+          durationMin: meter.durationMin > 0 ? meter.durationMin : null,
+        );
+      }
+    } catch (e) {
+      AppLog.w('DriverTrip', 'Trip meter unavailable, using straight-line estimate: $e');
+    }
 
     try {
       final estimate = await ApiService.estimateRide(
@@ -991,7 +1035,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             '"${widget.ride!.serviceType}" (${AppLocalizations.of(context).available}: ${estimate.fares.keys.join(', ')}).';
         return null;
       }
-      return (amount: fare.total, distanceKm: estimate.distanceKm);
+      return (amount: fare.total, distanceKm: estimate.distanceKm, dropoff: hasGpsFix ? pos : null, durationMin: null);
     } catch (e, s) {
       AppLog.e('DriverTrip', 'estimateRide failed for metered fare', e, s);
       _meteredFareError = '${AppLocalizations.of(context).fareCalculationFailedPrefix} $e';
@@ -1060,7 +1104,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     );
   }
 
-  Future<int?> _promptFinalFare(({int amount, double distanceKm})? suggested) async {
+  Future<int?> _promptFinalFare(({int amount, double distanceKm, LatLng? dropoff, int? durationMin})? suggested) async {
     final ctrl = TextEditingController(
         text: suggested != null ? suggested.amount.toString() : '');
     String? error;

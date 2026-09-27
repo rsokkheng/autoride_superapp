@@ -454,6 +454,13 @@ class AppLocalizations {
       'baseFare': 'Base fare',
       'distanceFee': 'Distance fee',
       'surgeFee': 'Surge fee',
+      'bookingFee': 'Booking fee',
+      'distanceFare': 'Distance',
+      'timeFare': 'Time (heavy traffic)',
+      'nightSurcharge': 'Night surcharge',
+      'weekendSurcharge': 'Weekend surcharge',
+      'holidaySurcharge': 'Holiday surcharge',
+      'fareRoundingAdjustment': 'Rounding / minimum fare',
       'promoDiscount': 'Promo discount',
       'tripDetails': 'Trip Details',
       'dateAndTime': 'Date & Time',
@@ -2068,6 +2075,13 @@ class AppLocalizations {
       'baseFare': 'Base fare',
       'distanceFee': 'Distance fee',
       'surgeFee': 'Surge fee',
+      'bookingFee': 'ថ្លៃកក់',
+      'distanceFare': 'ថ្លៃតាមចម្ងាយ',
+      'timeFare': 'ថ្លៃពេលវេលា (ចរាចរណ៍កកស្ទះ)',
+      'nightSurcharge': 'ថ្លៃបន្ថែមពេលយប់',
+      'weekendSurcharge': 'ថ្លៃបន្ថែមចុងសប្តាហ៍',
+      'holidaySurcharge': 'ថ្លៃបន្ថែមថ្ងៃបុណ្យ',
+      'fareRoundingAdjustment': 'ការបង្គត់ / តម្លៃអប្បបរមា',
       'promoDiscount': 'Promo discount',
       'tripDetails': 'Trip Details',
       'dateAndTime': 'Date & Time',
@@ -3682,6 +3696,13 @@ class AppLocalizations {
       'baseFare': 'Base fare',
       'distanceFee': 'Distance fee',
       'surgeFee': 'Surge fee',
+      'bookingFee': '预订费',
+      'distanceFare': '里程费',
+      'timeFare': '时长费（拥堵）',
+      'nightSurcharge': '夜间附加费',
+      'weekendSurcharge': '周末附加费',
+      'holidaySurcharge': '节假日附加费',
+      'fareRoundingAdjustment': '取整 / 最低消费调整',
       'promoDiscount': 'Promo discount',
       'tripDetails': 'Trip Details',
       'dateAndTime': 'Date & Time',
@@ -5316,6 +5337,13 @@ class AppLocalizations {
   String get baseFare => tr('baseFare');
   String get distanceFee => tr('distanceFee');
   String get surgeFee => tr('surgeFee');
+  String get bookingFee => tr('bookingFee');
+  String get distanceFare => tr('distanceFare');
+  String get timeFare => tr('timeFare');
+  String get nightSurcharge => tr('nightSurcharge');
+  String get weekendSurcharge => tr('weekendSurcharge');
+  String get holidaySurcharge => tr('holidaySurcharge');
+  String get fareRoundingAdjustment => tr('fareRoundingAdjustment');
   String get promoDiscount => tr('promoDiscount');
   String get tripDetails => tr('tripDetails');
   String get dateAndTime => tr('dateAndTime');
