@@ -363,7 +363,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     setState(() { _applyingCoupon = true; _couponError = null; });
     try {
       final subtotalKhr = (_totalUsd * 4100).round();
-      final result   = await ApiService.applyPromoCode(code, subtotalKhr, serviceType: 'rental');
+      final result   = await ApiService.applyPromoCode(code, subtotalKhr, serviceType: 'product_rent');
       if (!mounted) return;
       setState(() {
         _discountKhr    = (result['discount_amount'] as num? ?? 0).toInt();
@@ -540,6 +540,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         pickupLng:            _locLatLng?.longitude,
         paymentMethod:        _paymentId,
         notes:                _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
+        promoCode:            _appliedCode,
       );
       if (!mounted) return;
       _showConfirmation(result);

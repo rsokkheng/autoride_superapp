@@ -69,6 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
             FadeTransition(opacity: anim, child: child),
       ),
     );
+    NotificationService.instance.openPendingTap();
   }
 
   @override

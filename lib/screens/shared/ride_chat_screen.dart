@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import '../../utils/app_log.dart';
+import '../../l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../models/firestore_message.dart';
 import '../../services/firestore_chat_service.dart';
@@ -34,6 +36,23 @@ class _RideChatScreenState extends State<RideChatScreen> {
   final _scrollCtrl = ScrollController();
 
   String? _chatId;
+
+  Stream<List<FirestoreMessage>>? _messages;
+
+  /// Who the person you're talking to is, e.g. "អ្នកបើកបរ" — the header
+  /// shows their name, so this makes clear it's them, not you.
+  String get _otherRole => widget.isDriver
+      ? AppLocalizations.of(context).passenger
+      : AppLocalizations.of(context).driver;
+
+  /// "Ride #1215", or "Delivery #5" for delivery chats (rideId "delivery-5").
+  String get _tripLabel {
+    final l = AppLocalizations.of(context);
+    const deliveryPrefix = 'delivery-';
+    return widget.rideId.startsWith(deliveryPrefix)
+        ? '${l.delivery} #${widget.rideId.substring(deliveryPrefix.length)}'
+        : '${l.ride} #${widget.rideId}';
+  }
   bool    _loadingChat = true;
   String? _chatError;
   bool    _sending     = false;
@@ -60,7 +79,13 @@ class _RideChatScreenState extends State<RideChatScreen> {
         passengerId: widget.passengerId,
       );
       if (!mounted) return;
-      setState(() { _chatId = id; _loadingChat = false; });
+      setState(() {
+        _chatId = id;
+        // Created once — building it inside build() re-subscribed (and
+        // flashed the spinner) on every rebuild, e.g. after each send.
+        _messages = FirestoreChatService.messagesStream(id);
+        _loadingChat = false;
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() { _chatError = e.toString(); _loadingChat = false; });
@@ -175,7 +200,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                     color: context.appTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w700)),
-            Text('Ride #${widget.rideId}',
+            Text('$_otherRole · $_tripLabel',
                 style: TextStyle(
                     color: context.appTextSecondary, fontSize: 11)),
           ]),
@@ -210,14 +235,31 @@ class _RideChatScreenState extends State<RideChatScreen> {
               : Column(children: [
                   Expanded(
                     child: StreamBuilder<List<FirestoreMessage>>(
-                      stream:
-                          FirestoreChatService.messagesStream(_chatId!),
+                      stream: _messages,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
+                                ConnectionState.waiting &&
+                            !snapshot.hasData) {
                           return const Center(
                               child: CircularProgressIndicator(
                                   color: AppTheme.accent));
+                        }
+                        // A failed query (missing index, permission) used to
+                        // fall through to "No messages yet" — hiding the fact
+                        // that messages existed but couldn't be loaded.
+                        if (snapshot.hasError) {
+                          AppLog.e('RideChat', 'messages stream failed',
+                              snapshot.error, snapshot.stackTrace);
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                  'Could not load messages: ${snapshot.error}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                      color: AppTheme.danger)),
+                            ),
+                          );
                         }
                         final msgs = snapshot.data ?? [];
                         if (msgs.isNotEmpty) _scrollToBottom();
@@ -357,15 +399,6 @@ class _Bubble extends StatelessWidget {
           crossAxisAlignment:
               isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isMe)
-              Padding(
-                padding: EdgeInsets.only(bottom: 4),
-                child: Text(msg.senderName,
-                    style: TextStyle(
-                        color: AppTheme.accent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700)),
-              ),
             if (msg.isImage)
               GestureDetector(
                 onTap: () => showDialog(

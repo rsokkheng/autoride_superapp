@@ -11,6 +11,8 @@ import '../../utils/phone_utils.dart';
 import '../../models/user_model.dart';
 import '../../providers/biometric_provider.dart';
 import '../passenger/passenger_home.dart';
+import '../passenger/marketplace_screen.dart';
+import '../../l10n/app_localizations.dart';
 import '../driver/driver_home.dart';
 import '../driver/driver_approval_pending_screen.dart';
 import 'role_selection.dart';
@@ -283,6 +285,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
               SizedBox(height: 32),
 
+              // ── Guest shopping (buy/rent without an account) ─────────────
+              _GuestShopButton(
+                onTap: _loading
+                    ? null
+                    : () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
+              ),
+
+              SizedBox(height: 12),
+
               // ── Login button ────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
@@ -478,6 +490,45 @@ class _SocialButton extends StatelessWidget {
           SizedBox(width: 8),
           Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
         ]),
+      ),
+    );
+  }
+}
+
+class _GuestShopButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _GuestShopButton({required this.onTap});
+
+  static const _green = Color(0xFF16A34A);
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Material(
+      color: onTap == null ? _green.withValues(alpha: 0.5) : _green,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          child: Row(children: [
+            const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 28),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(l.continueAsGuest,
+                    style: const TextStyle(
+                        color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 2),
+                Text(l.continueAsGuestSub,
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
+              ]),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 26),
+          ]),
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/notification_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../auth/login_screen.dart';
 import 'fare_management_screen.dart';
@@ -16,6 +17,7 @@ import 'admin_banners_screen.dart';
 import 'admin_pricing_screen.dart';
 import 'admin_safety_screen.dart';
 import 'admin_transactions_screen.dart';
+import 'admin_notifications_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -28,15 +30,39 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Map<String, dynamic> _stats = {};
   bool _loading = true;
   String? _error;
+  int _unreadAlerts = 0;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Google/phone sign-in skips FCM registration; without it this phone
+    // never receives admin alert pushes. No-op if already registered.
+    NotificationService.instance.initFcm();
+    NotificationService.instance.adminAlertReceived.addListener(_loadUnread);
+  }
+
+  @override
+  void dispose() {
+    NotificationService.instance.adminAlertReceived.removeListener(_loadUnread);
+    super.dispose();
+  }
+
+  Future<void> _loadUnread() async {
+    try {
+      final n = await ApiService.getAdminUnreadCount();
+      if (mounted) setState(() => _unreadAlerts = n);
+    } catch (_) {}
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminNotificationsScreen()));
+    _loadUnread();
   }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
+    _loadUnread();
     try {
       final data = await ApiService.getAdminStats();
       if (!mounted) return;
@@ -80,6 +106,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const Text('Admin Dashboard'),
         ]),
         actions: [
+          IconButton(
+            tooltip: 'Notifications',
+            onPressed: _openNotifications,
+            icon: Badge(
+              isLabelVisible: _unreadAlerts > 0,
+              label: Text(_unreadAlerts > 99 ? '99+' : '$_unreadAlerts'),
+              backgroundColor: AppTheme.danger,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+          ),
           IconButton(icon: const Icon(Icons.refresh), onPressed: _load, tooltip: 'Refresh'),
           IconButton(
             icon: const Icon(Icons.logout),

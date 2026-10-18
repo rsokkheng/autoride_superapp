@@ -1,8 +1,14 @@
+import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart' show Color;
+import 'package:flutter/material.dart' show Color, MaterialPageRoute, ValueNotifier;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import '../main.dart' show navigatorKey;
+import '../screens/admin/admin_notifications_screen.dart';
+import '../screens/passenger/marketplace_screen.dart';
+import '../screens/passenger/my_rentals_screen.dart';
 import '../utils/app_log.dart';
 import 'api_service.dart';
 
@@ -117,6 +123,30 @@ class NotificationService {
   // Matches the backend's channel for ride_accepted / delivery_accepted
   // pushes. Sound file must exist as
   // android/app/src/main/res/raw/accepted.wav.
+  // Matches the backend's channel for every shop_* push (product orders and
+  // rentals, for both buyer and seller).
+  static const _shopChannel = AndroidNotificationChannel(
+    'shop_updates',
+    'Shop Orders & Rentals',
+    description: 'Updates on products you buy, rent or sell',
+    importance: Importance.high,
+    playSound: true,
+  );
+
+  // Matches the backend's channel for admin_* pushes — only ever sent to
+  // admin accounts, so passengers and drivers never see this channel fire.
+  static const _adminChannel = AndroidNotificationChannel(
+    'admin_alerts',
+    'Admin Alerts',
+    description: 'New shop orders, rentals, payments and cancellations',
+    importance: Importance.high,
+    playSound: true,
+  );
+
+  /// Bumped whenever an admin alert push arrives in the foreground, so the
+  /// admin dashboard can refresh its unread badge.
+  final adminAlertReceived = ValueNotifier<int>(0);
+
   static const _rideUpdatesChannel = AndroidNotificationChannel(
     'ride_updates',
     'Ride Updates',
@@ -148,9 +178,68 @@ class NotificationService {
     await androidPlugin?.createNotificationChannel(_deliveryChannel);
     await androidPlugin?.createNotificationChannel(_bookingChannel);
     await androidPlugin?.createNotificationChannel(_rideUpdatesChannel);
+    await androidPlugin?.createNotificationChannel(_shopChannel);
+    await androidPlugin?.createNotificationChannel(_adminChannel);
     await androidPlugin?.requestNotificationsPermission();
 
+    FirebaseMessaging.onMessageOpenedApp.listen((m) => openForType(m.data['type'] as String?));
+    // App launched by tapping a push: the navigator doesn't exist yet, so
+    // SplashScreen calls openPendingTap() once it has routed.
+    FirebaseMessaging.instance.getInitialMessage().then(
+      (m) => _pendingTapType = m?.data['type'] as String?,
+      onError: (Object e) => AppLog.w('FCM', 'getInitialMessage failed: $e'),
+    );
+
     _initialized = true;
+  }
+
+  String? _pendingTapType;
+
+  void openPendingTap() {
+    final type = _pendingTapType;
+    _pendingTapType = null;
+    openForType(type);
+  }
+
+  /// Opens the screen a tapped push is about (shop and admin pushes).
+  Future<void> openForType(String? type) async {
+    if (type == null || !(type.startsWith('shop_') || type.startsWith('admin_'))) return;
+    final nav = navigatorKey.currentState;
+    if (nav == null) {
+      _pendingTapType = type;
+      return;
+    }
+    if (type.startsWith('admin_')) {
+      if (await ApiService.getRole() == 'admin') {
+        nav.push(MaterialPageRoute(builder: (_) => const AdminNotificationsScreen()));
+      }
+      return;
+    }
+    final loggedIn = await ApiService.isLoggedIn();
+    nav.push(MaterialPageRoute(
+      builder: (_) => type.startsWith('shop_rental') && loggedIn
+          ? const MyRentalsScreen()
+          : const MarketplaceScreen(initialTab: 1),
+    ));
+  }
+
+  /// FCM token for a guest shopper (no account). It's sent with the order so
+  /// the server can push order updates straight to this phone.
+  Future<String?> guestFcmToken() async {
+    try {
+      final messaging = FirebaseMessaging.instance;
+      final settings = await messaging.requestPermission(alert: true, badge: true, sound: true);
+      if (settings.authorizationStatus == AuthorizationStatus.denied) return null;
+      if (defaultTargetPlatform == TargetPlatform.iOS && await messaging.getAPNSToken() == null) {
+        await Future.delayed(const Duration(seconds: 1));
+        if (await messaging.getAPNSToken() == null) return null;
+      }
+      _attachFcmListeners(messaging);
+      return await messaging.getToken();
+    } catch (e, s) {
+      AppLog.e('FCM', 'guestFcmToken failed', e, s);
+      return null;
+    }
   }
 
   // ── Push notifications (FCM) ────────────────────────────────────────────
@@ -161,6 +250,14 @@ class NotificationService {
   // and shows a system notification regardless of app state.
 
   bool _fcmInitialized = false;
+  bool _fcmListenersAttached = false;
+  int? _registeredUserId;
+  String? _registeredToken;
+  Timer? _fcmRetry;
+
+  /// The FCM token this phone last registered for the logged-in user — sent
+  /// with logout so the server stops pushing that account's alerts here.
+  String? get registeredToken => _registeredToken;
 
   /// Requests notification permission, registers the device's FCM token
   /// with the backend, and wires up foreground message handling. Call once
@@ -173,8 +270,13 @@ class NotificationService {
   bool _fcmInitializing = false;
 
   Future<void> initFcm() async {
-    if (_fcmInitialized || _fcmInitializing) return;
+    final userId = await ApiService.getUserId();
+    if (userId == null) return;
+    // Registered per user: logging in as someone else on this phone must
+    // re-send the token, or their pushes keep going to the previous account.
+    if ((_fcmInitialized && _registeredUserId == userId) || _fcmInitializing) return;
     _fcmInitializing = true;
+    _fcmRetry?.cancel();
 
     try {
       final messaging = FirebaseMessaging.instance;
@@ -200,69 +302,168 @@ class NotificationService {
           attempts++;
         }
         if (apnsToken == null) {
-          AppLog.w('FCM', 'APNS token never arrived — skipping FCM token fetch');
+          // Used to give up here for good — the token then never reached the
+          // server and this phone silently got no pushes. Retry instead.
+          AppLog.w('FCM', 'APNS token not ready yet — retrying FCM registration in 30 s');
+          _scheduleFcmRetry();
           return;
         }
       }
 
-      await _sendTokenToBackend(await messaging.getToken());
-      messaging.onTokenRefresh.listen(_sendTokenToBackend);
-
-      // App in foreground: FCM doesn't show a system notification itself,
-      // so surface it via the existing local-notification channel. Also
-      // handles data-only payloads (message.notification == null), which
-      // is what the backend's ride_requested/delivery_requested push
-      // looks like — falling back to that silently was the actual cause
-      // of drivers never seeing/hearing new-booking alerts.
-      FirebaseMessaging.onMessage.listen((message) {
-        final data = message.data;
-        final type = data['type'] as String?;
-        final title = message.notification?.title ?? data['title'] as String?;
-        final body  = message.notification?.body  ?? data['body']  as String? ??
-            [data['pickup'], data['destination']].where((s) => s != null).join(' → ');
-        if ((title == null || title.isEmpty) && body.isEmpty) return;
-
-        // Native push sound doesn't play while the app is foregrounded, so
-        // play the matching local asset explicitly. data.sound is sent by
-        // the backend; fall back to the type map if it's missing.
-        final soundAsset = data['sound'] as String? ?? _typeSounds[type]?.asset;
-        if (soundAsset != null) {
-          _audioPlayer.play(AssetSource('sounds/$soundAsset.wav'));
-        }
-
-        if (type == 'ride_requested' || type == 'delivery_requested') {
-          showRideRequest(
-            passengerName: data['passenger_name'] as String? ?? 'New request',
-            pickup:        data['pickup'] as String? ?? '',
-            destination:   data['destination'] as String? ?? '',
-            fare:          data['fare'] as String? ?? '',
-          );
-        } else if (type == 'ride_accepted' || type == 'delivery_accepted') {
-          showRideAccepted(title: title ?? 'ROTEH', body: body);
-        } else {
-          showTripUpdate(title: title ?? 'ROTEH', body: body, payload: type);
-        }
-      });
+      _attachFcmListeners(messaging);
+      final fcmToken = await messaging.getToken();
+      if (fcmToken == null || !await _sendTokenToBackend(fcmToken)) {
+        _scheduleFcmRetry();
+        return;
+      }
+      _registeredUserId = userId;
       _fcmInitialized = true;
     } catch (e, s) {
       AppLog.e('FCM', 'initFcm failed', e, s);
-      // Leave _fcmInitialized false so a later call (e.g. next screen,
-      // next app launch) can retry.
+      _scheduleFcmRetry();
     } finally {
       _fcmInitializing = false;
     }
   }
 
-  Future<void> _sendTokenToBackend(String? fcmToken) async {
-    if (fcmToken == null || fcmToken.isEmpty) return;
-    await ApiService.saveFcmToken(
+  void _scheduleFcmRetry() {
+    _fcmRetry?.cancel();
+    _fcmRetry = Timer(const Duration(seconds: 30), initFcm);
+  }
+
+  /// Forget this phone's registration — call when the session ends, so the
+  /// next login (possibly a different user) registers again.
+  void resetFcmRegistration() {
+    _fcmRetry?.cancel();
+    _fcmInitialized   = false;
+    _registeredUserId = null;
+    _registeredToken  = null;
+  }
+
+  // Attached once per app run — initFcm() can run again (retry, next login),
+  // and each extra listener would show every notification twice.
+  void _attachFcmListeners(FirebaseMessaging messaging) {
+    if (_fcmListenersAttached) return;
+    _fcmListenersAttached = true;
+
+    messaging.onTokenRefresh.listen(_sendTokenToBackend);
+
+    // App in foreground: FCM doesn't show a system notification itself,
+    // so surface it via the existing local-notification channel. Also
+    // handles data-only payloads (message.notification == null), which
+    // is what the backend's ride_requested/delivery_requested push
+    // looks like — falling back to that silently was the actual cause
+    // of drivers never seeing/hearing new-booking alerts.
+    FirebaseMessaging.onMessage.listen((message) {
+      final data = message.data;
+      final type = data['type'] as String?;
+      final title = message.notification?.title ?? data['title'] as String?;
+      final body  = message.notification?.body  ?? data['body']  as String? ??
+          [data['pickup'], data['destination']].where((s) => s != null).join(' → ');
+      if ((title == null || title.isEmpty) && body.isEmpty) return;
+
+      // Native push sound doesn't play while the app is foregrounded, so
+      // play the matching local asset explicitly. data.sound is sent by
+      // the backend; fall back to the type map if it's missing.
+      final soundAsset = data['sound'] as String? ?? _typeSounds[type]?.asset;
+      if (soundAsset != null) {
+        _audioPlayer.play(AssetSource('sounds/$soundAsset.wav'));
+      }
+
+      if (type == 'ride_requested' || type == 'delivery_requested') {
+        showRideRequest(
+          passengerName: data['passenger_name'] as String? ?? 'New request',
+          pickup:        data['pickup'] as String? ?? '',
+          destination:   data['destination'] as String? ?? '',
+          fare:          data['fare'] as String? ?? '',
+        );
+      } else if (type == 'ride_accepted' || type == 'delivery_accepted') {
+        showRideAccepted(title: title ?? 'ROTEH', body: body);
+      } else if (type != null && type.startsWith('shop_')) {
+        showShopUpdate(title: title ?? 'ROTEH', body: body, type: type);
+      } else if (type != null && type.startsWith('admin_')) {
+        adminAlertReceived.value++;
+        showAdminAlert(title: title ?? 'ROTEH Admin', body: body, type: type);
+      } else {
+        showTripUpdate(title: title ?? 'ROTEH', body: body, payload: type);
+      }
+    });
+  }
+
+  Future<bool> _sendTokenToBackend(String? fcmToken) async {
+    if (fcmToken == null || fcmToken.isEmpty) return false;
+    final saved = await ApiService.saveFcmToken(
       fcmToken,
       platform: defaultTargetPlatform == TargetPlatform.iOS ? 'ios' : 'android',
     );
+    if (saved) {
+      _registeredToken = fcmToken;
+      AppLog.d('FCM', 'Push token registered with the server (${fcmToken.substring(0, 8)}…)');
+    }
+    return saved;
   }
 
   void _onNotificationTapped(NotificationResponse response) {
     if (kDebugMode) print('Notification tapped: ${response.payload}');
+    openForType(response.payload);
+  }
+
+  Future<void> showAdminAlert({
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    await _plugin.show(
+      6,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _adminChannel.id,
+          _adminChannel.name,
+          channelDescription: _adminChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@drawable/ic_notification',
+          color: const Color(0xFF00D4AA),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: type,
+    );
+  }
+
+  Future<void> showShopUpdate({
+    required String title,
+    required String body,
+    required String type,
+  }) async {
+    await _plugin.show(
+      5,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _shopChannel.id,
+          _shopChannel.name,
+          channelDescription: _shopChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@drawable/ic_notification',
+          color: const Color(0xFF00D4AA),
+        ),
+        iOS: const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
+      payload: type,
+    );
   }
 
   Future<void> showRideRequest({

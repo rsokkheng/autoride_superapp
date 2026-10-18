@@ -375,6 +375,7 @@ class MarketplaceOrderModel {
   final String? renterPhone;
   final String? sellerName;
   final String? sellerPhone;
+  final String source;          // marketplace_order | car_rental
 
   const MarketplaceOrderModel({
     required this.id,
@@ -399,6 +400,7 @@ class MarketplaceOrderModel {
     this.renterPhone,
     this.sellerName,
     this.sellerPhone,
+    this.source = 'marketplace_order',
   });
 
   // total_price_usd = unit_price_usd × days × quantity + accessories_total_usd
@@ -448,6 +450,7 @@ class MarketplaceOrderModel {
       renterPhone:   (buyer ?? renter)?['phone'] as String?,
       sellerName:    seller?['name']  as String?,
       sellerPhone:   seller?['phone'] as String?,
+      source:        json['source'] as String? ?? 'marketplace_order',
     );
   }
 }

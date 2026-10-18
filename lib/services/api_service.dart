@@ -12,6 +12,7 @@ import 'package:uuid/uuid.dart';
 import '../utils/app_log.dart';
 import 'auth_service.dart';
 import 'realtime_service.dart';
+import 'notification_service.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/vehicle_type_model.dart';
@@ -436,9 +437,10 @@ class ApiService {
   // Single endpoint for all roles — the backend now auto-inserts into the
   // driver_devices multi-device registry when the caller is a driver, so
   // there's no separate driver-specific call needed on the client side.
-  static Future<void> saveFcmToken(String fcmToken, {required String platform}) async {
+  /// Returns whether the server stored the token.
+  static Future<bool> saveFcmToken(String fcmToken, {required String platform}) async {
     final token = await getToken();
-    if (token == null) return;
+    if (token == null) return false;
     try {
       final raw = await _rawPost('/auth/fcm-token', {
         'fcm_token': fcmToken,
@@ -446,9 +448,12 @@ class ApiService {
       }, token: token);
       if (raw.statusCode != 200 && raw.statusCode != 201) {
         AppLog.w('FCM', 'saveFcmToken failed: HTTP ${raw.statusCode} ${raw.body}');
+        return false;
       }
+      return true;
     } catch (e, s) {
       AppLog.e('FCM', 'saveFcmToken failed', e, s);
+      return false;
     }
   }
 
@@ -458,7 +463,12 @@ class ApiService {
     try {
       final token = await getToken();
       if (token != null) {
-        await _rawPost('/auth/logout', {}, token: token);
+        // Unlink this phone's push token, or the account's ride alerts keep
+        // arriving here after logout.
+        final fcmToken = NotificationService.instance.registeredToken;
+        await _rawPost('/auth/logout', {
+          if (fcmToken != null) 'fcm_token': fcmToken,
+        }, token: token);
       }
     } catch (e, s) {
       AppLog.w('Auth', 'logout server call failed (session cleared anyway): $e');
@@ -2844,9 +2854,16 @@ class ApiService {
     String? rentEndDate,
     String? promoCode,
     List<int> accessoryIds = const [],
+    String? guestName,
+    String? guestPhone,
+    String? deliveryAddress,  // set => delivery, null => pickup
+    double? deliveryLat,
+    double? deliveryLng,
   }) async {
     final token = await getToken();
     final body = <String, dynamic>{
+      if (token == null) ...await _guestShopperFields(guestName, guestPhone),
+      ..._fulfillmentFields(deliveryAddress, deliveryLat, deliveryLng),
       'order_type':     orderType,
       'quantity':       quantity,
       'payment_method': paymentMethod,
@@ -2880,10 +2897,16 @@ class ApiService {
     String  paymentMethod = 'cash',
     String? notes,
     String? promoCode,
+    String? guestName,
+    String? guestPhone,
+    String? deliveryAddress,  // set => delivery, null => pickup
+    double? deliveryLat,
+    double? deliveryLng,
   }) async {
     final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
     final body = <String, dynamic>{
+      if (token == null) ...await _guestShopperFields(guestName, guestPhone),
+      ..._fulfillmentFields(deliveryAddress, deliveryLat, deliveryLng),
       'items': items.map((i) => i.toJson()).toList(),
       'payment_method': paymentMethod,
       if (notes     != null) 'notes':      notes,
@@ -2939,7 +2962,76 @@ class ApiService {
 
   static Future<void> confirmMarketplaceOrder(int id)  => _marketplaceOrderAction('/marketplace/orders/$id/confirm');
   static Future<void> completeMarketplaceOrder(int id) => _marketplaceOrderAction('/marketplace/orders/$id/complete');
-  static Future<void> cancelMarketplaceOrder(int id)   => _marketplaceOrderAction('/marketplace/orders/$id/cancel');
+  static Future<void> cancelMarketplaceOrder(int id) async {
+    final token = await getToken();
+    if (token != null) return _marketplaceOrderAction('/marketplace/orders/$id/cancel');
+    final raw = await _rawPost('/marketplace/orders/$id/cancel', {'guest_token': await getGuestToken()});
+    if (raw.statusCode != 200 && raw.statusCode != 201) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Cancel failed (${raw.statusCode}).', raw.statusCode);
+    }
+  }
+
+  // ── Guest shopping (buy/rent without an account) ─────────────────────────
+
+  static const String _keyGuestToken = 'guest_shop_token';
+
+  /// Random per-install secret that ties guest orders to this phone, so a
+  /// guest can see and cancel their own orders. Survives logout on purpose.
+  static Future<String> getGuestToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = prefs.getString(_keyGuestToken);
+    if (existing != null && existing.length >= 20) return existing;
+    final token = const Uuid().v4().replaceAll('-', '') + const Uuid().v4().replaceAll('-', '').substring(0, 16);
+    await prefs.setString(_keyGuestToken, token);
+    return token;
+  }
+
+  static Map<String, dynamic> _fulfillmentFields(String? address, double? lat, double? lng) =>
+      address == null || address.trim().isEmpty
+          ? {'fulfillment': 'pickup'}
+          : {
+              'fulfillment':      'delivery',
+              'delivery_address': address.trim(),
+              if (lat != null) 'delivery_lat': lat,
+              if (lng != null) 'delivery_lng': lng,
+            };
+
+  static Future<Map<String, dynamic>> _guestShopperFields(String? name, String? phone) async {
+    if (name == null || name.trim().isEmpty || phone == null || phone.trim().isEmpty) {
+      throw const ApiException('Please enter your name and phone number.', 422);
+    }
+    final fcmToken = await NotificationService.instance.guestFcmToken();
+    return {
+      'guest_name':  name.trim(),
+      'guest_phone': phone.trim(),
+      'guest_token': await getGuestToken(),
+      if (fcmToken != null) 'fcm_token': fcmToken,
+    };
+  }
+
+  /// GET /marketplace/guest-orders — purchases and rentals placed from this
+  /// phone without logging in.
+  static Future<({List<MarketplaceOrderModel> orders, List<MarketplaceOrderModel> rentals})>
+      getGuestShopOrders() async {
+    final guestToken = await getGuestToken();
+    final raw = await _rawGet('/marketplace/guest-orders?guest_token=${Uri.encodeQueryComponent(guestToken)}');
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed to load orders.', raw.statusCode);
+    }
+    final data = body['data'] as Map<String, dynamic>? ?? body;
+    List<MarketplaceOrderModel> parse(Object? list) => (list as List<dynamic>? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(MarketplaceOrderModel.fromJson)
+        .toList();
+    return (orders: parse(data['orders']), rentals: parse(data['rentals']));
+  }
 
   // ── Driver tasks ──────────────────────────────────────────────────────────
 
@@ -3233,6 +3325,7 @@ class ApiService {
     // Drop the realtime socket and the Firebase session tied to this user —
     // both are keyed to the Laravel user, so the next login must start fresh.
     RealtimeService.instance.disconnect();
+    NotificationService.instance.resetFcmRegistration();
     await AuthService.signOutFirebase();
   }
 
@@ -3814,6 +3907,18 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
+  // ── Cancellation policy ───────────────────────────────────────────────────
+
+  /// Returns `{tiers: [{stage, from_minute, to_minute, fee_khr}]}` in display order.
+  static Future<Map<String, dynamic>> getCancellationPolicy() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/rides/cancellation-policy', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
   // ── Driver arrive timeout ─────────────────────────────────────────────────
 
   static Future<void> reportDriverTimeout(int rideId, {int timeoutMinutes = 5}) async {
@@ -4307,9 +4412,13 @@ class ApiService {
     double? pickupLng,
     String? paymentMethod, // cash | wallet | aba | wing | other_online
     String? notes,
+    String? promoCode,
+    String? guestName,
+    String? guestPhone,
   }) async {
     final token = await getToken();
     final raw = await _rawPost('/rentals', {
+      if (token == null) ...await _guestShopperFields(guestName, guestPhone),
       if (marketplaceProductId != null) 'marketplace_product_id': marketplaceProductId,
       if (vehicleType != null) 'vehicle_type': vehicleType,
       'pickup_location':  pickupLocation,
@@ -4319,6 +4428,7 @@ class ApiService {
       'end_date':         _fmtDate(endDate),
       if (paymentMethod != null) 'payment_method': paymentMethod,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (promoCode != null) 'promo_code': promoCode,
     }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode != 200 && raw.statusCode != 201) {
@@ -4370,8 +4480,8 @@ class ApiService {
 
   static Future<void> cancelCarRental(int id) async {
     final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw  = await _rawPost('/rentals/$id/cancel', {}, token: token);
+    final raw  = await _rawPost('/rentals/$id/cancel',
+        token == null ? {'guest_token': await getGuestToken()} : {}, token: token);
     if (raw.statusCode != 200 && raw.statusCode != 201) {
       final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
       throw ApiException(body['message'] as String? ?? 'Cancel failed.', raw.statusCode);
@@ -4423,20 +4533,23 @@ class ApiService {
 
   // ── Promo code ───────────────────────────────────────────────────────────────
 
+  /// [orderAmount] is in riel. Guests can only check product coupons
+  /// (serviceType product_purchase / product_rent).
   static Future<Map<String, dynamic>> applyPromoCode(
-      String code, int orderAmount, {String serviceType = 'ride'}) async {
+      String code, int orderAmount, {String serviceType = 'ride', String? guestPhone}) async {
     final token = await getToken();
-    if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw  = await _rawPost('/promo/apply', {
       'code':         code,
       'service_type': serviceType,
       'order_amount': orderAmount,
+      if (token == null && guestPhone != null && guestPhone.trim().isNotEmpty) 'guest_phone': guestPhone.trim(),
     }, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode != 200) {
       throw ApiException(body['message'] as String? ?? 'Invalid promo code', raw.statusCode);
     }
-    return body;
+    final data = body['data'];
+    return data is Map<String, dynamic> ? data : body;
   }
 
   // ── Social Login ─────────────────────────────────────────────────────────────
@@ -4862,6 +4975,51 @@ class ApiService {
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) return body['data'] as Map<String, dynamic>? ?? body;
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+  }
+
+  // ── Admin — Shop-order alerts (same inbox as the web panel's bell) ─────────
+
+  /// [category]: purchase | rental | system, or null for all.
+  static Future<Map<String, dynamic>> getAdminNotifications({String? category, int page = 1}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final query = 'page=$page${category != null ? '&category=$category' : ''}';
+    final raw  = await _rawGet('/admin/notifications?$query', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode == 200) return body['data'] as Map<String, dynamic>? ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed to load notifications.', raw.statusCode);
+  }
+
+  static Future<int> getAdminUnreadCount() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/admin/notifications/unread-count', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
+    final counts = (body['data'] as Map<String, dynamic>?)?['counts'] as Map<String, dynamic>?;
+    return (counts?['all'] as num?)?.toInt() ?? 0;
+  }
+
+  static Future<void> markAdminNotificationRead(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/admin/notifications/$id/read', {}, token: token);
+    if (raw.statusCode != 200) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
+  }
+
+  static Future<void> markAllAdminNotificationsRead() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/admin/notifications/read-all', {}, token: token);
+    if (raw.statusCode != 200) {
+      final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
+      throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
+    }
   }
 
   // ── Admin — Fare management ───────────────────────────────────────────────

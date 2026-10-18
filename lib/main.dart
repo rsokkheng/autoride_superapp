@@ -84,6 +84,22 @@ void main() async {
     // itself throws "[core/duplicate-app] ... already exists" instead.
     if (e.code != 'duplicate-app') rethrow;
   }
+  // Test iOS APNs + FCM
+final messaging = FirebaseMessaging.instance;
+
+await messaging.requestPermission(
+  alert: true,
+  badge: true,
+  sound: true,
+);
+
+final apnsToken = await messaging.getAPNSToken();
+final fcmToken = await messaging.getToken();
+
+print('========== PUSH TEST ==========');
+print('FCM Token length: ${fcmToken?.length}');
+print('FCM Token prefix: ${fcmToken != null ? fcmToken.substring(0, 8) : "NULL"}');
+print('================================');
 
   // Must be registered before runApp, right after Firebase is ready.
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

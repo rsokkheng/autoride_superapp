@@ -60,11 +60,12 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDm7mk3Nqxp1dYE8E-Nnsv-EIpusTOy7BE',
-    appId: '1:302191973529:ios:35e385a44a6b42cbc7d408',
+    appId: '1:302191973529:ios:f1b5d4f2bcf1314ec7d408',
     messagingSenderId: '302191973529',
     projectId: 'auto-ride-supperapp',
     storageBucket: 'auto-ride-supperapp.firebasestorage.app',
-    iosBundleId: 'com.example.autorideSuperapp',
+    iosClientId: '302191973529-02stgdte8n51t2hr3vdic9tnlnq94lk0.apps.googleusercontent.com',
+    iosBundleId: 'com.example.autorideSupperApp',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

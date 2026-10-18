@@ -18,6 +18,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../widgets/roteh_location_map.dart';
 import '../../widgets/guest_fields.dart';
 import '../../widgets/location_picker_screen.dart';
+import '../auth/login_screen.dart';
 
 // ── Tokens ─────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
@@ -160,11 +161,15 @@ class MarketplaceScreen extends StatefulWidget {
 class _MarketplaceScreenState extends State<MarketplaceScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tab;
+  bool _isGuest = false;
 
   @override
   void initState() {
     super.initState();
     _tab = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
+    ApiService.isLoggedIn().then((v) {
+      if (mounted) setState(() => _isGuest = !v);
+    });
   }
   @override
   void dispose() { _tab.dispose(); super.dispose(); }
@@ -205,7 +210,19 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
           Text(AppLocalizations.of(context).marketplace, style: TextStyle(
               color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
         ]),
-        actions: const [],
+        actions: [
+          if (_isGuest)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen())),
+                icon: const Icon(Icons.login_rounded, size: 18, color: _green),
+                label: Text(AppLocalizations.of(context).signIn,
+                    style: const TextStyle(color: _green, fontWeight: FontWeight.w700)),
+              ),
+            ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: TabBar(
@@ -2961,6 +2978,9 @@ class _OrderScreenState extends State<_OrderScreen> {
   String? _appliedCode;
   String? _couponError;
   int     _discountKhr = 0;
+  bool    _isGuest = false;
+  final   _guestNameCtrl  = TextEditingController();
+  final   _guestPhoneCtrl = TextEditingController();
   _LocType  _locType = _LocType.pickup;
   String    _deliveryAddress = '';
   LatLng?   _deliveryLatLng;
@@ -3023,6 +3043,13 @@ class _OrderScreenState extends State<_OrderScreen> {
   void initState() {
     super.initState();
     if (!_isVehicleRental) _loadFilterRefData();
+    ApiService.isLoggedIn().then((v) {
+      if (!mounted || v) return;
+      setState(() {
+        _isGuest = true;
+        if (_pay == 'wallet') _pay = 'cash';
+      });
+    });
   }
 
   Future<void> _loadFilterRefData() async {
@@ -3101,6 +3128,9 @@ class _OrderScreenState extends State<_OrderScreen> {
   // generic marketplace order — that's what makes them show up correctly for
   // the vehicle's driver/owner to accept.
   bool get _isVehicleRental => _isRent;
+  bool get _showLocation => _isVehicleRental || _isGuest;
+  String? get _orderDeliveryAddress =>
+      _showLocation && _locType == _LocType.delivery ? _deliveryAddress : null;
   bool get _datesOk => !_isRent || _start != null;
   DateTime? get _end => _start?.add(Duration(days: _duration.days));
   int  get _days    => _isRent ? _duration.days : 0;
@@ -3130,6 +3160,8 @@ class _OrderScreenState extends State<_OrderScreen> {
   void dispose() {
     _notes.dispose();
     _couponCtrl.dispose();
+    _guestNameCtrl.dispose();
+    _guestPhoneCtrl.dispose();
     super.dispose();
   }
 
@@ -3140,7 +3172,8 @@ class _OrderScreenState extends State<_OrderScreen> {
     try {
       final subtotalKhr = (_subtotal * 4100).round();
       final result = await ApiService.applyPromoCode(code, subtotalKhr,
-          serviceType: _isRent ? 'rental' : 'marketplace');
+          serviceType: _isRent ? 'product_rent' : 'product_purchase',
+          guestPhone: _isGuest ? _guestPhoneCtrl.text : null);
       if (!mounted) return;
       setState(() {
         _discountKhr    = (result['discount_amount'] as num? ?? 0).toInt();
@@ -3360,8 +3393,14 @@ class _OrderScreenState extends State<_OrderScreen> {
       setState(() => _err = AppLocalizations.of(context).selectRentalDatesError);
       return;
     }
-    if (_isVehicleRental && _locType == _LocType.delivery && _deliveryAddress.isEmpty) {
+    if (_showLocation && _locType == _LocType.delivery && _deliveryAddress.isEmpty) {
       setState(() => _err = AppLocalizations.of(context).setDeliveryLocationError);
+      return;
+    }
+    final guestName  = _isGuest ? _guestNameCtrl.text.trim()  : null;
+    final guestPhone = _isGuest ? _guestPhoneCtrl.text.trim() : null;
+    if (_isGuest && (guestName!.isEmpty || guestPhone!.length < 8)) {
+      setState(() => _err = AppLocalizations.of(context).fillRequiredFields);
       return;
     }
     setState(() { _busy = true; _err = null; });
@@ -3389,6 +3428,9 @@ class _OrderScreenState extends State<_OrderScreen> {
           endDate:        _end!,
           paymentMethod:  _pay,
           notes:          _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+          promoCode:      _appliedCode,
+          guestName:      guestName,
+          guestPhone:     guestPhone,
         );
       } else if (_extraItems.isEmpty) {
         await ApiService.placeMarketplaceOrder(_currentProduct.id,
@@ -3400,6 +3442,11 @@ class _OrderScreenState extends State<_OrderScreen> {
           rentEndDate:   _isRent ? DateFormat('yyyy-MM-dd').format(_end!)   : null,
           promoCode:     _appliedCode,
           accessoryIds:  _selectedAccessoryIds.toList(),
+          guestName:     guestName,
+          guestPhone:    guestPhone,
+          deliveryAddress: _orderDeliveryAddress,
+          deliveryLat:     _orderDeliveryAddress != null ? _deliveryLatLng?.latitude  : null,
+          deliveryLng:     _orderDeliveryAddress != null ? _deliveryLatLng?.longitude : null,
         );
       } else {
         // Multiple items — atomic checkout: all orders succeed together or
@@ -3416,6 +3463,11 @@ class _OrderScreenState extends State<_OrderScreen> {
             paymentMethod: _pay,
             notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
             promoCode:     _appliedCode,
+            guestName:     guestName,
+            guestPhone:    guestPhone,
+            deliveryAddress: _orderDeliveryAddress,
+            deliveryLat:     _orderDeliveryAddress != null ? _deliveryLatLng?.latitude  : null,
+            deliveryLng:     _orderDeliveryAddress != null ? _deliveryLatLng?.longitude : null,
           );
         } on ApiException catch (e) {
           // TEMPORARY: /marketplace/checkout isn't deployed on the live
@@ -3431,6 +3483,11 @@ class _OrderScreenState extends State<_OrderScreen> {
             notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
             promoCode:     _appliedCode,
             accessoryIds:  _selectedAccessoryIds.toList(),
+            guestName:     guestName,
+            guestPhone:    guestPhone,
+            deliveryAddress: _orderDeliveryAddress,
+            deliveryLat:     _orderDeliveryAddress != null ? _deliveryLatLng?.latitude  : null,
+            deliveryLng:     _orderDeliveryAddress != null ? _deliveryLatLng?.longitude : null,
           );
           for (final item in _extraItems) {
             await ApiService.placeMarketplaceOrder(item.id,
@@ -3438,6 +3495,11 @@ class _OrderScreenState extends State<_OrderScreen> {
               quantity:      _extraQty[item.id] ?? 1,
               paymentMethod: _pay,
               notes:         _notes.text.trim().isEmpty ? null : _notes.text.trim(),
+              guestName:     guestName,
+              guestPhone:    guestPhone,
+              deliveryAddress: _orderDeliveryAddress,
+              deliveryLat:     _orderDeliveryAddress != null ? _deliveryLatLng?.latitude  : null,
+              deliveryLng:     _orderDeliveryAddress != null ? _deliveryLatLng?.longitude : null,
             );
           }
         }
@@ -3447,7 +3509,7 @@ class _OrderScreenState extends State<_OrderScreen> {
           content: Text(AppLocalizations.of(context).orderPlacedSuccess), backgroundColor: _green));
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (_) => _isVehicleRental
+          builder: (_) => _isVehicleRental && !_isGuest
               ? const MyRentalsScreen()
               : const MarketplaceScreen(initialTab: 1),
         ),
@@ -3518,11 +3580,13 @@ class _OrderScreenState extends State<_OrderScreen> {
     );
   }
 
+  // Guests have no in-app wallet.
   List<(String, String, IconData, String)> _pays(AppLocalizations l) => [
     ('cash',         l.cash,          Icons.money_rounded,             l.payInCashOnPickup),
     ('aba',          'ABA',           Icons.account_balance_rounded,   l.abaMobileBanking),
     ('wing',         'Wing',          Icons.account_balance_wallet_rounded, l.wingMobileWallet),
-    ('wallet',       l.walletLabel,   Icons.wallet_rounded,            l.inAppWalletBalance),
+    if (!_isGuest)
+      ('wallet',     l.walletLabel,   Icons.wallet_rounded,            l.inAppWalletBalance),
     ('other_online', l.onlineLabel,   Icons.phone_android_rounded,     l.otherOnlinePayment),
   ];
 
@@ -3753,9 +3817,9 @@ class _OrderScreenState extends State<_OrderScreen> {
             ],
             const SizedBox(height: 16),
 
-            // Location (vehicle rentals only — books via /rentals), matching
-            // the Car Rental page's Location Type + embedded map.
-            if (_isVehicleRental) ...[
+            // Location — every rental, plus guest purchases (pick up from the
+            // seller or deliver to an address), same Location Type + map UI.
+            if (_showLocation) ...[
               _FormLabel(AppLocalizations.of(context).location),
               const SizedBox(height: 10),
               _OrderDropdownTile(
@@ -4015,6 +4079,11 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ]),
                 ),
               ),
+              const SizedBox(height: 16),
+            ],
+
+            if (_isGuest) ...[
+              GuestFields(nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
               const SizedBox(height: 16),
             ],
 
@@ -4495,6 +4564,7 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
   List<MarketplaceOrderModel> _buying  = [];
   List<MarketplaceOrderModel> _selling = [];
   bool _loading = true;
+  bool _isGuest = false;
   String? _error;
 
   @override
@@ -4509,6 +4579,16 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
+      if (!await ApiService.isLoggedIn()) {
+        final guest = await ApiService.getGuestShopOrders();
+        if (mounted) setState(() {
+          _isGuest = true;
+          _buying  = guest.orders;
+          _selling = guest.rentals;
+          _loading = false;
+        });
+        return;
+      }
       final results = await Future.wait([
         ApiService.getMyMarketplaceOrders(type: 'buying'),
         ApiService.getMyMarketplaceOrders(type: 'rental'),
@@ -4530,7 +4610,10 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
       switch (a) {
         case 'confirm':  await ApiService.confirmMarketplaceOrder(o.id);
         case 'complete': await ApiService.completeMarketplaceOrder(o.id);
-        case 'cancel':   await ApiService.cancelMarketplaceOrder(o.id);
+        case 'cancel':
+          o.source == 'car_rental'
+              ? await ApiService.cancelCarRental(o.id)
+              : await ApiService.cancelMarketplaceOrder(o.id);
       }
       _load();
     } on ApiException catch (e) {
@@ -4546,6 +4629,18 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
     if (_error != null) return _ErrorState(message: _error!, onRetry: _load);
 
     return Column(children: [
+      if (_isGuest)
+        Container(
+          width: double.infinity,
+          color: _green.withValues(alpha: 0.08),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(children: [
+            const Icon(Icons.person_outline_rounded, color: _green, size: 16),
+            const SizedBox(width: 8),
+            Expanded(child: Text(AppLocalizations.of(context).guestShoppingNotice,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12))),
+          ]),
+        ),
       Container(
         color: context.appSurface,
         child: TabBar(
@@ -4560,8 +4655,8 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
         ),
       ),
       Expanded(child: TabBarView(controller: _tc, children: [
-        _OrderList(orders: _buying,  isSeller: false, onAction: _action, onRefresh: _load),
-        _OrderList(orders: _selling, isSeller: false, onAction: _action, onRefresh: _load),
+        _OrderList(orders: _buying,  isSeller: false, isGuest: _isGuest, onAction: _action, onRefresh: _load),
+        _OrderList(orders: _selling, isSeller: false, isGuest: _isGuest, onAction: _action, onRefresh: _load),
       ])),
     ]);
   }
@@ -4570,10 +4665,11 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
 class _OrderList extends StatelessWidget {
   final List<MarketplaceOrderModel> orders;
   final bool isSeller;
+  final bool isGuest;
   final void Function(MarketplaceOrderModel, String) onAction;
   final Future<void> Function() onRefresh;
   const _OrderList({required this.orders, required this.isSeller,
-      required this.onAction, required this.onRefresh});
+      this.isGuest = false, required this.onAction, required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -4590,7 +4686,7 @@ class _OrderList extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         itemCount: orders.length,
         itemBuilder: (_, i) =>
-            _OrderCard(order: orders[i], isSeller: isSeller, onAction: onAction),
+            _OrderCard(order: orders[i], isSeller: isSeller, isGuest: isGuest, onAction: onAction),
       ),
     );
   }
@@ -4599,8 +4695,11 @@ class _OrderList extends StatelessWidget {
 class _OrderCard extends StatelessWidget {
   final MarketplaceOrderModel order;
   final bool isSeller;
+  // Guests can only cancel — completing needs an account on the server.
+  final bool isGuest;
   final void Function(MarketplaceOrderModel, String) onAction;
-  const _OrderCard({required this.order, required this.isSeller, required this.onAction});
+  const _OrderCard({required this.order, required this.isSeller,
+      this.isGuest = false, required this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -4709,9 +4808,11 @@ class _OrderCard extends StatelessWidget {
                     () => onAction(o, 'confirm')),
                 const SizedBox(width: 8),
               ],
-              _ActionPill(AppLocalizations.of(context).done, const Color(0xFF007AFF), Icons.task_alt_rounded,
-                  () => onAction(o, 'complete')),
-              const SizedBox(width: 8),
+              if (!isGuest) ...[
+                _ActionPill(AppLocalizations.of(context).done, const Color(0xFF007AFF), Icons.task_alt_rounded,
+                    () => onAction(o, 'complete')),
+                const SizedBox(width: 8),
+              ],
               _ActionPill(AppLocalizations.of(context).cancel, Colors.red, Icons.cancel_outlined,
                   () => onAction(o, 'cancel')),
             ],
