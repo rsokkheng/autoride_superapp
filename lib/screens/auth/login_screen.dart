@@ -5,14 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
+import '../../widgets/guest_shop_button.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../utils/phone_utils.dart';
 import '../../models/user_model.dart';
 import '../../providers/biometric_provider.dart';
 import '../passenger/passenger_home.dart';
-import '../passenger/marketplace_screen.dart';
-import '../../l10n/app_localizations.dart';
 import '../driver/driver_home.dart';
 import '../driver/driver_approval_pending_screen.dart';
 import 'role_selection.dart';
@@ -20,8 +20,12 @@ import 'register_screen.dart';
 import 'account_switcher_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
+/// Sign-in method to launch as soon as the screen opens (from WelcomeScreen).
+enum LoginStart { phone, google }
+
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  final LoginStart? start;
+  const LoginScreen({super.key, this.start});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -33,6 +37,18 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePass   = true;
   bool _loading       = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final start = widget.start;
+    if (start != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        start == LoginStart.phone ? _phoneLogin() : _googleLogin();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -185,348 +201,258 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: 32),
+  static const _green = GuestShopButton.green;
 
-              // ── Logo ────────────────────────────────────────────────────
-              Row(children: [
-                Image.asset(
-                  'assets/library/icon_fa.png',
-                  width: 48,
-                  height: 48,
-                ),
-                SizedBox(width: 12),
-                Text('ROTEH APP', style: TextStyle(color: AppTheme.accent, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                Spacer(),
-                LanguagePickerButton(),
-              ]),
+  bool _showDemo = false;
 
-              SizedBox(height: 52),
+  void _fillDemo(String email) => setState(() {
+        _emailCtrl.text = email;
+        _passwordCtrl.text = 'password';
+        _showDemo = false;
+      });
 
-              // ── Error banner ────────────────────────────────────────────
-              if (_error != null) ...[
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.danger.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.danger.withValues(alpha: 0.4)),
-                  ),
-                  child: Row(children: [
-                    Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
-                    SizedBox(width: 10),
-                    Expanded(child: Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13))),
-                  ]),
-                ),
-                SizedBox(height: 20),
-              ],
-
-              // ── Email ───────────────────────────────────────────────────
-              Text('Email', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              SizedBox(height: 8),
-              TextField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                autocorrect: false,
-                style: TextStyle(color: context.appTextPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Enter your email',
-                  prefixIcon: Icon(Icons.email_outlined, color: context.appTextSecondary, size: 20),
-                  filled: true,
-                  fillColor: context.appSurface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: AppTheme.accent, width: 1.5),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 18),
-
-              // ── Password ────────────────────────────────────────────────
-              Text('Password', style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
-              SizedBox(height: 8),
-              TextField(
-                controller: _passwordCtrl,
-                obscureText: _obscurePass,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _login(),
-                style: TextStyle(color: context.appTextPrimary),
-                decoration: InputDecoration(
-                  hintText: 'Enter your password',
-                  prefixIcon: Icon(Icons.lock_outline, color: context.appTextSecondary, size: 20),
-                  suffixIcon: GestureDetector(
-                    onTap: () => setState(() => _obscurePass = !_obscurePass),
-                    child: Icon(
-                      _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                      color: context.appTextSecondary,
-                      size: 20,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: context.appSurface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: AppTheme.accent, width: 1.5),
-                  ),
-                ),
-              ),
-
-              SizedBox(height: 32),
-
-              // ── Guest shopping (buy/rent without an account) ─────────────
-              _GuestShopButton(
-                onTap: _loading
-                    ? null
-                    : () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
-              ),
-
-              SizedBox(height: 12),
-
-              // ── Login button ────────────────────────────────────────────
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
-                    disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.5),
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: _loading
-                      ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: AppTheme.primary, strokeWidth: 2.5))
-                      : Text('Sign In', style: TextStyle(color: AppTheme.primary, fontSize: 16, fontWeight: FontWeight.w800)),
-                ),
-              ),
-
-              SizedBox(height: 20),
-
-              // ── Divider ─────────────────────────────────────────────────
-              Row(children: [
-                Expanded(child: Divider(color: context.appCardBg)),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('or continue with', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-                ),
-                Expanded(child: Divider(color: context.appCardBg)),
-              ]),
-
-              const SizedBox(height: 16),
-
-              // ── Social / Phone login ────────────────────────────────────
-              Row(children: [
-                Expanded(
-                  child: _SocialButton(
-                    onTap: _loading ? null : _googleLogin,
-                    icon: Icons.g_mobiledata_rounded,
-                    label: 'Google',
-                    iconColor: const Color(0xFFDB4437),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _SocialButton(
-                    onTap: _loading ? null : _phoneLogin,
-                    icon: Icons.phone_rounded,
-                    label: 'Phone',
-                    iconColor: AppTheme.accent,
-                  ),
-                ),
-              ]),
-
-              const SizedBox(height: 16),
-
-              // ── Biometric login ─────────────────────────────────────────
-              Consumer<BiometricProvider>(
-                builder: (context, bio, _) {
-                  if (!bio.enabled || !bio.available) return const SizedBox.shrink();
-                  return Column(children: [
-                    Row(children: [
-                      Expanded(child: Divider(color: context.appCardBg)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('or', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
-                      ),
-                      Expanded(child: Divider(color: context.appCardBg)),
-                    ]),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _loading ? null : _biometricLogin,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppTheme.accent,
-                          side: const BorderSide(color: AppTheme.accent, width: 1.5),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        icon: const Icon(Icons.fingerprint, size: 22),
-                        label: Text(
-                          bio.savedEmail != null
-                              ? 'Sign in as ${bio.savedEmail}'
-                              : 'Sign in with Biometrics',
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                  ]);
-                },
-              ),
-
-              SizedBox(height: 4),
-
-              // ── Create account link ──────────────────────────────────────
-              Center(
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text("Don't have an account?",
-                      style: TextStyle(
-                          color: context.appTextSecondary, fontSize: 14)),
-                  TextButton(
-                    onPressed: () => Navigator.push(context,
-                        MaterialPageRoute(
-                            builder: (_) => RegisterScreen())),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.symmetric(horizontal: 6),
-                      minimumSize: Size.zero, tapTargetSize:
-                          MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text('Create Account',
-                        style: TextStyle(
-                            color: AppTheme.accent,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14)),
-                  ),
-                ]),
-              ),
-
-              SizedBox(height: 16),
-
-              // ── Demo credentials hint ────────────────────────────────────
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: context.appCardBg),
-                ),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    const Icon(Icons.info_outline, color: AppTheme.accent, size: 16),
-                    const SizedBox(width: 8),
-                    const Text('Demo Accounts', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 13)),
-                  ]),
-                  const SizedBox(height: 12),
-                  _DemoTile(
-                    label: 'Passenger',
-                    email: 'sokkhnegry168@gmail.com',
-                    onTap: () => setState(() {
-                      _emailCtrl.text = 'sokkhnegry168@gmail.com';
-                      _passwordCtrl.text = 'password';
-                    }),
-                  ),
-                  const SizedBox(height: 8),
-                  _DemoTile(
-                    label: 'Driver',
-                    email: 'driver@example.com',
-                    onTap: () => setState(() {
-                      _emailCtrl.text = 'driver@example.com';
-                      _passwordCtrl.text = 'password';
-                    }),
-                  ),
-                  const SizedBox(height: 8),
-                  _DemoTile(
-                    label: 'Admin',
-                    email: 'admin@example.com',
-                    onTap: () => setState(() {
-                      _emailCtrl.text = 'admin@example.com';
-                      _passwordCtrl.text = 'password';
-                    }),
-                  ),
-                ]),
-              ),
-            ],
-          ),
+  InputDecoration _fieldDecoration(String hint, IconData icon, {Widget? suffix}) => InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: context.appTextSecondary.withValues(alpha: 0.7), fontSize: 14),
+        prefixIcon: Icon(icon, color: context.appTextSecondary, size: 20),
+        suffixIcon: suffix,
+        filled: true,
+        fillColor: context.appBackground,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.appCardBg),
         ),
-      ),
-    );
-  }
-}
-
-class _SocialButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  final IconData icon;
-  final String label;
-  final Color iconColor;
-
-  const _SocialButton({required this.onTap, required this.icon, required this.label, required this.iconColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: context.appSurface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.appCardBg),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: context.appCardBg),
         ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(icon, color: iconColor, size: 22),
-          SizedBox(width: 8),
-          Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
-        ]),
-      ),
-    );
-  }
-}
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _green, width: 1.5),
+        ),
+      );
 
-class _GuestShopButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  const _GuestShopButton({required this.onTap});
-
-  static const _green = Color(0xFF16A34A);
+  Widget _label(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(text,
+            style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+      );
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return Material(
-      color: onTap == null ? _green.withValues(alpha: 0.5) : _green,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          child: Row(children: [
-            const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 28),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(l.continueAsGuest,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 2),
-                Text(l.continueAsGuestSub,
-                    style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.85), fontSize: 12)),
+    final canPop = Navigator.canPop(context);
+
+    return Scaffold(
+      backgroundColor: context.appBackground,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // ── Top bar ──────────────────────────────────────────────────
+            Row(children: [
+              if (canPop)
+                Material(
+                  color: context.appSurface,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.arrow_back_ios_new_rounded, color: context.appTextPrimary, size: 18),
+                  ),
+                ),
+              const Spacer(),
+              const LanguagePickerButton(),
+            ]),
+
+            const SizedBox(height: 24),
+
+            // ── Brand + heading ──────────────────────────────────────────
+            Center(
+              child: Container(
+                width: 76, height: 76,
+                decoration: BoxDecoration(
+                  color: _green.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(14),
+                child: Image.asset('assets/library/icon_fa.png'),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(l.welcomeBack,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.appTextPrimary, fontSize: 26, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 6),
+            Text(l.signInSubtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 14, height: 1.4)),
+
+            const SizedBox(height: 28),
+
+            // ── Form card ────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: context.appSurface,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 24, offset: const Offset(0, 8)),
+                ],
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                if (_error != null) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 18),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                    ]),
+                  ),
+                  const SizedBox(height: 18),
+                ],
+
+                _label(l.email),
+                TextField(
+                  controller: _emailCtrl,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autocorrect: false,
+                  autofillHints: const [AutofillHints.email],
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 15),
+                  decoration: _fieldDecoration(l.enterEmail, Icons.mail_outline_rounded),
+                ),
+
+                const SizedBox(height: 18),
+
+                _label(l.password),
+                TextField(
+                  controller: _passwordCtrl,
+                  obscureText: _obscurePass,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  onSubmitted: (_) => _login(),
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 15),
+                  decoration: _fieldDecoration(
+                    l.enterPassword,
+                    Icons.lock_outline_rounded,
+                    suffix: IconButton(
+                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                      icon: Icon(
+                        _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        color: context.appTextSecondary,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  height: 54,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _green,
+                      disabledBackgroundColor: _green.withValues(alpha: 0.5),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 22, height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                        : Text(l.signIn, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+
+                // ── Biometric sign-in ──────────────────────────────────────
+                Consumer<BiometricProvider>(
+                  builder: (context, bio, _) {
+                    if (!bio.enabled || !bio.available) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: SizedBox(
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: _loading ? null : _biometricLogin,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: _green,
+                            side: BorderSide(color: _green.withValues(alpha: 0.6), width: 1.2),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          icon: const Icon(Icons.fingerprint_rounded, size: 22),
+                          label: Text(
+                            bio.savedEmail != null ? '${l.signInAs} ${bio.savedEmail}' : l.signInWithBiometrics,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ]),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white, size: 26),
+
+            const SizedBox(height: 20),
+
+            // ── Create account ───────────────────────────────────────────
+            Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              Text(l.noAccountYet, style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
+              TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => RegisterScreen())),
+                style: TextButton.styleFrom(
+                  foregroundColor: _green,
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(l.createAccount, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              ),
+            ]),
+
+            const SizedBox(height: 20),
+
+            // ── Trust note ───────────────────────────────────────────────
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Icon(Icons.lock_rounded, color: context.appTextSecondary, size: 14),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(l.secureSignInNote,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+              ),
+            ]),
+
+            const SizedBox(height: 12),
+
+            // ── Demo accounts (collapsed) ────────────────────────────────
+            Center(
+              child: TextButton.icon(
+                onPressed: () => setState(() => _showDemo = !_showDemo),
+                style: TextButton.styleFrom(foregroundColor: context.appTextSecondary),
+                icon: Icon(_showDemo ? Icons.expand_less_rounded : Icons.expand_more_rounded, size: 18),
+                label: Text(l.demoAccounts, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+              ),
+            ),
+            if (_showDemo)
+              Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [
+                _DemoTile(label: 'Passenger', icon: Icons.person_outline_rounded,
+                    onTap: () => _fillDemo('sokkhnegry168@gmail.com')),
+                _DemoTile(label: 'Driver', icon: Icons.drive_eta_outlined,
+                    onTap: () => _fillDemo('driver@example.com')),
+                _DemoTile(label: 'Admin', icon: Icons.admin_panel_settings_outlined,
+                    onTap: () => _fillDemo('admin@example.com')),
+              ]),
           ]),
         ),
       ),
@@ -872,31 +798,20 @@ class _OtpBox extends StatelessWidget {
 
 class _DemoTile extends StatelessWidget {
   final String label;
-  final String email;
+  final IconData icon;
   final VoidCallback onTap;
 
-  const _DemoTile({required this.label, required this.email, required this.onTap});
+  const _DemoTile({required this.label, required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
-        child: Row(children: [
-          Icon(
-            label == 'Driver' ? Icons.drive_eta_outlined : Icons.person_outline,
-            color: label == 'Driver' ? AppTheme.accentOrange : AppTheme.accent,
-            size: 16,
-          ),
-          SizedBox(width: 8),
-          Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-          SizedBox(width: 8),
-          Expanded(child: Text(email, style: TextStyle(color: context.appTextSecondary, fontSize: 12))),
-          Icon(Icons.touch_app_outlined, color: context.appTextSecondary, size: 14),
-        ]),
-      ),
+    return ActionChip(
+      onPressed: onTap,
+      avatar: Icon(icon, size: 16, color: GuestShopButton.green),
+      label: Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 12, fontWeight: FontWeight.w600)),
+      backgroundColor: context.appSurface,
+      side: BorderSide(color: context.appCardBg),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 }

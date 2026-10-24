@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
 
 // ROTEH CAMBODIA office — exact coordinates from Google Maps, no geocoding
 // round-trip needed (and no risk of a bad address-search match).
@@ -23,7 +25,7 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
   GoogleMapController? _ctrl;
   late final LatLng _resolved = widget.pin ?? kRotehPin;
 
-  static const _green = Color(0xFF00C48C);
+  static const _green = Color(0xFF0E9F6E);
 
   @override
   void dispose() {
@@ -45,21 +47,33 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
   Widget build(BuildContext context) {
     final address = widget.addressLabel ?? kRotehAddress;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Icon(Icons.location_on_rounded, color: _green, size: 16),
-        const SizedBox(width: 6),
-        const Text("Pick-up Location",
-            style: TextStyle(
-                color: _green, fontSize: 12, fontWeight: FontWeight.w600)),
-      ]),
-      const SizedBox(height: 4),
-      Text(address,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-      const SizedBox(height: 8),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _green.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(children: [
+          const Icon(Icons.location_on_rounded, color: _green, size: 26),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(AppLocalizations.of(context).pickupLocation,
+                  style: const TextStyle(
+                      color: _green, fontSize: 13, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(address,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
+            ]),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 10),
       ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: SizedBox(
           height: 180,
           child: Stack(children: [
@@ -90,26 +104,29 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
               rotateGesturesEnabled: false,
             ),
             Positioned(
-              right: 8,
-              bottom: 8,
+              right: 10,
+              bottom: 10,
               child: GestureDetector(
                 onTap: _openGoogleMaps,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                      horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(6),
+                    color: const Color(0xFF0B4F4A),
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 8, offset: const Offset(0, 3))],
                   ),
                   child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                     Icon(Icons.open_in_new_rounded,
-                        color: Colors.white, size: 14),
-                    SizedBox(width: 4),
+                        color: Colors.white, size: 16),
+                    SizedBox(width: 6),
                     Text('Open in Maps',
                         style: TextStyle(
-                            color: Colors.white, fontSize: 11)),
+                            color: Colors.white, fontSize: 12,
+                            fontWeight: FontWeight.w600)),
                   ]),
                 ),
               ),

@@ -13,6 +13,19 @@ class MarketplaceProductsPage {
   });
 }
 
+
+// The backend renamed name_km → name_kh (2026-08-31 migration) on vehicle
+// types/colors and product accessories; order accessory snapshots still use
+// name_km. Accept either so Khmer labels never come back blank.
+String? _khName(Map<String, dynamic>? json) {
+  final v = (json?['name_kh'] ?? json?['name_km']) as String?;
+  return (v == null || v.trim().isEmpty) ? null : v;
+}
+
+// Khmer label when the UI is in Khmer and one exists, else English.
+String _localized(String languageCode, String en, String? km) =>
+    languageCode == 'km' && km != null && km.trim().isNotEmpty ? km : en;
+
 class MarketplaceCategoryModel {
   final int id;
   final String name;
@@ -58,12 +71,12 @@ class MarketplaceVehicleTypeModel {
     this.sizes = const [],
   });
 
-  String name(String languageCode) => languageCode == 'km' ? nameKm : nameEn;
+  String name(String languageCode) => _localized(languageCode, nameEn, nameKm);
 
   factory MarketplaceVehicleTypeModel.fromJson(Map<String, dynamic> json) => MarketplaceVehicleTypeModel(
     id:     (json['id'] as num?)?.toInt() ?? 0,
     nameEn: json['name_en'] as String? ?? '',
-    nameKm: json['name_km'] as String? ?? '',
+    nameKm: _khName(json) ?? '',
     slug:   json['slug'] as String? ?? '',
     sizes: (json['sizes'] as List<dynamic>? ?? [])
         .whereType<Map<String, dynamic>>()
@@ -85,12 +98,12 @@ class MarketplaceVehicleColorModel {
     required this.code,
   });
 
-  String name(String languageCode) => languageCode == 'km' ? nameKm : nameEn;
+  String name(String languageCode) => _localized(languageCode, nameEn, nameKm);
 
   factory MarketplaceVehicleColorModel.fromJson(Map<String, dynamic> json) => MarketplaceVehicleColorModel(
     id:     (json['id'] as num?)?.toInt() ?? 0,
     nameEn: json['name_en'] as String? ?? '',
-    nameKm: json['name_km'] as String? ?? '',
+    nameKm: _khName(json) ?? '',
     code:   json['code'] as String? ?? '',
   );
 }
@@ -176,13 +189,13 @@ class MarketplaceProductAccessoryModel {
     required this.price,
   });
 
-  String name(String languageCode) => languageCode == 'km' ? (nameKm ?? nameEn) : nameEn;
+  String name(String languageCode) => _localized(languageCode, nameEn, nameKm);
 
   factory MarketplaceProductAccessoryModel.fromJson(Map<String, dynamic> json) =>
       MarketplaceProductAccessoryModel(
         id:     (json['id'] as num?)?.toInt(),
         nameEn: json['name_en'] as String? ?? '',
-        nameKm: json['name_km'] as String?,
+        nameKm: _khName(json),
         price:  num.tryParse(json['price']?.toString() ?? '')?.toDouble() ?? 0,
       );
 }
@@ -307,9 +320,9 @@ class MarketplaceProductModel {
       vehicleColorId: (json['marketplace_vehicle_color_id'] as num?)?.toInt(),
       vehicleSizeId:  (json['marketplace_vehicle_size_id']  as num?)?.toInt(),
       vehicleTypeNameEn:  vType?['name_en']  as String?,
-      vehicleTypeNameKm:  vType?['name_km']  as String?,
+      vehicleTypeNameKm:  _khName(vType),
       vehicleColorNameEn: vColor?['name_en'] as String?,
-      vehicleColorNameKm: vColor?['name_km'] as String?,
+      vehicleColorNameKm: _khName(vColor),
       vehicleColorCode:   vColor?['code']    as String?,
       vehicleSizeLabel:   vSize?['label']    as String?,
       sellerId:       (seller?['id']       as num?)?.toInt(),

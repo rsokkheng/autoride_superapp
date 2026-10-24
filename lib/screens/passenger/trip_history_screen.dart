@@ -215,7 +215,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     }
     if (_error != null) {
       return Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             const Icon(Icons.error_outline, color: AppTheme.danger, size: 40),

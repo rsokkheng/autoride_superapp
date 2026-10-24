@@ -6,6 +6,7 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/marketplace_model.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart' show appLocale;
@@ -22,8 +23,17 @@ import '../auth/login_screen.dart';
 
 // ── Tokens ─────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
-const _green2 = Color(0xFF00A37A);
 const _white  = Colors.white;
+const _emerald       = Color(0xFF0E9F6E);
+const _emeraldDeep   = Color(0xFF0A7A57);
+const _teal          = Color(0xFF0B4F4A);
+const _tealDeep      = Color(0xFF083B38);
+const _purple        = Color(0xFF7C3AED);
+const _blue          = Color(0xFF2563EB);
+
+// Soft emerald tint used behind icons, chips and info cards.
+Color _mint(BuildContext c) => _emerald.withValues(
+    alpha: Theme.of(c).brightness == Brightness.dark ? 0.16 : 0.08);
 
 final _fmt    = NumberFormat('#,###', 'en_US');
 final _fmtDec = NumberFormat('#,##0.##', 'en_US');
@@ -84,8 +94,7 @@ Color _statusColor(String s) => switch (s) {
 class _Pill extends StatelessWidget {
   final String label;
   final Color color;
-  final IconData? icon;
-  const _Pill({required this.label, required this.color, this.icon});
+  const _Pill({required this.label, required this.color});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -95,7 +104,6 @@ class _Pill extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      if (icon != null) ...[Icon(icon, color: color, size: 10), const SizedBox(width: 3)],
       Text(label, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
     ]),
   );
@@ -108,18 +116,18 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 24, 20, 14),
+    padding: const EdgeInsets.fromLTRB(16, 26, 12, 14),
     child: Row(children: [
-      Text(title, style: TextStyle(
-          color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
-      const Spacer(),
+      Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: context.appTextPrimary,
+              fontWeight: FontWeight.w800, fontSize: 18))),
       if (onSeeAll != null)
         GestureDetector(
           onTap: onSeeAll,
           child: Row(children: [
             Text(AppLocalizations.of(context).seeAll, style: const TextStyle(
-                color: _green, fontWeight: FontWeight.w600, fontSize: 13)),
-            const Icon(Icons.chevron_right_rounded, color: _green, size: 18),
+                color: _emerald, fontWeight: FontWeight.w700, fontSize: 13)),
+            const Icon(Icons.chevron_right_rounded, color: _emerald, size: 18),
           ]),
         ),
     ]),
@@ -176,68 +184,103 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final canPop = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
         backgroundColor: context.appSurface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
         automaticallyImplyLeading: false,
-        leading: Navigator.canPop(context)
+        toolbarHeight: 64,
+        leadingWidth: canPop ? 60 : null,
+        leading: canPop
             ? Padding(
-                padding: const EdgeInsets.all(8),
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    decoration: BoxDecoration(
-                        color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+                child: Material(
+                  color: _mint(context),
+                  borderRadius: BorderRadius.circular(12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => Navigator.pop(context),
                     child: Icon(Icons.arrow_back_ios_new_rounded,
                         color: context.appTextPrimary, size: 16),
                   ),
                 ),
               )
             : null,
-        titleSpacing: 8,
+        titleSpacing: canPop ? 8 : 16,
         title: Row(children: [
           Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(color: _green.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.storefront_rounded, color: _green, size: 20),
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_emerald, _emeraldDeep],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.3),
+                  blurRadius: 10, offset: const Offset(0, 4))],
+            ),
+            child: const Icon(Icons.storefront_rounded, color: _white, size: 22),
           ),
-          const SizedBox(width: 10),
-          Text(AppLocalizations.of(context).marketplace, style: TextStyle(
-              color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 18)),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(l.marketplace, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextPrimary,
+                    fontWeight: FontWeight.w800, fontSize: 20)),
+          ),
         ]),
         actions: [
+          Padding(
+            padding: EdgeInsets.only(right: _isGuest ? 4 : 16),
+            child: SizedBox(
+              width: 42, height: 42,
+              child: Material(
+                color: _mint(context),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.push(context,
+                      MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
+                  child: const Icon(Icons.search_rounded, color: _emerald, size: 22),
+                ),
+              ),
+            ),
+          ),
           if (_isGuest)
             Padding(
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
                 onPressed: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const LoginScreen())),
-                icon: const Icon(Icons.login_rounded, size: 18, color: _green),
-                label: Text(AppLocalizations.of(context).signIn,
-                    style: const TextStyle(color: _green, fontWeight: FontWeight.w700)),
+                icon: const Icon(Icons.login_rounded, size: 18, color: _emerald),
+                label: Text(l.signIn,
+                    style: const TextStyle(color: _emerald, fontWeight: FontWeight.w700)),
               ),
             ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: TabBar(
-            controller: _tab,
-            indicatorColor: _green,
-            indicatorWeight: 3,
-            labelColor: _green,
-            unselectedLabelColor: Colors.grey,
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-            tabs: [
-              Tab(text: AppLocalizations.of(context).browseTab),
-              Tab(text: AppLocalizations.of(context).myOrdersTab),
-            ],
+        bottom: TabBar(
+          controller: _tab,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          indicator: const UnderlineTabIndicator(
+            borderSide: BorderSide(color: _emerald, width: 3),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(3)),
           ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: context.appCardBg,
+          labelColor: _emerald,
+          unselectedLabelColor: context.appTextSecondary,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+          tabs: [
+            _IconTab(icon: Icons.storefront_outlined, label: l.browseTab),
+            _IconTab(icon: Icons.event_note_rounded, label: l.myOrdersTab),
+          ],
         ),
       ),
       body: TabBarView(
@@ -259,6 +302,7 @@ class _BrowseTab extends StatefulWidget {
 }
 
 class _BrowseTabState extends State<_BrowseTab> {
+  final _searchCtrl = TextEditingController();
   List<MarketplaceProductModel>  _prods = [];
   int  _totalCount = 0;
   bool _loading    = true;
@@ -266,6 +310,9 @@ class _BrowseTabState extends State<_BrowseTab> {
 
   @override
   void initState() { super.initState(); _load(); }
+
+  @override
+  void dispose() { _searchCtrl.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     if (!mounted) return;
@@ -291,182 +338,71 @@ class _BrowseTabState extends State<_BrowseTab> {
         .then((_) => _load());
   }
 
+  void _openAll({String? search}) => Navigator.push(context,
+      MaterialPageRoute(builder: (_) => _AllListingsScreen(search: search)));
+
+  void _submitSearch(String q) {
+    final s = q.trim();
+    _openAll(search: s.isEmpty ? null : s);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(
-        child: CircularProgressIndicator(color: _green, strokeWidth: 2));
+        child: CircularProgressIndicator(color: _emerald, strokeWidth: 2));
     if (_error != null) return _ErrorState(message: _error!, onRetry: _load);
 
+    final l        = AppLocalizations.of(context);
+    final heroes   = _prods.where((p) => p.images.isNotEmpty).take(3).toList();
     final featured = _prods.take(6).toList();
     final recent   = _prods.length > 6 ? _prods.sublist(6) : <MarketplaceProductModel>[];
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: _green,
+      color: _emerald,
       child: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
         children: [
-          // Filters — single entry point into All Listings (which has the
-          // real search box + filter sheet).
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: GestureDetector(
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.07),
-                        blurRadius: 12, offset: const Offset(0, 3)),
-                  ],
-                ),
-                child: Row(children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: _green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.tune_rounded, color: _green, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Text(AppLocalizations.of(context).filter,
-                      style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w600))),
-                  Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
-                ]),
-              ),
+            child: _SearchBar(
+              controller: _searchCtrl,
+              onSubmitted: _submitSearch,
+              onFilter: () => _openAll(),
             ),
           ),
 
-          // Hero banner (with total count)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: GestureDetector(
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
-              child: Container(
-              height: 172,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [_green, _green2],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Stack(children: [
-                Positioned(right: -24, top: -36,
-                  child: Container(width: 150, height: 150,
-                    decoration: BoxDecoration(
-                        color: _white.withValues(alpha: 0.07), shape: BoxShape.circle)),
-                ),
-                Positioned(right: 60, bottom: -50,
-                  child: Container(width: 100, height: 100,
-                    decoration: BoxDecoration(
-                        color: _white.withValues(alpha: 0.05), shape: BoxShape.circle)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(22, 22, 22, 22),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text('$_totalCount ${AppLocalizations.of(context).listingsAvailable}',
-                          style: TextStyle(color: _white.withValues(alpha: 0.95),
-                              fontSize: 11, fontWeight: FontWeight.w600)),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(AppLocalizations.of(context).findBestDeal,
-                        style: TextStyle(color: _white, fontWeight: FontWeight.w800, fontSize: 22)),
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
-                        decoration: BoxDecoration(
-                            color: context.appSurface, borderRadius: BorderRadius.circular(10)),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Text(AppLocalizations.of(context).browseAll,
-                              style: const TextStyle(color: _green,
-                                  fontWeight: FontWeight.w700, fontSize: 13)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.arrow_forward_rounded, color: _green, size: 14),
-                        ]),
-                      ),
-                    ),
-                  ]),
-                ),
-              ]),
-              ),
+            child: _HeroCarousel(
+              products: heroes,
+              totalCount: _totalCount,
+              onBrowse: () => _openAll(),
+              onOpen: _openDetail,
             ),
           ),
 
-          // Services
-          _SectionTitle(AppLocalizations.of(context).services),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: GestureDetector(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+            child: _ServiceBanner(
+              icon: Icons.electric_rickshaw,
+              title: l.rentalVehicle,
+              colors: const [_teal, _tealDeep],
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const CarRentalScreen())),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF00838F), Color(0xFF004D56)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Row(children: [
-                  Container(
-                    width: 54, height: 54,
-                    decoration: BoxDecoration(
-                      color: _white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.electric_rickshaw, color: _white, size: 28),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(AppLocalizations.of(context).rentalVehicle,
-                          style: TextStyle(color: _white, fontSize: 16,
-                              fontWeight: FontWeight.w800)),
-                    ]),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _white.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.arrow_forward_rounded, color: _white, size: 16),
-                  ),
-                ]),
-              ),
             ),
           ),
 
-          // Featured grid
           if (featured.isNotEmpty) ...[
-            _SectionTitle(AppLocalizations.of(context).popularListings,
-                onSeeAll: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const _AllListingsScreen()))),
+            _SectionTitle(l.popularListings, onSeeAll: () => _openAll()),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
-                    mainAxisExtent: 224),
+                    crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12,
+                    mainAxisExtent: _gridCardExtent),
                 itemCount: featured.length,
                 itemBuilder: (_, i) => _GridCard(
                     product: featured[i], onTap: () => _openDetail(featured[i])),
@@ -474,25 +410,330 @@ class _BrowseTabState extends State<_BrowseTab> {
             ),
           ],
 
-          // Recent list
           if (recent.isNotEmpty) ...[
-            _SectionTitle(AppLocalizations.of(context).recentListings,
-                onSeeAll: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const _AllListingsScreen()))),
+            _SectionTitle(l.recentListings, onSeeAll: () => _openAll()),
             ...recent.take(4).map((p) => Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: _ListCard(product: p, onTap: () => _openDetail(p)),
             )),
           ],
-
-          const SizedBox(height: 32),
         ],
       ),
     );
   }
 }
 
+// ── Search bar ─────────────────────────────────────────────────────────────
+
+class _SearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onFilter;
+  const _SearchBar({required this.controller, required this.onSubmitted, required this.onFilter});
+
+  Widget _roundBtn(BuildContext context, IconData icon, Color color, VoidCallback onTap) =>
+      Material(
+        color: _mint(context),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 44, height: 44, child: Icon(icon, color: color, size: 21)),
+        ),
+      );
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: context.appSurface,
+      borderRadius: BorderRadius.circular(28),
+      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06),
+          blurRadius: 16, offset: const Offset(0, 4))],
+    ),
+    child: Row(children: [
+      _roundBtn(context, Icons.tune_rounded, _emerald, onFilter),
+      const SizedBox(width: 12),
+      Expanded(
+        child: TextField(
+          controller: controller,
+          textInputAction: TextInputAction.search,
+          onSubmitted: onSubmitted,
+          style: TextStyle(color: context.appTextPrimary, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: AppLocalizations.of(context).searchListingsHint,
+            hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
+            filled: false,
+            isDense: true,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ),
+      const SizedBox(width: 8),
+      _roundBtn(context, Icons.search_rounded, context.appTextPrimary,
+          () => onSubmitted(controller.text)),
+    ]),
+  );
+}
+
+// ── Promo hero carousel ────────────────────────────────────────────────────
+// Rotates through up to three listings with photos; falls back to a single
+// illustrated slide when nothing has an image yet.
+
+class _HeroCarousel extends StatefulWidget {
+  final List<MarketplaceProductModel> products;
+  final int totalCount;
+  final VoidCallback onBrowse;
+  final ValueChanged<MarketplaceProductModel> onOpen;
+  const _HeroCarousel({
+    required this.products,
+    required this.totalCount,
+    required this.onBrowse,
+    required this.onOpen,
+  });
+
+  @override
+  State<_HeroCarousel> createState() => _HeroCarouselState();
+}
+
+class _HeroCarouselState extends State<_HeroCarousel> {
+  final _ctrl = PageController();
+  Timer? _timer;
+  int _idx = 0;
+
+  int get _count => widget.products.isEmpty ? 1 : widget.products.length;
+
+  @override
+  void initState() { super.initState(); _startAuto(); }
+
+  @override
+  void didUpdateWidget(covariant _HeroCarousel old) {
+    super.didUpdateWidget(old);
+    if (old.products.length != widget.products.length) {
+      if (_idx >= _count && _ctrl.hasClients) _ctrl.jumpToPage(0);
+      _startAuto();
+    }
+  }
+
+  void _startAuto() {
+    _timer?.cancel();
+    if (_count < 2) return;
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!_ctrl.hasClients) return;
+      _ctrl.animateToPage((_idx + 1) % _count,
+          duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
+    });
+  }
+
+  @override
+  void dispose() { _timer?.cancel(); _ctrl.dispose(); super.dispose(); }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 196,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(24),
+      boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.25),
+          blurRadius: 18, offset: const Offset(0, 8))],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Stack(children: [
+        PageView.builder(
+          controller: _ctrl,
+          itemCount: _count,
+          onPageChanged: (i) => setState(() => _idx = i),
+          itemBuilder: (_, i) =>
+              _slide(context, widget.products.isEmpty ? null : widget.products[i]),
+        ),
+        if (_count > 1)
+          Positioned(right: 18, bottom: 7,
+            child: Row(children: List.generate(_count, (i) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: _idx == i ? 16 : 6, height: 6,
+              margin: const EdgeInsets.only(left: 4),
+              decoration: BoxDecoration(
+                color: _white.withValues(alpha: _idx == i ? 1 : 0.45),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ))),
+          ),
+      ]),
+    ),
+  );
+
+  Widget _slide(BuildContext context, MarketplaceProductModel? p) {
+    final l = AppLocalizations.of(context);
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [_emerald, _emeraldDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(children: [
+        Positioned(right: -40, top: -50,
+          child: Container(width: 190, height: 190,
+            decoration: BoxDecoration(
+                color: _white.withValues(alpha: 0.07), shape: BoxShape.circle)),
+        ),
+        Positioned(left: -30, bottom: -60,
+          child: Container(width: 140, height: 140,
+            decoration: BoxDecoration(
+                color: _white.withValues(alpha: 0.05), shape: BoxShape.circle)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 14, 20),
+          child: Row(children: [
+            Expanded(
+              flex: 11,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _white.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.eco_rounded, color: _white, size: 12),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text('${widget.totalCount} ${l.listingsAvailable}',
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: _white,
+                              fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 10),
+                Text(l.findBestDeal, maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _white,
+                        fontWeight: FontWeight.w800, fontSize: 20, height: 1.25)),
+                if (p != null) ...[
+                  const SizedBox(height: 4),
+                  Text(p.title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: _white.withValues(alpha: 0.85), fontSize: 12)),
+                ],
+                const Spacer(),
+                Material(
+                  color: _white,
+                  borderRadius: BorderRadius.circular(22),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(22),
+                    onTap: widget.onBrowse,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 9, 10, 9),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Text(l.browseAll, style: const TextStyle(color: _emerald,
+                            fontWeight: FontWeight.w700, fontSize: 13)),
+                        const SizedBox(width: 2),
+                        const Icon(Icons.chevron_right_rounded, color: _emerald, size: 18),
+                      ]),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 9,
+              child: p == null
+                  ? Icon(Icons.electric_rickshaw,
+                      color: _white.withValues(alpha: 0.85), size: 96)
+                  : GestureDetector(
+                      onTap: () => widget.onOpen(p),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.18),
+                              blurRadius: 16, offset: const Offset(0, 6))],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(18),
+                          child: SizedBox.expand(child: _NetImage(url: p.images.first)),
+                        ),
+                      ),
+                    ),
+            ),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+// ── Service banner (rental) ─────────────────────────────────────
+
+class _ServiceBanner extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final List<Color> colors;
+  final VoidCallback onTap;
+  const _ServiceBanner({
+    required this.icon,
+    required this.title,
+    required this.colors,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: Ink(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: colors,
+            begin: Alignment.centerLeft, end: Alignment.centerRight),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.25),
+            blurRadius: 14, offset: const Offset(0, 6))],
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: onTap,
+        child: Stack(children: [
+          // Faint route pins in the background.
+          Positioned(right: 66, top: 10,
+              child: Icon(Icons.location_on_rounded,
+                  color: _white.withValues(alpha: 0.14), size: 22)),
+          Positioned(right: 108, bottom: 8,
+              child: Icon(Icons.location_on_outlined,
+                  color: _white.withValues(alpha: 0.12), size: 20)),
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              Container(
+                width: 56, height: 56,
+                decoration: BoxDecoration(
+                    color: _white.withValues(alpha: 0.12), shape: BoxShape.circle),
+                child: Icon(icon, color: _white, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: _white,
+                        fontWeight: FontWeight.w800, fontSize: 16)),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 40, height: 40,
+                decoration: const BoxDecoration(color: _green, shape: BoxShape.circle),
+                child: const Icon(Icons.arrow_forward_rounded, color: _white, size: 20),
+              ),
+            ]),
+          ),
+        ]),
+      ),
+    ),
+  );
+}
+
 // ── Grid card ──────────────────────────────────────────────────────────────
+
+const double _gridCardExtent = 266;
 
 class _GridCard extends StatelessWidget {
   final MarketplaceProductModel product;
@@ -502,59 +743,86 @@ class _GridCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = product;
+    final l = AppLocalizations.of(context);
+    final tag = p.vehicleTypeName(appLocale.value.languageCode)
+        ?? _listingTypeLabel(l, p.listingType);
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: context.appSurface,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 12, offset: const Offset(0, 3))],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 14, offset: const Offset(0, 4))],
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(
-            height: 130,
+            height: 140,
             width: double.infinity,
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: BorderRadius.circular(14),
               child: Stack(fit: StackFit.expand, children: [
                 _NetImage(url: p.images.isNotEmpty ? p.images.first : null),
-                Positioned(top: 8, left: 8,
-                  child: _Pill(
-                    label: _listingTypeLabel(AppLocalizations.of(context), p.listingType),
-                    color: p.listingType == 'rent'
-                        ? const Color(0xFF7C3AED) : _green,
+                Positioned(top: 8, left: 8, right: 44,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: _ImageTag(icon: Icons.electric_rickshaw, label: tag),
                   ),
                 ),
+                if (p.listingType != 'sale')
+                  Positioned(top: 8, right: 8,
+                    child: Container(
+                      width: 26, height: 26,
+                      decoration: const BoxDecoration(color: _purple, shape: BoxShape.circle),
+                      child: const Icon(Icons.key_rounded, color: _white, size: 14),
+                    ),
+                  ),
               ]),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 9, 10, 11),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                      fontSize: 12, height: 1.35)),
-              const SizedBox(height: 6),
-              Text(_usd(p.price), style: const TextStyle(
-                  color: _green, fontWeight: FontWeight.w800, fontSize: 14)),
-              if (p.locationText != null) ...[
-                const SizedBox(height: 3),
-                Row(children: [
-                  const Icon(Icons.location_on_rounded, color: Colors.grey, size: 10),
-                  const SizedBox(width: 2),
-                  Expanded(child: Text(p.locationText!, maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.grey, fontSize: 10))),
-                ]),
-              ],
-            ]),
+            padding: const EdgeInsets.fromLTRB(4, 10, 4, 0),
+            child: Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
+                    fontSize: 13, height: 1.35)),
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+            child: Text(_usd(p.price), style: const TextStyle(
+                color: _emerald, fontWeight: FontWeight.w800, fontSize: 18)),
           ),
         ]),
       ),
     );
   }
+}
+
+// Frosted label pinned over a product photo.
+class _ImageTag extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _ImageTag({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFE7F7F0).withValues(alpha: 0.94),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, color: _emerald, size: 12),
+      const SizedBox(width: 4),
+      Flexible(
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: _emeraldDeep,
+                fontSize: 10, fontWeight: FontWeight.w700)),
+      ),
+    ]),
+  );
 }
 
 // ── List card ──────────────────────────────────────────────────────────────
@@ -567,57 +835,59 @@ class _ListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = product;
+    final l = AppLocalizations.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: context.appSurface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8, offset: const Offset(0, 2))],
+              blurRadius: 14, offset: const Offset(0, 4))],
         ),
         child: Row(children: [
           ClipRRect(
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+            borderRadius: BorderRadius.circular(14),
             child: _NetImage(
                 url: p.images.isNotEmpty ? p.images.first : null,
-                width: 100, height: 100),
+                width: 96, height: 96),
           ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                        fontSize: 13, height: 1.3)),
-                const SizedBox(height: 6),
-                Wrap(spacing: 6, children: [
-                  if (p.condition != null)
-                    _Pill(label: _conditionLabel(AppLocalizations.of(context), p.condition),
-                        color: _condColor(p.condition)),
-                  _Pill(
-                    label: _listingTypeLabel(AppLocalizations.of(context), p.listingType),
-                    color: p.listingType == 'rent'
-                        ? const Color(0xFF7C3AED) : _green,
-                  ),
-                ]),
-                const SizedBox(height: 8),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text(_usd(p.price), style: const TextStyle(
-                      color: _green, fontWeight: FontWeight.w800, fontSize: 14)),
-                  if (p.locationText != null)
-                    Row(children: [
-                      const Icon(Icons.location_on_rounded, color: Colors.grey, size: 11),
-                      const SizedBox(width: 2),
-                      Text(
-                        p.locationText!.length > 14
-                            ? '${p.locationText!.substring(0, 14)}…'
-                            : p.locationText!,
-                        style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                    ]),
-                ]),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
+                      fontSize: 13, height: 1.3)),
+              const SizedBox(height: 6),
+              Wrap(spacing: 6, runSpacing: 4, children: [
+                if (p.condition != null)
+                  _Pill(label: _conditionLabel(l, p.condition), color: _condColor(p.condition)),
+                _Pill(
+                  label: _listingTypeLabel(l, p.listingType),
+                  color: p.listingType == 'rent' ? _purple : _emerald,
+                ),
               ]),
-            ),
+              const SizedBox(height: 8),
+              Row(children: [
+                Text(_usd(p.price), style: const TextStyle(
+                    color: _emerald, fontWeight: FontWeight.w800, fontSize: 16)),
+                const SizedBox(width: 8),
+                if (p.locationText != null)
+                  Expanded(
+                    child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                      Icon(Icons.location_on_rounded, color: context.appTextSecondary, size: 12),
+                      const SizedBox(width: 2),
+                      Flexible(
+                        child: Text(p.locationText!, maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                      ),
+                    ]),
+                  ),
+              ]),
+            ]),
           ),
         ]),
       ),
@@ -634,7 +904,7 @@ class _ErrorState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(padding: const EdgeInsets.all(20),
@@ -665,7 +935,8 @@ class _ErrorState extends StatelessWidget {
 class _AllListingsScreen extends StatefulWidget {
   final int?    categoryId;
   final String? categoryName;
-  const _AllListingsScreen({this.categoryId, this.categoryName});
+  final String? search;
+  const _AllListingsScreen({this.categoryId, this.categoryName, this.search});
 
   @override
   State<_AllListingsScreen> createState() => _AllListingsScreenState();
@@ -721,6 +992,7 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
         if (needsRefData) ApiService.getMarketplaceVehicleColors(),
         if (needsRefData) ApiService.getMarketplaceVehicleSizes(),
         ApiService.getMarketplaceProducts(
+          search:         widget.search,
           categoryId:     _selCat,
           listingType:    _type,
           condition:      _cond,
@@ -755,6 +1027,7 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
     setState(() => _loadingMore = true);
     try {
       final pageResult = await ApiService.getMarketplaceProducts(
+        search:         widget.search,
         categoryId:     _selCat,
         listingType:    _type,
         condition:      _cond,
@@ -818,7 +1091,8 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
         scrolledUnderElevation: 0.5,
         shadowColor: Colors.black12,
         leading: _BackBtn(),
-        title: Text(widget.categoryName ?? AppLocalizations.of(context).allListingsTitle,
+        title: Text(widget.categoryName
+            ?? (widget.search != null ? '“${widget.search}”' : AppLocalizations.of(context).allListingsTitle),
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
         actions: [
           IconButton(
@@ -968,8 +1242,8 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
               controller: _scrollCtrl,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, mainAxisSpacing: 14, crossAxisSpacing: 14,
-                  childAspectRatio: 0.72),
+                  crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12,
+                  mainAxisExtent: _gridCardExtent),
               itemCount: _prods.length + 1,
               itemBuilder: (_, i) {
                 if (i == _prods.length) return footer;
@@ -1307,6 +1581,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
   int  _imgIdx    = 0;
   int? _myId;
   late PageController _pageCtrl;
+  final _shareKey = GlobalKey();
 
   @override
   void initState() {
@@ -1336,57 +1611,68 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
 
   bool get _isOwner => _myId != null && _p.sellerId == _myId;
 
+  void _share(AppLocalizations l) {
+    final box = _shareKey.currentContext?.findRenderObject() as RenderBox?;
+    final price = _p.listingType == 'rent' && _p.rentPricePerDay != null
+        ? '${_usd(_p.rentPricePerDay!)} · ${l.rentPerDay}'
+        : _usd(_p.price);
+    Share.share(
+      [_p.title, price, if (_p.locationText != null) _p.locationText!].join('\n'),
+      sharePositionOrigin: box != null ? box.localToGlobal(Offset.zero) & box.size : null,
+    );
+  }
+
+  void _order(String type) => Navigator.push(context, MaterialPageRoute(
+      builder: (_) => _OrderScreen(product: _p, orderType: type)));
+
   @override
   Widget build(BuildContext context) {
-    final canSell = _p.listingType == 'sale' || _p.listingType == 'both';
-    final canRent = _p.listingType == 'rent' || _p.listingType == 'both';
+    final l        = AppLocalizations.of(context);
+    final lang     = appLocale.value.languageCode;
+    final canSell  = _p.listingType == 'sale' || _p.listingType == 'both';
+    final canRent  = _p.listingType == 'rent' || _p.listingType == 'both';
+    final vType    = _p.vehicleTypeName(lang);
+    final vColor   = _p.vehicleColorName(lang);
+
+    final specs = <_SpecItem>[
+      if (_p.condition != null)
+        _SpecItem(Icons.verified_outlined, l.condition, _conditionLabel(l, _p.condition)),
+      if (_p.vehicleSizeLabel != null)
+        _SpecItem(Icons.straighten_rounded, l.size, _p.vehicleSizeLabel!),
+      _SpecItem(Icons.sell_outlined, l.type, _listingTypeLabel(l, _p.listingType)),
+      _SpecItem(Icons.inventory_2_outlined, l.quantity, '${_p.quantity}'),
+    ];
 
     return Scaffold(
-      backgroundColor: context.appBackground,
+      backgroundColor: context.appSurface,
       body: Column(children: [
         Expanded(
           child: CustomScrollView(slivers: [
-            // ── Image hero ─────────────────────────────────────
+            // ── Photo hero ──────────────────────────────────────
             SliverAppBar(
-              expandedHeight: 280,
+              expandedHeight: 330,
               pinned: true,
               backgroundColor: context.appSurface,
+              surfaceTintColor: Colors.transparent,
               elevation: 0,
               automaticallyImplyLeading: false,
+              leadingWidth: 62,
               leading: Padding(
-                padding: const EdgeInsets.all(8),
-                child: GestureDetector(
+                padding: const EdgeInsets.only(left: 12),
+                child: Center(child: _CircleBtn(
+                  icon: Icons.arrow_back_ios_new_rounded, size: 17,
                   onTap: () => Navigator.pop(context),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: context.appSurface,
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 8, offset: const Offset(0, 2))],
-                    ),
-                    child: Icon(Icons.arrow_back_ios_new_rounded,
-                        color: context.appTextPrimary, size: 17),
-                  ),
-                ),
+                )),
               ),
               actions: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => _saved = !_saved),
-                    child: Container(
-                      width: 38, height: 38,
-                      decoration: BoxDecoration(
-                        color: context.appSurface, shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12),
-                            blurRadius: 8, offset: const Offset(0, 2))],
-                      ),
-                      child: Icon(
-                          _saved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
-                          color: _saved ? _green : context.appTextPrimary, size: 20),
-                    ),
-                  ),
+                _CircleBtn(
+                  icon: _saved ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: _saved ? Colors.redAccent : null,
+                  onTap: () => setState(() => _saved = !_saved),
                 ),
+                const SizedBox(width: 10),
+                _CircleBtn(key: _shareKey, icon: Icons.share_outlined, onTap: () => _share(l)),
+                const SizedBox(width: 12),
               ],
               flexibleSpace: FlexibleSpaceBar(
                 background: Stack(fit: StackFit.expand, children: [
@@ -1405,188 +1691,194 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                       : const Center(child: Icon(Icons.image_outlined,
                           color: Colors.grey, size: 60)),
                   if (_loading) const Center(
-                      child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-                  // Dots
-                  if (_p.images.length > 1)
-                    Positioned(bottom: 14, left: 0, right: 0,
-                      child: Row(mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_p.images.length, (i) =>
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: _imgIdx == i ? 18 : 6, height: 6,
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            decoration: BoxDecoration(
-                              color: _imgIdx == i ? _green : Colors.grey.shade300,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          )),
+                      child: CircularProgressIndicator(color: _emerald, strokeWidth: 2)),
+                  if (_p.images.length > 1) ...[
+                    Positioned(left: 16, bottom: 38,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('${_imgIdx + 1} / ${_p.images.length}',
+                            style: const TextStyle(color: _white,
+                                fontSize: 12, fontWeight: FontWeight.w600)),
                       ),
                     ),
+                    Positioned(right: 16, bottom: 44,
+                      child: Row(children: List.generate(_p.images.length, (i) =>
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: _imgIdx == i ? 18 : 6, height: 6,
+                          margin: const EdgeInsets.only(left: 4),
+                          decoration: BoxDecoration(
+                            color: _imgIdx == i ? _emerald : _white.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        )),
+                      ),
+                    ),
+                  ],
                 ]),
               ),
             ),
 
-            // ── Content ───────────────────────────────────────
+            // ── Content sheet (overlaps the photo) ──────────────
             SliverToBoxAdapter(
-              child: Column(children: [
-                // Main card
-                Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(color: context.appSurface,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10, offset: const Offset(0, 3))]),
+              child: Transform.translate(
+                offset: const Offset(0, -24),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     // Badges
-                    Wrap(spacing: 8, runSpacing: 6, children: [
-                      _Pill(
-                        label: _p.listingType == 'sale' ? AppLocalizations.of(context).forSaleLabel
-                            : _p.listingType == 'rent' ? AppLocalizations.of(context).forRentLabel
-                                : AppLocalizations.of(context).saleAndRentLabel,
-                        color: _p.listingType == 'rent'
-                            ? const Color(0xFF7C3AED) : _green,
+                    Wrap(spacing: 8, runSpacing: 8, children: [
+                      _SoftTag(
+                        icon: canSell ? Icons.local_shipping_rounded : Icons.key_rounded,
+                        label: _p.listingType == 'sale' ? l.forSaleLabel
+                            : _p.listingType == 'rent' ? l.forRentLabel
+                                : l.saleAndRentLabel,
+                        color: _white,
+                        bg: canSell ? _emerald : _purple,
                       ),
                       if (_p.condition != null)
-                        _Pill(
-                          label: _conditionLabel(AppLocalizations.of(context), _p.condition),
+                        _SoftTag(
+                          label: _conditionLabel(l, _p.condition),
                           color: _condColor(_p.condition),
+                          bg: _condColor(_p.condition).withValues(alpha: 0.12),
                         ),
-                      _Pill(label: '${_p.viewsCount} ${AppLocalizations.of(context).viewsCountSuffix}',
-                          color: Colors.grey, icon: Icons.visibility_outlined),
+                      _SoftTag(
+                        icon: Icons.visibility_outlined,
+                        label: '${_p.viewsCount} ${l.viewsCountSuffix}',
+                        color: context.appTextSecondary,
+                        bg: context.appCardBg,
+                      ),
                     ]),
-                    const SizedBox(height: 12),
-                    // Title
-                    Text(_p.title,
-                        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800,
-                            fontSize: 20, height: 1.2)),
+                    const SizedBox(height: 14),
+                    Text(_p.title, style: TextStyle(color: context.appTextPrimary,
+                        fontWeight: FontWeight.w800, fontSize: 22, height: 1.3)),
                     if (_p.categoryName != null) ...[
                       const SizedBox(height: 4),
                       Text(_p.categoryName!,
-                          style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                          style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                     ],
-                    if (_p.vehicleTypeName(appLocale.value.languageCode) != null ||
-                        _p.vehicleColorName(appLocale.value.languageCode) != null ||
-                        _p.vehicleSizeLabel != null) ...[
-                      const SizedBox(height: 8),
-                      Wrap(spacing: 8, runSpacing: 6, children: [
-                        if (_p.vehicleTypeName(appLocale.value.languageCode) != null)
-                          _Pill(label: _p.vehicleTypeName(appLocale.value.languageCode)!,
-                              color: _green, icon: Icons.two_wheeler_outlined),
-                        if (_p.vehicleSizeLabel != null)
-                          _Pill(label: _p.vehicleSizeLabel!, color: Colors.blueGrey),
-                        if (_p.vehicleColorName(appLocale.value.languageCode) != null)
-                          _Pill(
-                            label: _p.vehicleColorName(appLocale.value.languageCode)!,
-                            color: _swatchFor(_p.vehicleColorCode ?? ''),
+                    if (vType != null || vColor != null) ...[
+                      const SizedBox(height: 12),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        if (vType != null)
+                          _SoftTag(icon: Icons.bolt_rounded, label: vType,
+                              color: _emeraldDeep, bg: _mint(context)),
+                        if (vColor != null)
+                          _SoftTag(icon: Icons.circle, label: vColor,
+                              iconColor: _swatchFor(_p.vehicleColorCode ?? ''),
+                              color: const Color(0xFF2563EB),
+                              bg: const Color(0xFF2563EB).withValues(alpha: 0.08)),
+                      ]),
+                    ],
+
+                    // Price + verified seller
+                    const SizedBox(height: 18),
+                    Row(children: [
+                      Expanded(child: _PriceBlock(product: _p, canSell: canSell, canRent: canRent)),
+                      if (_p.sellerName != null) ...[
+                        const SizedBox(width: 12),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 170),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _mint(context),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Icons.verified_user_rounded, color: _emerald, size: 26),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min, children: [
+                                  Text(l.verifiedSeller, maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(color: _emeraldDeep,
+                                          fontWeight: FontWeight.w800, fontSize: 12)),
+                                  const SizedBox(height: 2),
+                                  Text(_p.sellerName!, maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(color: context.appTextSecondary,
+                                          fontSize: 11)),
+                                ]),
+                              ),
+                            ]),
                           ),
+                        ),
+                      ],
+                    ]),
+
+                    if (_p.locationText != null) ...[
+                      const SizedBox(height: 14),
+                      Row(children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                              color: _mint(context), borderRadius: BorderRadius.circular(10)),
+                          child: const Icon(Icons.location_on_rounded, color: _emerald, size: 16),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(child: Text(_p.locationText!,
+                            style: TextStyle(color: context.appTextSecondary, fontSize: 13))),
                       ]),
                     ],
-                    const SizedBox(height: 12),
-                    // Location
-                    if (_p.locationText != null)
-                      Row(children: [
-                        Container(padding: const EdgeInsets.all(5),
-                          decoration: BoxDecoration(
-                              color: _green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.location_on_rounded,
-                              color: _green, size: 14)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(_p.locationText!,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13))),
-                      ]),
-                    const SizedBox(height: 14),
-                    const Divider(color: Color(0xFFF0F0F0), height: 1),
-                    const SizedBox(height: 14),
-                    // Price
-                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        if (canSell) ...[
-                          Text(AppLocalizations.of(context).salePrice,
-                              style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          Text(_usd(_p.price),
-                              style: const TextStyle(color: _green,
-                                  fontWeight: FontWeight.w800, fontSize: 22)),
-                        ],
-                        if (canRent && _p.rentPricePerDay != null) ...[
-                          const SizedBox(height: 4),
-                          Text(AppLocalizations.of(context).rentPerDay,
-                              style: TextStyle(color: Colors.grey, fontSize: 11)),
-                          Text(_usd(_p.rentPricePerDay!),
-                              style: const TextStyle(
-                                  color: Color(0xFF7C3AED),
-                                  fontWeight: FontWeight.w700, fontSize: 15)),
-                        ],
-                      ]),
-                      const Spacer(),
-                      if (_p.quantity > 1)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                              color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
-                          child: Text('${AppLocalizations.of(context).qty}: ${_p.quantity}',
-                              style: TextStyle(color: context.appTextPrimary,
-                                  fontWeight: FontWeight.w600, fontSize: 12)),
+
+                    // Spec strip
+                    const SizedBox(height: 18),
+                    _SpecStrip(items: specs),
+
+                    if (_p.description != null && _p.description!.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      _DetailHeading(l.description),
+                      const SizedBox(height: 8),
+                      Text(_p.description!, style: TextStyle(
+                          color: context.appTextSecondary, fontSize: 14, height: 1.55)),
+                    ],
+
+                    if (_p.images.length > 1) ...[
+                      const SizedBox(height: 22),
+                      _DetailHeading(l.photos),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        height: 72,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _p.images.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 10),
+                          itemBuilder: (_, i) => GestureDetector(
+                            onTap: () => _pageCtrl.animateToPage(i,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _imgIdx == i ? _emerald : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: _NetImage(url: _p.images[i], width: 92, height: 64),
+                              ),
+                            ),
+                          ),
                         ),
-                    ]),
+                      ),
+                    ],
                   ]),
                 ),
-
-                // Seller card
-                if (_p.sellerName != null)
-                  _DetailSection(
-                    title: AppLocalizations.of(context).seller,
-                    child: Row(children: [
-                      CircleAvatar(radius: 22,
-                          backgroundColor: _green.withValues(alpha: 0.12),
-                          child: Text(_p.sellerName![0].toUpperCase(),
-                              style: const TextStyle(color: _green,
-                                  fontWeight: FontWeight.w800, fontSize: 18))),
-                      const SizedBox(width: 12),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(_p.sellerName!, style: TextStyle(
-                            color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
-                        Row(children: [
-                          const Icon(Icons.verified_rounded, color: _green, size: 13),
-                          const SizedBox(width: 3),
-                          Text(AppLocalizations.of(context).verifiedSeller,
-                              style: TextStyle(color: Colors.grey, fontSize: 11)),
-                        ]),
-                      ]),
-                    ]),
-                  ),
-
-                // Description
-                if (_p.description != null && _p.description!.isNotEmpty)
-                  _DetailSection(
-                    title: AppLocalizations.of(context).description,
-                    child: Text(_p.description!,
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 13, height: 1.35)),
-                  ),
-
-                // Specs grid
-                Builder(builder: (context) {
-                  final l = AppLocalizations.of(context);
-                  return _DetailSection(
-                    title: l.specifications,
-                    child: _SpecGrid(cells: [
-                      if (_p.condition != null)
-                        _SpecCell(l.condition, _conditionLabel(l, _p.condition)),
-                      _SpecCell(l.quantity, '${_p.quantity}'),
-                      _SpecCell(l.type, _listingTypeLabel(l, _p.listingType)),
-                      _SpecCell(l.viewsSpecLabel, '${_p.viewsCount}'),
-                      if (_p.rentPricePerDay != null)
-                        _SpecCell(l.perDaySpecLabel, _usd(_p.rentPricePerDay!)),
-                      if (_p.locationText != null)
-                        _SpecCell(l.location, _p.locationText!),
-                    ]),
-                  );
-                }),
-
-                const SizedBox(height: 16),
-              ]),
+              ),
             ),
           ]),
         ),
@@ -1597,48 +1889,150 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
               16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: context.appSurface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 16, offset: const Offset(0, -4))],
           ),
           child: _isOwner
               ? SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.edit_outlined, size: 16),
-                    label: Text(AppLocalizations.of(context).editListing,
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(
+                  child: _OutlineCTA(
+                    label: l.editListing,
+                    icon: Icons.edit_outlined,
+                    color: _emerald,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => _PostProductScreen(existing: _p))),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _green,
-                      side: const BorderSide(color: _green),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
                   ),
                 )
               : Row(children: [
-                  if (canSell) Expanded(child: _CTA(
-                    label: canRent ? AppLocalizations.of(context).buy : AppLocalizations.of(context).buyNowLabel,
-                    icon: Icons.shopping_bag_rounded,
-                    color: _green,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => _OrderScreen(product: _p, orderType: 'purchase'))),
-                  )),
-                  if (canSell && canRent) const SizedBox(width: 10),
-                  if (canRent) Expanded(child: _CTA(
-                    label: canSell ? AppLocalizations.of(context).rent : AppLocalizations.of(context).rentNowLabel,
-                    icon: Icons.key_rounded,
-                    color: const Color(0xFF7C3AED),
-                    onTap: () => Navigator.push(context, MaterialPageRoute(
-                        builder: (_) => _OrderScreen(product: _p, orderType: 'rent'))),
-                  )),
+                  if (canSell && canRent) ...[
+                    Expanded(child: _OutlineCTA(
+                      label: l.rent, icon: Icons.key_rounded, color: _purple,
+                      onTap: () => _order('rent'),
+                    )),
+                    const SizedBox(width: 12),
+                    Expanded(child: _CTA(
+                      label: l.buy, icon: Icons.shopping_cart_outlined, color: _emerald,
+                      onTap: () => _order('purchase'),
+                    )),
+                  ] else if (canSell)
+                    Expanded(child: _CTA(
+                      label: l.buyNowLabel, icon: Icons.shopping_cart_outlined, color: _emerald,
+                      onTap: () => _order('purchase'),
+                    ))
+                  else if (canRent)
+                    Expanded(child: _CTA(
+                      label: l.rentNowLabel, icon: Icons.key_rounded, color: _purple,
+                      onTap: () => _order('rent'),
+                    )),
                 ]),
         ),
       ]),
     );
   }
+}
+
+// Sale price (large) plus the per-day rent line; rent-only listings lead
+// with the rent price instead.
+class _PriceBlock extends StatelessWidget {
+  final MarketplaceProductModel product;
+  final bool canSell, canRent;
+  const _PriceBlock({required this.product, required this.canSell, required this.canRent});
+
+  @override
+  Widget build(BuildContext context) {
+    final l    = AppLocalizations.of(context);
+    final rent = product.rentPricePerDay;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if (canSell)
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(_usd(product.price), style: const TextStyle(color: _emerald,
+              fontWeight: FontWeight.w900, fontSize: 32, height: 1.1)),
+        )
+      else if (rent != null)
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text(_usd(rent), style: const TextStyle(color: _purple,
+              fontWeight: FontWeight.w900, fontSize: 30, height: 1.1)),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text('/ ${l.perDaySpecLabel}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+          ),
+        ]),
+      if (canSell && canRent && rent != null) ...[
+        const SizedBox(height: 6),
+        Row(children: [
+          const Icon(Icons.calendar_month_rounded, color: _purple, size: 16),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: '${l.rentPerDay}  ',
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                TextSpan(text: _usd(rent), style: const TextStyle(color: _purple,
+                    fontWeight: FontWeight.w800, fontSize: 14)),
+              ]),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ]),
+      ],
+      if (product.quantity > 1) ...[
+        const SizedBox(height: 4),
+        Text('${l.qty}: ${product.quantity}',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+      ],
+    ]);
+  }
+}
+
+class _CircleBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? color;
+  final double size;
+  const _CircleBtn({super.key, required this.icon, required this.onTap,
+      this.color, this.size = 20});
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: context.appSurface,
+    shape: const CircleBorder(),
+    elevation: 3,
+    shadowColor: Colors.black26,
+    child: InkWell(
+      customBorder: const CircleBorder(),
+      onTap: onTap,
+      child: SizedBox(width: 42, height: 42,
+          child: Icon(icon, color: color ?? context.appTextPrimary, size: size)),
+    ),
+  );
+}
+
+class _SoftTag extends StatelessWidget {
+  final String label;
+  final Color color, bg;
+  final IconData? icon;
+  final Color? iconColor;
+  const _SoftTag({required this.label, required this.color, required this.bg,
+      this.icon, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+    decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      if (icon != null) ...[
+        Icon(icon, color: iconColor ?? color, size: 15),
+        const SizedBox(width: 6),
+      ],
+      Flexible(
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+      ),
+    ]),
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2689,77 +3083,89 @@ class _CTA extends StatelessWidget {
     style: ElevatedButton.styleFrom(
       backgroundColor: color, foregroundColor: _white, elevation: 0,
       padding: const EdgeInsets.symmetric(vertical: 15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
   );
 }
 
-class _DetailSection extends StatelessWidget {
-  final String title;
-  final Widget child;
-  const _DetailSection({required this.title, required this.child});
+class _OutlineCTA extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const _OutlineCTA({required this.label, required this.icon,
+      required this.color, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: context.appSurface, borderRadius: BorderRadius.circular(16),
-      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 8, offset: const Offset(0, 2))],
+  Widget build(BuildContext context) => OutlinedButton.icon(
+    onPressed: onTap,
+    icon: Icon(icon, size: 18),
+    label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+    style: OutlinedButton.styleFrom(
+      foregroundColor: color,
+      side: BorderSide(color: color.withValues(alpha: 0.6), width: 1.5),
+      padding: const EdgeInsets.symmetric(vertical: 15),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: TextStyle(color: context.appTextPrimary,
-          fontWeight: FontWeight.w800, fontSize: 13)),
-      const SizedBox(height: 8),
-      child,
-    ]),
   );
 }
 
-class _SpecGrid extends StatelessWidget {
-  final List<_SpecCell> cells;
-  const _SpecGrid({required this.cells});
+class _DetailHeading extends StatelessWidget {
+  final String text;
+  const _DetailHeading(this.text);
 
   @override
-  Widget build(BuildContext context) {
-    if (cells.isEmpty) return const SizedBox.shrink();
-    return LayoutBuilder(builder: (context, constraints) {
-      final cellWidth = (constraints.maxWidth - 10) / 2;
-      final rows = <Widget>[];
-      for (int i = 0; i < cells.length; i += 2) {
-        final a = SizedBox(width: cellWidth, child: cells[i]);
-        final b = i + 1 < cells.length
-            ? SizedBox(width: cellWidth, child: cells[i + 1])
-            : SizedBox(width: cellWidth);
-        rows.add(Row(children: [a, const SizedBox(width: 8), b]));
-        if (i + 2 < cells.length) rows.add(const SizedBox(height: 8));
-      }
-      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: rows);
-    });
-  }
+  Widget build(BuildContext context) => Text(text, style: TextStyle(
+      color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 17));
 }
 
-class _SpecCell extends StatelessWidget {
+class _SpecItem {
+  final IconData icon;
   final String label, value;
-  const _SpecCell(this.label, this.value);
+  const _SpecItem(this.icon, this.label, this.value);
+}
+
+// Mint strip of icon/label/value columns separated by thin dividers.
+class _SpecStrip extends StatelessWidget {
+  final List<_SpecItem> items;
+  const _SpecStrip({required this.items});
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(10)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(
-              color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(value, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                  fontSize: 13, height: 1.2)),
-        ]),
-      );
-    });
+    if (items.isEmpty) return const SizedBox.shrink();
+    final divider = VerticalDivider(width: 1, thickness: 1,
+        indent: 6, endIndent: 6, color: _emerald.withValues(alpha: 0.15));
+    final cells = <Widget>[];
+    for (var i = 0; i < items.length; i++) {
+      if (i > 0) cells.add(divider);
+      final it = items[i];
+      cells.add(Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(it.icon, color: _emerald, size: 22),
+            const SizedBox(height: 6),
+            Text(it.label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+            const SizedBox(height: 3),
+            Text(it.value, maxLines: 1, overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.appTextPrimary,
+                    fontWeight: FontWeight.w800, fontSize: 13)),
+          ]),
+        ),
+      ));
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+      decoration: BoxDecoration(
+        color: _mint(context),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: IntrinsicHeight(child: Row(children: cells)),
+    );
   }
 }
 
@@ -3150,9 +3556,7 @@ class _OrderScreenState extends State<_OrderScreen> {
   double get _subtotal => _mainItemTotal + _extraItemsTotal;
   double get _discountUsd => _discountKhr / 4100.0;
   double get _total => (_subtotal - _discountUsd).clamp(0.0, _subtotal);
-  // Rentals book through the same /rentals system as the Car Rental page,
-  // so they share its green theme.
-  Color get _color => _isRent ? AppTheme.accent : _green;
+  Color get _color => _emerald;
 
   static String _fmt(DateTime d) => DateFormat('MMM d, yyyy').format(d);
 
@@ -3505,21 +3909,139 @@ class _OrderScreenState extends State<_OrderScreen> {
         }
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(AppLocalizations.of(context).orderPlacedSuccess), backgroundColor: _green));
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => _isVehicleRental && !_isGuest
-              ? const MyRentalsScreen()
-              : const MarketplaceScreen(initialTab: 1),
-        ),
-        (route) => route.isFirst,
-      );
+      final goToHistory = await _showSuccessDialog();
+      if (!mounted) return;
+      if (goToHistory) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => _isVehicleRental && !_isGuest
+                ? const MyRentalsScreen()
+                : const MarketplaceScreen(initialTab: 1),
+          ),
+          (route) => route.isFirst,
+        );
+      } else {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() { _err = e.message; _busy = false; });
+    } on SocketException {
+      // Never reached the server (offline, DNS, connect timeout) — show a
+      // readable message instead of the raw socket error.
+      if (mounted) {
+        setState(() {
+          _err = AppLocalizations.of(context).connectionErrorRetry;
+          _busy = false;
+        });
+      }
+    } on TimeoutException {
+      if (mounted) {
+        setState(() {
+          _err = AppLocalizations.of(context).connectionErrorRetry;
+          _busy = false;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() { _err = e.toString(); _busy = false; });
     }
+  }
+
+  // Success popup after a purchase / rental goes through. Returns true when
+  // the user wants to see their orders (or rentals), false for Home.
+  Future<bool> _showSuccessDialog() async {
+    final l = AppLocalizations.of(context);
+    final p = _currentProduct;
+    final showRentals = _isVehicleRental && !_isGuest;
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        backgroundColor: ctx.appSurface,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(22, 28, 22, 18),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0.4, end: 1),
+              duration: const Duration(milliseconds: 450),
+              curve: Curves.easeOutBack,
+              builder: (_, v, child) => Transform.scale(scale: v, child: child),
+              child: Container(
+                width: 92, height: 92,
+                decoration: BoxDecoration(color: _mint(ctx), shape: BoxShape.circle),
+                child: Center(
+                  child: Container(
+                    width: 64, height: 64,
+                    decoration: BoxDecoration(
+                      color: _emerald,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.35),
+                          blurRadius: 16, offset: const Offset(0, 6))],
+                    ),
+                    child: const Icon(Icons.check_rounded, color: _white, size: 38),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(_isRent ? l.rentalBookedSuccess : l.orderPlacedSuccess,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: ctx.appTextPrimary,
+                    fontWeight: FontWeight.w800, fontSize: 19, height: 1.3)),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _mint(ctx),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: _NetImage(
+                      url: p.images.isNotEmpty ? p.images.first : null,
+                      width: 52, height: 52),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: ctx.appTextPrimary,
+                          fontWeight: FontWeight.w700, fontSize: 13, height: 1.3)),
+                  const SizedBox(height: 2),
+                  Text('${l.total}: ${_usd(_total)}',
+                      style: const TextStyle(color: _emerald,
+                          fontWeight: FontWeight.w800, fontSize: 14)),
+                ])),
+              ]),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _emerald,
+                  foregroundColor: _white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(showRentals ? l.myRentals : l.myOrdersTab,
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l.backToHome, style: TextStyle(
+                  color: ctx.appTextSecondary, fontWeight: FontWeight.w600)),
+            ),
+          ]),
+        ),
+      ),
+    );
+    return result ?? true;
   }
 
   void _openPaymentSheet() {
@@ -3593,80 +4115,83 @@ class _OrderScreenState extends State<_OrderScreen> {
   @override
   Widget build(BuildContext context) {
     final p = _currentProduct;
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        backgroundColor: context.appSurface, elevation: 0,
-        scrolledUnderElevation: 0.5, shadowColor: Colors.black12,
-        leading: _BackBtn(),
-        title: Text(_isRent ? AppLocalizations.of(context).rentItemTitle : AppLocalizations.of(context).buyItemTitle,
-            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
+        backgroundColor: context.appBackground,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        shadowColor: Colors.black12,
+        automaticallyImplyLeading: false,
+        toolbarHeight: 64,
+        centerTitle: true,
+        leadingWidth: 64,
+        leading: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 4, 12),
+          child: Material(
+            color: _mint(context),
+            borderRadius: BorderRadius.circular(12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => Navigator.pop(context),
+              child: Icon(Icons.arrow_back_ios_new_rounded,
+                  color: context.appTextPrimary, size: 16),
+            ),
+          ),
+        ),
+        title: Text(_isRent ? l.rentItemTitle : l.buyItemTitle,
+            style: TextStyle(color: context.appTextPrimary,
+                fontWeight: FontWeight.w800, fontSize: 18)),
       ),
       body: Column(children: [
         Expanded(child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Error
-            if (_err != null)
-              Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.25))),
-                child: Row(children: [
-                  const Icon(Icons.error_outline_rounded, color: Colors.red, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(_err!,
-                      style: const TextStyle(color: Colors.red, fontSize: 13))),
-                ]),
-              ),
-
             // Product summary
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8, offset: const Offset(0, 2))]),
-              child: Row(children: [
-                ClipRRect(borderRadius: BorderRadius.circular(10),
+            _FormCard(
+              padding: const EdgeInsets.all(12),
+              child: Column(children: [
+                Row(children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
                     child: _NetImage(
                         url: p.images.isNotEmpty ? p.images.first : null,
-                        width: 60, height: 60)),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                          fontSize: 13)),
-                  const SizedBox(height: 4),
-                  Text(
-                    _isRent && p.rentPricePerDay != null
-                        ? '${_usd(p.rentPricePerDay!)}/day' : _usd(p.price),
-                    style: TextStyle(color: _color, fontWeight: FontWeight.w700,
-                        fontSize: 13)),
-                ])),
+                        width: 92, height: 92),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.appTextPrimary,
+                            fontWeight: FontWeight.w700, fontSize: 14, height: 1.3)),
+                    const SizedBox(height: 6),
+                    Text(
+                      _isRent && p.rentPricePerDay != null
+                          ? '${_usd(p.rentPricePerDay!)}/day' : _usd(p.price),
+                      style: TextStyle(color: _color,
+                          fontWeight: FontWeight.w800, fontSize: 18)),
+                    if (p.quantity > 0) ...[
+                      const SizedBox(height: 6),
+                      _SoftTag(icon: Icons.check_circle_rounded, label: l.available,
+                          color: _emeraldDeep, bg: _mint(context)),
+                    ],
+                  ])),
+                ]),
               ]),
             ),
 
-            // Inline filter — right under the item. Picking one both swaps
-            // the main item to a matching listing and narrows "Add Another
-            // Item". Purchase orders only. Grouped into one card (matching
-            // the Product summary / Rental Period / Quantity cards below)
-            // instead of floating labels directly on the page background —
-            // Type/Size/Color read as one "choose a variant" step, not three
-            // disconnected filters.
             if (!_isVehicleRental && !_refLoading &&
                 (_vTypes.isNotEmpty || _vColors.isNotEmpty || _vSizes.isNotEmpty)) ...[
-              const SizedBox(height: 14),
-              _FormLabel(AppLocalizations.of(context).options),
-              const SizedBox(height: 8),
+              const SizedBox(height: 18),
+              _OrderSectionHeader(icon: Icons.tune_rounded, text: AppLocalizations.of(context).options),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
                   color: context.appSurface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8, offset: const Offset(0, 2))],
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14, offset: const Offset(0, 4))],
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (_vTypes.isNotEmpty) ...[
@@ -3815,224 +4340,16 @@ class _OrderScreenState extends State<_OrderScreen> {
                 ]),
               ),
             ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
-            // Location — every rental, plus guest purchases (pick up from the
-            // seller or deliver to an address), same Location Type + map UI.
-            if (_showLocation) ...[
-              _FormLabel(AppLocalizations.of(context).location),
-              const SizedBox(height: 10),
-              _OrderDropdownTile(
-                icon: _locType.icon,
-                label: AppLocalizations.of(context).locationType,
-                value: _locType.labelFor(AppLocalizations.of(context)),
-                subtitle: _locType.subtitleFor(AppLocalizations.of(context)),
-                color: _color,
-                onTap: _openLocTypeSheet,
-              ),
-              const SizedBox(height: 10),
-              if (_locType == _LocType.pickup) ...[
-                if (widget.product.locationLat != null && widget.product.locationLng != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.appSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6, offset: const Offset(0, 2))],
-                    ),
-                    child: RotehLocationMap(
-                      pin: LatLng(widget.product.locationLat!, widget.product.locationLng!),
-                      // Never fall back to RotehLocationMap's own default label
-                      // (the ROTEH HQ address) — this is the listing's own
-                      // pickup point, not the company office.
-                      addressLabel: widget.product.locationText ?? AppLocalizations.of(context).pickupLocation,
-                    ),
-                  )
-                else if (_manualPickupLatLng != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: context.appSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 6, offset: const Offset(0, 2))],
-                    ),
-                    child: RotehLocationMap(
-                      pin: _manualPickupLatLng,
-                      addressLabel: _manualPickupAddress,
-                    ),
-                  )
-                else
-                  // No listing coordinates and nothing picked yet — default
-                  // to the ROTEH CAMBODIA office (same as Car Rental's Pick
-                  // Up default) instead of leaving this blank. Still tappable
-                  // to override with a real pickup point.
-                  GestureDetector(
-                    onTap: _pickManualPickupLocation,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: context.appSurface,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 6, offset: const Offset(0, 2))],
-                      ),
-                      child: const RotehLocationMap(),
-                    ),
-                  ),
-              ] else
-                GestureDetector(
-                  onTap: _pickDeliveryLocation,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: context.appSurface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color: _deliveryAddress.isEmpty
-                              ? Colors.red.withValues(alpha: 0.4) : context.appCardBg),
-                    ),
-                    child: Row(children: [
-                      Icon(Icons.location_on_rounded, color: _color, size: 18),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(
-                          _deliveryAddress.isEmpty ? AppLocalizations.of(context).tapToSetDelivery : _deliveryAddress,
-                          maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: _deliveryAddress.isEmpty
-                                  ? Colors.grey : context.appTextPrimary,
-                              fontSize: 13,
-                              fontWeight: _deliveryAddress.isEmpty ? FontWeight.w400 : FontWeight.w600))),
-                      Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
-                    ]),
-                  ),
-                ),
-              const SizedBox(height: 16),
-            ],
-
-            // Rental period — Duration dropdown + Start Date / End Date (auto),
-            // same pattern as the Car Rental page.
-            if (_isRent) ...[
-              _FormLabel(AppLocalizations.of(context).rentalPeriodLabel),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6, offset: const Offset(0, 2))],
-                ),
-                child: Column(children: [
-                  _OrderDropdownTile(
-                    icon: _duration.icon,
-                    label: AppLocalizations.of(context).durationLabel,
-                    value: _duration.labelFor(AppLocalizations.of(context)),
-                    subtitle: _start != null
-                        ? '$_days ${AppLocalizations.of(context).daysLabel}  ·  ${AppLocalizations.of(context).endsLabel} ${_fmt(_end!)}'
-                        : '$_days ${AppLocalizations.of(context).daysLabel}',
-                    color: _color,
-                    onTap: _openDurationSheet,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: GestureDetector(
-                      onTap: _pickStartDate,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                        decoration: BoxDecoration(
-                          color: context.appCardBg,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(AppLocalizations.of(context).startDate, style: TextStyle(
-                              color: context.appTextSecondary,
-                              fontSize: 10, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            Icon(Icons.calendar_today_outlined, color: _color, size: 13),
-                            const SizedBox(width: 5),
-                            Expanded(child: Text(_start == null ? AppLocalizations.of(context).selectLabel : _fmt(_start!),
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: context.appTextPrimary,
-                                    fontWeight: FontWeight.w700, fontSize: 12))),
-                          ]),
-                        ]),
-                      ),
-                    )),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.arrow_forward_rounded, color: _color, size: 16),
-                    ),
-                    Expanded(child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: _color.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _color.withValues(alpha: 0.18)),
-                      ),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(AppLocalizations.of(context).endDateAuto, style: TextStyle(
-                            color: _color, fontSize: 10, fontWeight: FontWeight.w500)),
-                        const SizedBox(height: 4),
-                        Row(children: [
-                          Icon(Icons.event_available_outlined, color: _color, size: 13),
-                          const SizedBox(width: 5),
-                          Expanded(child: Text(_end == null ? '—' : _fmt(_end!),
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: _color,
-                                  fontWeight: FontWeight.w700, fontSize: 12))),
-                        ]),
-                      ]),
-                    )),
-                  ]),
-                  if (_start == null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: Text(AppLocalizations.of(context).selectStartDate,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.red,
-                              fontWeight: FontWeight.w700, fontSize: 13)),
-                    ),
-                  ],
-                ]),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // Quantity (not applicable to a single vehicle-rental booking)
+            // Other items in the same order (purchases only).
             if (!_isVehicleRental) ...[
-              _FormLabel(AppLocalizations.of(context).quantity),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6)]),
-                child: Row(children: [
-                  _QtyBtn(Icons.remove_rounded, _qty > 1, _color,
-                      () { if (_qty > 1) setState(() => _qty--); }),
-                  Expanded(child: Center(
-                      child: Text('$_qty', style: TextStyle(
-                          color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)))),
-                  _QtyBtn(Icons.add_rounded, _qty < 99, _color,
-                      () { if (_qty < 99) setState(() => _qty++); }),
-                ]),
-              ),
-              const SizedBox(height: 16),
-
               // Other items added to this same order.
               for (final item in _extraItems) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14),
-                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6)]),
+                  decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(18),
+                      boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4))]),
                   child: Row(children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10),
@@ -4046,7 +4363,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(_usd(item.price), style: const TextStyle(color: _green, fontWeight: FontWeight.w700, fontSize: 12)),
+                      Text(_usd(item.price), style: const TextStyle(color: _emerald, fontWeight: FontWeight.w700, fontSize: 12)),
                     ])),
                     _QtyBtn(Icons.remove_rounded, (_extraQty[item.id] ?? 1) > 1, _color,
                         () => _bumpExtraQty(item.id, -1)),
@@ -4079,19 +4396,128 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ]),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
             ],
 
             if (_isGuest) ...[
               GuestFields(nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
+            ],
+
+            // Location — every rental, plus guest purchases (pick up from the
+            // seller or deliver to an address), same Location Type + map UI.
+            if (_showLocation) ...[
+              _OrderSectionHeader(icon: Icons.location_on_rounded, text: l.location),
+              _OrderDropdownTile(
+                icon: _locType.icon,
+                label: l.locationType,
+                value: _locType.labelFor(l),
+                subtitle: _locType.subtitleFor(l),
+                color: _color,
+                onTap: _openLocTypeSheet,
+              ),
+              const SizedBox(height: 10),
+              if (_locType == _LocType.pickup)
+                _FormCard(
+                  padding: const EdgeInsets.all(10),
+                  child: widget.product.locationLat != null && widget.product.locationLng != null
+                      ? RotehLocationMap(
+                          pin: LatLng(widget.product.locationLat!, widget.product.locationLng!),
+                          // Never fall back to RotehLocationMap's own default label
+                          // (the ROTEH HQ address) — this is the listing's own
+                          // pickup point, not the company office.
+                          addressLabel: widget.product.locationText ?? l.pickupLocation,
+                        )
+                      : _manualPickupLatLng != null
+                          ? RotehLocationMap(
+                              pin: _manualPickupLatLng,
+                              addressLabel: _manualPickupAddress,
+                            )
+                          // No listing coordinates and nothing picked yet —
+                          // default to the ROTEH CAMBODIA office (same as Car
+                          // Rental's Pick Up default). Still tappable to
+                          // override with a real pickup point.
+                          : GestureDetector(
+                              onTap: _pickManualPickupLocation,
+                              child: const RotehLocationMap(),
+                            ),
+                )
+              else
+                _FormCard(
+                  onTap: _pickDeliveryLocation,
+                  border: _deliveryAddress.isEmpty
+                      ? Colors.red.withValues(alpha: 0.4) : null,
+                  child: Row(children: [
+                    _IconBubble(icon: Icons.location_on_rounded, color: _color),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(
+                        _deliveryAddress.isEmpty ? l.tapToSetDelivery : _deliveryAddress,
+                        maxLines: 2, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: _deliveryAddress.isEmpty
+                                ? context.appTextSecondary : context.appTextPrimary,
+                            fontSize: 13,
+                            fontWeight: _deliveryAddress.isEmpty ? FontWeight.w400 : FontWeight.w600))),
+                    Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 22),
+                  ]),
+                ),
+              const SizedBox(height: 18),
+            ],
+
+            // Rental period — start date, then duration + auto end date.
+            if (_isRent) ...[
+              _OrderSectionHeader(icon: Icons.calendar_month_rounded, text: l.rentalPeriodLabel),
+              _FormCard(
+                padding: const EdgeInsets.all(12),
+                child: Column(children: [
+                  _PickerTile(
+                    icon: Icons.calendar_month_rounded,
+                    label: l.startDate,
+                    value: _start == null ? l.selectLabel : _fmt(_start!),
+                    trailing: Icons.keyboard_arrow_down_rounded,
+                    outlined: true,
+                    error: _start == null,
+                    onTap: _pickStartDate,
+                  ),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: _PickerTile(
+                      icon: _duration.icon,
+                      label: l.durationLabel,
+                      value: _duration.labelFor(l),
+                      subtitle: '$_days ${l.daysLabel}',
+                      trailing: Icons.chevron_right_rounded,
+                      onTap: _openDurationSheet,
+                    )),
+                    const SizedBox(width: 10),
+                    Expanded(child: _PickerTile(
+                      icon: Icons.event_available_rounded,
+                      label: l.endDateAuto,
+                      value: _end == null ? '—' : _fmt(_end!),
+                    )),
+                  ]),
+                  if (_start == null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.07),
+                          borderRadius: BorderRadius.circular(10)),
+                      child: Text(l.selectStartDate,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red,
+                              fontWeight: FontWeight.w700, fontSize: 13)),
+                    ),
+                  ],
+                ]),
+              ),
+              const SizedBox(height: 18),
             ],
 
             // Payment
-            _FormLabel(AppLocalizations.of(context).paymentMethod),
-            const SizedBox(height: 10),
+            _OrderSectionHeader(icon: Icons.credit_card_rounded, text: l.paymentMethod),
             Builder(builder: (context) {
-              final l = AppLocalizations.of(context);
               final selected = _pays(l).firstWhere((o) => o.$1 == _pay);
               return _OrderDropdownTile(
                 icon: selected.$3,
@@ -4102,28 +4528,31 @@ class _OrderScreenState extends State<_OrderScreen> {
                 onTap: _openPaymentSheet,
               );
             }),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
             // Notes
-            _FormLabel(AppLocalizations.of(context).notesOptional),
-            const SizedBox(height: 10),
+            _OrderSectionHeader(icon: Icons.edit_note_rounded, text: l.notesOptional),
             TextField(
               controller: _notes, maxLines: 2,
               style: TextStyle(color: context.appTextPrimary, fontSize: 13),
               decoration: InputDecoration(
-                hintText: AppLocalizations.of(context).anySpecialInstructionsHint,
-                hintStyle: const TextStyle(color: Colors.grey),
+                hintText: l.anySpecialInstructionsHint,
+                hintStyle: TextStyle(color: context.appTextSecondary),
                 filled: true, fillColor: context.appSurface,
                 border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(color: _color.withValues(alpha: 0.5))),
                 contentPadding: const EdgeInsets.all(14),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
             // Coupon code (buy & rent, matching Car Rental)
-            _FormLabel(AppLocalizations.of(context).couponCode),
-              const SizedBox(height: 10),
+            _OrderSectionHeader(icon: Icons.local_offer_rounded, text: l.couponCode),
               if (_appliedCode != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -4205,14 +4634,14 @@ class _OrderScreenState extends State<_OrderScreen> {
                   ]),
                 ],
               ],
-            const SizedBox(height: 16),
+            const SizedBox(height: 18),
 
             // Summary
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8)]),
+              decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(18),
+                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 14, offset: const Offset(0, 4))]),
               child: Column(children: [
                 Align(
                   alignment: Alignment.centerLeft,
@@ -4268,13 +4697,10 @@ class _OrderScreenState extends State<_OrderScreen> {
           ]),
         )),
 
-        // Confirm — total summary and the action button as two clearly
-        // separate rows (was one button with the price crammed into its
-        // label) so the price reads as a receipt total, not part of a
-        // long button caption.
+        // Confirm — total, any submit error, then the action button.
         Container(
           padding: EdgeInsets.fromLTRB(
-              16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+              16, 14, 16, 12 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: context.appSurface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -4283,27 +4709,60 @@ class _OrderScreenState extends State<_OrderScreen> {
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             if (!_isRent || _datesOk) ...[
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(AppLocalizations.of(context).totalSummaryLabel, style: TextStyle(
-                      color: context.appTextSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
-                  Text(_usd(_total), style: TextStyle(
-                      color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
-                ]),
+              Row(children: [
+                Expanded(child: Text(l.totalSummaryLabel, style: TextStyle(
+                    color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600))),
+                Text(_usd(_total), style: TextStyle(
+                    color: _color, fontSize: 22, fontWeight: FontWeight.w900)),
               ]),
               const SizedBox(height: 12),
             ],
-            SizedBox(width: double.infinity,
+            if (_err != null) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.error_rounded, color: Colors.red, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(_err!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13))),
+                ]),
+              ),
+              const SizedBox(height: 12),
+            ],
+            SizedBox(
+              width: double.infinity,
+              height: 56,
               child: ElevatedButton(
                 onPressed: _busy ? null : _submit,
-                style: AppTheme.confirmButtonStyle(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _color,
+                  foregroundColor: _white,
+                  disabledBackgroundColor: _color.withValues(alpha: 0.5),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
                 child: _busy
                     ? const SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
-                    : Text(
-                        _isRent
-                            ? (_datesOk ? AppLocalizations.of(context).confirmRentalLabel : AppLocalizations.of(context).selectDatesToContinue)
-                            : AppLocalizations.of(context).proceedToCheckout),
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.lock_rounded, size: 18),
+                        const SizedBox(width: 10),
+                        Flexible(child: Text(
+                          _isRent
+                              ? (_datesOk ? l.confirmRentalLabel : l.selectDatesToContinue)
+                              : l.proceedToCheckout,
+                          maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                        )),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.arrow_forward_rounded, size: 18),
+                      ]),
               ),
             ),
           ]),
@@ -4313,12 +4772,126 @@ class _OrderScreenState extends State<_OrderScreen> {
   }
 }
 
-class _FormLabel extends StatelessWidget {
+// Icon-in-circle + bold title above each order-form section.
+class _OrderSectionHeader extends StatelessWidget {
+  final IconData icon;
   final String text;
-  const _FormLabel(this.text);
+  const _OrderSectionHeader({required this.icon, required this.text});
+
   @override
-  Widget build(BuildContext context) => Text(text,
-      style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14));
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [
+      Container(
+        width: 36, height: 36,
+        decoration: const BoxDecoration(color: _emerald, shape: BoxShape.circle),
+        child: Icon(icon, color: _white, size: 19),
+      ),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: context.appTextPrimary,
+              fontWeight: FontWeight.w800, fontSize: 17))),
+    ]),
+  );
+}
+
+class _FormCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  final Color? border;
+  const _FormCard({required this.child,
+      this.padding = const EdgeInsets.all(14), this.onTap, this.border});
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(18);
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: radius,
+          border: border != null ? Border.all(color: border!) : null,
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 14, offset: const Offset(0, 4))],
+        ),
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconBubble extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  const _IconBubble({required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 46, height: 46,
+    decoration: BoxDecoration(color: _mint(context), shape: BoxShape.circle),
+    child: Icon(icon, color: color, size: 22),
+  );
+}
+
+// Date / duration tile in the rental-period card: mint fill, or outlined
+// for the primary (start date) pick.
+class _PickerTile extends StatelessWidget {
+  final IconData icon;
+  final String label, value;
+  final String? subtitle;
+  final IconData? trailing;
+  final bool outlined, error;
+  final VoidCallback? onTap;
+  const _PickerTile({
+    required this.icon, required this.label, required this.value,
+    this.subtitle, this.trailing, this.outlined = false, this.error = false, this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(14);
+    return Material(
+      color: outlined ? context.appSurface : _mint(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: outlined
+            ? BorderSide(color: error
+                ? Colors.red.withValues(alpha: 0.4)
+                : _emerald.withValues(alpha: 0.3), width: 1.2)
+            : BorderSide.none,
+      ),
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(children: [
+            Icon(icon, color: _emerald, size: 26),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+              const SizedBox(height: 2),
+              Text(value, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.appTextPrimary,
+                      fontWeight: FontWeight.w700, fontSize: 14)),
+              if (subtitle != null)
+                Text(subtitle!, maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+            ])),
+            if (trailing != null)
+              Icon(trailing, color: context.appTextSecondary, size: 20),
+          ]),
+        ),
+      ),
+    );
+  }
 }
 
 // Tappable summary tile that opens a bottom sheet — matches the Car Rental
@@ -4334,33 +4907,26 @@ class _OrderDropdownTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _FormCard(
     onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.appCardBg),
-      ),
-      child: Row(children: [
-        Icon(icon, color: color, size: 20),
-        const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(
-              color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(value, style: TextStyle(
-              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    child: Row(children: [
+      _IconBubble(icon: icon, color: color),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(
+            color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        if (subtitle.isNotEmpty)
+          Text(subtitle, style: TextStyle(
+              color: context.appTextSecondary, fontSize: 11),
               maxLines: 1, overflow: TextOverflow.ellipsis),
-          if (subtitle.isNotEmpty)
-            Text(subtitle, style: TextStyle(
-                color: context.appTextSecondary, fontSize: 10),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-        ])),
-        Icon(Icons.keyboard_arrow_down, color: context.appTextSecondary, size: 20),
-      ]),
-    ),
+      ])),
+      Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 22),
+    ]),
   );
 }
 
@@ -4376,7 +4942,7 @@ class _QtyBtn extends StatelessWidget {
     child: Container(width: 36, height: 36,
       decoration: BoxDecoration(
           color: active ? color.withValues(alpha: 0.1) : context.appCardBg,
-          borderRadius: BorderRadius.circular(10)),
+          shape: BoxShape.circle),
       child: Icon(icon, color: active ? color : Colors.grey, size: 20)),
   );
 }
@@ -4641,17 +5207,39 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
                 style: TextStyle(color: context.appTextSecondary, fontSize: 12))),
           ]),
         ),
-      Container(
-        color: context.appSurface,
-        child: TabBar(
-          controller: _tc,
-          indicatorColor: _green, indicatorWeight: 3,
-          labelColor: _green, unselectedLabelColor: Colors.grey,
-          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-          tabs: [
-            Tab(text: '${AppLocalizations.of(context).buyingTab} (${_buying.length})'),
-            Tab(text: '${AppLocalizations.of(context).rental} (${_selling.length})'),
-          ],
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        child: Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: context.appSurface,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 14, offset: const Offset(0, 4))],
+          ),
+          child: TabBar(
+            controller: _tc,
+            indicator: BoxDecoration(
+              color: _emerald,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.3),
+                  blurRadius: 10, offset: const Offset(0, 3))],
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            splashBorderRadius: BorderRadius.circular(24),
+            labelPadding: EdgeInsets.zero,
+            labelColor: _white,
+            unselectedLabelColor: context.appTextSecondary,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+            unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            tabs: [
+              _IconTab(icon: Icons.inventory_2_outlined, height: 46,
+                  label: '${AppLocalizations.of(context).buyingTab} (${_buying.length})'),
+              _IconTab(icon: Icons.key_outlined, height: 46,
+                  label: '${AppLocalizations.of(context).rental} (${_selling.length})'),
+            ],
+          ),
         ),
       ),
       Expanded(child: TabBarView(controller: _tc, children: [
@@ -4681,9 +5269,9 @@ class _OrderList extends StatelessWidget {
       ]),
     );
     return RefreshIndicator(
-      onRefresh: onRefresh, color: _green,
+      onRefresh: onRefresh, color: _emerald,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         itemCount: orders.length,
         itemBuilder: (_, i) =>
             _OrderCard(order: orders[i], isSeller: isSeller, isGuest: isGuest, onAction: onAction),
@@ -4701,119 +5289,130 @@ class _OrderCard extends StatelessWidget {
   const _OrderCard({required this.order, required this.isSeller,
       this.isGuest = false, required this.onAction});
 
+  IconData _statusIcon(String status) => switch (status) {
+    'confirmed' => Icons.check_circle_rounded,
+    'completed' => Icons.task_alt_rounded,
+    'cancelled' => Icons.schedule_rounded,
+    _           => Icons.autorenew_rounded,
+  };
+
   @override
   Widget build(BuildContext context) {
+    final l       = AppLocalizations.of(context);
     final o       = order;
     final sc      = _statusColor(o.status);
     final isRent  = o.orderType == 'rent';
-    final typeClr = isRent ? const Color(0xFF7C3AED) : _green;
+    final typeClr = isRent ? _purple : _emerald;
     final canAct  = o.status == 'pending' || o.status == 'confirmed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: context.appSurface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 10, offset: const Offset(0, 3))],
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16, offset: const Offset(0, 5))],
       ),
-      clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Card header ────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Product image / placeholder
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: SizedBox(
-                width: 64, height: 64,
-                child: o.productImage != null && o.productImage!.isNotEmpty
-                    ? Image.network(o.productImage!, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _imgFallback(typeClr, isRent))
-                    : _imgFallback(typeClr, isRent),
-              ),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              width: 104, height: 96,
+              child: o.productImage != null && o.productImage!.isNotEmpty
+                  ? Image.network(o.productImage!, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _imgFallback(typeClr, isRent))
+                  : _imgFallback(typeClr, isRent),
             ),
-            const SizedBox(width: 12),
-            // Details
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: Text(o.productTitle ?? 'Order #${o.id}',
+                Expanded(child: Text(o.productTitle ?? '${l.order} #${o.id}',
                     maxLines: 2, overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: context.appTextPrimary,
-                        fontWeight: FontWeight.w700, fontSize: 13, height: 1.3))),
-                const SizedBox(width: 8),
+                        fontWeight: FontWeight.w800, fontSize: 14, height: 1.3))),
+                const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: sc.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(_orderStatusLabel(AppLocalizations.of(context), o.status),
-                      style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(_statusIcon(o.status), color: sc, size: 12),
+                    const SizedBox(width: 4),
+                    Text(_orderStatusLabel(l, o.status),
+                        style: TextStyle(color: sc, fontSize: 10, fontWeight: FontWeight.w700)),
+                  ]),
                 ),
               ]),
-              const SizedBox(height: 6),
+              const SizedBox(height: 8),
               Row(children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: typeClr.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    color: typeClr.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(isRent ? AppLocalizations.of(context).rental : AppLocalizations.of(context).purchaseLabel,
-                      style: TextStyle(color: typeClr, fontSize: 10, fontWeight: FontWeight.w700)),
+                  child: Text(isRent ? l.rental : l.purchaseLabel,
+                      style: TextStyle(color: typeClr, fontSize: 11, fontWeight: FontWeight.w800)),
                 ),
                 const SizedBox(width: 8),
-                Text('${AppLocalizations.of(context).order} #${o.id}',
-                    style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                Flexible(child: Text('${l.order} #${o.id}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12))),
               ]),
-              if (o.rentStartDate != null) ...[
-                const SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.date_range_rounded, color: context.appTextSecondary, size: 12),
-                  const SizedBox(width: 4),
-                  Flexible(child: Text('${o.rentStartDate} → ${o.rentEndDate}',
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: context.appTextSecondary, fontSize: 11))),
-                ]),
-              ] else ...[
-                const SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.inventory_2_rounded, color: context.appTextSecondary, size: 12),
-                  const SizedBox(width: 4),
-                  Text('${AppLocalizations.of(context).qty}: ${o.quantity}',
-                      style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
-                ]),
-              ],
-            ])),
-          ]),
-        ),
-        // ── Price + actions ────────────────────────────────────────────
-        Container(
-          color: context.appCardBg.withValues(alpha: 0.5),
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          child: Row(children: [
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(AppLocalizations.of(context).total, style: TextStyle(
-                  color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
-              const SizedBox(height: 2),
-              Text(_usd(o.totalPriceUsd), style: const TextStyle(
-                  color: _green, fontWeight: FontWeight.w800, fontSize: 18)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Icon(o.rentStartDate != null ? Icons.calendar_month_rounded : Icons.inventory_2_rounded,
+                    color: context.appTextSecondary, size: 15),
+                const SizedBox(width: 6),
+                Flexible(child: Text(
+                    o.rentStartDate != null
+                        ? '${o.rentStartDate} → ${o.rentEndDate}'
+                        : '${l.qty}: ${o.quantity}',
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.appTextSecondary, fontSize: 12))),
+              ]),
             ]),
-            const Spacer(),
+          )),
+        ]),
+        const SizedBox(height: 10),
+
+        // ── Total + actions ─────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+          decoration: BoxDecoration(
+            color: _mint(context),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(l.total, style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(_usd(o.totalPriceUsd), style: const TextStyle(
+                    color: _emerald, fontWeight: FontWeight.w900, fontSize: 22, height: 1.2)),
+              ),
+            ])),
             if (canAct) ...[
               if (isSeller && o.status == 'pending') ...[
-                _ActionPill(AppLocalizations.of(context).confirm, AppTheme.confirmBlue, Icons.check_circle_outline_rounded,
+                _ActionPill(l.confirm, AppTheme.confirmBlue, Icons.check_circle_outline_rounded,
                     () => onAction(o, 'confirm')),
                 const SizedBox(width: 8),
               ],
               if (!isGuest) ...[
-                _ActionPill(AppLocalizations.of(context).done, const Color(0xFF007AFF), Icons.task_alt_rounded,
+                _ActionPill(l.done, _blue, Icons.task_alt_rounded,
                     () => onAction(o, 'complete')),
                 const SizedBox(width: 8),
               ],
-              _ActionPill(AppLocalizations.of(context).cancel, Colors.red, Icons.cancel_outlined,
+              _ActionPill(l.cancel, Colors.red, Icons.cancel_outlined,
                   () => onAction(o, 'cancel')),
             ],
           ]),
@@ -4826,7 +5425,7 @@ class _OrderCard extends StatelessWidget {
     color: color.withValues(alpha: 0.08),
     child: Center(child: Icon(
         isRent ? Icons.key_rounded : Icons.shopping_bag_rounded,
-        color: color, size: 26)),
+        color: color, size: 30)),
   );
 }
 
@@ -4838,21 +5437,40 @@ class _ActionPill extends StatelessWidget {
   const _ActionPill(this.label, this.color, this.icon, this.onTap);
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
+  Widget build(BuildContext context) => Material(
+    color: context.appSurface,
+    shape: StadiumBorder(side: BorderSide(color: color.withValues(alpha: 0.4), width: 1.3)),
+    child: InkWell(
+      customBorder: const StadiumBorder(),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+        ]),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, color: color, size: 13),
-        const SizedBox(width: 5),
-        Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12)),
-      ]),
     ),
+  );
+}
+
+// Tab with a leading icon — used by the main Browse / My Orders tabs and the
+// Buying / Rental switch.
+class _IconTab extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final double? height;
+  const _IconTab({required this.icon, required this.label, this.height});
+
+  @override
+  Widget build(BuildContext context) => Tab(
+    height: height,
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 19),
+      const SizedBox(width: 8),
+      Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis)),
+    ]),
   );
 }
 

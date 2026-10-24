@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
@@ -9,7 +10,6 @@ import 'package:autoride_superapp/widgets/skeleton_loader.dart';
 import 'package:autoride_superapp/widgets/slow_connection_banner.dart';
 import 'package:autoride_superapp/widgets/banner_carousel.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
-import 'package:autoride_superapp/screens/auth/login_screen.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 import 'package:autoride_superapp/models/ride_model.dart';
 import 'ride_booking.dart';
@@ -868,7 +868,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     await ApiService.logout();
                     if (!context.mounted) return;
                     Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
                       (_) => false,
                     );
                   },

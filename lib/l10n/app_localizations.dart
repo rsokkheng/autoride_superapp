@@ -95,6 +95,15 @@ class AppLocalizations {
       'documents': 'Documents',
       'navigate': 'Navigate',
       'available': 'Available',
+      'connectionErrorRetry': 'Can\'t reach the server. Check your internet connection and try again.',
+      'sortBy': 'Sort by',
+      'sortNewest': 'Newest',
+      'sortOldest': 'Oldest',
+      'sortPriceHigh': 'Price: high to low',
+      'sortPriceLow': 'Price: low to high',
+      'searchRentalsHint': 'Search rentals…',
+      'rentalBookedSuccess': 'Rental booked successfully!',
+      'rentalHeaderSubtitle': 'Fill in the details to book your rental',
       'busy': 'Busy',
       'full': 'Full',
       'chooseRide': 'Choose your ride',
@@ -138,6 +147,19 @@ class AppLocalizations {
       'fillRequiredFields': 'Please fill in all required fields',
       'shopAsGuest': 'Shop as guest',
       'continueAsGuest': 'Continue as Guest',
+      'welcomeBack': "Welcome back",
+      'signInSubtitle': "Sign in to manage your orders, rides and deliveries.",
+      'noAccountYet': "Don't have an account?",
+      'signInWithBiometrics': "Sign in with biometrics",
+      'signInAs': "Sign in as",
+      'secureSignInNote': "Your information is encrypted and kept secure.",
+      'welcomeTagline': 'Buy  •  Rent  •  Deliver  •  Move',
+      'welcomeTitle': 'Welcome to ROTEH APP',
+      'welcomeSubtitle': 'Buy or rent products, delivered to your door — no account required.',
+      'orContinueWith': 'or continue with',
+      'continueWithPhone': 'Continue with Phone',
+      'continueWithGoogle': 'Continue with Google',
+      'secureCheckoutNote': 'Secure checkout  •  Verify phone number when placing an order',
       'continueAsGuestSub': 'Buy or rent products without an account',
       'guestShoppingNotice': "You're shopping as a guest — orders are saved on this phone.",
       'orderPlaced': 'Order Placed!',
@@ -1716,6 +1738,15 @@ class AppLocalizations {
       'documents': 'ឯកសារ',
       'navigate': 'ស្វែងរក',
       'available': 'មាន',
+      'connectionErrorRetry': 'មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានទេ។ សូមពិនិត្យអ៊ីនធឺណិតរបស់អ្នក ហើយព្យាយាមម្តងទៀត។',
+      'sortBy': 'តម្រៀបតាម',
+      'sortNewest': 'ថ្មីបំផុត',
+      'sortOldest': 'ចាស់បំផុត',
+      'sortPriceHigh': 'តម្លៃ៖ ខ្ពស់ទៅទាប',
+      'sortPriceLow': 'តម្លៃ៖ ទាបទៅខ្ពស់',
+      'searchRentalsHint': 'ស្វែងរកការជួល…',
+      'rentalBookedSuccess': 'ការជួលបានកក់ដោយជោគជ័យ!',
+      'rentalHeaderSubtitle': 'បំពេញព័ត៌មានដើម្បីកក់យានជួល',
       'busy': 'រវល់',
       'full': 'ពេញ',
       'chooseRide': 'ជ្រើសរើសការធ្វើដំណើររបស់អ្នក',
@@ -1759,6 +1790,19 @@ class AppLocalizations {
       'fillRequiredFields': 'សូមបំពេញព័ត៌មានទាំងអស់ដែលជាតម្រូវការ',
       'shopAsGuest': 'ទិញជាភ្ញៀវ',
       'continueAsGuest': 'បន្តជាភ្ញៀវ',
+      'welcomeBack': "សូមស្វាគមន៍ការត្រឡប់មកវិញ",
+      'signInSubtitle': "ចូលគណនីដើម្បីគ្រប់គ្រងការបញ្ជាទិញ ការធ្វើដំណើរ និងការដឹកជញ្ជូនរបស់អ្នក។",
+      'noAccountYet': "មិនទាន់មានគណនី?",
+      'signInWithBiometrics': "ចូលដោយប្រើស្នាមម្រាមដៃ",
+      'signInAs': "ចូលជា",
+      'secureSignInNote': "ព័ត៌មានរបស់អ្នកត្រូវបានអ៊ិនគ្រីប និងរក្សាសុវត្ថិភាព។",
+      'welcomeTagline': 'ទិញ  •  ជួល  •  ដឹកជញ្ជូន  •  ផ្លាស់ទី',
+      'welcomeTitle': 'សូមស្វាគមន៍មកកាន់ ROTEH APP',
+      'welcomeSubtitle': 'ទិញ ឬជួលផលិតផល ដឹកដល់ផ្ទះ — មិនចាំបាច់មានគណនី។',
+      'orContinueWith': 'ឬបន្តជាមួយ',
+      'continueWithPhone': 'បន្តជាមួយលេខទូរស័ព្ទ',
+      'continueWithGoogle': 'បន្តជាមួយ Google',
+      'secureCheckoutNote': 'ការទូទាត់មានសុវត្ថិភាព  •  ផ្ទៀងផ្ទាត់លេខទូរស័ព្ទពេលបញ្ជាទិញ',
       'continueAsGuestSub': 'ទិញ ឬជួលផលិតផលដោយមិនចាំបាច់មានគណនី',
       'guestShoppingNotice': 'អ្នកកំពុងទិញជាភ្ញៀវ — ការបញ្ជាទិញត្រូវបានរក្សាទុកនៅលើទូរស័ព្ទនេះ។',
       'orderPlaced': 'បញ្ជាទិញជោគជ័យ!',
@@ -3338,6 +3382,15 @@ class AppLocalizations {
       'documents': '文件',
       'navigate': '导航',
       'available': '可用的',
+      'connectionErrorRetry': '无法连接服务器。请检查网络连接后重试。',
+      'sortBy': '排序',
+      'sortNewest': '最新',
+      'sortOldest': '最早',
+      'sortPriceHigh': '价格：从高到低',
+      'sortPriceLow': '价格：从低到高',
+      'searchRentalsHint': '搜索租赁…',
+      'rentalBookedSuccess': '租赁预订成功！',
+      'rentalHeaderSubtitle': '填写信息以预订租赁车辆',
       'busy': '繁忙',
       'full': '满的',
       'chooseRide': '选择车辆',
@@ -3381,6 +3434,19 @@ class AppLocalizations {
       'fillRequiredFields': '请填写所有必填信息',
       'shopAsGuest': '以访客身份购物',
       'continueAsGuest': '以访客身份继续',
+      'welcomeBack': "欢迎回来",
+      'signInSubtitle': "登录以管理您的订单、行程和配送。",
+      'noAccountYet': "还没有账户？",
+      'signInWithBiometrics': "使用生物识别登录",
+      'signInAs': "登录为",
+      'secureSignInNote': "您的信息已加密并安全保存。",
+      'welcomeTagline': '购买  •  租赁  •  配送  •  搬家',
+      'welcomeTitle': '欢迎使用 ROTEH APP',
+      'welcomeSubtitle': '购买或租赁商品，送货上门——无需注册账户。',
+      'orContinueWith': '或使用以下方式继续',
+      'continueWithPhone': '使用手机号继续',
+      'continueWithGoogle': '使用 Google 继续',
+      'secureCheckoutNote': '安全结账  •  下单时验证手机号',
       'continueAsGuestSub': '无需账户即可购买或租赁商品',
       'guestShoppingNotice': '您正在以访客身份购物，订单保存在此手机上。',
       'orderPlaced': '订单已提交！',
@@ -4969,6 +5035,15 @@ class AppLocalizations {
   String get documents => tr('documents');
   String get navigate => tr('navigate');
   String get available => tr('available');
+  String get connectionErrorRetry => tr('connectionErrorRetry');
+  String get sortBy => tr('sortBy');
+  String get sortNewest => tr('sortNewest');
+  String get sortOldest => tr('sortOldest');
+  String get sortPriceHigh => tr('sortPriceHigh');
+  String get sortPriceLow => tr('sortPriceLow');
+  String get searchRentalsHint => tr('searchRentalsHint');
+  String get rentalBookedSuccess => tr('rentalBookedSuccess');
+  String get rentalHeaderSubtitle => tr('rentalHeaderSubtitle');
   String get busy => tr('busy');
   String get full => tr('full');
   String get chooseRide => tr('chooseRide');
@@ -5025,6 +5100,19 @@ class AppLocalizations {
   String get fillRequiredFields => tr('fillRequiredFields');
   String get shopAsGuest => tr('shopAsGuest');
   String get continueAsGuest => tr('continueAsGuest');
+  String get welcomeBack => tr('welcomeBack');
+  String get signInSubtitle => tr('signInSubtitle');
+  String get noAccountYet => tr('noAccountYet');
+  String get signInWithBiometrics => tr('signInWithBiometrics');
+  String get signInAs => tr('signInAs');
+  String get secureSignInNote => tr('secureSignInNote');
+  String get welcomeTagline => tr('welcomeTagline');
+  String get welcomeTitle => tr('welcomeTitle');
+  String get welcomeSubtitle => tr('welcomeSubtitle');
+  String get orContinueWith => tr('orContinueWith');
+  String get continueWithPhone => tr('continueWithPhone');
+  String get continueWithGoogle => tr('continueWithGoogle');
+  String get secureCheckoutNote => tr('secureCheckoutNote');
   String get continueAsGuestSub => tr('continueAsGuestSub');
   String get guestShoppingNotice => tr('guestShoppingNotice');
   String get orderPlaced => tr('orderPlaced');

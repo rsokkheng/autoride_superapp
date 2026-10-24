@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../auth/login_screen.dart';
+import '../auth/welcome_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -90,7 +90,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
     await OnboardingScreen.markSeen();
     if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const WelcomeScreen()));
   }
 
   @override
@@ -188,10 +188,12 @@ class _PageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 32),
+    // Scrolls on short screens (e.g. Galaxy Z Flip cover screen), centred otherwise.
+    return Center(
+      child: SingleChildScrollView(
+      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 140,
@@ -224,6 +226,7 @@ class _PageView extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -1,9 +1,9 @@
 import 'dart:convert';
+import '../screens/auth/welcome_screen.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../main.dart' show navigatorKey, appLocale;
-import '../screens/auth/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -69,7 +69,7 @@ class ApiService {
         // silently failing every subsequent API call with 401s — kick the
         // user back to login instead, same as IdleTimeoutWrapper does.
         navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
           (_) => false,
         );
         rethrow;

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import '../auth/welcome_screen.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../auth/login_screen.dart';
 import 'fare_management_screen.dart';
 import 'surge_promo_screen.dart';
 import 'admin_driver_approval_screen.dart';
@@ -103,7 +103,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 18),
           ),
           const SizedBox(width: 10),
-          const Text('Admin Dashboard'),
+          const Flexible(child: Text('Admin Dashboard', overflow: TextOverflow.ellipsis)),
         ]),
         actions: [
           IconButton(
@@ -124,7 +124,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               await ApiService.adminLogout();
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                MaterialPageRoute(builder: (_) => const WelcomeScreen()),
                 (_) => false,
               );
             },

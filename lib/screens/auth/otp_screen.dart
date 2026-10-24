@@ -132,7 +132,7 @@ class _OtpScreenState extends State<OtpScreen> {
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(28),
           child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
             SizedBox(height: 20),

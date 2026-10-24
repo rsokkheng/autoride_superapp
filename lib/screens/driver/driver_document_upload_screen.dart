@@ -273,9 +273,12 @@ class _DocTile extends StatelessWidget {
 
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(_docLabel(AppLocalizations.of(context), doc.type),
-                  style: TextStyle(color: context.appTextPrimary,
-                      fontWeight: FontWeight.w600, fontSize: 13)),
+              Flexible(
+                child: Text(_docLabel(AppLocalizations.of(context), doc.type),
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.appTextPrimary,
+                        fontWeight: FontWeight.w600, fontSize: 13)),
+              ),
               if (doc.required) ...[
                 SizedBox(width: 6),
                 Container(

@@ -562,11 +562,14 @@ class _AirportTripScreenState extends State<AirportTripScreen>
                       : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                           const Icon(Icons.flight_rounded, size: 18),
                           const SizedBox(width: 8),
-                          Text(
-                            _estimate != null
-                                ? '${AppLocalizations.of(context).bookTransferPrefix} ${AppTheme.khr(_estimate!.totalKhr)}'
-                                : AppLocalizations.of(context).bookAirportTransfer,
-                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                          Flexible(
+                            child: Text(
+                              _estimate != null
+                                  ? '${AppLocalizations.of(context).bookTransferPrefix} ${AppTheme.khr(_estimate!.totalKhr)}'
+                                  : AppLocalizations.of(context).bookAirportTransfer,
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                            ),
                           ),
                         ]),
                 ),

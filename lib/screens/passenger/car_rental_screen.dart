@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
@@ -12,6 +13,12 @@ import 'my_rentals_screen.dart';
 import '../../models/marketplace_model.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart' show appLocale;
+
+const _emerald     = Color(0xFF0E9F6E);
+const _emeraldDeep = Color(0xFF0A7A57);
+
+Color _mint(BuildContext c) => _emerald.withValues(
+    alpha: Theme.of(c).brightness == Brightness.dark ? 0.16 : 0.08);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Duration options  (1M · 2M · 3M · 6M · 1Y · 2Y)
@@ -59,7 +66,7 @@ extension _LocTypeX on _LocType {
   IconData get icon   => this == _LocType.pickup
       ? Icons.directions_walk_rounded
       : Icons.local_shipping_outlined;
-  Color get pinColor  => this == _LocType.pickup ? AppTheme.accent : AppTheme.danger;
+  Color get pinColor  => this == _LocType.pickup ? _emerald : AppTheme.danger;
   String get hint {
     final l = AppLocalizations(appLocale.value);
     return this == _LocType.pickup ? l.tapToSetPickupLocation : l.tapToSetDeliveryLocation;
@@ -81,6 +88,8 @@ class _RentalCar {
   final double  dailyRateUsd;
   final int?    marketplaceProductId;
   final String? imageUrl;
+  // (icon, label) chips shown on the selected-vehicle card.
+  final List<(IconData, String)> specs;
 
   const _RentalCar({
     required this.vehicleType,
@@ -89,7 +98,20 @@ class _RentalCar {
     required this.dailyRateUsd,
     this.marketplaceProductId,
     this.imageUrl,
+    this.specs = const [],
   });
+
+  // Type / size / color chips from a marketplace listing.
+  static List<(IconData, String)> specsFor(MarketplaceProductModel p) {
+    final lang  = appLocale.value.languageCode;
+    final type  = p.vehicleTypeName(lang);
+    final color = p.vehicleColorName(lang);
+    return [
+      if (type != null && type.isNotEmpty) (Icons.bolt_rounded, type),
+      if (p.vehicleSizeLabel != null) (Icons.straighten_rounded, p.vehicleSizeLabel!),
+      if (color != null && color.isNotEmpty) (Icons.palette_outlined, color),
+    ];
+  }
 
   factory _RentalCar.fromJson(Map<String, dynamic> m) {
     final type    = m['vehicle_type'] as String? ?? m['type'] as String? ?? '';
@@ -264,6 +286,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       dailyRateUsd:         p.rentPricePerDay ?? p.price,
       marketplaceProductId: p.id,
       imageUrl:             p.images.isNotEmpty ? p.images.first : null,
+      specs:                _RentalCar.specsFor(p),
     );
   }
 
@@ -299,7 +322,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-            colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: AppTheme.accent)),
+            colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: _emerald)),
         child: child!,
       ),
     );
@@ -409,6 +432,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -426,6 +451,37 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               borderRadius: BorderRadius.circular(2),
             ),
           )),
+          // success badge
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 14),
+            child: Column(children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.4, end: 1),
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeOutBack,
+                builder: (_, v, child) => Transform.scale(scale: v, child: child),
+                child: Container(
+                  width: 76, height: 76,
+                  decoration: BoxDecoration(color: _mint(context), shape: BoxShape.circle),
+                  child: Center(child: Container(
+                    width: 54, height: 54,
+                    decoration: BoxDecoration(
+                      color: _emerald,
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.35),
+                          blurRadius: 14, offset: const Offset(0, 5))],
+                    ),
+                    child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
+                  )),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(AppLocalizations.of(context).rentalBookedSuccess,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: context.appTextPrimary,
+                      fontWeight: FontWeight.w800, fontSize: 18)),
+            ]),
+          ),
           // car image
           if (image != null)
             ClipRRect(
@@ -492,7 +548,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent,
+                    backgroundColor: _emerald,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14)),
@@ -557,279 +613,255 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final car        = _selectedCar;
-    final totalUsd   = _totalUsd;
+    final l           = AppLocalizations.of(context);
+    final car         = _selectedCar;
+    final totalUsd    = _totalUsd;
     final discountUsd = _discountKhr / 4100.0;
-    final finalUsd   = (totalUsd - discountUsd).clamp(0.0, totalUsd);
+    final finalUsd    = (totalUsd - discountUsd).clamp(0.0, totalUsd);
+    final topPad      = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        elevation: 0,
-        scrolledUnderElevation: 0.5,
-        shadowColor: Colors.black12,
-        title: Text(AppLocalizations.of(context).rentalVehicleTitle,
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 17)),
-      ),
-      body: Column(children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-              // ── Location ──────────────────────────────────────────────────
-              _label(AppLocalizations.of(context).locationLabel),
-              const SizedBox(height: 8),
-              _DropdownTile(
-                icon: _locType.icon,
-                label: AppLocalizations.of(context).locationTypeLabel,
-                value: _locType.label,
-                subtitle: _locType.subtitle,
-                onTap: _openLocTypeSheet,
-              ),
-              const SizedBox(height: 10),
-              if (_locType == _LocType.pickup)
-                const RotehLocationMap()
-              else
-                _Tile(
-                  icon: Icons.location_on_rounded,
-                  iconColor: _locType.pinColor,
-                  text: _locAddress.isEmpty ? _locType.hint : _locAddress,
-                  placeholder: _locAddress.isEmpty,
-                  onTap: _pickLocation,
-                ),
-              const SizedBox(height: 16),
-
-              // ── Vehicle for rent ─────────────────────────────────────────────
-              _label(AppLocalizations.of(context).vehicleForRentLabel),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _browseCars,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: context.appSurface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: car == null ? AppTheme.danger.withValues(alpha: 0.4) : context.appCardBg,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: context.appBackground,
+        body: Column(children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // ── Gradient header ───────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 48),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [_emeraldDeep, _emerald],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 6, offset: const Offset(0, 2))],
                   ),
-                  child: car == null
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-                          child: Row(children: [
-                            Container(
-                              width: 48, height: 48,
-                              decoration: BoxDecoration(
-                                color: AppTheme.accent.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.electric_rickshaw,
-                                  color: AppTheme.accent, size: 26),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(AppLocalizations.of(context).browseAvailableVehicle,
-                                  style: TextStyle(color: context.appTextPrimary,
-                                      fontWeight: FontWeight.w700, fontSize: 14)),
-                              const SizedBox(height: 2),
-                              Text(AppLocalizations.of(context).tapToViewAllVehicles,
-                                  style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-                            ])),
-                            const Icon(Icons.chevron_right_rounded,
-                                color: AppTheme.accent, size: 22),
-                          ]),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          child: Row(children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: SizedBox(
-                                width: 58, height: 58,
-                                child: car.imageUrl != null
-                                    ? Image.network(car.imageUrl!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          color: AppTheme.accent.withValues(alpha: 0.10),
-                                          child: Icon(car.icon, color: AppTheme.accent, size: 28),
-                                        ))
-                                    : Container(
-                                        color: AppTheme.accent.withValues(alpha: 0.10),
-                                        child: Icon(car.icon, color: AppTheme.accent, size: 28),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(car.name,
-                                  style: TextStyle(color: context.appTextPrimary,
-                                      fontWeight: FontWeight.w700, fontSize: 14),
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
-                              const SizedBox(height: 2),
-                              Text(car.rateLabel,
-                                  style: const TextStyle(color: AppTheme.accent,
-                                      fontWeight: FontWeight.w700, fontSize: 13)),
-                              if (car.description.isNotEmpty)
-                                Text(car.description,
-                                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
-                            ])),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: AppTheme.accent.withValues(alpha: 0.10),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(AppLocalizations.of(context).change,
-                                  style: const TextStyle(color: AppTheme.accent,
-                                      fontSize: 12, fontWeight: FontWeight.w700)),
-                            ),
-                          ]),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Rental Period ─────────────────────────────────────────────
-              _label(AppLocalizations.of(context).rentalPeriodLabel),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 6, offset: const Offset(0, 2))],
-                ),
-                child: Column(children: [
-                  _DropdownTile(
-                    icon: _duration.icon,
-                    label: AppLocalizations.of(context).duration,
-                    value: _duration.label,
-                    subtitle: '$_totalDays ${AppLocalizations.of(context).daysLabel}  ·  ${AppLocalizations.of(context).endsLabel} ${_fmt(_endDate)}',
-                    onTap: _openDurationSheet,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: GestureDetector(
-                      onTap: _pickStartDate,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                        decoration: BoxDecoration(
-                          color: context.appCardBg,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(AppLocalizations.of(context).startDateLabel, style: TextStyle(
-                              color: context.appTextSecondary,
-                              fontSize: 10, fontWeight: FontWeight.w500)),
-                          const SizedBox(height: 4),
-                          Row(children: [
-                            const Icon(Icons.calendar_today_outlined,
-                                color: AppTheme.accent, size: 13),
-                            const SizedBox(width: 5),
-                            Expanded(child: Text(_fmt(_startDate),
-                                maxLines: 1, overflow: TextOverflow.ellipsis,
-                                style: TextStyle(color: context.appTextPrimary,
-                                    fontWeight: FontWeight.w700, fontSize: 12))),
-                          ]),
-                        ]),
+                  child: Row(children: [
+                    Material(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(14),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () => Navigator.maybePop(context),
+                        child: const SizedBox(width: 44, height: 44,
+                            child: Icon(Icons.arrow_back_ios_new_rounded,
+                                color: Colors.white, size: 18)),
                       ),
-                    )),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8),
-                      child: Icon(Icons.arrow_forward_rounded,
-                          color: AppTheme.accent, size: 16),
                     ),
-                    Expanded(child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accent.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.18)),
-                      ),
+                    const SizedBox(width: 14),
+                    Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(AppLocalizations.of(context).endDateAutoLabel, style: const TextStyle(
-                            color: AppTheme.accent,
-                            fontSize: 10, fontWeight: FontWeight.w500)),
+                        Text(l.rentalVehicleTitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white,
+                                fontWeight: FontWeight.w800, fontSize: 24)),
                         const SizedBox(height: 4),
-                        Row(children: [
-                          const Icon(Icons.event_available_outlined,
-                              color: AppTheme.accent, size: 13),
-                          const SizedBox(width: 5),
-                          Expanded(child: Text(_fmt(_endDate),
-                              maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: AppTheme.accent,
-                                  fontWeight: FontWeight.w700, fontSize: 12))),
-                        ]),
+                        Text(l.rentalHeaderSubtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
+                                fontSize: 13)),
                       ]),
-                    )),
+                    ),
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 110, height: 82,
+                      child: car?.imageUrl != null
+                          ? Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2),
+                                    blurRadius: 14, offset: const Offset(0, 6))],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Image.network(car!.imageUrl!, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.electric_rickshaw, color: Colors.white, size: 64)),
+                              ),
+                            )
+                          : Icon(Icons.electric_rickshaw,
+                              color: Colors.white.withValues(alpha: 0.9), size: 72),
+                    ),
                   ]),
-                ]),
-              ),
-              const SizedBox(height: 16),
-
-              // ── Payment ───────────────────────────────────────────────────
-              _label(AppLocalizations.of(context).paymentMethod),
-              const SizedBox(height: 8),
-              _DropdownTile(
-                icon: _payment.icon,
-                label: AppLocalizations.of(context).paymentMethod,
-                value: _payment.label,
-                subtitle: _payment.subtitle,
-                onTap: _openPaymentSheet,
-              ),
-              const SizedBox(height: 16),
-
-              // ── Guest info ────────────────────────────────────────────────
-              if (_isGuest) ...[
-                _label(AppLocalizations.of(context).yourInformationLabel),
-                const SizedBox(height: 8),
-                GuestFields(
-                    nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
-                const SizedBox(height: 20),
-              ],
-
-              // ── Notes ─────────────────────────────────────────────────────
-              _label(AppLocalizations.of(context).notesOptionalLabel),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _notesCtrl,
-                maxLines: 3,
-                style: TextStyle(color: context.appTextPrimary, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: AppLocalizations.of(context).anySpecialRequestsHint,
-                  hintStyle: TextStyle(color: context.appTextSecondary),
-                  filled: true,
-                  fillColor: context.appSurface,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.all(14),
                 ),
-              ),
-              const SizedBox(height: 20),
 
-              // ── Coupon code ───────────────────────────────────────────────
-              _label(AppLocalizations.of(context).couponCodeLabel),
-              const SizedBox(height: 8),
+                // ── Content sheet (overlaps the header) ───────────────────
+                Transform.translate(
+                  offset: const Offset(0, -28),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    decoration: BoxDecoration(
+                      color: context.appBackground,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                    ),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      // Vehicle
+                      _Card(
+                        onTap: _browseCars,
+                        padding: const EdgeInsets.all(12),
+                        border: car == null ? AppTheme.danger.withValues(alpha: 0.4) : null,
+                        child: car == null
+                            ? Row(children: [
+                                const _Bubble(icon: Icons.electric_rickshaw, size: 52),
+                                const SizedBox(width: 14),
+                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(l.browseAvailableVehicle,
+                                      style: TextStyle(color: context.appTextPrimary,
+                                          fontWeight: FontWeight.w800, fontSize: 15)),
+                                  const SizedBox(height: 2),
+                                  Text(l.tapToViewAllVehicles,
+                                      style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                                ])),
+                                Icon(Icons.chevron_right_rounded,
+                                    color: context.appTextSecondary, size: 24),
+                              ])
+                            : Row(children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: SizedBox(
+                                    width: 96, height: 84,
+                                    child: car.imageUrl != null
+                                        ? Image.network(car.imageUrl!, fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => _carFallback(car))
+                                        : _carFallback(car),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Text(car.name, maxLines: 2, overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(color: context.appTextPrimary,
+                                          fontWeight: FontWeight.w800, fontSize: 15, height: 1.3)),
+                                  const SizedBox(height: 4),
+                                  Text(car.rateLabel, style: const TextStyle(color: _emerald,
+                                      fontWeight: FontWeight.w800, fontSize: 17)),
+                                  if (car.specs.isNotEmpty) ...[
+                                    const SizedBox(height: 8),
+                                    Wrap(spacing: 6, runSpacing: 6, children: [
+                                      for (final s in car.specs) _SpecChip(icon: s.$1, label: s.$2),
+                                    ]),
+                                  ],
+                                ])),
+                                const SizedBox(width: 4),
+                                Icon(Icons.chevron_right_rounded,
+                                    color: context.appTextSecondary, size: 24),
+                              ]),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Location
+                      _SectionHeader(icon: Icons.location_on_rounded, text: l.locationLabel),
+                      _DropdownTile(
+                        icon: _locType.icon,
+                        label: l.locationTypeLabel,
+                        value: _locType.label,
+                        subtitle: _locType.subtitle,
+                        onTap: _openLocTypeSheet,
+                      ),
+                      const SizedBox(height: 10),
+                      if (_locType == _LocType.pickup)
+                        const _Card(
+                          padding: EdgeInsets.all(10),
+                          child: RotehLocationMap(),
+                        )
+                      else
+                        _Tile(
+                          icon: Icons.location_on_rounded,
+                          iconColor: _locType.pinColor,
+                          text: _locAddress.isEmpty ? _locType.hint : _locAddress,
+                          placeholder: _locAddress.isEmpty,
+                          onTap: _pickLocation,
+                        ),
+                      const SizedBox(height: 20),
+
+                      // Rental period
+                      _SectionHeader(icon: Icons.calendar_month_rounded, text: l.rentalPeriodLabel),
+                      _DropdownTile(
+                        icon: _duration.icon,
+                        label: l.duration,
+                        value: _duration.label,
+                        subtitle: '$_totalDays ${l.daysLabel}',
+                        onTap: _openDurationSheet,
+                      ),
+                      const SizedBox(height: 10),
+                      Row(children: [
+                        Expanded(child: _DateTile(
+                          label: l.startDateLabel,
+                          value: _fmt(_startDate),
+                          onTap: _pickStartDate,
+                        )),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(Icons.arrow_forward_rounded, color: _emerald, size: 22),
+                        ),
+                        Expanded(child: _DateTile(
+                          label: l.endDateAutoLabel,
+                          value: _fmt(_endDate),
+                          highlighted: true,
+                        )),
+                      ]),
+                      const SizedBox(height: 20),
+
+                      // Payment
+                      _SectionHeader(icon: Icons.credit_card_rounded, text: l.paymentMethod),
+                      _DropdownTile(
+                        icon: _payment.icon,
+                        label: l.paymentMethod,
+                        value: _payment.label,
+                        subtitle: _payment.subtitle,
+                        onTap: _openPaymentSheet,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Guest info
+                      if (_isGuest) ...[
+                        _SectionHeader(icon: Icons.person_rounded, text: l.yourInformationLabel),
+                        GuestFields(nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
+                        const SizedBox(height: 20),
+                      ],
+
+                      // Notes
+                      _SectionHeader(icon: Icons.edit_note_rounded, text: l.notesOptionalLabel),
+                      TextField(
+                        controller: _notesCtrl,
+                        maxLines: 3,
+                        style: TextStyle(color: context.appTextPrimary, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: l.anySpecialRequestsHint,
+                          hintStyle: TextStyle(color: context.appTextSecondary),
+                          filled: true,
+                          fillColor: context.appSurface,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none),
+                          enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none),
+                          focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: _emerald.withValues(alpha: 0.5))),
+                          contentPadding: const EdgeInsets.all(14),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Coupon code
+                      _SectionHeader(icon: Icons.local_offer_rounded, text: l.couponCodeLabel),
               if (_appliedCode != null) ...[
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppTheme.accent.withValues(alpha: 0.08),
+                    color: _emerald.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
+                    border: Border.all(color: _emerald.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 18),
+                    const Icon(Icons.local_offer_rounded, color: _emerald, size: 18),
                     const SizedBox(width: 10),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(_appliedCode!, style: const TextStyle(
-                          color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
+                          color: _emerald, fontWeight: FontWeight.w700, fontSize: 14)),
                       Text('- ${AppTheme.khr(_discountKhr)} ${AppLocalizations.of(context).discountAppliedSuffix}',
                           style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     ])),
@@ -865,7 +897,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                             borderSide: BorderSide.none),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         prefixIcon: const Icon(Icons.local_offer_outlined,
-                            color: AppTheme.accent, size: 18),
+                            color: _emerald, size: 18),
                       ),
                     ),
                   ),
@@ -875,9 +907,9 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     child: ElevatedButton(
                       onPressed: _applyingCoupon ? null : _applyCoupon,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.accent,
+                        backgroundColor: _emerald,
                         foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
+                        disabledBackgroundColor: _emerald.withValues(alpha: 0.4),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -899,118 +931,132 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                   ]),
                 ],
               ],
-              const SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
-              // ── Summary ───────────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 8, offset: const Offset(0, 2))],
-                ),
-                child: Column(children: [
-                  Text(AppLocalizations.of(context).bookingSummaryLabel,
-                      style: TextStyle(color: context.appTextPrimary,
-                          fontSize: 15, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 12),
-                  _SummaryRow(AppLocalizations.of(context).vehicle,    car?.name ?? '—'),
-                  const SizedBox(height: 8),
-                  _SummaryRow(AppLocalizations.of(context).duration,   _duration.label),
-                  const SizedBox(height: 8),
-                  _SummaryRow(AppLocalizations.of(context).dailyRateLabel, car == null ? '—' : _usd(_dailyRate)),
-                  const SizedBox(height: 8),
-                  _SummaryRow(AppLocalizations.of(context).daysCapLabel, car == null ? '—' : '$_totalDays ${AppLocalizations.of(context).daysLabel}'),
-                  const SizedBox(height: 8),
-                  Row(children: [
-                    Row(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.accent),
-                      const SizedBox(width: 4),
-                      Text(
-                        _appliedCode != null ? '${AppLocalizations.of(context).discountLabel} ($_appliedCode)' : AppLocalizations.of(context).discountLabel,
-                        style: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                      // Summary
+                      _Card(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(l.bookingSummaryLabel,
+                                style: TextStyle(color: context.appTextPrimary,
+                                    fontSize: 16, fontWeight: FontWeight.w800)),
+                          ),
+                          const SizedBox(height: 12),
+                          _SummaryRow(l.vehicle, car?.name ?? '—'),
+                          const SizedBox(height: 8),
+                          _SummaryRow(l.duration, _duration.label),
+                          const SizedBox(height: 8),
+                          _SummaryRow(l.dailyRateLabel, car == null ? '—' : _usd(_dailyRate)),
+                          const SizedBox(height: 8),
+                          _SummaryRow(l.daysCapLabel, car == null ? '—' : '$_totalDays ${l.daysLabel}'),
+                          const SizedBox(height: 8),
+                          Row(children: [
+                            Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Icons.local_offer_outlined, size: 14, color: _emerald),
+                              const SizedBox(width: 4),
+                              Text(
+                                _appliedCode != null ? '${l.discountLabel} ($_appliedCode)' : l.discountLabel,
+                                style: TextStyle(color: context.appTextSecondary, fontSize: 14),
+                              ),
+                            ]),
+                            const Spacer(),
+                            Text(
+                              _discountKhr > 0 ? '- ${_usd(discountUsd)}' : '—',
+                              style: TextStyle(
+                                color: _discountKhr > 0 ? _emerald : context.appTextSecondary,
+                                fontWeight: _discountKhr > 0 ? FontWeight.w600 : FontWeight.w400,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ]),
+                          Divider(color: context.appCardBg, height: 24),
+                          Row(children: [
+                            Text(l.total, style: TextStyle(color: context.appTextPrimary,
+                                fontWeight: FontWeight.w800, fontSize: 16)),
+                            const Spacer(),
+                            Text(car == null ? '—' : _usd(finalUsd),
+                                style: const TextStyle(color: _emerald,
+                                    fontWeight: FontWeight.w900, fontSize: 22)),
+                          ]),
+                        ]),
                       ),
+
+                      // Error
+                      if (_bookError != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.danger.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(children: [
+                            const Icon(Icons.error_rounded, color: AppTheme.danger, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text(_bookError!,
+                                style: const TextStyle(color: AppTheme.danger, fontSize: 13))),
+                          ]),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
                     ]),
-                    const Spacer(),
-                    Text(
-                      _discountKhr > 0 ? '- ${_usd(discountUsd)}' : '—',
-                      style: TextStyle(
-                        color: _discountKhr > 0 ? AppTheme.accent : context.appTextSecondary,
-                        fontWeight: _discountKhr > 0 ? FontWeight.w600 : FontWeight.w400,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ]),
-                  Divider(color: context.appCardBg, height: 20),
-                  Row(children: [
-                    Text(AppLocalizations.of(context).total, style: TextStyle(color: context.appTextPrimary,
-                        fontWeight: FontWeight.w700, fontSize: 16)),
-                    const Spacer(),
-                    Text(
-                      car == null ? '—' : _usd(finalUsd),
-                      style: const TextStyle(color: AppTheme.accent,
-                          fontWeight: FontWeight.w900, fontSize: 20),
-                    ),
-                  ]),
-                ]),
-              ),
-
-              // ── Error ─────────────────────────────────────────────────────
-              if (_bookError != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.danger.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Row(children: [
-                    const Icon(Icons.error_outline, color: AppTheme.danger, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(_bookError!,
-                        style: const TextStyle(color: AppTheme.danger, fontSize: 12))),
-                  ]),
                 ),
-              ],
-              const SizedBox(height: 20),
-            ]),
-          ),
-        ),
-
-        // ── Book Now button ───────────────────────────────────────────────
-        Container(
-          padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
-          decoration: BoxDecoration(
-            color: context.appSurface,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07),
-                blurRadius: 12, offset: const Offset(0, -4))],
-          ),
-          child: SizedBox(
-            width: double.infinity, height: 52,
-            child: ElevatedButton(
-              onPressed: _booking ? null : _bookNow,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-              child: _booking
-                  ? const SizedBox(width: 22, height: 22,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(AppLocalizations.of(context).bookNowLabel,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              ]),
             ),
           ),
-        ),
-      ]),
+
+          // ── Book Now button ───────────────────────────────────────────────
+          Container(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+            decoration: BoxDecoration(
+              color: context.appSurface,
+              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07),
+                  blurRadius: 12, offset: const Offset(0, -4))],
+            ),
+            child: Opacity(
+              opacity: _booking ? 0.7 : 1,
+              child: Container(
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_emeraldDeep, _emerald]),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.35),
+                      blurRadius: 14, offset: const Offset(0, 6))],
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: _booking ? null : _bookNow,
+                    child: Center(
+                      child: _booking
+                          ? const SizedBox(width: 22, height: 22,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                          : Row(mainAxisSize: MainAxisSize.min, children: [
+                              const Icon(Icons.event_available_rounded, color: Colors.white, size: 24),
+                              const SizedBox(width: 12),
+                              Text(l.bookNowLabel, style: const TextStyle(color: Colors.white,
+                                  fontWeight: FontWeight.w800, fontSize: 18)),
+                            ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 
-  Widget _label(String text) => Text(text,
-      style: TextStyle(color: context.appTextPrimary,
-          fontWeight: FontWeight.w600, fontSize: 13));
+  Widget _carFallback(_RentalCar car) => Container(
+    color: _emerald.withValues(alpha: 0.10),
+    child: Icon(car.icon, color: _emerald, size: 32),
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1068,23 +1114,23 @@ void _openSheet<T>({
                   Container(
                     width: 40, height: 40,
                     decoration: BoxDecoration(
-                      color: isSel ? AppTheme.accent.withValues(alpha: 0.12) : ctx.appCardBg,
+                      color: isSel ? _emerald.withValues(alpha: 0.12) : ctx.appCardBg,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(item.icon,
-                        color: isSel ? AppTheme.accent : ctx.appTextSecondary, size: 20),
+                        color: isSel ? _emerald : ctx.appTextSecondary, size: 20),
                   ),
                   const SizedBox(width: 14),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(item.label, style: TextStyle(
-                        color: isSel ? AppTheme.accent : ctx.appTextPrimary,
+                        color: isSel ? _emerald : ctx.appTextPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                     if (item.subtitle.isNotEmpty)
                       Text(item.subtitle, style: TextStyle(
                           color: ctx.appTextSecondary, fontSize: 12)),
                   ])),
                   isSel
-                      ? const Icon(Icons.check_circle, color: AppTheme.accent, size: 20)
+                      ? const Icon(Icons.check_circle, color: _emerald, size: 20)
                       : Icon(Icons.radio_button_off, color: ctx.appTextSecondary, size: 20),
                 ]),
               ),
@@ -1101,6 +1147,142 @@ void _openSheet<T>({
 // UI helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+class _Card extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  final Color? border;
+  const _Card({required this.child,
+      this.padding = const EdgeInsets.all(14), this.onTap, this.border});
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(18);
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: context.appSurface,
+          borderRadius: radius,
+          border: border != null ? Border.all(color: border!) : null,
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 14, offset: const Offset(0, 4))],
+        ),
+        child: InkWell(
+          borderRadius: radius,
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
+  }
+}
+
+class _Bubble extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double size;
+  const _Bubble({required this.icon, this.color = _emerald, this.size = 46});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: size, height: size,
+    decoration: BoxDecoration(color: _mint(context), shape: BoxShape.circle),
+    child: Icon(icon, color: color, size: size * 0.48),
+  );
+}
+
+// Icon-in-circle + bold title above each form section.
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _SectionHeader({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [
+      Container(
+        width: 36, height: 36,
+        decoration: const BoxDecoration(color: _emerald, shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.white, size: 19),
+      ),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: context.appTextPrimary,
+              fontWeight: FontWeight.w800, fontSize: 17))),
+    ]),
+  );
+}
+
+class _SpecChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _SpecChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: context.appCardBg,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, color: _emerald, size: 15),
+      const SizedBox(width: 5),
+      Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: context.appTextPrimary,
+              fontWeight: FontWeight.w600, fontSize: 12))),
+    ]),
+  );
+}
+
+// Start / end date tile; the end date is auto-computed and highlighted.
+class _DateTile extends StatelessWidget {
+  final String label, value;
+  final bool highlighted;
+  final VoidCallback? onTap;
+  const _DateTile({required this.label, required this.value,
+      this.highlighted = false, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(18);
+    return Material(
+      color: highlighted ? _mint(context) : context.appSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: highlighted
+            ? BorderSide(color: _emerald.withValues(alpha: 0.4), width: 1.3)
+            : BorderSide(color: context.appCardBg),
+      ),
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(children: [
+            const Icon(Icons.event_available_rounded, color: _emerald, size: 24),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+              const SizedBox(height: 3),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(value, style: TextStyle(
+                    color: highlighted ? _emeraldDeep : context.appTextPrimary,
+                    fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+            ])),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _Tile extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -1111,28 +1293,20 @@ class _Tile extends StatelessWidget {
       this.placeholder = false, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _Card(
     onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Row(children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 12),
-        Expanded(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: placeholder ? context.appTextSecondary : context.appTextPrimary,
-              fontWeight: placeholder ? FontWeight.w400 : FontWeight.w500,
-              fontSize: 14,
-            ))),
-        Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 18),
-      ]),
-    ),
+    border: placeholder ? AppTheme.danger.withValues(alpha: 0.35) : null,
+    child: Row(children: [
+      _Bubble(icon: icon, color: iconColor),
+      const SizedBox(width: 12),
+      Expanded(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: placeholder ? context.appTextSecondary : context.appTextPrimary,
+            fontWeight: placeholder ? FontWeight.w400 : FontWeight.w600,
+            fontSize: 14,
+          ))),
+      Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 22),
+    ]),
   );
 }
 
@@ -1144,33 +1318,26 @@ class _DropdownTile extends StatelessWidget {
       required this.value, required this.subtitle, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => _Card(
     onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.appCardBg),
-      ),
-      child: Row(children: [
-        Icon(icon, color: AppTheme.accent, size: 20),
-        const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: TextStyle(
-              color: context.appTextSecondary, fontSize: 10, fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(value, style: TextStyle(
-              color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 13),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    child: Row(children: [
+      _Bubble(icon: icon),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(
+            color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 15),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+        if (subtitle.isNotEmpty)
+          Text(subtitle, style: TextStyle(
+              color: context.appTextSecondary, fontSize: 11),
               maxLines: 1, overflow: TextOverflow.ellipsis),
-          if (subtitle.isNotEmpty)
-            Text(subtitle, style: TextStyle(
-                color: context.appTextSecondary, fontSize: 10),
-                maxLines: 1, overflow: TextOverflow.ellipsis),
-        ])),
-        Icon(Icons.keyboard_arrow_down, color: context.appTextSecondary, size: 20),
-      ]),
-    ),
+      ])),
+      Icon(Icons.keyboard_arrow_down_rounded, color: context.appTextSecondary, size: 24),
+    ]),
   );
 }
 
@@ -1307,6 +1474,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
       dailyRateUsd:         p.rentPricePerDay ?? p.price,
       marketplaceProductId: p.id,
       imageUrl:             p.images.isNotEmpty ? p.images.first : null,
+      specs:                _RentalCar.specsFor(p),
     );
   }
 
@@ -1332,7 +1500,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
             icon: Badge(
               isLabelVisible: _hasActiveFilters,
               smallSize: 8,
-              backgroundColor: AppTheme.accent,
+              backgroundColor: _emerald,
               child: Icon(Icons.tune_rounded, color: context.appTextPrimary, size: 22),
             ),
           ),
@@ -1409,9 +1577,9 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
               onPressed: _selected == null ? null
                   : () => Navigator.pop(context, _toRentalCar(_selected!)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accent,
+                backgroundColor: _emerald,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: AppTheme.accent.withValues(alpha: 0.4),
+                disabledBackgroundColor: _emerald.withValues(alpha: 0.4),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 elevation: 0,
               ),
@@ -1429,7 +1597,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
 
   Widget _buildBody(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
+      return const Center(child: CircularProgressIndicator(color: _emerald));
     }
     if (_error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1461,7 +1629,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
               color: context.appSurface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: selected ? AppTheme.accent : context.appCardBg,
+                color: selected ? _emerald : context.appCardBg,
                 width: selected ? 2 : 1,
               ),
               boxShadow: [BoxShadow(
@@ -1488,7 +1656,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: const BoxDecoration(
-                          color: AppTheme.accent, shape: BoxShape.circle),
+                          color: _emerald, shape: BoxShape.circle),
                       child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
                     ),
                   ),
@@ -1513,19 +1681,19 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                     Expanded(
                       child: Text(p.title,
                           style: TextStyle(
-                            color: selected ? AppTheme.accent : context.appTextPrimary,
+                            color: selected ? _emerald : context.appTextPrimary,
                             fontWeight: FontWeight.w700, fontSize: 15,
                           )),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppTheme.accent.withValues(alpha: 0.10),
+                        color: _emerald.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text('${_usd(daily)}/day',
                           style: const TextStyle(
-                              color: AppTheme.accent,
+                              color: _emerald,
                               fontWeight: FontWeight.w800, fontSize: 13)),
                     ),
                   ]),
@@ -1596,12 +1764,12 @@ class _VehicleTypePill extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: active ? AppTheme.accent.withValues(alpha: 0.1) : Colors.transparent,
+        color: active ? _emerald.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: active ? AppTheme.accent : const Color(0xFFE0E0E0), width: 1.5),
+        border: Border.all(color: active ? _emerald : const Color(0xFFE0E0E0), width: 1.5),
       ),
       child: Text(label,
-          style: TextStyle(color: active ? AppTheme.accent : Colors.grey.shade600,
+          style: TextStyle(color: active ? _emerald : Colors.grey.shade600,
               fontWeight: FontWeight.w600, fontSize: 12)),
     ),
   );
@@ -1616,17 +1784,17 @@ class _RentalFilterChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
     decoration: BoxDecoration(
-      color: AppTheme.accent.withValues(alpha: 0.1),
+      color: _emerald.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
+      border: Border.all(color: _emerald.withValues(alpha: 0.4)),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Text(label, style: const TextStyle(color: AppTheme.accent, fontSize: 12, fontWeight: FontWeight.w600)),
+      Text(label, style: const TextStyle(color: _emerald, fontSize: 12, fontWeight: FontWeight.w600)),
       GestureDetector(
         onTap: onClear,
         child: const Padding(
           padding: EdgeInsets.all(4),
-          child: Icon(Icons.close_rounded, size: 14, color: AppTheme.accent),
+          child: Icon(Icons.close_rounded, size: 14, color: _emerald),
         ),
       ),
     ]),
@@ -1672,7 +1840,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
-        Checkbox(value: checked, activeColor: AppTheme.accent, onChanged: (_) => onTap()),
+        Checkbox(value: checked, activeColor: _emerald, onChanged: (_) => onTap()),
         Expanded(child: Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 14))),
       ]),
     ),
@@ -1709,7 +1877,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
               Text(AppLocalizations.of(context).filter, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
               GestureDetector(
                 onTap: () => setState(() { _vType = null; _vSize = null; _vColor = null; }),
-                child: Text(AppLocalizations.of(context).clearAll, style: const TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600)),
+                child: Text(AppLocalizations.of(context).clearAll, style: const TextStyle(color: _emerald, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             ]),
           ),
@@ -1745,7 +1913,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
                               color: _rentalSwatchFor(vc.code),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                  color: _vColor == vc.id ? AppTheme.accent : const Color(0xFFE0E0E0),
+                                  color: _vColor == vc.id ? _emerald : const Color(0xFFE0E0E0),
                                   width: _vColor == vc.id ? 2.5 : 1),
                             ),
                             child: _vColor == vc.id
@@ -1769,7 +1937,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.accent, foregroundColor: Colors.white,
+                    backgroundColor: _emerald, foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -1798,7 +1966,7 @@ class _ConfRow extends StatelessWidget {
       Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       const Spacer(),
       Text(value, style: TextStyle(
-        color: highlight ? AppTheme.accent : context.appTextPrimary,
+        color: highlight ? _emerald : context.appTextPrimary,
         fontWeight: highlight ? FontWeight.w800 : FontWeight.w600,
         fontSize: highlight ? 15 : 13,
       )),

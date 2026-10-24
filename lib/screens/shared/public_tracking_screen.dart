@@ -382,7 +382,7 @@ class _ErrorBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: EdgeInsets.all(32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.link_off_rounded,

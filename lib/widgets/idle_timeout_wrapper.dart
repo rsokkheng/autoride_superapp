@@ -1,7 +1,7 @@
 import 'dart:async';
+import '../screens/auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import '../screens/auth/login_screen.dart';
 
 /// Force-logs-out the user after a period of no interaction, instead of the
 /// old behaviour of forcing logout on every 401 (see [ApiService]'s
@@ -64,7 +64,7 @@ class _IdleTimeoutWrapperState extends State<IdleTimeoutWrapper>
 
     await ApiService.clearSession();
     nav.pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const WelcomeScreen()),
       (_) => false,
     );
     _resetActivity();

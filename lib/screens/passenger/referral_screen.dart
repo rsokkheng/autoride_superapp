@@ -150,14 +150,19 @@ class _ReferralScreenState extends State<ReferralScreen> {
             style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(_code,
-              style: const TextStyle(
-                color: AppTheme.accent,
-                fontSize: 30,
-                fontWeight: FontWeight.w900,
-                fontFamily: 'monospace',
-                letterSpacing: 4,
-              )),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(_code,
+                  style: const TextStyle(
+                    color: AppTheme.accent,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w900,
+                    fontFamily: 'monospace',
+                    letterSpacing: 4,
+                  )),
+            ),
+          ),
           const SizedBox(width: 12),
           GestureDetector(
             onTap: _copyCode,

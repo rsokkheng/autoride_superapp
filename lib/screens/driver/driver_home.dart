@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +20,6 @@ import '../../models/ride_model.dart';
 import '../../models/driver_stats_model.dart';
 import '../../models/wallet_model.dart';
 import '../auth/role_selection.dart';
-import '../auth/login_screen.dart';
 import '../passenger/wallet_screen.dart';
 import '../shared/chat_screen.dart';
 import '../passenger/safety_screen.dart';
@@ -2733,7 +2733,7 @@ class _DriverProfileState extends State<_DriverProfile> {
                   await ApiService.logout();
                   if (!context.mounted) return;
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    MaterialPageRoute(builder: (_) => const WelcomeScreen()),
                     (_) => false,
                   );
                 }, true),

@@ -14,8 +14,13 @@ class RoleSelectionScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        // Fills the screen with Spacers on tall phones; scrolls instead on
+        // short ones like the Galaxy Z Flip cover screen.
+        child: LayoutBuilder(builder: (context, constraints) => SingleChildScrollView(
           padding: EdgeInsets.all(24),
+          child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
+          child: IntrinsicHeight(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -82,7 +87,9 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
+          ),
+          ),
+        )),
       ),
     );
   }

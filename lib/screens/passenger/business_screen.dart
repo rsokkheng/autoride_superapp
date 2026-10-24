@@ -828,9 +828,9 @@ class _ErrorState extends StatelessWidget {
   const _ErrorState({required this.message, required this.onRetry});
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: EdgeInsets.all(32),
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.error_outline, color: AppTheme.danger, size: 48),
         SizedBox(height: 12),
         Text(message, textAlign: TextAlign.center,

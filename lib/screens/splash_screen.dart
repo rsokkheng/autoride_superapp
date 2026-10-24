@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
-import 'auth/login_screen.dart';
+import 'auth/welcome_screen.dart';
 import 'onboarding/onboarding_screen.dart';
 import 'passenger/passenger_home.dart';
 import 'driver/driver_home.dart';
@@ -52,7 +52,7 @@ class _SplashScreenState extends State<SplashScreen>
       destination = const PassengerHomeScreen();
     } else {
       final seenOnboarding = await OnboardingScreen.hasSeenOnboarding();
-      destination = seenOnboarding ? const LoginScreen() : const OnboardingScreen();
+      destination = seenOnboarding ? const WelcomeScreen() : const OnboardingScreen();
     }
 
     // Register this device for push notifications if a session already
