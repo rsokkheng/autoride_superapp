@@ -837,7 +837,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
 
     try {
       if (_ticket == null || _ticket!.isClosed) {
-        final t = await ApiService.createSupportTicket(subject: 'Chat with Support', message: text);
+        final t = await ApiService.createSupportTicket(subject: AppLocalizations.of(context).trChatWithSupport, message: text);
         if (!mounted) return;
         setState(() {
           _ticket             = t;
@@ -894,7 +894,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
             child: Icon(Icons.support_agent, color: _green, size: 20),
           ),
           SizedBox(width: 10),
-          Text('ROTEH Support',
+          Text(AppLocalizations.of(context).rotehSupport,
               style: TextStyle(color: context.appTextPrimary, fontSize: 15, fontWeight: FontWeight.w700)),
         ]),
         actions: [
@@ -925,7 +925,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                           child: Column(mainAxisSize: MainAxisSize.min, children: [
                             Icon(Icons.chat_bubble_outline, color: context.appTextSecondary.withValues(alpha: 0.4), size: 56),
                             SizedBox(height: 12),
-                            Text('Say hello! Our team typically replies within a few minutes.',
+                            Text(AppLocalizations.of(context).supportRepliesSoon,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: context.appTextSecondary)),
                           ]),
@@ -950,7 +950,7 @@ class _SupportChatScreenState extends State<SupportChatScreen> {
                   minLines: 1,
                   textInputAction: TextInputAction.newline,
                   decoration: InputDecoration(
-                    hintText: 'Type a message...',
+                    hintText: AppLocalizations.of(context).typeAMessageHint,
                     hintStyle: TextStyle(color: context.appTextSecondary),
                     filled: true,
                     fillColor: context.appCardBg,

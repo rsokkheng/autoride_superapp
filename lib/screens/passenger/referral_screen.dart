@@ -303,7 +303,7 @@ class _ReferralRow extends StatelessWidget {
           ]),
         ),
         Text(
-          isComplete ? '+${AppTheme.khr(bonusKhr)}' : 'Pending first ride',
+          isComplete ? '+${AppTheme.khr(bonusKhr)}' : AppLocalizations.of(context).trPendingFirstRide,
           style: TextStyle(
               color: isComplete ? AppTheme.success : context.appTextSecondary,
               fontWeight: FontWeight.w700,

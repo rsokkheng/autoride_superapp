@@ -10,6 +10,7 @@ import 'package:autoride_superapp/services/realtime_service.dart';
 import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'passenger_delivery_summary_screen.dart';
+import '../../widgets/tablet_frame.dart';
 
 const _kGreen   = Color(0xFF00B14F);
 // Phnom Penh fallback coords used when no geocoded positions are available.
@@ -34,7 +35,7 @@ const _kMovingSteps = [
   'completed',
 ];
 
-class DeliveryTrackingScreen extends StatefulWidget {
+class DeliveryTrackingScreen extends StatefulWidget implements TabletFullWidth {
   final int    deliveryId;
   final String from;          // pickup address
   final String to;            // dropoff address
@@ -223,24 +224,24 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     if (_isMoving) {
       switch (_status) {
         case 'pending':
-        case 'requested': return 'Looking for a driver...';
-        case 'accepted':  return 'Driver assigned';
-        case 'arrived':   return 'Driver arrived at pickup';
-        case 'loading':   return 'Loading items...';
-        case 'in_transit':return 'On the way to destination';
-        case 'completed': return 'Moving completed!';
+        case 'requested': return AppLocalizations.of(context).trLookingForDriver;
+        case 'accepted':  return AppLocalizations.of(context).trDriverAssigned;
+        case 'arrived':   return AppLocalizations.of(context).trDriverArrivedPickup;
+        case 'loading':   return AppLocalizations.of(context).trLoadingItems;
+        case 'in_transit':return AppLocalizations.of(context).trOnWayToDestination;
+        case 'completed': return AppLocalizations.of(context).trMovingCompletedExcl;
         case 'cancelled': return 'Cancelled';
-        default:          return 'Processing...';
+        default:          return AppLocalizations.of(context).trProcessingDots;
       }
     }
     switch (_status) {
-      case 'requested':   return 'Looking for a driver...';
-      case 'accepted':    return 'Driver assigned';
-      case 'picked_up':   return 'Package picked up';
-      case 'in_progress': return 'On the way to recipient';
-      case 'delivered':   return 'Delivered!';
+      case 'requested':   return AppLocalizations.of(context).trLookingForDriver;
+      case 'accepted':    return AppLocalizations.of(context).trDriverAssigned;
+      case 'picked_up':   return AppLocalizations.of(context).trPackagePickedUp;
+      case 'in_progress': return AppLocalizations.of(context).trOnWayToRecipient;
+      case 'delivered':   return AppLocalizations.of(context).trDeliveredExcl;
       case 'cancelled':   return 'Cancelled';
-      default:            return 'Processing...';
+      default:            return AppLocalizations.of(context).trProcessingDots;
     }
   }
 
@@ -408,7 +409,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   void _shareLocationFallback() {
     final isMoving = widget.serviceType == 'moving';
-    final serviceLabel = isMoving ? 'Moving Service' : 'Package Delivery';
+    final serviceLabel = isMoving ? 'Moving Service' : AppLocalizations.of(context).trPackageDelivery;
     final recipient = widget.recipientName.isNotEmpty
         ? widget.recipientName
         : (_delivery?.recipientName ?? '');
@@ -433,7 +434,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     final box = context.findRenderObject() as RenderBox?;
     Share.share(
       buf.toString().trim(),
-      subject: 'Track my $serviceLabel',
+      subject: AppLocalizations.of(context).trTrackMy(serviceLabel),
       sharePositionOrigin:
           box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
@@ -556,7 +557,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            _isMoving ? 'Moving Completed!' : 'Delivered!',
+                            _isMoving ? AppLocalizations.of(context).trMovingCompletedExcl : AppLocalizations.of(context).trDeliveredExcl,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 15,
@@ -768,8 +769,8 @@ class _BottomSheet extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text(
                             serviceType == 'moving'
-                                ? 'Moving Completed (ការរើផ្ទះបានបញ្ចប់)'
-                                : 'Delivery Completed (បានបញ្ចប់ការដឹក)',
+                                ? AppLocalizations.of(context).trMovingCompleted
+                                : AppLocalizations.of(context).trDeliveryCompletedTitle,
                             style: const TextStyle(
                               color: _kGreen,
                               fontSize: 13,
@@ -1549,16 +1550,16 @@ class _DeliveryShareSheet extends StatelessWidget {
 
   void _shareNative(BuildContext context) {
     final box = context.findRenderObject() as RenderBox?;
-    final title = isMoving ? 'Moving Service' : 'Package Delivery';
-    final recipientText = recipientName.isNotEmpty ? 'Recipient: $recipientName\n' : '';
-    final driverText = (driverName != null && driverName!.isNotEmpty) ? 'Driver: $driverName\n' : '';
+    final title = isMoving ? 'Moving Service' : AppLocalizations.of(context).trPackageDelivery;
+    final recipientText = recipientName.isNotEmpty ? '${AppLocalizations.of(context).trRecipientLine(recipientName)}\n' : '';
+    final driverText = (driverName != null && driverName!.isNotEmpty) ? '${AppLocalizations.of(context).trDriverLine(driverName)}\n' : '';
 
     Share.share(
       'Track my ROTEH $title live 📦🚚\n'
       '$recipientText$driverText'
       'From: $from\nTo: $to\n\n'
       'Track here: $url',
-      subject: 'Track my $title live',
+      subject: AppLocalizations.of(context).trTrackMyLive(title),
       sharePositionOrigin:
           box != null ? box.localToGlobal(Offset.zero) & box.size : null,
     );
@@ -1617,7 +1618,7 @@ class _DeliveryShareSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isMoving ? 'Share Moving Tracking' : 'Share Delivery Tracking',
+                      isMoving ? AppLocalizations.of(context).trShareMovingTracking : AppLocalizations.of(context).trShareDeliveryTracking,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,

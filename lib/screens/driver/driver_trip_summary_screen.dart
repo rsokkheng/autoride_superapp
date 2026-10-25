@@ -81,7 +81,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     Text(AppLocalizations.of(context).tripCompleted,
                         style: TextStyle(color: context.appTextPrimary, fontSize: 22, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 4),
-                    Text('Ride #${ride.id}',
+                    Text(AppLocalizations.of(context).trRideNo(ride.id),
                         style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                   ]),
                 ),
@@ -134,7 +134,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                         padding: EdgeInsets.only(left: 9),
                         child: Container(width: 2, height: 20, color: context.appCardBg),
                       ),
-                      _TripAddressRow(icon: Icons.location_on, color: AppTheme.warning, label: 'Stop ${i + 1}', address: wayStops[i]),
+                      _TripAddressRow(icon: Icons.location_on, color: AppTheme.warning, label: AppLocalizations.of(context).trStopN(i + 1), address: wayStops[i]),
                     ],
                     Padding(
                       padding: EdgeInsets.only(left: 9),
@@ -188,7 +188,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     _FareRow(
-                      label: 'Distance (${_distKm!.toStringAsFixed(1)} km)',
+                      label: AppLocalizations.of(context).trDistanceKm(_distKm!.toStringAsFixed(1)),
                       value: AppTheme.khr((fareKhr - 3000).clamp(0, fareKhr)),
                     ),
                     SizedBox(height: 8),
@@ -198,7 +198,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
                     Row(children: [
                       Icon(Icons.local_offer_outlined, color: _kGreen, size: 14),
                       SizedBox(width: 6),
-                      Text('Promo (${ride.promoCode})', style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(AppLocalizations.of(context).trPromoWithCode(ride.promoCode ?? ''), style: TextStyle(color: _kGreen, fontSize: 13, fontWeight: FontWeight.w600)),
                       Spacer(),
                       Text(
                         ride.discountAmountKhr != null ? '-${AppTheme.khr(ride.discountAmountKhr!)}' : '',

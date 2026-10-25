@@ -8,7 +8,7 @@ class AppLocalizations {
 
   static AppLocalizations of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations) ??
-        AppLocalizations(const Locale('en'));
+        AppLocalizations(const Locale('km'));
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
@@ -104,6 +104,428 @@ class AppLocalizations {
       'searchRentalsHint': 'Search rentals…',
       'rentalBookedSuccess': 'Rental booked successfully!',
       'rentalHeaderSubtitle': 'Fill in the details to book your rental',
+      'drvTopUpMsg': 'Your wallet balance is too low to go online. Please top up at least {amount} to continue.',
+      'drvShortBy': 'Short by {amount}',
+      'drvKmAway': '{km} km away',
+      'drvEndsInHm': 'ends in {h}h {m}m',
+      'drvEndsInMin': 'ends in {m} min',
+      'drvTripsCount': '{n} Trips',
+      'drvSurgeInside': '{x}× Surge Zone — You\'re Inside!',
+      'drvSurgeNearby': '{x}× Surge Nearby — {zone}',
+      'drvZone': 'Zone',
+      'drvInactive': 'Inactive',
+      'drvPeakExtra': 'Extra {amount} per trip during peak hours',
+      'drvPeakProgress': '{done} of {target} peak-hour trips completed today',
+      'drvStreakCount': '{n} consecutive 5-star ratings!',
+      'drvStreakRemaining': '{n} more 5-star = Earn {amount} bonus',
+      'drvStreakUnlocked': 'Streak bonus unlocked — {amount}!',
+      'drvPassengerNo': 'Passenger #{id}',
+      'drvSenderNo': 'Sender #{id}',
+      'drvSecondsShort': '{n} s',
+      'drvFloors': 'Floor: pickup {from} → dropoff {to}',
+      'drvElevator': 'Elevator: {v}',
+      'drvHelpers': '{n} helper(s) — {type}',
+      'drvHeavyCarry': 'Heavy carry',
+      'drvNormalCarry': 'Normal carry',
+      'drvWithdrawConfirm': 'Withdraw your full balance to {bank}?\nThis will be sent to admin for approval.',
+      'drvWithdrawSubmitted': '✅ Withdrawal request for {amount} submitted — pending admin approval',
+      'drvMinWithdrawal': 'Minimum withdrawal: {amount}',
+      'drvWithdrawTo': '💸  Withdraw {amount} to {bank}',
+      'drvTodaysTransactions': 'Today\'s Transactions',
+      'drvTotalCount': '{n} total',
+      'drvBalanceShort': 'Bal: {amount}',
+      'seatsCount': '{n} seats',
+      'seatsOne': '1 seat',
+      'senderNameHint': 'Sender\'s name',
+      'senderPhoneHint': 'Sender\'s phone',
+      'recipientNameHint': 'Recipient\'s name',
+      'recipientPhoneHint': 'Recipient\'s phone',
+      'floorsPickupDropoff': 'Pickup: {from}  •  Dropoff: {to}',
+      'packageAmountHint': 'Package value in ៛ (optional)',
+      'packageAmount': 'Package Amount',
+      'deliveryFee': 'Delivery Fee',
+      'serviceFee': 'Service Fee',
+      'pickup': 'Pickup',
+      'completedAt': 'Completed At',
+      'completionTime': 'Completion Time',
+      'deliveryCompleted': 'Delivery Completed',
+      'deliveryReceipt': 'Delivery Receipt',
+      'deliverySummary': 'Delivery Summary',
+      'viewDeliverySummary': 'View Delivery Summary',
+      'feePaidBy': 'Fee Paid By',
+      'paidBySender': 'Paid by sender',
+      'paidByRecipient': 'Paid by recipient',
+      'guestOtpReason': 'Confirm your phone number to place this order.',
+      'confirmOtpTitle': 'Confirm OTP code',
+      'otpSentToYourPhone': 'We sent a 6-digit code to your phone',
+      'didntReceiveCode': 'Didn\'t receive the code?',
+      'resendShort': 'Resend',
+      'guestPhoneStarHint': 'Phone number * (e.g. 012 345 678)',
+      'guestFullNameRequired': 'Please enter your full name.',
+      'guestPhoneInvalid': 'Please enter a valid phone number (8–16 digits).',
+      'guestPhoneNotVerified': 'Please verify your phone number with the SMS code.',
+      'guestOtpNote': 'We\'ll send an SMS code to verify this number.',
+      'regJoinTitle': 'Join ROTEH',
+      'regTagline': 'Fast, safe rides in Cambodia',
+      'regIWantTo': 'I want to',
+      'regRideAsPassenger': 'Ride as Passenger',
+      'regDriveAndEarn': 'Drive & Earn',
+      'regOwner': 'Owner',
+      'regSelectCity': 'Select your city',
+      'regCityRequired': 'City is required',
+      'regNameRequired': 'Name is required',
+      'regEmailRequired': 'Email is required',
+      'regEmailInvalid': 'Enter a valid email',
+      'regPhoneOptional': 'Phone (optional)',
+      'regPasswordMin': 'At least 8 characters',
+      'regPasswordMismatch': 'Passwords do not match',
+      'regReferralOptional': 'Referral Code (optional)',
+      'regRegisterUpload': 'Register & Upload Documents',
+      'cityPhnomPenh': 'Phnom Penh',
+      'citySiemReap': 'Siem Reap',
+      'citySihanoukville': 'Sihanoukville',
+      'cityBattambang': 'Battambang',
+      'cityKampongCham': 'Kampong Cham',
+      'cityKampot': 'Kampot',
+      'cityKep': 'Kep',
+      'cityPoipet': 'Poipet',
+      'chatsTab': 'Chats',
+      'noConversationsYet': 'No conversations yet',
+      'driverMessagesHint': 'Messages with your driver will appear here',
+      'rotehSupport': 'ROTEH Support',
+      'chatWithOurTeam': 'Chat with our team',
+      'noMessagesSayHello': 'No messages yet. Say hello!',
+      'typeAMessageHint': 'Type a message...',
+      'howCanWeHelp': 'How can we help?',
+      'searchForHelp': 'Search for help...',
+      'quickHelp': 'Quick Help',
+      'qhDriverLate': 'My driver is late',
+      'qhOvercharged': 'I was overcharged',
+      'qhLostItem': 'Lost item in vehicle',
+      'qhSafetyIssue': 'Report a safety issue',
+      'qhCancelTrip': 'Cancel my trip',
+      'support247': '24/7 Support',
+      'openTicketReplyHere': 'Open a ticket and our team will reply here',
+      'chatNow': 'Chat Now',
+      'supportRepliesSoon': 'Say hello! Our team typically replies within a few minutes.',
+      'uploadFromGallery': 'Upload from gallery',
+      'couldNotSendPhoto': 'Could not send photo: {error}',
+      'couldNotLoadMessages': 'Could not load messages: {error}',
+      'missedRequestsTitle': 'Missed requests',
+      'missedTab': 'Missed',
+      'declinedTab': 'Declined',
+      'reasonMissed': 'No response in time',
+      'reasonDeclined': 'You declined',
+      'outcomeOpen': 'Still available',
+      'outcomeTaken': 'Taken by another driver',
+      'outcomeCancelled': 'Cancelled',
+      'noMissedRequests': 'No missed requests',
+      'missedRequestsHint': 'Requests you decline or don\'t answer in time appear here.',
+      'trRemove': 'Remove',
+      'trSwitch': 'Switch',
+      'trAccount': 'Account',
+      'trBack': 'Back',
+      'trSave': 'Save',
+      'trDelete': 'Delete',
+      'trEdit': 'Edit',
+      'trApprove': 'Approve',
+      'trReject': 'Reject',
+      'trApproved': 'Approved',
+      'trRejected': 'Rejected',
+      'trPending': 'Pending',
+      'trActive': 'Active',
+      'trInactive': 'Inactive',
+      'trTitle': 'Title',
+      'trRefresh': 'Refresh',
+      'trSignOut': 'Sign Out',
+      'trUnknown': 'Unknown',
+      'trSearch': 'Search',
+      'trMap': 'Map',
+      'trView': 'View',
+      'trNow': 'Now',
+      'trJustNow': 'Just now',
+      'trMinutesAgo': '{n}m ago',
+      'trHoursAgo': '{n}h ago',
+      'trDaysAgo': '{n}d ago',
+      'trMinAgoLong': '{n} min ago',
+      'trHrsAgoLong': '{n} hrs ago',
+      'trDaysAgoLong': '{n} days ago',
+      'trTodayAt': 'Today, {time}',
+      'trPerDay': '/day',
+      'trTryAgain': 'Try again',
+      'trProcessing': 'Processing…',
+      'trCustomerNo': 'Customer #{id}',
+      'trDriverNo': 'Driver #{id}',
+      'trRideNo': 'Ride #{id}',
+      'trStopN': 'Stop {n}',
+      'trStopWithAddress': 'Stop {n}: {address}',
+      'trStopDestination': 'Stop {n} — Destination',
+      'trStopDistance': 'Stop {n} · {km} km',
+      'trDistanceKm': 'Distance ({km} km)',
+      'trPromoWithCode': 'Promo ({code})',
+      'trYouEarned': 'You earned {amount}',
+      'trEtaMin': 'ETA {n} min',
+      'trFromPlace': 'From: {place}',
+      'trToPlace': 'To: {place}',
+      'trFareKhr': 'Fare: {amount} ៛',
+      'trCar': 'Car',
+      'trBike': 'Bike',
+      'trTukTuk': 'Tuk-Tuk',
+      'trVan': 'Van',
+      'trHome': 'Home',
+      'trWork': 'Work',
+      'trCash': 'Cash',
+      'trWalletTopUp': 'Wallet Top-up',
+      'trTripEarning': 'Trip Earning',
+      'trPlatformFee': 'Platform Fee',
+      'trBonusCredit': 'Bonus Credit',
+      'trTripPayment': 'Trip Payment',
+      'trRefund': 'Refund',
+      'trGoogleNotConfigured': 'Google sign-in is not configured for this app. Contact support.',
+      'trAdminRole': 'Admin',
+      'trEnterOtp': 'Enter OTP',
+      'trPhoneLogin': 'Phone Login',
+      'trCodeSentTo': 'Code sent to {phone}',
+      'trWeSendSmsCode': 'We\'ll send a one-time code via SMS',
+      'trResendCodeIn': 'Resend code in {n}s',
+      'trThisAccount': 'this account',
+      'trRemoveAccount': 'Remove Account',
+      'trUnlinkConfirm': 'Unlink {name} from your account?',
+      'trSwitchAccount': 'Switch Account',
+      'trLinkAccount': 'Link Account',
+      'trNoLinkedAccounts': 'No linked accounts',
+      'trLinkAnotherAccount': 'Link another account to switch between them.',
+      'trLabelOptionalWork': 'Label (optional, e.g. "Work")',
+      'trNewCodeSent': 'New code sent',
+      'trVerifyPhone': 'Verify Phone',
+      'trEnterVerificationCode': 'Enter verification code',
+      'trDidntReceiveCode': 'Didn\'t receive the code? ',
+      'trResendInSeconds': 'Resend in {n}s',
+      'trNoTasksNow': 'No {label} tasks right now',
+      'trSosFailedCall': 'SOS failed to send. Please call emergency services directly.',
+      'trNoDestinationMeteredFare': 'This trip had no destination set — enter the metered fare to complete it.',
+      'trCouldntAutoCalc': 'Couldn\'t auto-calculate a suggestion: ',
+      'trFromKmTravelled': 'from {km} km',
+      'trUser': 'User',
+      'trCreditName': 'Credit {name}',
+      'trAmountKhr': 'Amount (KHR)',
+      'trNoteOptional': 'Note (optional)',
+      'trCredit': 'Credit',
+      'trCreditApplied': 'Credit applied.',
+      'trDeleteUser': 'Delete User',
+      'trPermanentlyDelete': 'Permanently delete {name}?',
+      'trUsers': 'Users',
+      'trSearchNameEmail': 'Search by name / email…',
+      'trAllRoles': 'All Roles',
+      'trNoUsersFound': 'No users found.',
+      'trCreditWallet': 'Credit Wallet',
+      'trNotifications': 'Notifications',
+      'trMarkAllRead': 'Mark all read',
+      'trNoNotificationsYet': 'No notifications yet',
+      'trCarRental': 'Car rental',
+      'trMarketplaceOrder': 'Marketplace order',
+      'trManageOnWebAdmin': 'Confirm or manage this order from the web admin panel.',
+      'trTransactions': 'Transactions',
+      'trDebit': 'Debit',
+      'trTopUp': 'Top-up',
+      'trWithdraw': 'Withdraw',
+      'trNoTransactions': 'No transactions.',
+      'trDriverApproved': 'Driver approved',
+      'trDriverRejected': 'Driver rejected',
+      'trDriverApplications': 'Driver Applications',
+      'trNoPendingApplications': 'No pending applications',
+      'trRejectDriver': 'Reject Driver',
+      'trProvideReasonOptional': 'Provide a reason (optional):',
+      'trEgDocsUnclear': 'e.g. Documents unclear, ID expired…',
+      'trReviewDocs': 'Review Docs',
+      'trNationalIdPassport': 'National ID / Passport',
+      'trDriverLicense': 'Driver License',
+      'trVehicleRegistration': 'Vehicle Registration',
+      'trSelfieWithId': 'Selfie with ID',
+      'trVehicleInsurance': 'Vehicle Insurance',
+      'trOtherDocument': 'Other Document',
+      'trRejectDocument': 'Reject Document',
+      'trReasonImageBlurry': 'Reason (e.g. Image too blurry)',
+      'trApproveDriver': 'Approve Driver',
+      'trServiceZoneOptional': 'Service zone (optional):',
+      'trEgZoneA': 'e.g. Phnom Penh Zone A',
+      'trConfirmApprove': 'Confirm Approve',
+      'trDriverApprovedExcl': 'Driver approved!',
+      'trDocuments': 'Documents',
+      'trNoDocumentsYet': 'No documents uploaded yet.',
+      'trNoteWith': 'Note: {note}',
+      'trViewDocument': 'View Document',
+      'trPricingSaved': 'Pricing settings saved.',
+      'trPricingSettings': 'Pricing Settings',
+      'trSaveSettings': 'Save Settings',
+      'trDeleteBanner': 'Delete Banner',
+      'trRemoveBannerQ': 'Remove this banner?',
+      'trBanners': 'Banners',
+      'trNoBannersYet': 'No banners yet.',
+      'trUntitled': 'Untitled',
+      'trNewBanner': 'New Banner',
+      'trEditBanner': 'Edit Banner',
+      'trSubtitleDescription': 'Subtitle / Description',
+      'trImageUrlOptional': 'Image URL (optional)',
+      'trSaveBanner': 'Save Banner',
+      'trSupportTickets': 'Support Tickets',
+      'trOpen': 'Open',
+      'trInProgress': 'In Progress',
+      'trResolved': 'Resolved',
+      'trClosed': 'Closed',
+      'trNoTicketsFound': 'No tickets found.',
+      'trNoSubject': 'No subject',
+      'trTicketNo': 'Ticket #{id}',
+      'trMarkOpen': 'Mark Open',
+      'trMarkInProgress': 'Mark In Progress',
+      'trMarkResolved': 'Mark Resolved',
+      'trMarkClosed': 'Mark Closed',
+      'trTypeReply': 'Type a reply…',
+      'trTopUpApproved': 'Top-up approved & wallet credited.',
+      'trRejectTopUp': 'Reject Top-up',
+      'trReasonColon': 'Reason:',
+      'trEnterReason': 'Enter reason',
+      'trRejectedDot': 'Rejected.',
+      'trTopUpRequests': 'Top-up Requests',
+      'trNoTopUpRequests': 'No top-up requests.',
+      'trCancelRide': 'Cancel Ride',
+      'trReasonForCancellation': 'Reason for cancellation:',
+      'trEgPolicyViolation': 'e.g. Policy violation',
+      'trRides': 'Rides',
+      'trNoRidesFound': 'No rides found.',
+      'trApproveWithdrawal': 'Approve Withdrawal',
+      'trAddNoteOptional': 'Add a note (optional):',
+      'trEgTransferredAba': 'e.g. Transferred via ABA',
+      'trApprovedDot': 'Approved.',
+      'trRejectWithdrawal': 'Reject Withdrawal',
+      'trReasonRequired': 'Reason (required):',
+      'trEgInvalidAccount': 'e.g. Invalid account number',
+      'trWithdrawals': 'Withdrawals',
+      'trNoWithdrawalsFound': 'No withdrawals found.',
+      'trSafetyIncidents': 'Safety Incidents',
+      'trCrash': 'Crash',
+      'trUserReport': 'User Report',
+      'trNoSafetyIncidents': 'No safety incidents.',
+      'trDeliveries': 'Deliveries',
+      'trNoDeliveriesFound': 'No deliveries found.',
+      'trAdminDashboard': 'Admin Dashboard',
+      'trRevenue7Days': 'Revenue (7 days)',
+      'trSurgePromoControl': 'Surge & Promo Control',
+      'trSurge': 'Surge',
+      'trPromos': 'Promos',
+      'trThisZone': 'this zone',
+      'trDeleteSurgeZone': 'Delete Surge Zone',
+      'trDeleteNamedQ': 'Delete "{name}"?',
+      'trNewZone': 'New Zone',
+      'trNoSurgeZones': 'No surge zones configured.',
+      'trNewSurgeZone': 'New Surge Zone',
+      'trEditSurgeZone': 'Edit Surge Zone',
+      'trZoneName': 'Zone Name',
+      'trEgCityCentre': 'e.g. City Centre',
+      'trDescriptionOptional': 'Description (optional)',
+      'trEgHighDemand': 'e.g. High demand area',
+      'trMultiplierX': 'Multiplier: ×{x}',
+      'trCreateZone': 'Create Zone',
+      'trSaveChanges': 'Save Changes',
+      'trDeletePromo': 'Delete Promo',
+      'trNewPromo': 'New Promo',
+      'trNoPromoCodes': 'No promo codes.',
+      'trAmountOff': '{amount} off',
+      'trUsesLeft': '{n} uses left',
+      'trExpShort': 'Exp {date}',
+      'trCodeDiscountRequired': 'Code and discount amount are required.',
+      'trEditPromoCode': 'Edit Promo Code',
+      'trNewPromoCode': 'New Promo Code',
+      'trPromoCode': 'Promo Code',
+      'trDiscountKhr': 'Discount (KHR)',
+      'trMaxUsesHint': 'Max Uses (leave blank = unlimited)',
+      'trExpiresAtHint': 'Expires At (YYYY-MM-DD)',
+      'trCreatePromo': 'Create Promo',
+      'trDeleteFareRule': 'Delete Fare Rule',
+      'trThisVehicle': 'this vehicle',
+      'trFareManagement': 'Fare Management',
+      'trAddRule': 'Add Rule',
+      'trNoFareRules': 'No fare rules configured.',
+      'trBaseFare': 'Base Fare',
+      'trPerKm': 'Per KM',
+      'trMinimum': 'Minimum',
+      'trFillFareFields': 'Please fill all fare fields with valid numbers.',
+      'trEditFareRule': 'Edit Fare Rule',
+      'trNewFareRule': 'New Fare Rule',
+      'trBaseFareKhr': 'Base Fare (KHR)',
+      'trPerKmRateKhr': 'Per KM Rate (KHR)',
+      'trMinimumFareKhr': 'Minimum Fare (KHR)',
+      'trCreateRule': 'Create Rule',
+      'trDestination': 'Destination',
+      'trFindingDriver': 'Finding driver…',
+      'trDriverOnTheWay': 'Driver on the way',
+      'trDriverEnRoutePickup': 'Driver en route to pickup',
+      'trTripInProgress': 'Trip in progress',
+      'trTripCompleted': 'Trip completed',
+      'trTripCancelled': 'Trip cancelled',
+      'trLiveTrip': 'ROTEH — Live Trip',
+      'trMovingService': 'Moving Service',
+      'trWaitingDriverGps': 'Waiting for driver GPS…',
+      'trPageAutoUpdates': 'This page updates automatically every 8 seconds.',
+      'trTripNotFound': 'Trip not found',
+      'trLookingForDriver': 'Looking for a driver...',
+      'trDriverAssigned': 'Driver assigned',
+      'trDriverArrivedPickup': 'Driver arrived at pickup',
+      'trLoadingItems': 'Loading items...',
+      'trOnWayToDestination': 'On the way to destination',
+      'trMovingCompletedExcl': 'Moving completed!',
+      'trProcessingDots': 'Processing...',
+      'trPackagePickedUp': 'Package picked up',
+      'trOnWayToRecipient': 'On the way to recipient',
+      'trDeliveredExcl': 'Delivered!',
+      'trPackageDelivery': 'Package Delivery',
+      'trTrackMy': 'Track my {service}',
+      'trTrackMyLive': 'Track my {title} live',
+      'trMovingCompleted': 'Moving Completed',
+      'trDeliveryCompletedTitle': 'Delivery Completed',
+      'trMoving': 'Moving',
+      'trRecipientLine': 'Recipient: {name}',
+      'trDriverLine': 'Driver: {name}',
+      'trShareMovingTracking': 'Share Moving Tracking',
+      'trShareDeliveryTracking': 'Share Delivery Tracking',
+      'trPendingFirstRide': 'Pending first ride',
+      'trSedan': 'Sedan',
+      'trUpTo4Pax': 'Up to 4 pax',
+      'trSuvVan': 'SUV/Van',
+      'trUpTo6Pax': 'Up to 6 pax',
+      'trDriverArrivingPickup': '{name} is arriving at your pickup point.',
+      'trDriverWaitingAt': '{name} is waiting at {place}',
+      'trSosSentToContacts': '🆘 SOS sent to {n} contact(s)',
+      'trChatWithSupport': 'Chat with Support',
+      'trPaidBySender': 'paid by sender',
+      'trPaidByRecipient': 'paid by recipient',
+      'trScheduleWithFare': 'Schedule — {fare}',
+      'trConfirmWithFare': 'Confirm — {fare}',
+      'trAddedToWallet': '{amount} has been added to your wallet.',
+      'trRecipientPhoneNumber': 'Recipient\'s phone number',
+      'trConfirmAndPay': 'Confirm & Pay',
+      'trNewRideRequest': '🚗 New Ride Request',
+      'trNewRequest': 'New request',
+      'trSubscribed': 'Subscribed!',
+      'trPlanUpgraded': 'Plan upgraded!',
+      'trSubscriptionCancelled': 'Subscription cancelled.',
+      'trTransferred': 'Transferred.',
+      'trSearchLocation': 'Search location…',
+      'trFindingAddress': 'Finding address…',
+      'trMoveMapToSet': 'Move map to set location',
+      'trConfirmLocation': 'Confirm Location',
+      'trTapOpenGoogleMaps': 'Tap to open Google Maps',
+      'trOpenInMaps': 'Open in Maps',
+      'trSearchAddressHint': 'Search address, place or landmark…',
+      'trUseMyLocation': 'Use my current location',
+      'trDetectedViaGps': 'Detected via GPS',
+      'trTypeToSearchPlace': 'Type to search for a place',
+      'trNoResultsFor': 'No results for "{q}"',
+      'trMoveTheMapToSet': 'Move the map to set location',
+      'trUseThisLocation': 'Use this location',
+      'trPromotions': 'Promotions',
+      'trSlowConnection': 'Experiencing a slow connection?',
+      'trSwipeToRefresh': 'Swipe down and release to refresh',
       'busy': 'Busy',
       'full': 'Full',
       'chooseRide': 'Choose your ride',
@@ -1747,6 +2169,430 @@ class AppLocalizations {
       'searchRentalsHint': 'ស្វែងរកការជួល…',
       'rentalBookedSuccess': 'ការជួលបានកក់ដោយជោគជ័យ!',
       'rentalHeaderSubtitle': 'បំពេញព័ត៌មានដើម្បីកក់យានជួល',
+      'drvTopUpMsg': 'សមតុល្យកាបូបរបស់អ្នកទាបពេកដើម្បីចូលធ្វើការ។ សូមបញ្ចូលទឹកប្រាក់យ៉ាងតិច {amount} ដើម្បីបន្ត។',
+      'drvShortBy': 'ខ្វះ {amount}',
+      'drvKmAway': 'ចម្ងាយ {km} គ.ម',
+      'drvEndsInHm': 'បញ្ចប់ក្នុង {h} ម៉ោង {m} នាទី',
+      'drvEndsInMin': 'បញ្ចប់ក្នុង {m} នាទី',
+      'drvTripsCount': '{n} ដំណើរ',
+      'drvSurgeInside': 'តំបន់តម្លៃកើនឡើង {x}× — អ្នកនៅក្នុងតំបន់!',
+      'drvSurgeNearby': 'តំបន់តម្លៃកើនឡើង {x}× នៅជិត — {zone}',
+      'drvZone': 'តំបន់',
+      'drvInactive': 'អសកម្ម',
+      'drvPeakExtra': 'បន្ថែម {amount} ក្នុងមួយដំណើរ ក្នុងម៉ោងមមាញឹក',
+      'drvPeakProgress': 'ថ្ងៃនេះបានបញ្ចប់ {done}/{target} ដំណើរក្នុងម៉ោងមមាញឹក',
+      'drvStreakCount': 'ទទួលបាន 5 ផ្កាយជាប់ៗគ្នា {n} ដង!',
+      'drvStreakRemaining': '{n} ដង 5 ផ្កាយទៀត = ទទួលបានប្រាក់រង្វាន់ {amount}',
+      'drvStreakUnlocked': 'បានទទួលប្រាក់រង្វាន់ជាប់ៗគ្នា — {amount}!',
+      'drvPassengerNo': 'អ្នកដំណើរ #{id}',
+      'drvSenderNo': 'អ្នកផ្ញើ #{id}',
+      'drvSecondsShort': '{n} វិ',
+      'drvFloors': 'ជាន់៖ ទទួល {from} → ទម្លាក់ {to}',
+      'drvElevator': 'ជណ្តើរយន្ត៖ {v}',
+      'drvHelpers': 'អ្នកជំនួយ {n} នាក់ — {type}',
+      'drvHeavyCarry': 'លើកធ្ងន់',
+      'drvNormalCarry': 'លើកធម្មតា',
+      'drvWithdrawConfirm': 'ដកសមតុល្យទាំងអស់ទៅ {bank}?\nសំណើនេះនឹងត្រូវផ្ញើទៅអ្នកគ្រប់គ្រងដើម្បីអនុម័ត។',
+      'drvWithdrawSubmitted': '✅ បានដាក់សំណើដកប្រាក់ {amount} — កំពុងរង់ចាំការអនុម័ត',
+      'drvMinWithdrawal': 'ការដកប្រាក់អប្បបរមា៖ {amount}',
+      'drvWithdrawTo': '💸  ដក {amount} ទៅ {bank}',
+      'drvTodaysTransactions': 'ប្រតិបត្តិការថ្ងៃនេះ',
+      'drvTotalCount': 'សរុប {n}',
+      'drvBalanceShort': 'សមតុល្យ៖ {amount}',
+      'seatsCount': '{n} កៅអី',
+      'seatsOne': '1 កៅអី',
+      'senderNameHint': 'ឈ្មោះអ្នកផ្ញើ',
+      'senderPhoneHint': 'លេខទូរស័ព្ទអ្នកផ្ញើ',
+      'recipientNameHint': 'ឈ្មោះអ្នកទទួល',
+      'recipientPhoneHint': 'លេខទូរស័ព្ទអ្នកទទួល',
+      'floorsPickupDropoff': 'ទទួល៖ {from}  •  ទម្លាក់៖ {to}',
+      'packageAmountHint': 'តម្លៃកញ្ចប់ឥវ៉ាន់ ជា ៛ (ស្រេចចិត្ត)',
+      'packageAmount': 'តម្លៃកញ្ចប់ឥវ៉ាន់',
+      'deliveryFee': 'ថ្លៃដឹកជញ្ជូន',
+      'serviceFee': 'ថ្លៃសេវា',
+      'pickup': 'ទីតាំងទទួល',
+      'completedAt': 'បញ្ចប់នៅ',
+      'completionTime': 'ពេលវេលាបញ្ចប់',
+      'deliveryCompleted': 'ការដឹកជញ្ជូនបានបញ្ចប់',
+      'deliveryReceipt': 'បង្កាន់ដៃដឹកជញ្ជូន',
+      'deliverySummary': 'សង្ខេបការដឹកជញ្ជូន',
+      'viewDeliverySummary': 'មើលសង្ខេបការដឹកជញ្ជូន',
+      'feePaidBy': 'ថ្លៃបង់ដោយ',
+      'paidBySender': 'បង់ដោយអ្នកផ្ញើ',
+      'paidByRecipient': 'បង់ដោយអ្នកទទួល',
+      'guestOtpReason': 'សូមផ្ទៀងផ្ទាត់លេខទូរស័ព្ទរបស់អ្នក ដើម្បីដាក់ការបញ្ជាទិញនេះ។',
+      'confirmOtpTitle': 'បញ្ជាក់លេខកូដ OTP',
+      'otpSentToYourPhone': 'យើងបានផ្ញើលេខកូដ 6 ខ្ទង់ទៅលេខទូរស័ព្ទរបស់អ្នក',
+      'didntReceiveCode': 'មិនទាន់ទទួលលេខកូដ?',
+      'resendShort': 'ផ្ញើម្តងទៀត',
+      'guestPhoneStarHint': 'លេខទូរស័ព្ទ * (ឧ. 012 345 678)',
+      'guestFullNameRequired': 'សូមបញ្ចូលឈ្មោះពេញរបស់អ្នក។',
+      'guestPhoneInvalid': 'សូមបញ្ចូលលេខទូរស័ព្ទត្រឹមត្រូវ (8–16 ខ្ទង់)។',
+      'guestPhoneNotVerified': 'សូមផ្ទៀងផ្ទាត់លេខទូរស័ព្ទរបស់អ្នកជាមួយលេខកូដ SMS។',
+      'guestOtpNote': 'យើងនឹងផ្ញើលេខកូដ SMS ដើម្បីផ្ទៀងផ្ទាត់លេខនេះ។',
+      'regJoinTitle': 'ចូលរួមជាមួយ ROTEH',
+      'regTagline': 'ការធ្វើដំណើររហ័ស និងសុវត្ថិភាពនៅកម្ពុជា',
+      'regIWantTo': 'ខ្ញុំចង់',
+      'regRideAsPassenger': 'ជិះជាអ្នកដំណើរ',
+      'regDriveAndEarn': 'បើកបរ និងរកប្រាក់',
+      'regOwner': 'ម្ចាស់យានជំនិះ',
+      'regSelectCity': 'ជ្រើសរើសទីក្រុងរបស់អ្នក',
+      'regCityRequired': 'សូមជ្រើសរើសទីក្រុង',
+      'regNameRequired': 'សូមបញ្ចូលឈ្មោះ',
+      'regEmailRequired': 'សូមបញ្ចូលអ៊ីមែល',
+      'regEmailInvalid': 'សូមបញ្ចូលអ៊ីមែលឲ្យបានត្រឹមត្រូវ',
+      'regPhoneOptional': 'លេខទូរស័ព្ទ (ស្រេចចិត្ត)',
+      'regPasswordMin': 'យ៉ាងតិច ៨ តួអក្សរ',
+      'regPasswordMismatch': 'ពាក្យសម្ងាត់មិនដូចគ្នាទេ',
+      'regReferralOptional': 'លេខកូដណែនាំ (ស្រេចចិត្ត)',
+      'regRegisterUpload': 'ចុះឈ្មោះ និងបញ្ចូលឯកសារ',
+      'cityPhnomPenh': 'ភ្នំពេញ',
+      'citySiemReap': 'សៀមរាប',
+      'citySihanoukville': 'ព្រះសីហនុ',
+      'cityBattambang': 'បាត់ដំបង',
+      'cityKampongCham': 'កំពង់ចាម',
+      'cityKampot': 'កំពត',
+      'cityKep': 'កែប',
+      'cityPoipet': 'ប៉ោយប៉ែត',
+      'chatsTab': 'ការជជែក',
+      'noConversationsYet': 'មិនទាន់មានការសន្ទនានៅឡើយ',
+      'driverMessagesHint': 'សារជាមួយអ្នកបើកបររបស់អ្នកនឹងបង្ហាញនៅទីនេះ',
+      'rotehSupport': 'ផ្នែកជំនួយ ROTEH',
+      'chatWithOurTeam': 'ជជែកជាមួយក្រុមការងាររបស់យើង',
+      'noMessagesSayHello': 'មិនទាន់មានសារនៅឡើយ។ សូមផ្ញើសារសួរសុខទុក្ខ!',
+      'typeAMessageHint': 'វាយសារ...',
+      'howCanWeHelp': 'តើយើងអាចជួយអ្វីបាន?',
+      'searchForHelp': 'ស្វែងរកជំនួយ...',
+      'quickHelp': 'ជំនួយរហ័ស',
+      'qhDriverLate': 'អ្នកបើកបររបស់ខ្ញុំមកយឺត',
+      'qhOvercharged': 'ខ្ញុំត្រូវបានគិតថ្លៃលើស',
+      'qhLostItem': 'ភ្លេចរបស់របរក្នុងយានជំនិះ',
+      'qhSafetyIssue': 'រាយការណ៍បញ្ហាសុវត្ថិភាព',
+      'qhCancelTrip': 'បោះបង់ដំណើររបស់ខ្ញុំ',
+      'support247': 'ជំនួយ 24/7',
+      'openTicketReplyHere': 'បើកសំណើជំនួយ ហើយក្រុមការងាររបស់យើងនឹងឆ្លើយតបនៅទីនេះ',
+      'chatNow': 'ជជែកឥឡូវ',
+      'supportRepliesSoon': 'សួរសុខទុក្ខមកយើង! ក្រុមការងាររបស់យើងតែងឆ្លើយតបក្នុងរយៈពេលប៉ុន្មាននាទី។',
+      'uploadFromGallery': 'ផ្ទុកឡើងពីវិចិត្រសាល',
+      'couldNotSendPhoto': 'មិនអាចផ្ញើរូបថតបានទេ៖ {error}',
+      'couldNotLoadMessages': 'មិនអាចផ្ទុកសារបានទេ៖ {error}',
+      'missedRequestsTitle': 'សំណើដែលខកខាន',
+      'missedTab': 'ខកខាន',
+      'declinedTab': 'បានបដិសេធ',
+      'reasonMissed': 'មិនបានឆ្លើយតបទាន់ពេល',
+      'reasonDeclined': 'អ្នកបានបដិសេធ',
+      'outcomeOpen': 'នៅទំនេរ',
+      'outcomeTaken': 'អ្នកបើកបរផ្សេងបានទទួល',
+      'outcomeCancelled': 'បានបោះបង់',
+      'noMissedRequests': 'មិនមានសំណើដែលខកខាន',
+      'missedRequestsHint': 'សំណើដែលអ្នកបដិសេធ ឬមិនបានឆ្លើយតបទាន់ពេល នឹងបង្ហាញនៅទីនេះ។',
+      'trRemove': 'លុបចេញ',
+      'trSwitch': 'ប្តូរ',
+      'trAccount': 'គណនី',
+      'trBack': 'ត្រឡប់ក្រោយ',
+      'trSave': 'រក្សាទុក',
+      'trDelete': 'លុប',
+      'trEdit': 'កែប្រែ',
+      'trApprove': 'អនុម័ត',
+      'trReject': 'បដិសេធ',
+      'trApproved': 'បានអនុម័ត',
+      'trRejected': 'បានបដិសេធ',
+      'trPending': 'កំពុងរង់ចាំ',
+      'trActive': 'សកម្ម',
+      'trInactive': 'អសកម្ម',
+      'trTitle': 'ចំណងជើង',
+      'trRefresh': 'ផ្ទុកឡើងវិញ',
+      'trSignOut': 'ចាកចេញ',
+      'trUnknown': 'មិនស្គាល់',
+      'trSearch': 'ស្វែងរក',
+      'trMap': 'ផែនទី',
+      'trView': 'មើល',
+      'trNow': 'ឥឡូវនេះ',
+      'trJustNow': 'អម្បាញ់មិញ',
+      'trMinutesAgo': '{n} នាទីមុន',
+      'trHoursAgo': '{n} ម៉ោងមុន',
+      'trDaysAgo': '{n} ថ្ងៃមុន',
+      'trMinAgoLong': '{n} នាទីមុន',
+      'trHrsAgoLong': '{n} ម៉ោងមុន',
+      'trDaysAgoLong': '{n} ថ្ងៃមុន',
+      'trTodayAt': 'ថ្ងៃនេះ {time}',
+      'trPerDay': '/ថ្ងៃ',
+      'trTryAgain': 'ព្យាយាមម្តងទៀត',
+      'trProcessing': 'កំពុងដំណើរការ…',
+      'trCustomerNo': 'អតិថិជន #{id}',
+      'trDriverNo': 'អ្នកបើកបរ #{id}',
+      'trRideNo': 'ដំណើរ #{id}',
+      'trStopN': 'ចំណត {n}',
+      'trStopWithAddress': 'ចំណត {n}៖ {address}',
+      'trStopDestination': 'ចំណត {n} — គោលដៅ',
+      'trStopDistance': 'ចំណត {n} · {km} គ.ម',
+      'trDistanceKm': 'ចម្ងាយ ({km} គ.ម)',
+      'trPromoWithCode': 'ប្រូម៉ូសិន ({code})',
+      'trYouEarned': 'អ្នកទទួលបាន {amount}',
+      'trEtaMin': 'ប្រហែល {n} នាទី',
+      'trFromPlace': 'ពី៖ {place}',
+      'trToPlace': 'ទៅ៖ {place}',
+      'trFareKhr': 'ថ្លៃ៖ {amount} ៛',
+      'trCar': 'ឡាន',
+      'trBike': 'ម៉ូតូ',
+      'trTukTuk': 'កង់បី',
+      'trVan': 'ឡានវ៉ាន',
+      'trHome': 'ផ្ទះ',
+      'trWork': 'កន្លែងធ្វើការ',
+      'trCash': 'សាច់ប្រាក់',
+      'trWalletTopUp': 'បញ្ចូលទឹកប្រាក់កាបូប',
+      'trTripEarning': 'ចំណូលពីដំណើរ',
+      'trPlatformFee': 'ថ្លៃសេវាកម្មវិធី',
+      'trBonusCredit': 'ប្រាក់រង្វាន់',
+      'trTripPayment': 'ការទូទាត់ដំណើរ',
+      'trRefund': 'ប្រាក់សងវិញ',
+      'trGoogleNotConfigured': 'ការចូលដោយ Google មិនទាន់បានកំណត់សម្រាប់កម្មវិធីនេះទេ។ សូមទាក់ទងផ្នែកជំនួយ។',
+      'trAdminRole': 'អ្នកគ្រប់គ្រង',
+      'trEnterOtp': 'បញ្ចូលលេខកូដ OTP',
+      'trPhoneLogin': 'ចូលដោយលេខទូរស័ព្ទ',
+      'trCodeSentTo': 'លេខកូដត្រូវបានផ្ញើទៅ {phone}',
+      'trWeSendSmsCode': 'យើងនឹងផ្ញើលេខកូដប្រើម្តងតាម SMS',
+      'trResendCodeIn': 'ផ្ញើលេខកូដម្តងទៀតក្នុង {n}វិ',
+      'trThisAccount': 'គណនីនេះ',
+      'trRemoveAccount': 'លុបគណនីចេញ',
+      'trUnlinkConfirm': 'ផ្តាច់ {name} ពីគណនីរបស់អ្នក?',
+      'trSwitchAccount': 'ប្តូរគណនី',
+      'trLinkAccount': 'ភ្ជាប់គណនី',
+      'trNoLinkedAccounts': 'មិនមានគណនីដែលបានភ្ជាប់',
+      'trLinkAnotherAccount': 'ភ្ជាប់គណនីផ្សេងទៀត ដើម្បីប្តូររវាងគណនី។',
+      'trLabelOptionalWork': 'ស្លាក (ស្រេចចិត្ត ឧ. "ការងារ")',
+      'trNewCodeSent': 'បានផ្ញើលេខកូដថ្មី',
+      'trVerifyPhone': 'ផ្ទៀងផ្ទាត់លេខទូរស័ព្ទ',
+      'trEnterVerificationCode': 'បញ្ចូលលេខកូដផ្ទៀងផ្ទាត់',
+      'trDidntReceiveCode': 'មិនទាន់ទទួលបានលេខកូដ? ',
+      'trResendInSeconds': 'ផ្ញើម្តងទៀតក្នុង {n}វិ',
+      'trNoTasksNow': 'មិនមានការងារ{label}ទេនៅពេលនេះ',
+      'trSosFailedCall': 'មិនអាចផ្ញើ SOS បានទេ។ សូមហៅសេវាសង្គ្រោះបន្ទាន់ដោយផ្ទាល់។',
+      'trNoDestinationMeteredFare': 'ដំណើរនេះគ្មានគោលដៅ — សូមបញ្ចូលថ្លៃតាមម៉ែត្រ ដើម្បីបញ្ចប់។',
+      'trCouldntAutoCalc': 'មិនអាចគណនាដោយស្វ័យប្រវត្តិបានទេ៖ ',
+      'trFromKmTravelled': 'ពី {km} គ.ម',
+      'trUser': 'អ្នកប្រើប្រាស់',
+      'trCreditName': 'បញ្ចូលប្រាក់ឲ្យ {name}',
+      'trAmountKhr': 'ចំនួនទឹកប្រាក់ (រៀល)',
+      'trNoteOptional': 'កំណត់ចំណាំ (ស្រេចចិត្ត)',
+      'trCredit': 'បញ្ចូលប្រាក់',
+      'trCreditApplied': 'បានបញ្ចូលប្រាក់។',
+      'trDeleteUser': 'លុបអ្នកប្រើប្រាស់',
+      'trPermanentlyDelete': 'លុប {name} ជាអចិន្ត្រៃយ៍?',
+      'trUsers': 'អ្នកប្រើប្រាស់',
+      'trSearchNameEmail': 'ស្វែងរកតាមឈ្មោះ / អ៊ីមែល…',
+      'trAllRoles': 'តួនាទីទាំងអស់',
+      'trNoUsersFound': 'រកមិនឃើញអ្នកប្រើប្រាស់។',
+      'trCreditWallet': 'បញ្ចូលប្រាក់កាបូប',
+      'trNotifications': 'ការជូនដំណឹង',
+      'trMarkAllRead': 'សម្គាល់ថាបានអានទាំងអស់',
+      'trNoNotificationsYet': 'មិនទាន់មានការជូនដំណឹង',
+      'trCarRental': 'ការជួលឡាន',
+      'trMarketplaceOrder': 'ការបញ្ជាទិញពីផ្សារ',
+      'trManageOnWebAdmin': 'សូមបញ្ជាក់ ឬគ្រប់គ្រងការបញ្ជាទិញនេះពីផ្ទាំងគ្រប់គ្រងលើវេប។',
+      'trTransactions': 'ប្រតិបត្តិការ',
+      'trDebit': 'ដកប្រាក់',
+      'trTopUp': 'បញ្ចូលប្រាក់',
+      'trWithdraw': 'ដកប្រាក់',
+      'trNoTransactions': 'មិនមានប្រតិបត្តិការ។',
+      'trDriverApproved': 'បានអនុម័តអ្នកបើកបរ',
+      'trDriverRejected': 'បានបដិសេធអ្នកបើកបរ',
+      'trDriverApplications': 'ពាក្យស្នើសុំអ្នកបើកបរ',
+      'trNoPendingApplications': 'មិនមានពាក្យស្នើសុំកំពុងរង់ចាំ',
+      'trRejectDriver': 'បដិសេធអ្នកបើកបរ',
+      'trProvideReasonOptional': 'ផ្តល់មូលហេតុ (ស្រេចចិត្ត)៖',
+      'trEgDocsUnclear': 'ឧ. ឯកសារមិនច្បាស់ អត្តសញ្ញាណប័ណ្ណផុតកំណត់…',
+      'trReviewDocs': 'ពិនិត្យឯកសារ',
+      'trNationalIdPassport': 'អត្តសញ្ញាណប័ណ្ណ / លិខិតឆ្លងដែន',
+      'trDriverLicense': 'ប័ណ្ណបើកបរ',
+      'trVehicleRegistration': 'កាតគ្រីយានយន្ត',
+      'trSelfieWithId': 'រូបថតខ្លួនឯងជាមួយអត្តសញ្ញាណប័ណ្ណ',
+      'trVehicleInsurance': 'ធានារ៉ាប់រងយានយន្ត',
+      'trOtherDocument': 'ឯកសារផ្សេងៗ',
+      'trRejectDocument': 'បដិសេធឯកសារ',
+      'trReasonImageBlurry': 'មូលហេតុ (ឧ. រូបភាពព្រិលពេក)',
+      'trApproveDriver': 'អនុម័តអ្នកបើកបរ',
+      'trServiceZoneOptional': 'តំបន់សេវាកម្ម (ស្រេចចិត្ត)៖',
+      'trEgZoneA': 'ឧ. ភ្នំពេញ តំបន់ A',
+      'trConfirmApprove': 'បញ្ជាក់ការអនុម័ត',
+      'trDriverApprovedExcl': 'បានអនុម័តអ្នកបើកបរ!',
+      'trDocuments': 'ឯកសារ',
+      'trNoDocumentsYet': 'មិនទាន់មានឯកសារបានបញ្ចូល។',
+      'trNoteWith': 'កំណត់ចំណាំ៖ {note}',
+      'trViewDocument': 'មើលឯកសារ',
+      'trPricingSaved': 'បានរក្សាទុកការកំណត់តម្លៃ។',
+      'trPricingSettings': 'ការកំណត់តម្លៃ',
+      'trSaveSettings': 'រក្សាទុកការកំណត់',
+      'trDeleteBanner': 'លុបផ្ទាំងផ្សាយ',
+      'trRemoveBannerQ': 'លុបផ្ទាំងផ្សាយនេះ?',
+      'trBanners': 'ផ្ទាំងផ្សាយ',
+      'trNoBannersYet': 'មិនទាន់មានផ្ទាំងផ្សាយ។',
+      'trUntitled': 'គ្មានចំណងជើង',
+      'trNewBanner': 'ផ្ទាំងផ្សាយថ្មី',
+      'trEditBanner': 'កែប្រែផ្ទាំងផ្សាយ',
+      'trSubtitleDescription': 'ចំណងជើងរង / ការពិពណ៌នា',
+      'trImageUrlOptional': 'តំណរូបភាព (ស្រេចចិត្ត)',
+      'trSaveBanner': 'រក្សាទុកផ្ទាំងផ្សាយ',
+      'trSupportTickets': 'សំណើជំនួយ',
+      'trOpen': 'បើក',
+      'trInProgress': 'កំពុងដំណើរការ',
+      'trResolved': 'បានដោះស្រាយ',
+      'trClosed': 'បានបិទ',
+      'trNoTicketsFound': 'រកមិនឃើញសំណើជំនួយ។',
+      'trNoSubject': 'គ្មានប្រធានបទ',
+      'trTicketNo': 'សំណើ #{id}',
+      'trMarkOpen': 'សម្គាល់ថាបើក',
+      'trMarkInProgress': 'សម្គាល់ថាកំពុងដំណើរការ',
+      'trMarkResolved': 'សម្គាល់ថាបានដោះស្រាយ',
+      'trMarkClosed': 'សម្គាល់ថាបានបិទ',
+      'trTypeReply': 'វាយការឆ្លើយតប…',
+      'trTopUpApproved': 'បានអនុម័តការបញ្ចូលប្រាក់ និងបញ្ចូលទៅកាបូប។',
+      'trRejectTopUp': 'បដិសេធការបញ្ចូលប្រាក់',
+      'trReasonColon': 'មូលហេតុ៖',
+      'trEnterReason': 'បញ្ចូលមូលហេតុ',
+      'trRejectedDot': 'បានបដិសេធ។',
+      'trTopUpRequests': 'សំណើបញ្ចូលប្រាក់',
+      'trNoTopUpRequests': 'មិនមានសំណើបញ្ចូលប្រាក់។',
+      'trCancelRide': 'បោះបង់ដំណើរ',
+      'trReasonForCancellation': 'មូលហេតុនៃការបោះបង់៖',
+      'trEgPolicyViolation': 'ឧ. បំពានគោលការណ៍',
+      'trRides': 'ដំណើរ',
+      'trNoRidesFound': 'រកមិនឃើញដំណើរ។',
+      'trApproveWithdrawal': 'អនុម័តការដកប្រាក់',
+      'trAddNoteOptional': 'បន្ថែមកំណត់ចំណាំ (ស្រេចចិត្ត)៖',
+      'trEgTransferredAba': 'ឧ. បានផ្ទេរតាម ABA',
+      'trApprovedDot': 'បានអនុម័ត។',
+      'trRejectWithdrawal': 'បដិសេធការដកប្រាក់',
+      'trReasonRequired': 'មូលហេតុ (ចាំបាច់)៖',
+      'trEgInvalidAccount': 'ឧ. លេខគណនីមិនត្រឹមត្រូវ',
+      'trWithdrawals': 'ការដកប្រាក់',
+      'trNoWithdrawalsFound': 'រកមិនឃើញការដកប្រាក់។',
+      'trSafetyIncidents': 'ឧប្បត្តិហេតុសុវត្ថិភាព',
+      'trCrash': 'គ្រោះថ្នាក់',
+      'trUserReport': 'របាយការណ៍អ្នកប្រើ',
+      'trNoSafetyIncidents': 'មិនមានឧប្បត្តិហេតុសុវត្ថិភាព។',
+      'trDeliveries': 'ការដឹកជញ្ជូន',
+      'trNoDeliveriesFound': 'រកមិនឃើញការដឹកជញ្ជូន។',
+      'trAdminDashboard': 'ផ្ទាំងគ្រប់គ្រង',
+      'trRevenue7Days': 'ចំណូល (៧ ថ្ងៃ)',
+      'trSurgePromoControl': 'គ្រប់គ្រងតម្លៃកើន និងប្រូម៉ូសិន',
+      'trSurge': 'តម្លៃកើន',
+      'trPromos': 'ប្រូម៉ូសិន',
+      'trThisZone': 'តំបន់នេះ',
+      'trDeleteSurgeZone': 'លុបតំបន់តម្លៃកើន',
+      'trDeleteNamedQ': 'លុប "{name}"?',
+      'trNewZone': 'តំបន់ថ្មី',
+      'trNoSurgeZones': 'មិនទាន់មានតំបន់តម្លៃកើន។',
+      'trNewSurgeZone': 'តំបន់តម្លៃកើនថ្មី',
+      'trEditSurgeZone': 'កែប្រែតំបន់តម្លៃកើន',
+      'trZoneName': 'ឈ្មោះតំបន់',
+      'trEgCityCentre': 'ឧ. កណ្តាលក្រុង',
+      'trDescriptionOptional': 'ការពិពណ៌នា (ស្រេចចិត្ត)',
+      'trEgHighDemand': 'ឧ. តំបន់មានតម្រូវការខ្ពស់',
+      'trMultiplierX': 'មេគុណ៖ ×{x}',
+      'trCreateZone': 'បង្កើតតំបន់',
+      'trSaveChanges': 'រក្សាទុកការផ្លាស់ប្តូរ',
+      'trDeletePromo': 'លុបប្រូម៉ូសិន',
+      'trNewPromo': 'ប្រូម៉ូសិនថ្មី',
+      'trNoPromoCodes': 'មិនមានលេខកូដប្រូម៉ូសិន។',
+      'trAmountOff': 'បញ្ចុះ {amount}',
+      'trUsesLeft': 'នៅសល់ {n} ដង',
+      'trExpShort': 'ផុត {date}',
+      'trCodeDiscountRequired': 'ត្រូវការលេខកូដ និងចំនួនបញ្ចុះតម្លៃ។',
+      'trEditPromoCode': 'កែប្រែលេខកូដប្រូម៉ូសិន',
+      'trNewPromoCode': 'លេខកូដប្រូម៉ូសិនថ្មី',
+      'trPromoCode': 'លេខកូដប្រូម៉ូសិន',
+      'trDiscountKhr': 'ការបញ្ចុះតម្លៃ (រៀល)',
+      'trMaxUsesHint': 'ចំនួនប្រើអតិបរមា (ទុកទទេ = គ្មានដែនកំណត់)',
+      'trExpiresAtHint': 'ផុតកំណត់នៅ (YYYY-MM-DD)',
+      'trCreatePromo': 'បង្កើតប្រូម៉ូសិន',
+      'trDeleteFareRule': 'លុបច្បាប់តម្លៃ',
+      'trThisVehicle': 'យានជំនិះនេះ',
+      'trFareManagement': 'គ្រប់គ្រងតម្លៃ',
+      'trAddRule': 'បន្ថែមច្បាប់',
+      'trNoFareRules': 'មិនទាន់មានច្បាប់តម្លៃ។',
+      'trBaseFare': 'ថ្លៃមូលដ្ឋាន',
+      'trPerKm': 'ក្នុងមួយគ.ម',
+      'trMinimum': 'អប្បបរមា',
+      'trFillFareFields': 'សូមបំពេញចន្លោះតម្លៃទាំងអស់ដោយលេខត្រឹមត្រូវ។',
+      'trEditFareRule': 'កែប្រែច្បាប់តម្លៃ',
+      'trNewFareRule': 'ច្បាប់តម្លៃថ្មី',
+      'trBaseFareKhr': 'ថ្លៃមូលដ្ឋាន (រៀល)',
+      'trPerKmRateKhr': 'តម្លៃក្នុងមួយគ.ម (រៀល)',
+      'trMinimumFareKhr': 'ថ្លៃអប្បបរមា (រៀល)',
+      'trCreateRule': 'បង្កើតច្បាប់',
+      'trDestination': 'គោលដៅ',
+      'trFindingDriver': 'កំពុងស្វែងរកអ្នកបើកបរ…',
+      'trDriverOnTheWay': 'អ្នកបើកបរកំពុងមក',
+      'trDriverEnRoutePickup': 'អ្នកបើកបរកំពុងទៅទីតាំងទទួល',
+      'trTripInProgress': 'ដំណើរកំពុងដំណើរការ',
+      'trTripCompleted': 'ដំណើរបានបញ្ចប់',
+      'trTripCancelled': 'ដំណើរត្រូវបានបោះបង់',
+      'trLiveTrip': 'ROTEH — ដំណើរផ្ទាល់',
+      'trMovingService': 'សេវាដឹកឥវ៉ាន់ផ្លាស់ទី',
+      'trWaitingDriverGps': 'កំពុងរង់ចាំ GPS អ្នកបើកបរ…',
+      'trPageAutoUpdates': 'ទំព័រនេះធ្វើបច្ចុប្បន្នភាពដោយស្វ័យប្រវត្តិរៀងរាល់ ៨ វិនាទី។',
+      'trTripNotFound': 'រកមិនឃើញដំណើរ',
+      'trLookingForDriver': 'កំពុងស្វែងរកអ្នកបើកបរ...',
+      'trDriverAssigned': 'បានចាត់អ្នកបើកបរ',
+      'trDriverArrivedPickup': 'អ្នកបើកបរបានមកដល់ទីតាំងទទួល',
+      'trLoadingItems': 'កំពុងលើកឥវ៉ាន់...',
+      'trOnWayToDestination': 'កំពុងធ្វើដំណើរទៅគោលដៅ',
+      'trMovingCompletedExcl': 'ការដឹកផ្លាស់ទីបានបញ្ចប់!',
+      'trProcessingDots': 'កំពុងដំណើរការ...',
+      'trPackagePickedUp': 'បានទទួលកញ្ចប់ឥវ៉ាន់',
+      'trOnWayToRecipient': 'កំពុងដឹកទៅអ្នកទទួល',
+      'trDeliveredExcl': 'បានដឹកដល់!',
+      'trPackageDelivery': 'ការដឹកកញ្ចប់ឥវ៉ាន់',
+      'trTrackMy': 'តាមដាន{service}របស់ខ្ញុំ',
+      'trTrackMyLive': 'តាមដាន{title}របស់ខ្ញុំផ្ទាល់',
+      'trMovingCompleted': 'ការដឹកផ្លាស់ទីបានបញ្ចប់',
+      'trDeliveryCompletedTitle': 'ការដឹកជញ្ជូនបានបញ្ចប់',
+      'trMoving': 'ការដឹកផ្លាស់ទី',
+      'trRecipientLine': 'អ្នកទទួល៖ {name}',
+      'trDriverLine': 'អ្នកបើកបរ៖ {name}',
+      'trShareMovingTracking': 'ចែករំលែកការតាមដានការដឹកផ្លាស់ទី',
+      'trShareDeliveryTracking': 'ចែករំលែកការតាមដានការដឹកជញ្ជូន',
+      'trPendingFirstRide': 'រង់ចាំដំណើរដំបូង',
+      'trSedan': 'ឡានសេដង់',
+      'trUpTo4Pax': 'រហូតដល់ ៤ នាក់',
+      'trSuvVan': 'SUV/ឡានវ៉ាន',
+      'trUpTo6Pax': 'រហូតដល់ ៦ នាក់',
+      'trDriverArrivingPickup': '{name} កំពុងមកដល់ទីតាំងទទួលរបស់អ្នក។',
+      'trDriverWaitingAt': '{name} កំពុងរង់ចាំនៅ {place}',
+      'trSosSentToContacts': '🆘 បានផ្ញើ SOS ទៅទំនាក់ទំនង {n} នាក់',
+      'trChatWithSupport': 'ជជែកជាមួយផ្នែកជំនួយ',
+      'trPaidBySender': 'បង់ដោយអ្នកផ្ញើ',
+      'trPaidByRecipient': 'បង់ដោយអ្នកទទួល',
+      'trScheduleWithFare': 'កំណត់ពេល — {fare}',
+      'trConfirmWithFare': 'បញ្ជាក់ — {fare}',
+      'trAddedToWallet': 'បានបញ្ចូល {amount} ទៅក្នុងកាបូបរបស់អ្នក។',
+      'trRecipientPhoneNumber': 'លេខទូរស័ព្ទអ្នកទទួល',
+      'trConfirmAndPay': 'បញ្ជាក់ និងបង់ប្រាក់',
+      'trNewRideRequest': '🚗 សំណើដំណើរថ្មី',
+      'trNewRequest': 'សំណើថ្មី',
+      'trSubscribed': 'បានជាវ!',
+      'trPlanUpgraded': 'បានដំឡើងគម្រោង!',
+      'trSubscriptionCancelled': 'បានបោះបង់ការជាវ។',
+      'trTransferred': 'បានផ្ទេរ។',
+      'trSearchLocation': 'ស្វែងរកទីតាំង…',
+      'trFindingAddress': 'កំពុងស្វែងរកអាសយដ្ឋាន…',
+      'trMoveMapToSet': 'រំកិលផែនទីដើម្បីកំណត់ទីតាំង',
+      'trConfirmLocation': 'បញ្ជាក់ទីតាំង',
+      'trTapOpenGoogleMaps': 'ចុចដើម្បីបើក Google Maps',
+      'trOpenInMaps': 'បើកក្នុងផែនទី',
+      'trSearchAddressHint': 'ស្វែងរកអាសយដ្ឋាន ទីកន្លែង ឬសំណង់សម្គាល់…',
+      'trUseMyLocation': 'ប្រើទីតាំងបច្ចុប្បន្នរបស់ខ្ញុំ',
+      'trDetectedViaGps': 'រកឃើញតាម GPS',
+      'trTypeToSearchPlace': 'វាយដើម្បីស្វែងរកទីកន្លែង',
+      'trNoResultsFor': 'រកមិនឃើញលទ្ធផលសម្រាប់ "{q}"',
+      'trMoveTheMapToSet': 'រំកិលផែនទីដើម្បីកំណត់ទីតាំង',
+      'trUseThisLocation': 'ប្រើទីតាំងនេះ',
+      'trPromotions': 'ប្រូម៉ូសិន',
+      'trSlowConnection': 'ការតភ្ជាប់យឺតមែនទេ?',
+      'trSwipeToRefresh': 'អូសចុះក្រោម ហើយលែងដើម្បីផ្ទុកឡើងវិញ',
+      'goodAfternoon': 'ទិវាសួស្តី,',
+      'goodEvening': 'សាយណ្ហសួស្តី,',
       'busy': 'រវល់',
       'full': 'ពេញ',
       'chooseRide': 'ជ្រើសរើសការធ្វើដំណើររបស់អ្នក',
@@ -2780,7 +3626,7 @@ class AppLocalizations {
       'couponCodeLabel': 'កូដគូប៉ុង',
       'discountAppliedSuffix': 'ការបញ្ចុះតម្លៃត្រូវបានអនុវត្ត',
       'enterCouponCodeHint': 'បញ្ចូលកូដគូប៉ុង',
-      'bookingSummaryLabel': 'សេចក្តីសង្ខេបការកក់',
+      'bookingSummaryLabel': 'សង្ខេបការកក់',
       'discountLabel': 'ការបញ្ចុះតម្លៃ',
       'bookNowLabel': 'កក់ឥលូវនេះ',
       'selectAVehicleLabel': 'ជ្រើសរើសយានជំនិះ',
@@ -3248,7 +4094,7 @@ class AppLocalizations {
       'next': 'បន្ទាប់',
       'getStarted': 'ចាប់ផ្តើម',
       'onboardWelcomeTitle': 'សូមស្វាគមន៍មកកាន់ រទេះអេប',
-      'onboardWelcomeSubtitle': 'សម្ព័ន្ធធិការធ្វើដំណើរឆ្លាតវៃរបស់អ្នកនៅកម្ពុជា\nលឿន សុវត្ថិភាព និងតម្លៃសមរម្យនៅចុងម្រាមដៃអ្នក',
+      'onboardWelcomeSubtitle': 'ការធ្វើដំណើរឆ្លាតវៃរបស់អ្នកនៅកម្ពុជា\nលឿន សុវត្ថិភាព និងតម្លៃសមរម្យ',
       'onboardBookTitle': 'កក់ក្នុងរយៈពេលប៉ុន្មានវិនាទី',
       'onboardBookSubtitle': 'ជ្រើសរើសប្រភេទយានជំនិះរបស់អ្នក — រថយន្ត ម៉ូតូ ឬតុកតុក។\nទទួលបានការប៉ាន់ស្មានថ្លៃមុនពេលអ្នកបញ្ជាក់',
       'onboardPaySubtitle': 'បង់ប្រាក់ជាសាច់ប្រាក់ ឬប្រើកាបូបលុយ ROTEH Pay\nផ្ញើប្រាក់ទៅមិត្តភក្តិដោយប្រើកូដ QR',
@@ -3391,6 +4237,430 @@ class AppLocalizations {
       'searchRentalsHint': '搜索租赁…',
       'rentalBookedSuccess': '租赁预订成功！',
       'rentalHeaderSubtitle': '填写信息以预订租赁车辆',
+      'drvTopUpMsg': '您的钱包余额不足，无法上线。请至少充值 {amount} 后继续。',
+      'drvShortBy': '还差 {amount}',
+      'drvKmAway': '距离 {km} 公里',
+      'drvEndsInHm': '{h}小时{m}分钟后结束',
+      'drvEndsInMin': '{m} 分钟后结束',
+      'drvTripsCount': '{n} 趟',
+      'drvSurgeInside': '{x}× 高峰区 — 您在区域内！',
+      'drvSurgeNearby': '附近 {x}× 高峰 — {zone}',
+      'drvZone': '区域',
+      'drvInactive': '未激活',
+      'drvPeakExtra': '高峰时段每趟额外 {amount}',
+      'drvPeakProgress': '今日已完成 {done}/{target} 趟高峰时段行程',
+      'drvStreakCount': '连续 {n} 次五星好评！',
+      'drvStreakRemaining': '再获 {n} 次五星 = 赚取 {amount} 奖励',
+      'drvStreakUnlocked': '连续奖励已解锁 — {amount}！',
+      'drvPassengerNo': '乘客 #{id}',
+      'drvSenderNo': '寄件人 #{id}',
+      'drvSecondsShort': '{n} 秒',
+      'drvFloors': '楼层：取件 {from} → 送达 {to}',
+      'drvElevator': '电梯：{v}',
+      'drvHelpers': '{n} 名帮手 — {type}',
+      'drvHeavyCarry': '重物搬运',
+      'drvNormalCarry': '普通搬运',
+      'drvWithdrawConfirm': '将全部余额提现至 {bank}？\n此请求将提交管理员审核。',
+      'drvWithdrawSubmitted': '✅ 已提交 {amount} 的提现申请 — 等待管理员审核',
+      'drvMinWithdrawal': '最低提现金额：{amount}',
+      'drvWithdrawTo': '💸  提现 {amount} 至 {bank}',
+      'drvTodaysTransactions': '今日交易',
+      'drvTotalCount': '共 {n} 条',
+      'drvBalanceShort': '余额：{amount}',
+      'seatsCount': '{n} 个座位',
+      'seatsOne': '1 个座位',
+      'senderNameHint': '寄件人姓名',
+      'senderPhoneHint': '寄件人电话',
+      'recipientNameHint': '收件人姓名',
+      'recipientPhoneHint': '收件人电话',
+      'floorsPickupDropoff': '取件：{from}  •  送达：{to}',
+      'packageAmountHint': '包裹价值（៛，可选）',
+      'packageAmount': '包裹金额',
+      'deliveryFee': '配送费',
+      'serviceFee': '服务费',
+      'pickup': '取件',
+      'completedAt': '完成时间',
+      'completionTime': '完成用时',
+      'deliveryCompleted': '配送已完成',
+      'deliveryReceipt': '配送收据',
+      'deliverySummary': '配送摘要',
+      'viewDeliverySummary': '查看配送摘要',
+      'feePaidBy': '费用支付方',
+      'paidBySender': '由寄件人支付',
+      'paidByRecipient': '由收件人支付',
+      'guestOtpReason': '请验证您的电话号码以提交此订单。',
+      'confirmOtpTitle': '确认验证码',
+      'otpSentToYourPhone': '我们已向您的手机发送 6 位验证码',
+      'didntReceiveCode': '没有收到验证码？',
+      'resendShort': '重新发送',
+      'guestPhoneStarHint': '电话号码 *（例如 012 345 678）',
+      'guestFullNameRequired': '请输入您的全名。',
+      'guestPhoneInvalid': '请输入有效的电话号码（8–16 位数字）。',
+      'guestPhoneNotVerified': '请使用短信验证码验证您的电话号码。',
+      'guestOtpNote': '我们将发送短信验证码以验证此号码。',
+      'regJoinTitle': '加入 ROTEH',
+      'regTagline': '柬埔寨快速、安全的出行',
+      'regIWantTo': '我想要',
+      'regRideAsPassenger': '作为乘客出行',
+      'regDriveAndEarn': '驾驶赚钱',
+      'regOwner': '车主',
+      'regSelectCity': '选择您的城市',
+      'regCityRequired': '请选择城市',
+      'regNameRequired': '请输入姓名',
+      'regEmailRequired': '请输入邮箱',
+      'regEmailInvalid': '请输入有效的邮箱',
+      'regPhoneOptional': '电话（可选）',
+      'regPasswordMin': '至少 8 个字符',
+      'regPasswordMismatch': '两次输入的密码不一致',
+      'regReferralOptional': '推荐码（可选）',
+      'regRegisterUpload': '注册并上传证件',
+      'cityPhnomPenh': '金边',
+      'citySiemReap': '暹粒',
+      'citySihanoukville': '西哈努克',
+      'cityBattambang': '马德望',
+      'cityKampongCham': '磅湛',
+      'cityKampot': '贡布',
+      'cityKep': '白马',
+      'cityPoipet': '波贝',
+      'chatsTab': '聊天',
+      'noConversationsYet': '暂无对话',
+      'driverMessagesHint': '与司机的消息将显示在这里',
+      'rotehSupport': 'ROTEH 客服',
+      'chatWithOurTeam': '与我们的团队聊天',
+      'noMessagesSayHello': '暂无消息，打个招呼吧！',
+      'typeAMessageHint': '输入消息...',
+      'howCanWeHelp': '我们能帮您什么？',
+      'searchForHelp': '搜索帮助...',
+      'quickHelp': '快速帮助',
+      'qhDriverLate': '我的司机迟到了',
+      'qhOvercharged': '我被多收费了',
+      'qhLostItem': '物品遗失在车内',
+      'qhSafetyIssue': '报告安全问题',
+      'qhCancelTrip': '取消我的行程',
+      'support247': '24/7 客服',
+      'openTicketReplyHere': '提交工单，我们的团队会在这里回复',
+      'chatNow': '立即聊天',
+      'supportRepliesSoon': '打个招呼吧！我们的团队通常会在几分钟内回复。',
+      'uploadFromGallery': '从相册上传',
+      'couldNotSendPhoto': '无法发送照片：{error}',
+      'couldNotLoadMessages': '无法加载消息：{error}',
+      'missedRequestsTitle': '未接请求',
+      'missedTab': '未接',
+      'declinedTab': '已拒绝',
+      'reasonMissed': '未及时响应',
+      'reasonDeclined': '您已拒绝',
+      'outcomeOpen': '仍可接单',
+      'outcomeTaken': '已被其他司机接单',
+      'outcomeCancelled': '已取消',
+      'noMissedRequests': '没有未接请求',
+      'missedRequestsHint': '您拒绝或未及时响应的请求会显示在这里。',
+      'trRemove': '移除',
+      'trSwitch': '切换',
+      'trAccount': '账户',
+      'trBack': '返回',
+      'trSave': '保存',
+      'trDelete': '删除',
+      'trEdit': '编辑',
+      'trApprove': '批准',
+      'trReject': '拒绝',
+      'trApproved': '已批准',
+      'trRejected': '已拒绝',
+      'trPending': '待处理',
+      'trActive': '启用',
+      'trInactive': '停用',
+      'trTitle': '标题',
+      'trRefresh': '刷新',
+      'trSignOut': '退出登录',
+      'trUnknown': '未知',
+      'trSearch': '搜索',
+      'trMap': '地图',
+      'trView': '查看',
+      'trNow': '现在',
+      'trJustNow': '刚刚',
+      'trMinutesAgo': '{n} 分钟前',
+      'trHoursAgo': '{n} 小时前',
+      'trDaysAgo': '{n} 天前',
+      'trMinAgoLong': '{n} 分钟前',
+      'trHrsAgoLong': '{n} 小时前',
+      'trDaysAgoLong': '{n} 天前',
+      'trTodayAt': '今天 {time}',
+      'trPerDay': '/天',
+      'trTryAgain': '重试',
+      'trProcessing': '处理中…',
+      'trCustomerNo': '客户 #{id}',
+      'trDriverNo': '司机 #{id}',
+      'trRideNo': '行程 #{id}',
+      'trStopN': '停靠点 {n}',
+      'trStopWithAddress': '停靠点 {n}：{address}',
+      'trStopDestination': '停靠点 {n} — 目的地',
+      'trStopDistance': '停靠点 {n} · {km} 公里',
+      'trDistanceKm': '距离（{km} 公里）',
+      'trPromoWithCode': '优惠（{code}）',
+      'trYouEarned': '您赚取了 {amount}',
+      'trEtaMin': '预计 {n} 分钟',
+      'trFromPlace': '从：{place}',
+      'trToPlace': '到：{place}',
+      'trFareKhr': '车费：{amount} ៛',
+      'trCar': '汽车',
+      'trBike': '摩托车',
+      'trTukTuk': '嘟嘟车',
+      'trVan': '面包车',
+      'trHome': '家',
+      'trWork': '公司',
+      'trCash': '现金',
+      'trWalletTopUp': '钱包充值',
+      'trTripEarning': '行程收入',
+      'trPlatformFee': '平台费',
+      'trBonusCredit': '奖励金',
+      'trTripPayment': '行程付款',
+      'trRefund': '退款',
+      'trGoogleNotConfigured': '此应用未配置 Google 登录。请联系客服。',
+      'trAdminRole': '管理员',
+      'trEnterOtp': '输入验证码',
+      'trPhoneLogin': '手机号登录',
+      'trCodeSentTo': '验证码已发送至 {phone}',
+      'trWeSendSmsCode': '我们将通过短信发送一次性验证码',
+      'trResendCodeIn': '{n} 秒后重新发送',
+      'trThisAccount': '此账户',
+      'trRemoveAccount': '移除账户',
+      'trUnlinkConfirm': '要从您的账户中解除关联 {name} 吗？',
+      'trSwitchAccount': '切换账户',
+      'trLinkAccount': '关联账户',
+      'trNoLinkedAccounts': '没有已关联的账户',
+      'trLinkAnotherAccount': '关联其他账户以便在它们之间切换。',
+      'trLabelOptionalWork': '标签（可选，例如“工作”）',
+      'trNewCodeSent': '新验证码已发送',
+      'trVerifyPhone': '验证手机号',
+      'trEnterVerificationCode': '输入验证码',
+      'trDidntReceiveCode': '没有收到验证码？',
+      'trResendInSeconds': '{n} 秒后重新发送',
+      'trNoTasksNow': '目前没有{label}任务',
+      'trSosFailedCall': 'SOS 发送失败。请直接拨打紧急服务电话。',
+      'trNoDestinationMeteredFare': '此行程未设置目的地——请输入计价车费以完成行程。',
+      'trCouldntAutoCalc': '无法自动计算建议车费：',
+      'trFromKmTravelled': '基于 {km} 公里',
+      'trUser': '用户',
+      'trCreditName': '为 {name} 充值',
+      'trAmountKhr': '金额（瑞尔）',
+      'trNoteOptional': '备注（可选）',
+      'trCredit': '充值',
+      'trCreditApplied': '已充值。',
+      'trDeleteUser': '删除用户',
+      'trPermanentlyDelete': '永久删除 {name}？',
+      'trUsers': '用户',
+      'trSearchNameEmail': '按姓名/邮箱搜索…',
+      'trAllRoles': '所有角色',
+      'trNoUsersFound': '未找到用户。',
+      'trCreditWallet': '钱包充值',
+      'trNotifications': '通知',
+      'trMarkAllRead': '全部标为已读',
+      'trNoNotificationsYet': '暂无通知',
+      'trCarRental': '租车',
+      'trMarketplaceOrder': '商城订单',
+      'trManageOnWebAdmin': '请在网页管理后台确认或管理此订单。',
+      'trTransactions': '交易',
+      'trDebit': '支出',
+      'trTopUp': '充值',
+      'trWithdraw': '提现',
+      'trNoTransactions': '没有交易。',
+      'trDriverApproved': '司机已批准',
+      'trDriverRejected': '司机已拒绝',
+      'trDriverApplications': '司机申请',
+      'trNoPendingApplications': '没有待处理的申请',
+      'trRejectDriver': '拒绝司机',
+      'trProvideReasonOptional': '提供原因（可选）：',
+      'trEgDocsUnclear': '例如：证件不清晰、身份证过期…',
+      'trReviewDocs': '审核证件',
+      'trNationalIdPassport': '身份证/护照',
+      'trDriverLicense': '驾驶证',
+      'trVehicleRegistration': '车辆登记证',
+      'trSelfieWithId': '手持证件自拍',
+      'trVehicleInsurance': '车辆保险',
+      'trOtherDocument': '其他证件',
+      'trRejectDocument': '拒绝证件',
+      'trReasonImageBlurry': '原因（例如：图片太模糊）',
+      'trApproveDriver': '批准司机',
+      'trServiceZoneOptional': '服务区域（可选）：',
+      'trEgZoneA': '例如：金边 A 区',
+      'trConfirmApprove': '确认批准',
+      'trDriverApprovedExcl': '司机已批准！',
+      'trDocuments': '证件',
+      'trNoDocumentsYet': '尚未上传证件。',
+      'trNoteWith': '备注：{note}',
+      'trViewDocument': '查看证件',
+      'trPricingSaved': '价格设置已保存。',
+      'trPricingSettings': '价格设置',
+      'trSaveSettings': '保存设置',
+      'trDeleteBanner': '删除横幅',
+      'trRemoveBannerQ': '删除此横幅？',
+      'trBanners': '横幅',
+      'trNoBannersYet': '暂无横幅。',
+      'trUntitled': '无标题',
+      'trNewBanner': '新建横幅',
+      'trEditBanner': '编辑横幅',
+      'trSubtitleDescription': '副标题/描述',
+      'trImageUrlOptional': '图片链接（可选）',
+      'trSaveBanner': '保存横幅',
+      'trSupportTickets': '客服工单',
+      'trOpen': '待处理',
+      'trInProgress': '处理中',
+      'trResolved': '已解决',
+      'trClosed': '已关闭',
+      'trNoTicketsFound': '未找到工单。',
+      'trNoSubject': '无主题',
+      'trTicketNo': '工单 #{id}',
+      'trMarkOpen': '标为待处理',
+      'trMarkInProgress': '标为处理中',
+      'trMarkResolved': '标为已解决',
+      'trMarkClosed': '标为已关闭',
+      'trTypeReply': '输入回复…',
+      'trTopUpApproved': '充值已批准，已入账钱包。',
+      'trRejectTopUp': '拒绝充值',
+      'trReasonColon': '原因：',
+      'trEnterReason': '输入原因',
+      'trRejectedDot': '已拒绝。',
+      'trTopUpRequests': '充值申请',
+      'trNoTopUpRequests': '没有充值申请。',
+      'trCancelRide': '取消行程',
+      'trReasonForCancellation': '取消原因：',
+      'trEgPolicyViolation': '例如：违反政策',
+      'trRides': '行程',
+      'trNoRidesFound': '未找到行程。',
+      'trApproveWithdrawal': '批准提现',
+      'trAddNoteOptional': '添加备注（可选）：',
+      'trEgTransferredAba': '例如：已通过 ABA 转账',
+      'trApprovedDot': '已批准。',
+      'trRejectWithdrawal': '拒绝提现',
+      'trReasonRequired': '原因（必填）：',
+      'trEgInvalidAccount': '例如：账号无效',
+      'trWithdrawals': '提现',
+      'trNoWithdrawalsFound': '未找到提现记录。',
+      'trSafetyIncidents': '安全事件',
+      'trCrash': '碰撞',
+      'trUserReport': '用户举报',
+      'trNoSafetyIncidents': '没有安全事件。',
+      'trDeliveries': '配送',
+      'trNoDeliveriesFound': '未找到配送。',
+      'trAdminDashboard': '管理后台',
+      'trRevenue7Days': '收入（7天）',
+      'trSurgePromoControl': '高峰与优惠管理',
+      'trSurge': '高峰',
+      'trPromos': '优惠',
+      'trThisZone': '此区域',
+      'trDeleteSurgeZone': '删除高峰区域',
+      'trDeleteNamedQ': '删除“{name}”？',
+      'trNewZone': '新建区域',
+      'trNoSurgeZones': '尚未配置高峰区域。',
+      'trNewSurgeZone': '新建高峰区域',
+      'trEditSurgeZone': '编辑高峰区域',
+      'trZoneName': '区域名称',
+      'trEgCityCentre': '例如：市中心',
+      'trDescriptionOptional': '描述（可选）',
+      'trEgHighDemand': '例如：高需求区域',
+      'trMultiplierX': '倍数：×{x}',
+      'trCreateZone': '创建区域',
+      'trSaveChanges': '保存更改',
+      'trDeletePromo': '删除优惠',
+      'trNewPromo': '新建优惠',
+      'trNoPromoCodes': '没有优惠码。',
+      'trAmountOff': '减 {amount}',
+      'trUsesLeft': '剩余 {n} 次',
+      'trExpShort': '到期 {date}',
+      'trCodeDiscountRequired': '必须填写优惠码和折扣金额。',
+      'trEditPromoCode': '编辑优惠码',
+      'trNewPromoCode': '新建优惠码',
+      'trPromoCode': '优惠码',
+      'trDiscountKhr': '折扣（瑞尔）',
+      'trMaxUsesHint': '最多使用次数（留空 = 不限）',
+      'trExpiresAtHint': '到期日期（YYYY-MM-DD）',
+      'trCreatePromo': '创建优惠',
+      'trDeleteFareRule': '删除计价规则',
+      'trThisVehicle': '此车型',
+      'trFareManagement': '车费管理',
+      'trAddRule': '添加规则',
+      'trNoFareRules': '尚未配置计价规则。',
+      'trBaseFare': '起步价',
+      'trPerKm': '每公里',
+      'trMinimum': '最低',
+      'trFillFareFields': '请用有效数字填写所有车费字段。',
+      'trEditFareRule': '编辑计价规则',
+      'trNewFareRule': '新建计价规则',
+      'trBaseFareKhr': '起步价（瑞尔）',
+      'trPerKmRateKhr': '每公里价格（瑞尔）',
+      'trMinimumFareKhr': '最低车费（瑞尔）',
+      'trCreateRule': '创建规则',
+      'trDestination': '目的地',
+      'trFindingDriver': '正在寻找司机…',
+      'trDriverOnTheWay': '司机正在路上',
+      'trDriverEnRoutePickup': '司机正前往上车点',
+      'trTripInProgress': '行程进行中',
+      'trTripCompleted': '行程已完成',
+      'trTripCancelled': '行程已取消',
+      'trLiveTrip': 'ROTEH — 实时行程',
+      'trMovingService': '搬家服务',
+      'trWaitingDriverGps': '正在等待司机定位…',
+      'trPageAutoUpdates': '此页面每 8 秒自动更新。',
+      'trTripNotFound': '未找到行程',
+      'trLookingForDriver': '正在寻找司机...',
+      'trDriverAssigned': '已分配司机',
+      'trDriverArrivedPickup': '司机已到达取件点',
+      'trLoadingItems': '正在装货...',
+      'trOnWayToDestination': '正前往目的地',
+      'trMovingCompletedExcl': '搬家已完成！',
+      'trProcessingDots': '处理中...',
+      'trPackagePickedUp': '已取件',
+      'trOnWayToRecipient': '正送往收件人',
+      'trDeliveredExcl': '已送达！',
+      'trPackageDelivery': '包裹配送',
+      'trTrackMy': '追踪我的{service}',
+      'trTrackMyLive': '实时追踪我的{title}',
+      'trMovingCompleted': '搬家已完成',
+      'trDeliveryCompletedTitle': '配送已完成',
+      'trMoving': '搬家',
+      'trRecipientLine': '收件人：{name}',
+      'trDriverLine': '司机：{name}',
+      'trShareMovingTracking': '分享搬家追踪',
+      'trShareDeliveryTracking': '分享配送追踪',
+      'trPendingFirstRide': '等待首次乘车',
+      'trSedan': '轿车',
+      'trUpTo4Pax': '最多 4 人',
+      'trSuvVan': 'SUV/面包车',
+      'trUpTo6Pax': '最多 6 人',
+      'trDriverArrivingPickup': '{name} 即将到达您的上车点。',
+      'trDriverWaitingAt': '{name} 正在 {place} 等候',
+      'trSosSentToContacts': '🆘 已向 {n} 位联系人发送 SOS',
+      'trChatWithSupport': '联系客服',
+      'trPaidBySender': '寄件人付款',
+      'trPaidByRecipient': '收件人付款',
+      'trScheduleWithFare': '预约 — {fare}',
+      'trConfirmWithFare': '确认 — {fare}',
+      'trAddedToWallet': '{amount} 已存入您的钱包。',
+      'trRecipientPhoneNumber': '收款人手机号',
+      'trConfirmAndPay': '确认并支付',
+      'trNewRideRequest': '🚗 新的乘车请求',
+      'trNewRequest': '新请求',
+      'trSubscribed': '订阅成功！',
+      'trPlanUpgraded': '套餐已升级！',
+      'trSubscriptionCancelled': '订阅已取消。',
+      'trTransferred': '已转账。',
+      'trSearchLocation': '搜索位置…',
+      'trFindingAddress': '正在查找地址…',
+      'trMoveMapToSet': '移动地图以设置位置',
+      'trConfirmLocation': '确认位置',
+      'trTapOpenGoogleMaps': '点击打开 Google 地图',
+      'trOpenInMaps': '在地图中打开',
+      'trSearchAddressHint': '搜索地址、地点或地标…',
+      'trUseMyLocation': '使用我的当前位置',
+      'trDetectedViaGps': '通过 GPS 定位',
+      'trTypeToSearchPlace': '输入以搜索地点',
+      'trNoResultsFor': '没有找到“{q}”的结果',
+      'trMoveTheMapToSet': '移动地图以设置位置',
+      'trUseThisLocation': '使用此位置',
+      'trPromotions': '优惠活动',
+      'trSlowConnection': '网络连接较慢？',
+      'trSwipeToRefresh': '下拉并松开以刷新',
+      'goodAfternoon': '下午好,',
+      'goodEvening': '晚上好,',
       'busy': '繁忙',
       'full': '满的',
       'chooseRide': '选择车辆',
@@ -5044,6 +6314,434 @@ class AppLocalizations {
   String get searchRentalsHint => tr('searchRentalsHint');
   String get rentalBookedSuccess => tr('rentalBookedSuccess');
   String get rentalHeaderSubtitle => tr('rentalHeaderSubtitle');
+
+  // Fills {name} placeholders in a translated template.
+  String _fill(String key, Map<String, Object?> args) {
+    var out = tr(key);
+    args.forEach((k, v) => out = out.replaceAll('{$k}', '$v'));
+    return out;
+  }
+
+  String drvTopUpMsg(String amount) => _fill('drvTopUpMsg', {'amount': amount});
+  String drvShortBy(String amount) => _fill('drvShortBy', {'amount': amount});
+  String drvKmAway(String km) => _fill('drvKmAway', {'km': km});
+  String drvEndsInHm(int h, int m) => _fill('drvEndsInHm', {'h': h, 'm': m});
+  String drvEndsInMin(int m) => _fill('drvEndsInMin', {'m': m});
+  String drvTripsCount(int n) => _fill('drvTripsCount', {'n': n});
+  String drvSurgeInside(String x) => _fill('drvSurgeInside', {'x': x});
+  String drvSurgeNearby(String x, String zone) => _fill('drvSurgeNearby', {'x': x, 'zone': zone});
+  String get drvZone => tr('drvZone');
+  String get drvInactive => tr('drvInactive');
+  String drvPeakExtra(String amount) => _fill('drvPeakExtra', {'amount': amount});
+  String drvPeakProgress(int done, int target) => _fill('drvPeakProgress', {'done': done, 'target': target});
+  String drvStreakCount(int n) => _fill('drvStreakCount', {'n': n});
+  String drvStreakRemaining(int n, String amount) => _fill('drvStreakRemaining', {'n': n, 'amount': amount});
+  String drvStreakUnlocked(String amount) => _fill('drvStreakUnlocked', {'amount': amount});
+  String drvPassengerNo(Object id) => _fill('drvPassengerNo', {'id': id});
+  String drvSenderNo(Object id) => _fill('drvSenderNo', {'id': id});
+  String drvSecondsShort(int n) => _fill('drvSecondsShort', {'n': n});
+  String drvFloors(Object from, Object to) => _fill('drvFloors', {'from': from, 'to': to});
+  String drvElevator(String v) => _fill('drvElevator', {'v': v});
+  String drvHelpers(Object n, String type) => _fill('drvHelpers', {'n': n, 'type': type});
+  String get drvHeavyCarry => tr('drvHeavyCarry');
+  String get drvNormalCarry => tr('drvNormalCarry');
+  String drvWithdrawConfirm(String bank) => _fill('drvWithdrawConfirm', {'bank': bank});
+  String drvWithdrawSubmitted(String amount) => _fill('drvWithdrawSubmitted', {'amount': amount});
+  String drvMinWithdrawal(String amount) => _fill('drvMinWithdrawal', {'amount': amount});
+  String drvWithdrawTo(String amount, String bank) => _fill('drvWithdrawTo', {'amount': amount, 'bank': bank});
+  String get drvTodaysTransactions => tr('drvTodaysTransactions');
+  String drvTotalCount(int n) => _fill('drvTotalCount', {'n': n});
+  String drvBalanceShort(String amount) => _fill('drvBalanceShort', {'amount': amount});
+  String seatsLabel(int n) => n == 1 ? tr('seatsOne') : _fill('seatsCount', {'n': n});
+  String get senderNameHint => tr('senderNameHint');
+  String get senderPhoneHint => tr('senderPhoneHint');
+  String get recipientNameHint => tr('recipientNameHint');
+  String get recipientPhoneHint => tr('recipientPhoneHint');
+  String get guestOtpReason => tr('guestOtpReason');
+  String get confirmOtpTitle => tr('confirmOtpTitle');
+  String get otpSentToYourPhone => tr('otpSentToYourPhone');
+  String get didntReceiveCode => tr('didntReceiveCode');
+  String get resendShort => tr('resendShort');
+  String get guestPhoneStarHint => tr('guestPhoneStarHint');
+  String get guestFullNameRequired => tr('guestFullNameRequired');
+  String get guestPhoneInvalid => tr('guestPhoneInvalid');
+  String get guestPhoneNotVerified => tr('guestPhoneNotVerified');
+  String get guestOtpNote => tr('guestOtpNote');
+  String get regJoinTitle => tr('regJoinTitle');
+  String get regTagline => tr('regTagline');
+  String get regIWantTo => tr('regIWantTo');
+  String get regRideAsPassenger => tr('regRideAsPassenger');
+  String get regDriveAndEarn => tr('regDriveAndEarn');
+  String get regOwner => tr('regOwner');
+  String get regSelectCity => tr('regSelectCity');
+  String get regCityRequired => tr('regCityRequired');
+  String get regNameRequired => tr('regNameRequired');
+  String get regEmailRequired => tr('regEmailRequired');
+  String get regEmailInvalid => tr('regEmailInvalid');
+  String get regPhoneOptional => tr('regPhoneOptional');
+  String get regPasswordMin => tr('regPasswordMin');
+  String get regPasswordMismatch => tr('regPasswordMismatch');
+  String get regReferralOptional => tr('regReferralOptional');
+  String get regRegisterUpload => tr('regRegisterUpload');
+  String get cityPhnomPenh => tr('cityPhnomPenh');
+  String get citySiemReap => tr('citySiemReap');
+  String get citySihanoukville => tr('citySihanoukville');
+  String get cityBattambang => tr('cityBattambang');
+  String get cityKampongCham => tr('cityKampongCham');
+  String get cityKampot => tr('cityKampot');
+  String get cityKep => tr('cityKep');
+  String get cityPoipet => tr('cityPoipet');
+  String get chatsTab => tr('chatsTab');
+  String get noConversationsYet => tr('noConversationsYet');
+  String get driverMessagesHint => tr('driverMessagesHint');
+  String get rotehSupport => tr('rotehSupport');
+  String get chatWithOurTeam => tr('chatWithOurTeam');
+  String get noMessagesSayHello => tr('noMessagesSayHello');
+  String get typeAMessageHint => tr('typeAMessageHint');
+  String get howCanWeHelp => tr('howCanWeHelp');
+  String get searchForHelp => tr('searchForHelp');
+  String get quickHelp => tr('quickHelp');
+  String get qhDriverLate => tr('qhDriverLate');
+  String get qhOvercharged => tr('qhOvercharged');
+  String get qhLostItem => tr('qhLostItem');
+  String get qhSafetyIssue => tr('qhSafetyIssue');
+  String get qhCancelTrip => tr('qhCancelTrip');
+  String get support247 => tr('support247');
+  String get openTicketReplyHere => tr('openTicketReplyHere');
+  String get chatNow => tr('chatNow');
+  String get supportRepliesSoon => tr('supportRepliesSoon');
+  String get uploadFromGallery => tr('uploadFromGallery');
+  String couldNotSendPhoto(Object error) => _fill('couldNotSendPhoto', {'error': error});
+  String couldNotLoadMessages(Object error) => _fill('couldNotLoadMessages', {'error': error});
+  String get missedRequestsTitle => tr('missedRequestsTitle');
+  String get missedTab => tr('missedTab');
+  String get declinedTab => tr('declinedTab');
+  String get reasonMissed => tr('reasonMissed');
+  String get reasonDeclined => tr('reasonDeclined');
+  String get outcomeOpen => tr('outcomeOpen');
+  String get outcomeTaken => tr('outcomeTaken');
+  String get outcomeCancelled => tr('outcomeCancelled');
+  String get noMissedRequests => tr('noMissedRequests');
+  String get missedRequestsHint => tr('missedRequestsHint');
+  String get trRemove => tr('trRemove');
+  String get trSwitch => tr('trSwitch');
+  String get trAccount => tr('trAccount');
+  String get trBack => tr('trBack');
+  String get trSave => tr('trSave');
+  String get trDelete => tr('trDelete');
+  String get trEdit => tr('trEdit');
+  String get trApprove => tr('trApprove');
+  String get trReject => tr('trReject');
+  String get trApproved => tr('trApproved');
+  String get trRejected => tr('trRejected');
+  String get trPending => tr('trPending');
+  String get trActive => tr('trActive');
+  String get trInactive => tr('trInactive');
+  String get trTitle => tr('trTitle');
+  String get trRefresh => tr('trRefresh');
+  String get trSignOut => tr('trSignOut');
+  String get trUnknown => tr('trUnknown');
+  String get trSearch => tr('trSearch');
+  String get trMap => tr('trMap');
+  String get trView => tr('trView');
+  String get trNow => tr('trNow');
+  String get trJustNow => tr('trJustNow');
+  String trMinutesAgo(Object? n) => _fill('trMinutesAgo', {'n': n});
+  String trHoursAgo(Object? n) => _fill('trHoursAgo', {'n': n});
+  String trDaysAgo(Object? n) => _fill('trDaysAgo', {'n': n});
+  String trMinAgoLong(Object? n) => _fill('trMinAgoLong', {'n': n});
+  String trHrsAgoLong(Object? n) => _fill('trHrsAgoLong', {'n': n});
+  String trDaysAgoLong(Object? n) => _fill('trDaysAgoLong', {'n': n});
+  String trTodayAt(Object? time) => _fill('trTodayAt', {'time': time});
+  String get trPerDay => tr('trPerDay');
+  String get trTryAgain => tr('trTryAgain');
+  String get trProcessing => tr('trProcessing');
+  String trCustomerNo(Object? id) => _fill('trCustomerNo', {'id': id});
+  String trDriverNo(Object? id) => _fill('trDriverNo', {'id': id});
+  String trRideNo(Object? id) => _fill('trRideNo', {'id': id});
+  String trStopN(Object? n) => _fill('trStopN', {'n': n});
+  String trStopWithAddress(Object? n, Object? address) => _fill('trStopWithAddress', {'n': n, 'address': address});
+  String trStopDestination(Object? n) => _fill('trStopDestination', {'n': n});
+  String trStopDistance(Object? n, Object? km) => _fill('trStopDistance', {'n': n, 'km': km});
+  String trDistanceKm(Object? km) => _fill('trDistanceKm', {'km': km});
+  String trPromoWithCode(Object? code) => _fill('trPromoWithCode', {'code': code});
+  String trYouEarned(Object? amount) => _fill('trYouEarned', {'amount': amount});
+  String trEtaMin(Object? n) => _fill('trEtaMin', {'n': n});
+  String trFromPlace(Object? place) => _fill('trFromPlace', {'place': place});
+  String trToPlace(Object? place) => _fill('trToPlace', {'place': place});
+  String trFareKhr(Object? amount) => _fill('trFareKhr', {'amount': amount});
+  String get trCar => tr('trCar');
+  String get trBike => tr('trBike');
+  String get trTukTuk => tr('trTukTuk');
+  String get trVan => tr('trVan');
+  String get trHome => tr('trHome');
+  String get trWork => tr('trWork');
+  String get trCash => tr('trCash');
+  String get trWalletTopUp => tr('trWalletTopUp');
+  String get trTripEarning => tr('trTripEarning');
+  String get trPlatformFee => tr('trPlatformFee');
+  String get trBonusCredit => tr('trBonusCredit');
+  String get trTripPayment => tr('trTripPayment');
+  String get trRefund => tr('trRefund');
+  String get trGoogleNotConfigured => tr('trGoogleNotConfigured');
+  String get trAdminRole => tr('trAdminRole');
+  String get trEnterOtp => tr('trEnterOtp');
+  String get trPhoneLogin => tr('trPhoneLogin');
+  String trCodeSentTo(Object? phone) => _fill('trCodeSentTo', {'phone': phone});
+  String get trWeSendSmsCode => tr('trWeSendSmsCode');
+  String trResendCodeIn(Object? n) => _fill('trResendCodeIn', {'n': n});
+  String get trThisAccount => tr('trThisAccount');
+  String get trRemoveAccount => tr('trRemoveAccount');
+  String trUnlinkConfirm(Object? name) => _fill('trUnlinkConfirm', {'name': name});
+  String get trSwitchAccount => tr('trSwitchAccount');
+  String get trLinkAccount => tr('trLinkAccount');
+  String get trNoLinkedAccounts => tr('trNoLinkedAccounts');
+  String get trLinkAnotherAccount => tr('trLinkAnotherAccount');
+  String get trLabelOptionalWork => tr('trLabelOptionalWork');
+  String get trNewCodeSent => tr('trNewCodeSent');
+  String get trVerifyPhone => tr('trVerifyPhone');
+  String get trEnterVerificationCode => tr('trEnterVerificationCode');
+  String get trDidntReceiveCode => tr('trDidntReceiveCode');
+  String trResendInSeconds(Object? n) => _fill('trResendInSeconds', {'n': n});
+  String trNoTasksNow(Object? label) => _fill('trNoTasksNow', {'label': label});
+  String get trSosFailedCall => tr('trSosFailedCall');
+  String get trNoDestinationMeteredFare => tr('trNoDestinationMeteredFare');
+  String get trCouldntAutoCalc => tr('trCouldntAutoCalc');
+  String trFromKmTravelled(Object? km) => _fill('trFromKmTravelled', {'km': km});
+  String get trUser => tr('trUser');
+  String trCreditName(Object? name) => _fill('trCreditName', {'name': name});
+  String get trAmountKhr => tr('trAmountKhr');
+  String get trNoteOptional => tr('trNoteOptional');
+  String get trCredit => tr('trCredit');
+  String get trCreditApplied => tr('trCreditApplied');
+  String get trDeleteUser => tr('trDeleteUser');
+  String trPermanentlyDelete(Object? name) => _fill('trPermanentlyDelete', {'name': name});
+  String get trUsers => tr('trUsers');
+  String get trSearchNameEmail => tr('trSearchNameEmail');
+  String get trAllRoles => tr('trAllRoles');
+  String get trNoUsersFound => tr('trNoUsersFound');
+  String get trCreditWallet => tr('trCreditWallet');
+  String get trNotifications => tr('trNotifications');
+  String get trMarkAllRead => tr('trMarkAllRead');
+  String get trNoNotificationsYet => tr('trNoNotificationsYet');
+  String get trCarRental => tr('trCarRental');
+  String get trMarketplaceOrder => tr('trMarketplaceOrder');
+  String get trManageOnWebAdmin => tr('trManageOnWebAdmin');
+  String get trTransactions => tr('trTransactions');
+  String get trDebit => tr('trDebit');
+  String get trTopUp => tr('trTopUp');
+  String get trWithdraw => tr('trWithdraw');
+  String get trNoTransactions => tr('trNoTransactions');
+  String get trDriverApproved => tr('trDriverApproved');
+  String get trDriverRejected => tr('trDriverRejected');
+  String get trDriverApplications => tr('trDriverApplications');
+  String get trNoPendingApplications => tr('trNoPendingApplications');
+  String get trRejectDriver => tr('trRejectDriver');
+  String get trProvideReasonOptional => tr('trProvideReasonOptional');
+  String get trEgDocsUnclear => tr('trEgDocsUnclear');
+  String get trReviewDocs => tr('trReviewDocs');
+  String get trNationalIdPassport => tr('trNationalIdPassport');
+  String get trDriverLicense => tr('trDriverLicense');
+  String get trVehicleRegistration => tr('trVehicleRegistration');
+  String get trSelfieWithId => tr('trSelfieWithId');
+  String get trVehicleInsurance => tr('trVehicleInsurance');
+  String get trOtherDocument => tr('trOtherDocument');
+  String get trRejectDocument => tr('trRejectDocument');
+  String get trReasonImageBlurry => tr('trReasonImageBlurry');
+  String get trApproveDriver => tr('trApproveDriver');
+  String get trServiceZoneOptional => tr('trServiceZoneOptional');
+  String get trEgZoneA => tr('trEgZoneA');
+  String get trConfirmApprove => tr('trConfirmApprove');
+  String get trDriverApprovedExcl => tr('trDriverApprovedExcl');
+  String get trDocuments => tr('trDocuments');
+  String get trNoDocumentsYet => tr('trNoDocumentsYet');
+  String trNoteWith(Object? note) => _fill('trNoteWith', {'note': note});
+  String get trViewDocument => tr('trViewDocument');
+  String get trPricingSaved => tr('trPricingSaved');
+  String get trPricingSettings => tr('trPricingSettings');
+  String get trSaveSettings => tr('trSaveSettings');
+  String get trDeleteBanner => tr('trDeleteBanner');
+  String get trRemoveBannerQ => tr('trRemoveBannerQ');
+  String get trBanners => tr('trBanners');
+  String get trNoBannersYet => tr('trNoBannersYet');
+  String get trUntitled => tr('trUntitled');
+  String get trNewBanner => tr('trNewBanner');
+  String get trEditBanner => tr('trEditBanner');
+  String get trSubtitleDescription => tr('trSubtitleDescription');
+  String get trImageUrlOptional => tr('trImageUrlOptional');
+  String get trSaveBanner => tr('trSaveBanner');
+  String get trSupportTickets => tr('trSupportTickets');
+  String get trOpen => tr('trOpen');
+  String get trInProgress => tr('trInProgress');
+  String get trResolved => tr('trResolved');
+  String get trClosed => tr('trClosed');
+  String get trNoTicketsFound => tr('trNoTicketsFound');
+  String get trNoSubject => tr('trNoSubject');
+  String trTicketNo(Object? id) => _fill('trTicketNo', {'id': id});
+  String get trMarkOpen => tr('trMarkOpen');
+  String get trMarkInProgress => tr('trMarkInProgress');
+  String get trMarkResolved => tr('trMarkResolved');
+  String get trMarkClosed => tr('trMarkClosed');
+  String get trTypeReply => tr('trTypeReply');
+  String get trTopUpApproved => tr('trTopUpApproved');
+  String get trRejectTopUp => tr('trRejectTopUp');
+  String get trReasonColon => tr('trReasonColon');
+  String get trEnterReason => tr('trEnterReason');
+  String get trRejectedDot => tr('trRejectedDot');
+  String get trTopUpRequests => tr('trTopUpRequests');
+  String get trNoTopUpRequests => tr('trNoTopUpRequests');
+  String get trCancelRide => tr('trCancelRide');
+  String get trReasonForCancellation => tr('trReasonForCancellation');
+  String get trEgPolicyViolation => tr('trEgPolicyViolation');
+  String get trRides => tr('trRides');
+  String get trNoRidesFound => tr('trNoRidesFound');
+  String get trApproveWithdrawal => tr('trApproveWithdrawal');
+  String get trAddNoteOptional => tr('trAddNoteOptional');
+  String get trEgTransferredAba => tr('trEgTransferredAba');
+  String get trApprovedDot => tr('trApprovedDot');
+  String get trRejectWithdrawal => tr('trRejectWithdrawal');
+  String get trReasonRequired => tr('trReasonRequired');
+  String get trEgInvalidAccount => tr('trEgInvalidAccount');
+  String get trWithdrawals => tr('trWithdrawals');
+  String get trNoWithdrawalsFound => tr('trNoWithdrawalsFound');
+  String get trSafetyIncidents => tr('trSafetyIncidents');
+  String get trCrash => tr('trCrash');
+  String get trUserReport => tr('trUserReport');
+  String get trNoSafetyIncidents => tr('trNoSafetyIncidents');
+  String get trDeliveries => tr('trDeliveries');
+  String get trNoDeliveriesFound => tr('trNoDeliveriesFound');
+  String get trAdminDashboard => tr('trAdminDashboard');
+  String get trRevenue7Days => tr('trRevenue7Days');
+  String get trSurgePromoControl => tr('trSurgePromoControl');
+  String get trSurge => tr('trSurge');
+  String get trPromos => tr('trPromos');
+  String get trThisZone => tr('trThisZone');
+  String get trDeleteSurgeZone => tr('trDeleteSurgeZone');
+  String trDeleteNamedQ(Object? name) => _fill('trDeleteNamedQ', {'name': name});
+  String get trNewZone => tr('trNewZone');
+  String get trNoSurgeZones => tr('trNoSurgeZones');
+  String get trNewSurgeZone => tr('trNewSurgeZone');
+  String get trEditSurgeZone => tr('trEditSurgeZone');
+  String get trZoneName => tr('trZoneName');
+  String get trEgCityCentre => tr('trEgCityCentre');
+  String get trDescriptionOptional => tr('trDescriptionOptional');
+  String get trEgHighDemand => tr('trEgHighDemand');
+  String trMultiplierX(Object? x) => _fill('trMultiplierX', {'x': x});
+  String get trCreateZone => tr('trCreateZone');
+  String get trSaveChanges => tr('trSaveChanges');
+  String get trDeletePromo => tr('trDeletePromo');
+  String get trNewPromo => tr('trNewPromo');
+  String get trNoPromoCodes => tr('trNoPromoCodes');
+  String trAmountOff(Object? amount) => _fill('trAmountOff', {'amount': amount});
+  String trUsesLeft(Object? n) => _fill('trUsesLeft', {'n': n});
+  String trExpShort(Object? date) => _fill('trExpShort', {'date': date});
+  String get trCodeDiscountRequired => tr('trCodeDiscountRequired');
+  String get trEditPromoCode => tr('trEditPromoCode');
+  String get trNewPromoCode => tr('trNewPromoCode');
+  String get trPromoCode => tr('trPromoCode');
+  String get trDiscountKhr => tr('trDiscountKhr');
+  String get trMaxUsesHint => tr('trMaxUsesHint');
+  String get trExpiresAtHint => tr('trExpiresAtHint');
+  String get trCreatePromo => tr('trCreatePromo');
+  String get trDeleteFareRule => tr('trDeleteFareRule');
+  String get trThisVehicle => tr('trThisVehicle');
+  String get trFareManagement => tr('trFareManagement');
+  String get trAddRule => tr('trAddRule');
+  String get trNoFareRules => tr('trNoFareRules');
+  String get trBaseFare => tr('trBaseFare');
+  String get trPerKm => tr('trPerKm');
+  String get trMinimum => tr('trMinimum');
+  String get trFillFareFields => tr('trFillFareFields');
+  String get trEditFareRule => tr('trEditFareRule');
+  String get trNewFareRule => tr('trNewFareRule');
+  String get trBaseFareKhr => tr('trBaseFareKhr');
+  String get trPerKmRateKhr => tr('trPerKmRateKhr');
+  String get trMinimumFareKhr => tr('trMinimumFareKhr');
+  String get trCreateRule => tr('trCreateRule');
+  String get trDestination => tr('trDestination');
+  String get trFindingDriver => tr('trFindingDriver');
+  String get trDriverOnTheWay => tr('trDriverOnTheWay');
+  String get trDriverEnRoutePickup => tr('trDriverEnRoutePickup');
+  String get trTripInProgress => tr('trTripInProgress');
+  String get trTripCompleted => tr('trTripCompleted');
+  String get trTripCancelled => tr('trTripCancelled');
+  String get trLiveTrip => tr('trLiveTrip');
+  String get trMovingService => tr('trMovingService');
+  String get trWaitingDriverGps => tr('trWaitingDriverGps');
+  String get trPageAutoUpdates => tr('trPageAutoUpdates');
+  String get trTripNotFound => tr('trTripNotFound');
+  String get trLookingForDriver => tr('trLookingForDriver');
+  String get trDriverAssigned => tr('trDriverAssigned');
+  String get trDriverArrivedPickup => tr('trDriverArrivedPickup');
+  String get trLoadingItems => tr('trLoadingItems');
+  String get trOnWayToDestination => tr('trOnWayToDestination');
+  String get trMovingCompletedExcl => tr('trMovingCompletedExcl');
+  String get trProcessingDots => tr('trProcessingDots');
+  String get trPackagePickedUp => tr('trPackagePickedUp');
+  String get trOnWayToRecipient => tr('trOnWayToRecipient');
+  String get trDeliveredExcl => tr('trDeliveredExcl');
+  String get trPackageDelivery => tr('trPackageDelivery');
+  String trTrackMy(Object? service) => _fill('trTrackMy', {'service': service});
+  String trTrackMyLive(Object? title) => _fill('trTrackMyLive', {'title': title});
+  String get trMovingCompleted => tr('trMovingCompleted');
+  String get trDeliveryCompletedTitle => tr('trDeliveryCompletedTitle');
+  String get trMoving => tr('trMoving');
+  String trRecipientLine(Object? name) => _fill('trRecipientLine', {'name': name});
+  String trDriverLine(Object? name) => _fill('trDriverLine', {'name': name});
+  String get trShareMovingTracking => tr('trShareMovingTracking');
+  String get trShareDeliveryTracking => tr('trShareDeliveryTracking');
+  String get trPendingFirstRide => tr('trPendingFirstRide');
+  String get trSedan => tr('trSedan');
+  String get trUpTo4Pax => tr('trUpTo4Pax');
+  String get trSuvVan => tr('trSuvVan');
+  String get trUpTo6Pax => tr('trUpTo6Pax');
+  String trDriverArrivingPickup(Object? name) => _fill('trDriverArrivingPickup', {'name': name});
+  String trDriverWaitingAt(Object? name, Object? place) => _fill('trDriverWaitingAt', {'name': name, 'place': place});
+  String trSosSentToContacts(Object? n) => _fill('trSosSentToContacts', {'n': n});
+  String get trChatWithSupport => tr('trChatWithSupport');
+  String get trPaidBySender => tr('trPaidBySender');
+  String get trPaidByRecipient => tr('trPaidByRecipient');
+  String trScheduleWithFare(Object? fare) => _fill('trScheduleWithFare', {'fare': fare});
+  String trConfirmWithFare(Object? fare) => _fill('trConfirmWithFare', {'fare': fare});
+  String trAddedToWallet(Object? amount) => _fill('trAddedToWallet', {'amount': amount});
+  String get trRecipientPhoneNumber => tr('trRecipientPhoneNumber');
+  String get trConfirmAndPay => tr('trConfirmAndPay');
+  String get trNewRideRequest => tr('trNewRideRequest');
+  String get trNewRequest => tr('trNewRequest');
+  String get trSubscribed => tr('trSubscribed');
+  String get trPlanUpgraded => tr('trPlanUpgraded');
+  String get trSubscriptionCancelled => tr('trSubscriptionCancelled');
+  String get trTransferred => tr('trTransferred');
+  String get trSearchLocation => tr('trSearchLocation');
+  String get trFindingAddress => tr('trFindingAddress');
+  String get trMoveMapToSet => tr('trMoveMapToSet');
+  String get trConfirmLocation => tr('trConfirmLocation');
+  String get trTapOpenGoogleMaps => tr('trTapOpenGoogleMaps');
+  String get trOpenInMaps => tr('trOpenInMaps');
+  String get trSearchAddressHint => tr('trSearchAddressHint');
+  String get trUseMyLocation => tr('trUseMyLocation');
+  String get trDetectedViaGps => tr('trDetectedViaGps');
+  String get trTypeToSearchPlace => tr('trTypeToSearchPlace');
+  String trNoResultsFor(Object? q) => _fill('trNoResultsFor', {'q': q});
+  String get trMoveTheMapToSet => tr('trMoveTheMapToSet');
+  String get trUseThisLocation => tr('trUseThisLocation');
+  String get trPromotions => tr('trPromotions');
+  String get trSlowConnection => tr('trSlowConnection');
+  String get trSwipeToRefresh => tr('trSwipeToRefresh');
+  /// Display name for a city stored by its English name (register screen).
+  String cityName(String english) => switch (english) {
+    'Phnom Penh'    => cityPhnomPenh,
+    'Siem Reap'     => citySiemReap,
+    'Sihanoukville' => citySihanoukville,
+    'Battambang'    => cityBattambang,
+    'Kampong Cham'  => cityKampongCham,
+    'Kampot'        => cityKampot,
+    'Kep'           => cityKep,
+    'Poipet'        => cityPoipet,
+    _               => english,
+  };
+  String floorsPickupDropoff(Object from, Object to) =>
+      _fill('floorsPickupDropoff', {'from': from, 'to': to});
   String get busy => tr('busy');
   String get full => tr('full');
   String get chooseRide => tr('chooseRide');

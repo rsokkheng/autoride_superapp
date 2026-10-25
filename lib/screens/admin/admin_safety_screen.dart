@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminSafetyScreen extends StatefulWidget {
   const AdminSafetyScreen({super.key});
@@ -35,7 +36,7 @@ class _AdminSafetyScreenState extends State<AdminSafetyScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Safety Incidents'),
+        title: Text(AppLocalizations.of(context).trSafetyIncidents),
         actions: [
           PopupMenuButton<String?>(
             color: context.appSurface,
@@ -62,7 +63,7 @@ class _AdminSafetyScreenState extends State<AdminSafetyScreen> {
                   ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.check_circle_outline, color: AppTheme.success, size: 48),
                       SizedBox(height: 12),
-                      Text('No safety incidents.', style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
+                      Text(AppLocalizations.of(context).trNoSafetyIncidents, style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
                     ]))
                   : RefreshIndicator(
                       onRefresh: _load,

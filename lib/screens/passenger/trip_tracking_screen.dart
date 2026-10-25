@@ -24,6 +24,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/location_display.dart';
 import '../../utils/app_log.dart';
 import '../../main.dart' show appLocale;
+import '../../widgets/tablet_frame.dart';
 
 const _kGreen = Color(0xFF00B14F);
 
@@ -34,7 +35,7 @@ class TripStop {
   TripStop({required this.address, required this.latLng});
 }
 
-class TripTrackingScreen extends StatefulWidget {
+class TripTrackingScreen extends StatefulWidget implements TabletFullWidth {
   final int?    rideId;
   final String  driverId;
   final String  driverName;
@@ -179,7 +180,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   String get _currentTargetLabel {
     if (!_hasWayStops || _nextStopIndex >= widget.wayStops.length) return widget.to;
-    return 'Stop ${_nextStopIndex + 1}: ${widget.wayStops[_nextStopIndex].address}';
+    return AppLocalizations.of(context).trStopWithAddress(_nextStopIndex + 1, widget.wayStops[_nextStopIndex].address);
   }
 
   // Fallback only for the rare case neither was passed in — same default
@@ -263,7 +264,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           markerId: MarkerId('stop_$i'),
           position: widget.wayStops[i].latLng,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          infoWindow: InfoWindow(title: 'Stop ${i + 1}: ${widget.wayStops[i].address}'),
+          infoWindow: InfoWindow(title: AppLocalizations.of(context).trStopWithAddress(i + 1, widget.wayStops[i].address)),
         ),
       Marker(
         markerId: const MarkerId('destination'),
@@ -565,7 +566,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _arrivingAlertShown = true;
       NotificationService.instance.showTripUpdate(
         title: AppLocalizations.of(context).yourDriverIsAlmostHere,
-        body: '$_driverName is arriving at your pickup point.',
+        body: AppLocalizations.of(context).trDriverArrivingPickup(_driverName),
         payload: 'arriving_soon',
       );
     }
@@ -766,7 +767,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _driverArrivedAlertShown = true;
       NotificationService.instance.showTripUpdate(
         title: AppLocalizations.of(context).driverArrived,
-        body: '$_driverName is waiting at ${widget.from}',
+        body: AppLocalizations.of(context).trDriverWaitingAt(_driverName, widget.from),
         payload: 'arrived',
       );
     }
@@ -993,7 +994,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // plate/vehicle/name/rating get filled in regardless of which path
   // detects the driver assignment first.
   void _applyDriverDetails(RideModel ride) {
-    _driverName      = ride.driver?.name ?? 'Driver #${ride.driverId}';
+    _driverName      = ride.driver?.name ?? AppLocalizations.of(context).trDriverNo(ride.driverId ?? '');
     _driverAvatarUrl = ride.driver?.photoUrl;
     _driverRating    = ride.driver?.rating != null
         ? ride.driver!.rating!.toStringAsFixed(1)
@@ -1456,7 +1457,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                     : (_hasWayStops &&
                                             _rideStatus == 'in_progress' &&
                                             _nextStopIndex < widget.wayStops.length
-                                        ? 'Stop ${_nextStopIndex + 1} · $dist km'
+                                        ? AppLocalizations.of(context).trStopDistance(_nextStopIndex + 1, dist)
                                         : (_rideStatus == 'in_progress' ? widget.to : widget.from))),
                             style: TextStyle(fontSize: 13, color: context.appTextSecondary),
                             maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -1697,7 +1698,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(result.contactsNotified > 0
-            ? '🆘 SOS sent to ${result.contactsNotified} contact(s)'
+            ? AppLocalizations.of(context).trSosSentToContacts(result.contactsNotified)
             : AppLocalizations.of(context).sosAlertSent),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,

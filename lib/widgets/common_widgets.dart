@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/models/promo_event_model.dart';
 import 'package:autoride_superapp/services/api_service.dart';
+import '../l10n/app_localizations.dart';
 
 class GradientCard extends StatelessWidget {
   final Widget child;
@@ -371,7 +372,7 @@ class PromoEventDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: const Text('Promotions')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).trPromotions)),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: events.length,

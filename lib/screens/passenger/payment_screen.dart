@@ -336,7 +336,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ? const SizedBox(width: 18, height: 18,
                           child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.lock_outline, color: Colors.white, size: 18),
-                  label: Text(_paying ? 'Processing…' : 'Confirm & Pay'),
+                  label: Text(_paying ? AppLocalizations.of(context).trProcessing : AppLocalizations.of(context).trConfirmAndPay),
                 ),
               ),
             ),

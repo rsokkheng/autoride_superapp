@@ -8,31 +8,27 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../models/marketplace_model.dart';
+import '../../widgets/responsive.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart' show appLocale;
 import '../../services/api_service.dart';
-import '../../services/maps_service.dart';
 import '../../theme/app_theme.dart';
 import 'dart:async';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../widgets/roteh_location_map.dart';
 import '../../widgets/guest_fields.dart';
+import '../../widgets/guest_phone_otp_sheet.dart';
 import '../../widgets/location_picker_screen.dart';
-import '../auth/login_screen.dart';
+import '../auth/welcome_screen.dart';
+import '../../widgets/tablet_frame.dart';
 
 // ── Tokens ─────────────────────────────────────────────────────────────────
 const _green  = Color(0xFF00C48C);
 const _white  = Colors.white;
-const _emerald       = Color(0xFF0E9F6E);
-const _emeraldDeep   = Color(0xFF0A7A57);
-const _teal          = Color(0xFF0B4F4A);
-const _tealDeep      = Color(0xFF083B38);
 const _purple        = Color(0xFF7C3AED);
-const _blue          = Color(0xFF2563EB);
 
 // Soft emerald tint used behind icons, chips and info cards.
-Color _mint(BuildContext c) => _emerald.withValues(
+Color _mint(BuildContext c) => AppTheme.accent.withValues(
     alpha: Theme.of(c).brightness == Brightness.dark ? 0.16 : 0.08);
 
 final _fmt    = NumberFormat('#,###', 'en_US');
@@ -126,8 +122,8 @@ class _SectionTitle extends StatelessWidget {
           onTap: onSeeAll,
           child: Row(children: [
             Text(AppLocalizations.of(context).seeAll, style: const TextStyle(
-                color: _emerald, fontWeight: FontWeight.w700, fontSize: 13)),
-            const Icon(Icons.chevron_right_rounded, color: _emerald, size: 18),
+                color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 13)),
+            const Icon(Icons.chevron_right_rounded, color: AppTheme.accent, size: 18),
           ]),
         ),
     ]),
@@ -157,7 +153,7 @@ class _NetImage extends StatelessWidget {
 // Main Screen
 // ══════════════════════════════════════════════════════════════════════════════
 
-class MarketplaceScreen extends StatefulWidget {
+class MarketplaceScreen extends StatefulWidget implements TabletFullWidth {
   // 0 = Browse, 1 = My Orders — lets a successful purchase/order land
   // straight on the orders list instead of always defaulting to Browse.
   final int initialTab;
@@ -217,13 +213,9 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
           Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [_emerald, _emeraldDeep],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: AppTheme.accent,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.3),
+              boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.3),
                   blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: const Icon(Icons.storefront_rounded, color: _white, size: 22),
@@ -247,7 +239,7 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
                   borderRadius: BorderRadius.circular(12),
                   onTap: () => Navigator.push(context,
                       MaterialPageRoute(builder: (_) => const _AllListingsScreen())),
-                  child: const Icon(Icons.search_rounded, color: _emerald, size: 22),
+                  child: const Icon(Icons.search_rounded, color: AppTheme.accent, size: 22),
                 ),
               ),
             ),
@@ -257,10 +249,10 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
                 onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen())),
-                icon: const Icon(Icons.login_rounded, size: 18, color: _emerald),
+                    MaterialPageRoute(builder: (_) => const WelcomeScreen())),
+                icon: const Icon(Icons.login_rounded, size: 18, color: AppTheme.accent),
                 label: Text(l.signIn,
-                    style: const TextStyle(color: _emerald, fontWeight: FontWeight.w700)),
+                    style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
               ),
             ),
         ],
@@ -268,12 +260,12 @@ class _MarketplaceScreenState extends State<MarketplaceScreen>
           controller: _tab,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           indicator: const UnderlineTabIndicator(
-            borderSide: BorderSide(color: _emerald, width: 3),
+            borderSide: BorderSide(color: AppTheme.accent, width: 3),
             borderRadius: BorderRadius.vertical(top: Radius.circular(3)),
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: context.appCardBg,
-          labelColor: _emerald,
+          labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
           labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
@@ -349,7 +341,7 @@ class _BrowseTabState extends State<_BrowseTab> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(
-        child: CircularProgressIndicator(color: _emerald, strokeWidth: 2));
+        child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2));
     if (_error != null) return _ErrorState(message: _error!, onRetry: _load);
 
     final l        = AppLocalizations.of(context);
@@ -359,9 +351,9 @@ class _BrowseTabState extends State<_BrowseTab> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      color: _emerald,
+      color: AppTheme.accent,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 32),
+        padding: responsivePadding(context, maxWidth: 1100, horizontal: 0, bottom: 32),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -387,7 +379,7 @@ class _BrowseTabState extends State<_BrowseTab> {
             child: _ServiceBanner(
               icon: Icons.electric_rickshaw,
               title: l.rentalVehicle,
-              colors: const [_teal, _tealDeep],
+              colors: const [AppTheme.accent],
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const CarRentalScreen())),
             ),
@@ -400,9 +392,7 @@ class _BrowseTabState extends State<_BrowseTab> {
               child: GridView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12,
-                    mainAxisExtent: _gridCardExtent),
+                gridDelegate: responsiveGrid(mainAxisExtent: _gridCardExtent),
                 itemCount: featured.length,
                 itemBuilder: (_, i) => _GridCard(
                     product: featured[i], onTap: () => _openDetail(featured[i])),
@@ -452,7 +442,7 @@ class _SearchBar extends StatelessWidget {
           blurRadius: 16, offset: const Offset(0, 4))],
     ),
     child: Row(children: [
-      _roundBtn(context, Icons.tune_rounded, _emerald, onFilter),
+      _roundBtn(context, Icons.tune_rounded, AppTheme.accent, onFilter),
       const SizedBox(width: 12),
       Expanded(
         child: TextField(
@@ -536,7 +526,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
     height: 196,
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(24),
-      boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.25),
+      boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.25),
           blurRadius: 18, offset: const Offset(0, 8))],
     ),
     child: ClipRRect(
@@ -568,13 +558,7 @@ class _HeroCarouselState extends State<_HeroCarousel> {
   Widget _slide(BuildContext context, MarketplaceProductModel? p) {
     final l = AppLocalizations.of(context);
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [_emerald, _emeraldDeep],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      decoration: const BoxDecoration(color: AppTheme.accent),
       child: Stack(children: [
         Positioned(right: -40, top: -50,
           child: Container(width: 190, height: 190,
@@ -628,10 +612,10 @@ class _HeroCarouselState extends State<_HeroCarousel> {
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 9, 10, 9),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Text(l.browseAll, style: const TextStyle(color: _emerald,
+                        Text(l.browseAll, style: const TextStyle(color: AppTheme.accent,
                             fontWeight: FontWeight.w700, fontSize: 13)),
                         const SizedBox(width: 2),
-                        const Icon(Icons.chevron_right_rounded, color: _emerald, size: 18),
+                        const Icon(Icons.chevron_right_rounded, color: AppTheme.accent, size: 18),
                       ]),
                     ),
                   ),
@@ -685,8 +669,7 @@ class _ServiceBanner extends StatelessWidget {
     color: Colors.transparent,
     child: Ink(
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: colors,
-            begin: Alignment.centerLeft, end: Alignment.centerRight),
+        color: colors.first,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [BoxShadow(color: colors.first.withValues(alpha: 0.25),
             blurRadius: 14, offset: const Offset(0, 6))],
@@ -720,8 +703,8 @@ class _ServiceBanner extends StatelessWidget {
               const SizedBox(width: 8),
               Container(
                 width: 40, height: 40,
-                decoration: const BoxDecoration(color: _green, shape: BoxShape.circle),
-                child: const Icon(Icons.arrow_forward_rounded, color: _white, size: 20),
+                decoration: const BoxDecoration(color: _white, shape: BoxShape.circle),
+                child: const Icon(Icons.arrow_forward_rounded, color: AppTheme.accent, size: 20),
               ),
             ]),
           ),
@@ -792,7 +775,7 @@ class _GridCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
             child: Text(_usd(p.price), style: const TextStyle(
-                color: _emerald, fontWeight: FontWeight.w800, fontSize: 18)),
+                color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 18)),
           ),
         ]),
       ),
@@ -814,11 +797,11 @@ class _ImageTag extends StatelessWidget {
       borderRadius: BorderRadius.circular(20),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, color: _emerald, size: 12),
+      Icon(icon, color: AppTheme.accent, size: 12),
       const SizedBox(width: 4),
       Flexible(
         child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: _emeraldDeep,
+            style: const TextStyle(color: AppTheme.accent,
                 fontSize: 10, fontWeight: FontWeight.w700)),
       ),
     ]),
@@ -866,13 +849,13 @@ class _ListCard extends StatelessWidget {
                   _Pill(label: _conditionLabel(l, p.condition), color: _condColor(p.condition)),
                 _Pill(
                   label: _listingTypeLabel(l, p.listingType),
-                  color: p.listingType == 'rent' ? _purple : _emerald,
+                  color: p.listingType == 'rent' ? _purple : AppTheme.accent,
                 ),
               ]),
               const SizedBox(height: 8),
               Row(children: [
                 Text(_usd(p.price), style: const TextStyle(
-                    color: _emerald, fontWeight: FontWeight.w800, fontSize: 16)),
+                    color: AppTheme.accent, fontWeight: FontWeight.w800, fontSize: 16)),
                 const SizedBox(width: 8),
                 if (p.locationText != null)
                   Expanded(
@@ -932,7 +915,7 @@ class _ErrorState extends StatelessWidget {
 // All Listings Screen
 // ══════════════════════════════════════════════════════════════════════════════
 
-class _AllListingsScreen extends StatefulWidget {
+class _AllListingsScreen extends StatefulWidget implements TabletFullWidth {
   final int?    categoryId;
   final String? categoryName;
   final String? search;
@@ -1240,10 +1223,8 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
       child: _grid
           ? GridView.builder(
               controller: _scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12,
-                  mainAxisExtent: _gridCardExtent),
+              padding: responsivePadding(context, maxWidth: 1100, top: 8),
+              gridDelegate: responsiveGrid(mainAxisExtent: _gridCardExtent),
               itemCount: _prods.length + 1,
               itemBuilder: (_, i) {
                 if (i == _prods.length) return footer;
@@ -1251,7 +1232,7 @@ class _AllListingsScreenState extends State<_AllListingsScreen> {
               })
           : ListView.builder(
               controller: _scrollCtrl,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: responsivePadding(context, top: 8),
               itemCount: _prods.length + 1,
               itemBuilder: (_, i) {
                 if (i == _prods.length) return footer;
@@ -1691,7 +1672,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                       : const Center(child: Icon(Icons.image_outlined,
                           color: Colors.grey, size: 60)),
                   if (_loading) const Center(
-                      child: CircularProgressIndicator(color: _emerald, strokeWidth: 2)),
+                      child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2)),
                   if (_p.images.length > 1) ...[
                     Positioned(left: 16, bottom: 38,
                       child: Container(
@@ -1712,7 +1693,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                           width: _imgIdx == i ? 18 : 6, height: 6,
                           margin: const EdgeInsets.only(left: 4),
                           decoration: BoxDecoration(
-                            color: _imgIdx == i ? _emerald : _white.withValues(alpha: 0.8),
+                            color: _imgIdx == i ? AppTheme.accent : _white.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(3),
                           ),
                         )),
@@ -1728,7 +1709,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
               child: Transform.translate(
                 offset: const Offset(0, -24),
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                  padding: responsivePadding(context, top: 20),
                   decoration: BoxDecoration(
                     color: context.appSurface,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -1742,7 +1723,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                             : _p.listingType == 'rent' ? l.forRentLabel
                                 : l.saleAndRentLabel,
                         color: _white,
-                        bg: canSell ? _emerald : _purple,
+                        bg: canSell ? AppTheme.accent : _purple,
                       ),
                       if (_p.condition != null)
                         _SoftTag(
@@ -1770,12 +1751,12 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                       Wrap(spacing: 8, runSpacing: 8, children: [
                         if (vType != null)
                           _SoftTag(icon: Icons.bolt_rounded, label: vType,
-                              color: _emeraldDeep, bg: _mint(context)),
+                              color: AppTheme.accent, bg: _mint(context)),
                         if (vColor != null)
                           _SoftTag(icon: Icons.circle, label: vColor,
                               iconColor: _swatchFor(_p.vehicleColorCode ?? ''),
-                              color: const Color(0xFF2563EB),
-                              bg: const Color(0xFF2563EB).withValues(alpha: 0.08)),
+                              color: AppTheme.confirmBlue,
+                              bg: AppTheme.confirmBlue.withValues(alpha: 0.08)),
                       ]),
                     ],
 
@@ -1794,14 +1775,14 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Row(mainAxisSize: MainAxisSize.min, children: [
-                              const Icon(Icons.verified_user_rounded, color: _emerald, size: 26),
+                              const Icon(Icons.verified_user_rounded, color: AppTheme.accent, size: 26),
                               const SizedBox(width: 8),
                               Flexible(
                                 child: Column(crossAxisAlignment: CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min, children: [
                                   Text(l.verifiedSeller, maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(color: _emeraldDeep,
+                                      style: const TextStyle(color: AppTheme.accent,
                                           fontWeight: FontWeight.w800, fontSize: 12)),
                                   const SizedBox(height: 2),
                                   Text(_p.sellerName!, maxLines: 1,
@@ -1823,7 +1804,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
                               color: _mint(context), borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.location_on_rounded, color: _emerald, size: 16),
+                          child: const Icon(Icons.location_on_rounded, color: AppTheme.accent, size: 16),
                         ),
                         const SizedBox(width: 10),
                         Expanded(child: Text(_p.locationText!,
@@ -1863,7 +1844,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: _imgIdx == i ? _emerald : Colors.transparent,
+                                  color: _imgIdx == i ? AppTheme.accent : Colors.transparent,
                                   width: 2,
                                 ),
                               ),
@@ -1885,8 +1866,8 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
 
         // ── Bottom CTA ──────────────────────────────────────────
         Container(
-          padding: EdgeInsets.fromLTRB(
-              16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+          padding: responsivePadding(context, top: 12,
+              bottom: 12 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: context.appSurface,
             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08),
@@ -1898,7 +1879,7 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
                   child: _OutlineCTA(
                     label: l.editListing,
                     icon: Icons.edit_outlined,
-                    color: _emerald,
+                    color: AppTheme.confirmBlue,
                     onTap: () => Navigator.push(context, MaterialPageRoute(
                         builder: (_) => _PostProductScreen(existing: _p))),
                   ),
@@ -1906,22 +1887,22 @@ class _ProductDetailScreenState extends State<_ProductDetailScreen> {
               : Row(children: [
                   if (canSell && canRent) ...[
                     Expanded(child: _OutlineCTA(
-                      label: l.rent, icon: Icons.key_rounded, color: _purple,
+                      label: l.rent, icon: Icons.key_rounded, color: AppTheme.confirmBlue,
                       onTap: () => _order('rent'),
                     )),
                     const SizedBox(width: 12),
                     Expanded(child: _CTA(
-                      label: l.buy, icon: Icons.shopping_cart_outlined, color: _emerald,
+                      label: l.buy, icon: Icons.shopping_cart_outlined, color: AppTheme.confirmBlue,
                       onTap: () => _order('purchase'),
                     )),
                   ] else if (canSell)
                     Expanded(child: _CTA(
-                      label: l.buyNowLabel, icon: Icons.shopping_cart_outlined, color: _emerald,
+                      label: l.buyNowLabel, icon: Icons.shopping_cart_outlined, color: AppTheme.confirmBlue,
                       onTap: () => _order('purchase'),
                     ))
                   else if (canRent)
                     Expanded(child: _CTA(
-                      label: l.rentNowLabel, icon: Icons.key_rounded, color: _purple,
+                      label: l.rentNowLabel, icon: Icons.key_rounded, color: AppTheme.confirmBlue,
                       onTap: () => _order('rent'),
                     )),
                 ]),
@@ -1947,7 +1928,7 @@ class _PriceBlock extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Text(_usd(product.price), style: const TextStyle(color: _emerald,
+          child: Text(_usd(product.price), style: const TextStyle(color: AppTheme.accent,
               fontWeight: FontWeight.w900, fontSize: 32, height: 1.1)),
         )
       else if (rent != null)
@@ -2035,1038 +2016,6 @@ class _SoftTag extends StatelessWidget {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Purchase Screen
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _PurchaseScreen extends StatefulWidget {
-  final MarketplaceProductModel product;
-  const _PurchaseScreen({required this.product});
-  @override
-  State<_PurchaseScreen> createState() => _PurchaseScreenState();
-}
-
-class _PurchaseScreenState extends State<_PurchaseScreen> {
-  // Location
-  String  _locType    = 'pickup'; // 'pickup' | 'delivery'
-  String  _locAddress = '';
-  LatLng? _locLatLng;
-
-  final _couponCtrl     = TextEditingController();
-  final _phoneCtrl      = TextEditingController();
-  final _guestNameCtrl  = TextEditingController();
-
-  // 0 = Paid all, 1 = Book 30%, 2 = COD
-  int _paymentType = 0;
-  // Payment method (for paid options)
-  String _paymentMethod = 'cash';
-  bool _placing = false;
-  bool _isGuest = false;
-
-  static const _paymentTypes = [
-    ('Paid Full',    'Pay the full amount now'),
-    ('Book 30%',     'Pay 30% deposit — balance on delivery'),
-    ('COD',          'Cash on delivery'),
-  ];
-
-  static const _methods = [
-    ('cash',         'Cash',         Icons.payments_outlined),
-    ('wallet',       'ROTEH Pay',    Icons.account_balance_wallet),
-    ('aba',          'ABA Pay',      Icons.account_balance),
-    ('wing',         'Wing',         Icons.flight_takeoff),
-    ('other_online', 'Other Online', Icons.language_outlined),
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _locAddress = widget.product.locationText ?? '';
-    ApiService.isLoggedIn().then((v) {
-      if (mounted) setState(() => _isGuest = !v);
-    });
-  }
-
-  @override
-  void dispose() {
-    _couponCtrl.dispose();
-    _phoneCtrl.dispose();
-    _guestNameCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickLocation() async {
-    final result = await Navigator.push<_LocationResult>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _LocationPickerScreen(
-          title: _locType == 'pickup'
-              ? AppLocalizations.of(context).pickupLocation
-              : AppLocalizations.of(context).setDeliveryLocationTitle,
-          isPickup: _locType == 'pickup',
-          initial: _locLatLng,
-          initialAddress: _locAddress,
-        ),
-      ),
-    );
-    if (result == null || !mounted) return;
-    setState(() {
-      _locAddress = result.address;
-      _locLatLng  = result.latLng;
-    });
-  }
-
-  Future<void> _confirm() async {
-    // Delivery requires a buyer address; Pick Up uses the seller's location
-    final needsAddress = _locType == 'delivery' && _locAddress.isEmpty;
-    final needsPhone   = _phoneCtrl.text.trim().isEmpty;
-    final needsName    = _isGuest && _guestNameCtrl.text.trim().isEmpty;
-    if (needsAddress || needsPhone || needsName) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).fillRequiredFields),
-            backgroundColor: Colors.red));
-      return;
-    }
-    setState(() => _placing = true);
-    try {
-      await ApiService.placeMarketplaceOrder(
-        widget.product.id,
-        paymentMethod: _paymentMethod,
-      );
-    } catch (_) {
-      // non-fatal: show success dialog anyway (matches existing UX)
-    }
-    if (!mounted) return;
-    setState(() => _placing = false);
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const SizedBox(height: 8),
-          Container(
-            width: 64, height: 64,
-            decoration: BoxDecoration(
-                color: _green.withValues(alpha: 0.1), shape: BoxShape.circle),
-            child: const Icon(Icons.check_rounded, color: _green, size: 36),
-          ),
-          const SizedBox(height: 16),
-          Text(AppLocalizations.of(context).orderPlaced,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
-          const SizedBox(height: 8),
-          Text(AppLocalizations.of(context).purchaseRequestSent,
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(
-                      builder: (_) => const MarketplaceScreen(initialTab: 1)),
-                  (route) => route.isFirst,
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: _green,
-                  foregroundColor: _white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12))),
-              child: Text(AppLocalizations.of(context).done, style: const TextStyle(fontWeight: FontWeight.w700)),
-            ),
-          ),
-        ]),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = widget.product;
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      appBar: AppBar(
-        backgroundColor: context.appSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: context.appTextPrimary, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(AppLocalizations.of(context).purchaseProduct,
-            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 17)),
-        centerTitle: true,
-      ),
-      body: Column(children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-              // Product summary
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8, offset: const Offset(0, 2))],
-                ),
-                child: Row(children: [
-                  if (p.images.isNotEmpty)
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(p.images.first,
-                          width: 60, height: 60, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                              width: 60, height: 60,
-                              color: _green.withValues(alpha: 0.1),
-                              child: const Icon(Icons.storefront_rounded, color: _green))),
-                    )
-                  else
-                    Container(
-                      width: 60, height: 60,
-                      decoration: BoxDecoration(
-                          color: _green.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.storefront_rounded, color: _green, size: 28),
-                    ),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(p.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700,
-                            fontSize: 14)),
-                    const SizedBox(height: 4),
-                    Text(_usd(p.price),
-                        style: const TextStyle(color: _green,
-                            fontWeight: FontWeight.w800, fontSize: 15)),
-                  ])),
-                ]),
-              ),
-              const SizedBox(height: 20),
-
-              // Location type + address
-              _PurchaseField(
-                label: AppLocalizations.of(context).location,
-                child: Column(children: [
-                  _PurchaseDropdown<String>(
-                    label: AppLocalizations.of(context).locationType,
-                    icon: _locType == 'pickup'
-                        ? Icons.directions_walk_rounded
-                        : Icons.local_shipping_outlined,
-                    value: _locType,
-                    items: [
-                      _DropItemM(
-                        value: 'pickup',
-                        label: AppLocalizations.of(context).pickUp,
-                        subtitle: AppLocalizations.of(context).collectMyself,
-                        icon: Icons.directions_walk_rounded,
-                      ),
-                      _DropItemM(
-                        value: 'delivery',
-                        label: AppLocalizations.of(context).delivery,
-                        subtitle: AppLocalizations.of(context).deliverToAddress,
-                        icon: Icons.local_shipping_outlined,
-                      ),
-                    ],
-                    onChanged: (v) => setState(() {
-                      _locType    = v;
-                      _locAddress = '';
-                      _locLatLng  = null;
-                    }),
-                  ),
-                  // Delivery: buyer enters their own address
-                  if (_locType == 'delivery') ...[
-                    const SizedBox(height: 10),
-                    _LocationTile(
-                      address: _locAddress,
-                      icon: Icons.location_on_rounded,
-                      iconColor: Colors.red,
-                      hint: AppLocalizations.of(context).tapToSetDelivery,
-                      onTap: _pickLocation,
-                    ),
-                  ],
-                  // Pick Up: show seller's real location on embedded map.
-                  // If the listing has no coordinates, default to the ROTEH
-                  // CAMBODIA office (same as Car Rental) instead of leaving
-                  // this blank — still tappable to set a real pickup point.
-                  if (_locType == 'pickup') ...[
-                    const SizedBox(height: 10),
-                    if (p.locationLat != null && p.locationLng != null)
-                      RotehLocationMap(
-                        pin: LatLng(p.locationLat!, p.locationLng!),
-                        addressLabel: p.locationText ?? AppLocalizations.of(context).pickupLocation,
-                      )
-                    else
-                      GestureDetector(
-                        onTap: _pickLocation,
-                        child: RotehLocationMap(
-                          pin: _locLatLng,
-                          addressLabel: _locAddress.isNotEmpty ? _locAddress : null,
-                        ),
-                      ),
-                  ],
-                ]),
-              ),
-
-              // Payment
-              _PurchaseField(
-                label: AppLocalizations.of(context).paymentType,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  _PurchaseDropdown<int>(
-                    label: AppLocalizations.of(context).paymentType,
-                    icon: Icons.payments_outlined,
-                    value: _paymentType,
-                    items: [
-                      _DropItemM(value: 0, label: AppLocalizations.of(context).paidFull,
-                          subtitle: AppLocalizations.of(context).payFullAmountNow,
-                          icon: Icons.check_circle_outline),
-                      _DropItemM(value: 1, label: AppLocalizations.of(context).book30,
-                          subtitle: AppLocalizations.of(context).pay30Deposit,
-                          icon: Icons.percent_rounded),
-                      _DropItemM(value: 2, label: AppLocalizations.of(context).cod,
-                          subtitle: AppLocalizations.of(context).cashOnDelivery,
-                          icon: Icons.payments_outlined),
-                    ],
-                    onChanged: (v) => setState(() => _paymentType = v),
-                  ),
-                  if (_paymentType != 2) ...[
-                    const SizedBox(height: 10),
-                    _PurchaseDropdown<String>(
-                      label: AppLocalizations.of(context).paymentMethod,
-                      icon: Icons.account_balance_wallet_outlined,
-                      value: _paymentMethod,
-                      items: [
-                        _DropItemM(value: 'cash',         label: AppLocalizations.of(context).cash,
-                            subtitle: AppLocalizations.of(context).payWithCash,
-                            icon: Icons.payments_outlined),
-                        _DropItemM(value: 'wallet',       label: AppLocalizations.of(context).rotehPay,
-                            subtitle: AppLocalizations.of(context).inAppWalletBalance,
-                            icon: Icons.account_balance_wallet),
-                        _DropItemM(value: 'aba',          label: 'ABA Pay',
-                            subtitle: AppLocalizations.of(context).abaMobileBanking,
-                            icon: Icons.account_balance),
-                        _DropItemM(value: 'wing',         label: 'Wing',
-                            subtitle: AppLocalizations.of(context).wingMobileWallet,
-                            icon: Icons.flight_takeoff),
-                        _DropItemM(value: 'other_online', label: AppLocalizations.of(context).otherOnline,
-                            subtitle: AppLocalizations.of(context).otherOnlinePayment,
-                            icon: Icons.language_outlined),
-                      ],
-                      onChanged: (v) => setState(() => _paymentMethod = v),
-                    ),
-                  ],
-                ]),
-              ),
-
-              // Coupon code
-              Text(AppLocalizations.of(context).couponCode, style: TextStyle(
-                  color: context.appTextPrimary,
-                  fontWeight: FontWeight.w600, fontSize: 13)),
-              const SizedBox(height: 6),
-              _InputField(
-                controller: _couponCtrl,
-                hint: AppLocalizations.of(context).enterCouponCodeOptional,
-                icon: Icons.local_offer_outlined,
-              ),
-              const SizedBox(height: 12),
-
-              // Guest info (shown only when not logged in)
-              if (_isGuest) ...[
-                GuestFields(
-                    nameCtrl: _guestNameCtrl, phoneCtrl: _phoneCtrl),
-                const SizedBox(height: 12),
-              ] else ...[
-                // Phone number for logged-in users
-                Text(AppLocalizations.of(context).phoneNumber, style: TextStyle(
-                    color: context.appTextPrimary,
-                    fontWeight: FontWeight.w600, fontSize: 13)),
-                const SizedBox(height: 6),
-                _InputField(
-                  controller: _phoneCtrl,
-                  hint: AppLocalizations.of(context).phoneNumberHintExample,
-                  icon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              // Confirm info box
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _green.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _green.withValues(alpha: 0.2)),
-                ),
-                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Icon(Icons.info_outline_rounded, color: _green, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text(AppLocalizations.of(context).confirmInformation,
-                        style: TextStyle(color: _green, fontWeight: FontWeight.w700,
-                            fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Text(AppLocalizations.of(context).verifyAddressesNote,
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                  ])),
-                ]),
-              ),
-
-              const SizedBox(height: 24),
-            ]),
-          ),
-        ),
-
-        // Purchase Now button
-        Container(
-          padding: EdgeInsets.fromLTRB(
-              16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
-          decoration: BoxDecoration(
-            color: context.appSurface,
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07),
-                blurRadius: 12, offset: const Offset(0, -4))],
-          ),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: _placing ? null : _confirm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _green,
-                foregroundColor: _white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-              child: _placing
-                  ? const SizedBox(width: 22, height: 22,
-                      child: CircularProgressIndicator(
-                          color: _white, strokeWidth: 2.5))
-                  : Text(AppLocalizations.of(context).purchaseNow,
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-            ),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-class _PurchaseField extends StatelessWidget {
-  final String label;
-  final Widget child;
-  const _PurchaseField({required this.label, required this.child});
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: TextStyle(
-          color: context.appTextPrimary,
-          fontWeight: FontWeight.w600, fontSize: 13)),
-      const SizedBox(height: 8),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: context.appSurface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6, offset: const Offset(0, 2))],
-        ),
-        child: child,
-      ),
-      const SizedBox(height: 12),
-    ],
-  );
-}
-
-// ── Location result passed back from _LocationPickerScreen ───────────────────
-
-class _LocationResult {
-  final String address;
-  final LatLng latLng;
-  const _LocationResult({required this.address, required this.latLng});
-}
-
-// ── Tappable location tile shown in Purchase form ─────────────────────────────
-
-class _LocationTile extends StatelessWidget {
-  final String address;
-  final IconData icon;
-  final Color iconColor;
-  final String hint;
-  final VoidCallback onTap;
-  const _LocationTile({
-    required this.address, required this.icon,
-    required this.iconColor, required this.hint, required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Row(children: [
-      Icon(icon, color: iconColor, size: 22),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Text(
-          address.isEmpty ? hint : address,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: address.isEmpty ? Colors.grey.shade400 : context.appTextPrimary,
-            fontSize: 14,
-          ),
-        ),
-      ),
-      const SizedBox(width: 8),
-      Icon(Icons.chevron_right_rounded,
-          color: Colors.grey.shade400, size: 20),
-    ]),
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Location Picker Screen — search + drag-pin map
-// ══════════════════════════════════════════════════════════════════════════════
-
-class _LocationPickerScreen extends StatefulWidget {
-  final String title;
-  // Drives which confirm-button caption is shown — kept as an explicit flag
-  // instead of comparing the (now localized) `title` string, which broke
-  // once `title` stopped being a fixed English literal.
-  final bool isPickup;
-  final LatLng? initial;
-  final String initialAddress;
-  const _LocationPickerScreen({
-    required this.title,
-    this.isPickup = true,
-    this.initial,
-    this.initialAddress = '',
-  });
-
-  @override
-  State<_LocationPickerScreen> createState() => _LocationPickerScreenState();
-}
-
-class _LocationPickerScreenState extends State<_LocationPickerScreen> {
-  static const _phnomPenh = LatLng(11.5680, 104.9195);
-
-  GoogleMapController? _mapCtrl;
-  late LatLng _center;
-  String _address = '';
-  bool   _geocoding = false;
-
-  final _searchCtrl = TextEditingController();
-  List<PlaceResult> _searchResults = [];
-  bool _searching = false;
-  Timer? _debounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _center  = widget.initial ?? _phnomPenh;
-    _address = widget.initialAddress;
-  }
-
-  @override
-  void dispose() {
-    _mapCtrl?.dispose();
-    _searchCtrl.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  void _onSearchChanged(String q) {
-    _debounce?.cancel();
-    if (q.trim().isEmpty) {
-      setState(() => _searchResults = []);
-      return;
-    }
-    _debounce = Timer(const Duration(milliseconds: 450), () => _doSearch(q));
-  }
-
-  Future<void> _doSearch(String q) async {
-    setState(() => _searching = true);
-    try {
-      final results = await MapsService.searchAddress(q);
-      if (mounted) setState(() { _searchResults = results; _searching = false; });
-    } catch (_) {
-      if (mounted) setState(() => _searching = false);
-    }
-  }
-
-  void _selectResult(PlaceResult r) {
-    _searchCtrl.text = r.address;
-    setState(() {
-      _center        = r.latLng;
-      _address       = r.address;
-      _searchResults = [];
-    });
-    _mapCtrl?.animateCamera(CameraUpdate.newLatLngZoom(r.latLng, 16));
-  }
-
-  Future<void> _onCameraIdle() async {
-    setState(() { _geocoding = true; _address = ''; });
-    try {
-      final addr = await MapsService.reverseGeocode(_center);
-      if (mounted) setState(() {
-        _address  = addr ?? '${_center.latitude.toStringAsFixed(4)}, '
-            '${_center.longitude.toStringAsFixed(4)}';
-        _geocoding = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _geocoding = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final hasResults = _searchResults.isNotEmpty;
-
-    return Scaffold(
-      backgroundColor: context.appBackground,
-      body: Stack(children: [
-
-        // ── Map ────────────────────────────────────────────────────────────
-        GoogleMap(
-          onMapCreated: (c) {
-            _mapCtrl = c;
-            c.animateCamera(CameraUpdate.newLatLngZoom(_center, 15));
-            if (_address.isEmpty) _onCameraIdle();
-          },
-          initialCameraPosition: CameraPosition(target: _center, zoom: 15),
-          myLocationEnabled: true,
-          myLocationButtonEnabled: false,
-          zoomControlsEnabled: false,
-          onCameraMove: (pos) => _center = pos.target,
-          onCameraIdle: _onCameraIdle,
-        ),
-
-        // ── Crosshair pin ──────────────────────────────────────────────────
-        const Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.location_on_rounded, color: _green, size: 40),
-            SizedBox(
-              width: 10, height: 4,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.black38,
-                  borderRadius: BorderRadius.all(Radius.circular(2)),
-                ),
-              ),
-            ),
-          ]),
-        ),
-
-        // ── Top bar: back + search ─────────────────────────────────────────
-        SafeArea(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-              child: Row(children: [
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: context.appSurface, shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 6)],
-                    ),
-                    child: Icon(Icons.arrow_back_ios_new_rounded,
-                        color: context.appTextPrimary, size: 18),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Container(
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: context.appSurface,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 8)],
-                    ),
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: _onSearchChanged,
-                      style: TextStyle(color: context.appTextPrimary, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context).searchLocationHint,
-                        hintStyle: TextStyle(
-                            color: context.appTextSecondary, fontSize: 14),
-                        prefixIcon: _searching
-                            ? Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: SizedBox(
-                                  width: 18, height: 18,
-                                  child: CircularProgressIndicator(
-                                      color: _green, strokeWidth: 2),
-                                ))
-                            : Icon(Icons.search_rounded,
-                                color: context.appTextSecondary, size: 20),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                icon: Icon(Icons.close_rounded,
-                                    color: context.appTextSecondary, size: 18),
-                                onPressed: () {
-                                  _searchCtrl.clear();
-                                  setState(() => _searchResults = []);
-                                })
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                ),
-              ]),
-            ),
-
-            // Search results dropdown
-            if (hasResults)
-              Container(
-                margin: const EdgeInsets.fromLTRB(62, 6, 12, 0),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 10)],
-                ),
-                child: Material(
-                  color: context.appSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  clipBehavior: Clip.antiAlias,
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _searchResults.length.clamp(0, 5),
-                    separatorBuilder: (_, __) =>
-                        Divider(height: 1, color: context.appCardBg),
-                    itemBuilder: (_, i) {
-                      final r = _searchResults[i];
-                      return ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.place_outlined,
-                            color: _green, size: 18),
-                        title: Text(r.address,
-                            maxLines: 2, overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: context.appTextPrimary, fontSize: 13)),
-                        onTap: () => _selectResult(r),
-                      );
-                    },
-                  ),
-                ),
-              ),
-          ]),
-        ),
-
-        // ── Bottom confirm bar ─────────────────────────────────────────────
-        Positioned(
-          bottom: 0, left: 0, right: 0,
-          child: Container(
-            padding: EdgeInsets.fromLTRB(
-                16, 14, 16, 14 + MediaQuery.of(context).padding.bottom),
-            decoration: BoxDecoration(
-              color: context.appSurface,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(22)),
-              boxShadow: [BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 16, offset: const Offset(0, -4))],
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Drag handle
-              Container(
-                width: 36, height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                    color: context.appCardBg,
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-
-              Row(children: [
-                Icon(Icons.location_on_rounded,
-                    color: _green, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _geocoding
-                      ? Row(children: [
-                          SizedBox(
-                            width: 14, height: 14,
-                            child: CircularProgressIndicator(
-                                color: _green, strokeWidth: 2),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(AppLocalizations.of(context).findingAddress,
-                              style: TextStyle(
-                                  color: context.appTextSecondary, fontSize: 13)),
-                        ])
-                      : Text(
-                          _address.isEmpty
-                              ? AppLocalizations.of(context).dragMapToSetLocation
-                              : _address,
-                          maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: context.appTextPrimary, fontSize: 14,
-                              fontWeight: FontWeight.w500)),
-                ),
-              ]),
-              const SizedBox(height: 14),
-
-              SizedBox(
-                width: double.infinity, height: 50,
-                child: ElevatedButton(
-                  onPressed: (_geocoding || _address.isEmpty)
-                      ? null
-                      : () => Navigator.pop(
-                          context,
-                          _LocationResult(
-                              address: _address, latLng: _center)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _green,
-                    foregroundColor: _white,
-                    disabledBackgroundColor:
-                        _green.withValues(alpha: 0.35),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: Text(widget.isPickup
-                      ? AppLocalizations.of(context).setPickupHere
-                      : AppLocalizations.of(context).setDropoffHere,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w800)),
-                ),
-              ),
-            ]),
-          ),
-        ),
-
-        // ── My-location button ─────────────────────────────────────────────
-        Positioned(
-          right: 14,
-          bottom: 140 + MediaQuery.of(context).padding.bottom,
-          child: GestureDetector(
-            onTap: () async {
-              try {
-                final pos = await Geolocator.getCurrentPosition(
-                    desiredAccuracy: LocationAccuracy.high);
-                if (!mounted) return;
-                final ll = LatLng(pos.latitude, pos.longitude);
-                _mapCtrl?.animateCamera(CameraUpdate.newLatLngZoom(ll, 16));
-              } catch (_) {}
-            },
-            child: Builder(builder: (ctx) => Container(
-              width: 44, height: 44,
-              decoration: BoxDecoration(
-                color: ctx.appSurface, shape: BoxShape.circle,
-                boxShadow: [BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 6)],
-              ),
-              child: Icon(Icons.my_location_rounded,
-                  color: ctx.appTextPrimary, size: 22),
-            )),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-// Delivery-style text input — adapts to dark mode
-class _InputField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final TextInputType keyboardType;
-  const _InputField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    this.keyboardType = TextInputType.text,
-  });
-
-  @override
-  Widget build(BuildContext context) => TextField(
-    controller: controller,
-    keyboardType: keyboardType,
-    style: TextStyle(color: context.appTextPrimary),
-    decoration: InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: context.appTextSecondary),
-      prefixIcon: Icon(icon, color: context.appTextSecondary, size: 20),
-      filled: true,
-      fillColor: context.appSurface,
-      border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none),
-      focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppTheme.accent, width: 1.5)),
-    ),
-  );
-}
-
-// Delivery-style dropdown item
-class _DropItemM<T> {
-  final T value;
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  const _DropItemM({
-    required this.value,
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-  });
-}
-
-// Delivery-style bottom-sheet dropdown
-class _PurchaseDropdown<T> extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final T value;
-  final List<_DropItemM<T>> items;
-  final ValueChanged<T> onChanged;
-
-  const _PurchaseDropdown({
-    required this.label,
-    required this.icon,
-    required this.value,
-    required this.items,
-    required this.onChanged,
-  });
-
-  _DropItemM<T> get _selected =>
-      items.firstWhere((i) => i.value == value, orElse: () => items.first);
-
-  void _open(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: context.appSurface,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            width: 40, height: 4,
-            decoration: BoxDecoration(
-                color: context.appCardBg,
-                borderRadius: BorderRadius.circular(2)),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(label,
-                  style: TextStyle(
-                      color: context.appTextPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700)),
-            ),
-          ),
-          Divider(height: 1, color: context.appCardBg),
-          ...items.map((item) {
-            final selected = item.value == value;
-            return InkWell(
-              onTap: () {
-                onChanged(item.value);
-                Navigator.pop(ctx);
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20, vertical: 14),
-                child: Row(children: [
-                  Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppTheme.accent.withValues(alpha: 0.12)
-                          : context.appCardBg,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(item.icon,
-                        color: selected
-                            ? AppTheme.accent
-                            : context.appTextSecondary,
-                        size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text(item.label,
-                        style: TextStyle(
-                            color: selected
-                                ? AppTheme.accent
-                                : context.appTextPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14)),
-                    if (item.subtitle.isNotEmpty)
-                      Text(item.subtitle,
-                          style: TextStyle(
-                              color: context.appTextSecondary,
-                              fontSize: 12)),
-                  ])),
-                  if (selected)
-                    const Icon(Icons.check_circle,
-                        color: AppTheme.accent, size: 20)
-                  else
-                    Icon(Icons.radio_button_off,
-                        color: context.appTextSecondary, size: 20),
-                ]),
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-        ]),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: () => _open(context),
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        color: context.appSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.appCardBg),
-      ),
-      child: Row(children: [
-        Icon(_selected.icon, color: AppTheme.accent, size: 20),
-        const SizedBox(width: 12),
-        Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label,
-              style: TextStyle(
-                  color: context.appTextSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 2),
-          Text(_selected.label,
-              style: TextStyle(
-                  color: context.appTextPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600)),
-        ])),
-        Icon(Icons.keyboard_arrow_down,
-            color: context.appTextSecondary, size: 22),
-      ]),
-    ),
-  );
-}
-
 class _CTA extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -3079,12 +2028,8 @@ class _CTA extends StatelessWidget {
   Widget build(BuildContext context) => ElevatedButton.icon(
     onPressed: onTap,
     icon: Icon(icon, size: 18),
-    label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-    style: ElevatedButton.styleFrom(
-      backgroundColor: color, foregroundColor: _white, elevation: 0,
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-    ),
+    label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    style: AppTheme.confirmButtonStyle(background: color),
   );
 }
 
@@ -3100,13 +2045,15 @@ class _OutlineCTA extends StatelessWidget {
   Widget build(BuildContext context) => OutlinedButton.icon(
     onPressed: onTap,
     icon: Icon(icon, size: 18),
-    label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+    label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+    // Same size/shape as AppTheme.confirmButtonStyle, outlined.
     style: OutlinedButton.styleFrom(
       foregroundColor: color,
-      side: BorderSide(color: color.withValues(alpha: 0.6), width: 1.5),
-      padding: const EdgeInsets.symmetric(vertical: 15),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      side: BorderSide(color: color, width: 1.3),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      minimumSize: const Size(0, 44),
+      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
   );
 }
@@ -3135,7 +2082,7 @@ class _SpecStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     if (items.isEmpty) return const SizedBox.shrink();
     final divider = VerticalDivider(width: 1, thickness: 1,
-        indent: 6, endIndent: 6, color: _emerald.withValues(alpha: 0.15));
+        indent: 6, endIndent: 6, color: AppTheme.accent.withValues(alpha: 0.15));
     final cells = <Widget>[];
     for (var i = 0; i < items.length; i++) {
       if (i > 0) cells.add(divider);
@@ -3144,7 +2091,7 @@ class _SpecStrip extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(it.icon, color: _emerald, size: 22),
+            Icon(it.icon, color: AppTheme.accent, size: 22),
             const SizedBox(height: 6),
             Text(it.label, maxLines: 1, overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
@@ -3556,7 +2503,7 @@ class _OrderScreenState extends State<_OrderScreen> {
   double get _subtotal => _mainItemTotal + _extraItemsTotal;
   double get _discountUsd => _discountKhr / 4100.0;
   double get _total => (_subtotal - _discountUsd).clamp(0.0, _subtotal);
-  Color get _color => _emerald;
+  Color get _color => AppTheme.accent;
 
   static String _fmt(DateTime d) => DateFormat('MMM d, yyyy').format(d);
 
@@ -3803,10 +2750,16 @@ class _OrderScreenState extends State<_OrderScreen> {
     }
     final guestName  = _isGuest ? _guestNameCtrl.text.trim()  : null;
     final guestPhone = _isGuest ? _guestPhoneCtrl.text.trim() : null;
-    if (_isGuest && (guestName!.isEmpty || guestPhone!.length < 8)) {
-      setState(() => _err = AppLocalizations.of(context).fillRequiredFields);
-      return;
+    if (_isGuest) {
+      final invalid = GuestFields.validate(AppLocalizations.of(context), guestName!, guestPhone!);
+      if (invalid != null) {
+        setState(() => _err = invalid);
+        return;
+      }
     }
+    // Guests confirm their phone by SMS code before ordering.
+    if (_isGuest && !await ensureGuestPhoneVerified(context, guestPhone!)) return;
+    if (!mounted) return;
     setState(() { _busy = true; _err = null; });
     try {
       if (_isVehicleRental) {
@@ -3974,9 +2927,9 @@ class _OrderScreenState extends State<_OrderScreen> {
                   child: Container(
                     width: 64, height: 64,
                     decoration: BoxDecoration(
-                      color: _emerald,
+                      color: AppTheme.accent,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.35),
+                      boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.35),
                           blurRadius: 16, offset: const Offset(0, 6))],
                     ),
                     child: const Icon(Icons.check_rounded, color: _white, size: 38),
@@ -4010,7 +2963,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                           fontWeight: FontWeight.w700, fontSize: 13, height: 1.3)),
                   const SizedBox(height: 2),
                   Text('${l.total}: ${_usd(_total)}',
-                      style: const TextStyle(color: _emerald,
+                      style: const TextStyle(color: AppTheme.accent,
                           fontWeight: FontWeight.w800, fontSize: 14)),
                 ])),
               ]),
@@ -4018,17 +2971,10 @@ class _OrderScreenState extends State<_OrderScreen> {
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              height: 52,
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _emerald,
-                  foregroundColor: _white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: Text(showRentals ? l.myRentals : l.myOrdersTab,
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                style: AppTheme.confirmButtonStyle(),
+                child: Text(showRentals ? l.myRentals : l.myOrdersTab),
               ),
             ),
             const SizedBox(height: 6),
@@ -4147,7 +3093,7 @@ class _OrderScreenState extends State<_OrderScreen> {
       ),
       body: Column(children: [
         Expanded(child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          padding: responsivePadding(context, maxWidth: 720, top: 8, bottom: 24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             // Product summary
             _FormCard(
@@ -4168,13 +3114,13 @@ class _OrderScreenState extends State<_OrderScreen> {
                     const SizedBox(height: 6),
                     Text(
                       _isRent && p.rentPricePerDay != null
-                          ? '${_usd(p.rentPricePerDay!)}/day' : _usd(p.price),
+                          ? '${_usd(p.rentPricePerDay!)}${AppLocalizations.of(context).trPerDay}' : _usd(p.price),
                       style: TextStyle(color: _color,
                           fontWeight: FontWeight.w800, fontSize: 18)),
                     if (p.quantity > 0) ...[
                       const SizedBox(height: 6),
                       _SoftTag(icon: Icons.check_circle_rounded, label: l.available,
-                          color: _emeraldDeep, bg: _mint(context)),
+                          color: AppTheme.accent, bg: _mint(context)),
                     ],
                   ])),
                 ]),
@@ -4363,7 +3309,7 @@ class _OrderScreenState extends State<_OrderScreen> {
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text(_usd(item.price), style: const TextStyle(color: _emerald, fontWeight: FontWeight.w700, fontSize: 12)),
+                      Text(_usd(item.price), style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 12)),
                     ])),
                     _QtyBtn(Icons.remove_rounded, (_extraQty[item.id] ?? 1) > 1, _color,
                         () => _bumpExtraQty(item.id, -1)),
@@ -4699,8 +3645,8 @@ class _OrderScreenState extends State<_OrderScreen> {
 
         // Confirm — total, any submit error, then the action button.
         Container(
-          padding: EdgeInsets.fromLTRB(
-              16, 14, 16, 12 + MediaQuery.of(context).padding.bottom),
+          padding: responsivePadding(context, maxWidth: 720, top: 14,
+              bottom: 12 + MediaQuery.of(context).padding.bottom),
           decoration: BoxDecoration(
             color: context.appSurface,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -4737,16 +3683,9 @@ class _OrderScreenState extends State<_OrderScreen> {
             ],
             SizedBox(
               width: double.infinity,
-              height: 56,
               child: ElevatedButton(
                 onPressed: _busy ? null : _submit,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _color,
-                  foregroundColor: _white,
-                  disabledBackgroundColor: _color.withValues(alpha: 0.5),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
+                style: AppTheme.confirmButtonStyle(),
                 child: _busy
                     ? const SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(color: _white, strokeWidth: 2.5))
@@ -4758,7 +3697,6 @@ class _OrderScreenState extends State<_OrderScreen> {
                               ? (_datesOk ? l.confirmRentalLabel : l.selectDatesToContinue)
                               : l.proceedToCheckout,
                           maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                         )),
                         const SizedBox(width: 8),
                         const Icon(Icons.arrow_forward_rounded, size: 18),
@@ -4784,7 +3722,7 @@ class _OrderSectionHeader extends StatelessWidget {
     child: Row(children: [
       Container(
         width: 36, height: 36,
-        decoration: const BoxDecoration(color: _emerald, shape: BoxShape.circle),
+        decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
         child: Icon(icon, color: _white, size: 19),
       ),
       const SizedBox(width: 10),
@@ -4863,7 +3801,7 @@ class _PickerTile extends StatelessWidget {
         side: outlined
             ? BorderSide(color: error
                 ? Colors.red.withValues(alpha: 0.4)
-                : _emerald.withValues(alpha: 0.3), width: 1.2)
+                : AppTheme.accent.withValues(alpha: 0.3), width: 1.2)
             : BorderSide.none,
       ),
       child: InkWell(
@@ -4872,7 +3810,7 @@ class _PickerTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(children: [
-            Icon(icon, color: _emerald, size: 26),
+            Icon(icon, color: AppTheme.accent, size: 26),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -4950,17 +3888,30 @@ class _QtyBtn extends StatelessWidget {
 class _SumRow extends StatelessWidget {
   final String label, amount;
   const _SumRow(this.label, this.amount);
+  // Either side can be long (a product title as the label for purchases,
+  // or as the value for rentals): the label wraps in the remaining space and
+  // the value keeps its natural width, capped at ~55% so neither side is
+  // squeezed into a one-character column.
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
-      const SizedBox(width: 12),
-      Expanded(
-        child: Text(amount, textAlign: TextAlign.right, style: TextStyle(
-            color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
-      ),
-    ]),
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: LayoutBuilder(builder: (context, c) => Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(label, maxLines: 3, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.appTextSecondary, fontSize: 13, height: 1.35)),
+        ),
+        const SizedBox(width: 12),
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: c.maxWidth * 0.55),
+          child: Text(amount, textAlign: TextAlign.right, maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.appTextPrimary,
+                  fontWeight: FontWeight.w700, fontSize: 13, height: 1.35)),
+        ),
+      ],
+    )),
   );
 }
 
@@ -5208,7 +4159,7 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
           ]),
         ),
       Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+        padding: responsivePadding(context, top: 14, bottom: 4),
         child: Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
@@ -5220,9 +4171,9 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
           child: TabBar(
             controller: _tc,
             indicator: BoxDecoration(
-              color: _emerald,
+              color: AppTheme.accent,
               borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.3),
+              boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.3),
                   blurRadius: 10, offset: const Offset(0, 3))],
             ),
             indicatorSize: TabBarIndicatorSize.tab,
@@ -5269,9 +4220,9 @@ class _OrderList extends StatelessWidget {
       ]),
     );
     return RefreshIndicator(
-      onRefresh: onRefresh, color: _emerald,
+      onRefresh: onRefresh, color: AppTheme.accent,
       child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        padding: responsivePadding(context, top: 12, bottom: 24),
         itemCount: orders.length,
         itemBuilder: (_, i) =>
             _OrderCard(order: orders[i], isSeller: isSeller, isGuest: isGuest, onAction: onAction),
@@ -5302,7 +4253,7 @@ class _OrderCard extends StatelessWidget {
     final o       = order;
     final sc      = _statusColor(o.status);
     final isRent  = o.orderType == 'rent';
-    final typeClr = isRent ? _purple : _emerald;
+    final typeClr = isRent ? _purple : AppTheme.accent;
     final canAct  = o.status == 'pending' || o.status == 'confirmed';
 
     return Container(
@@ -5398,7 +4349,7 @@ class _OrderCard extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(_usd(o.totalPriceUsd), style: const TextStyle(
-                    color: _emerald, fontWeight: FontWeight.w900, fontSize: 22, height: 1.2)),
+                    color: AppTheme.accent, fontWeight: FontWeight.w900, fontSize: 22, height: 1.2)),
               ),
             ])),
             if (canAct) ...[
@@ -5408,7 +4359,7 @@ class _OrderCard extends StatelessWidget {
                 const SizedBox(width: 8),
               ],
               if (!isGuest) ...[
-                _ActionPill(l.done, _blue, Icons.task_alt_rounded,
+                _ActionPill(l.done, AppTheme.confirmBlue, Icons.task_alt_rounded,
                     () => onAction(o, 'complete')),
                 const SizedBox(width: 8),
               ],

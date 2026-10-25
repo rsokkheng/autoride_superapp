@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../widgets/responsive.dart';
 import '../../l10n/app_localizations.dart';
 
-const _emerald     = Color(0xFF0E9F6E);
-const _emeraldDeep = Color(0xFF0A7A57);
-const _blue        = Color(0xFF2563EB);
 const _purple      = Color(0xFF7C3AED);
 
-Color _mint(BuildContext c) => _emerald.withValues(
+Color _mint(BuildContext c) => AppTheme.accent.withValues(
     alpha: Theme.of(c).brightness == Brightness.dark ? 0.16 : 0.08);
 
 enum _Sort { newest, oldest, priceHigh, priceLow }
@@ -121,7 +119,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
                     color: context.appTextPrimary,
                     fontWeight: s == _sort ? FontWeight.w700 : FontWeight.w500)),
                 trailing: s == _sort
-                    ? const Icon(Icons.check_circle_rounded, color: _emerald)
+                    ? const Icon(Icons.check_circle_rounded, color: AppTheme.accent)
                     : null,
                 onTap: () {
                   setState(() => _sort = s);
@@ -207,7 +205,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
           height: 60,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+            padding: responsivePadding(context, top: 6, bottom: 10),
             itemCount: _statuses.length,
             separatorBuilder: (_, __) => const SizedBox(width: 10),
             itemBuilder: (_, i) => _StatusChip(
@@ -221,7 +219,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
 
         // Sort + result count
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          padding: responsivePadding(context, top: 4, bottom: 8),
           child: Container(
             padding: const EdgeInsets.fromLTRB(8, 8, 14, 8),
             decoration: BoxDecoration(
@@ -241,7 +239,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
                         width: 34, height: 34,
                         decoration: BoxDecoration(
                             color: context.appSurface, shape: BoxShape.circle),
-                        child: const Icon(Icons.swap_vert_rounded, color: _emeraldDeep, size: 20),
+                        child: const Icon(Icons.swap_vert_rounded, color: AppTheme.accent, size: 20),
                       ),
                       const SizedBox(width: 10),
                       ConstrainedBox(
@@ -280,7 +278,7 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
   Widget _buildBody(BuildContext context, List<Map<String, dynamic>> visible) {
     final l = AppLocalizations.of(context);
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: _emerald, strokeWidth: 2));
+      return const Center(child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2));
     }
     if (_error != null) {
       return Center(child: Padding(
@@ -292,20 +290,20 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           const SizedBox(height: 12),
           TextButton(onPressed: _load, child: Text(l.retry,
-              style: const TextStyle(color: _emerald, fontWeight: FontWeight.w700))),
+              style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700))),
         ]),
       ));
     }
     if (visible.isEmpty) {
       return RefreshIndicator(
-        color: _emerald,
+        color: AppTheme.accent,
         onRefresh: _load,
         child: ListView(children: [
           const SizedBox(height: 100),
           Center(child: Container(
             width: 88, height: 88,
             decoration: BoxDecoration(color: _mint(context), shape: BoxShape.circle),
-            child: const Icon(Icons.electric_rickshaw, color: _emerald, size: 42),
+            child: const Icon(Icons.electric_rickshaw, color: AppTheme.accent, size: 42),
           )),
           const SizedBox(height: 16),
           Center(child: Text(l.noRentalsFound, style: TextStyle(
@@ -314,10 +312,10 @@ class _MyRentalsScreenState extends State<MyRentalsScreen> {
       );
     }
     return RefreshIndicator(
-      color: _emerald,
+      color: AppTheme.accent,
       onRefresh: _load,
       child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+        padding: responsivePadding(context, top: 6, bottom: 24),
         itemCount: visible.length,
         separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (_, i) => _RentalCard(r: visible[i], onRefresh: _load),
@@ -358,10 +356,10 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final fg = active ? Colors.white : context.appTextPrimary;
     return Material(
-      color: active ? _emerald : context.appSurface,
+      color: active ? AppTheme.accent : context.appSurface,
       borderRadius: BorderRadius.circular(22),
       elevation: active ? 2 : 0.5,
-      shadowColor: active ? _emerald.withValues(alpha: 0.4) : Colors.black12,
+      shadowColor: active ? AppTheme.accent.withValues(alpha: 0.4) : Colors.black12,
       child: InkWell(
         borderRadius: BorderRadius.circular(22),
         onTap: onTap,
@@ -395,8 +393,8 @@ class _RentalCard extends StatelessWidget {
   }
 
   Color _statusColor(String s) => switch (s) {
-    'confirmed'  => _blue,
-    'completed'  => _emerald,
+    'confirmed'  => AppTheme.confirmBlue,
+    'completed'  => AppTheme.accent,
     'cancelled'  => AppTheme.danger,
     _            => const Color(0xFFF59E0B),   // pending → amber
   };
@@ -543,11 +541,11 @@ class _RentalCard extends StatelessWidget {
                   _Tag(
                     icon: isOrder ? Icons.storefront_rounded : Icons.bolt_rounded,
                     label: isOrder ? l.marketplace : l.rentalVehicleBadge,
-                    color: isOrder ? _emeraldDeep : _purple,
+                    color: isOrder ? AppTheme.accent : _purple,
                   ),
                   _Tag(
                     label: '${isOrder ? l.orderHashPrefix : l.rentalHashPrefix}$id',
-                    color: _blue,
+                    color: AppTheme.confirmBlue,
                   ),
                 ]),
                 const SizedBox(height: 10),
@@ -601,7 +599,7 @@ class _RentalCard extends StatelessWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
-                child: Text(_usd(total), style: const TextStyle(color: _emerald,
+                child: Text(_usd(total), style: const TextStyle(color: AppTheme.accent,
                     fontWeight: FontWeight.w900, fontSize: 24, height: 1.15)),
               ),
             ]),
@@ -610,13 +608,15 @@ class _RentalCard extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: () => _cancel(context),
               icon: const Icon(Icons.close_rounded, size: 18),
-              label: Text(l.cancelRentalTitle,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              label: Text(l.cancelRentalTitle),
+              // Same size/shape as AppTheme.confirmButtonStyle, outlined.
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.danger,
-                side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.5), width: 1.3),
-                shape: const StadiumBorder(),
+                side: const BorderSide(color: AppTheme.danger, width: 1.3),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                minimumSize: const Size(0, 44),
+                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
         ]),
@@ -637,7 +637,7 @@ class _RentalCard extends StatelessWidget {
   Widget _placeholder(BuildContext context, String? vtype) => Container(
     color: _mint(context),
     child: Center(child: Icon(_vehicleIcon(vtype),
-        size: 48, color: _emerald.withValues(alpha: 0.5))),
+        size: 48, color: AppTheme.accent.withValues(alpha: 0.5))),
   );
 
   String _titleFor(BuildContext context, String? type) {
@@ -708,7 +708,7 @@ class _StatTile extends StatelessWidget {
       border: Border.all(color: context.appCardBg, width: 1.2),
     ),
     child: Row(children: [
-      Icon(icon, color: _emerald, size: 20),
+      Icon(icon, color: AppTheme.accent, size: 20),
       const SizedBox(width: 8),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

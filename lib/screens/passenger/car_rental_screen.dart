@@ -8,16 +8,16 @@ import '../../services/api_service.dart';
 import '../../services/maps_service.dart';
 import '../../widgets/roteh_location_map.dart';
 import '../../widgets/guest_fields.dart';
+import '../../widgets/guest_phone_otp_sheet.dart';
 import '../../widgets/location_picker_screen.dart';
 import 'my_rentals_screen.dart';
 import '../../models/marketplace_model.dart';
+import '../../widgets/responsive.dart';
 import '../../l10n/app_localizations.dart';
 import '../../main.dart' show appLocale;
+import '../../l10n/l10n.dart';
 
-const _emerald     = Color(0xFF0E9F6E);
-const _emeraldDeep = Color(0xFF0A7A57);
-
-Color _mint(BuildContext c) => _emerald.withValues(
+Color _mint(BuildContext c) => AppTheme.accent.withValues(
     alpha: Theme.of(c).brightness == Brightness.dark ? 0.16 : 0.08);
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ extension _LocTypeX on _LocType {
   IconData get icon   => this == _LocType.pickup
       ? Icons.directions_walk_rounded
       : Icons.local_shipping_outlined;
-  Color get pinColor  => this == _LocType.pickup ? _emerald : AppTheme.danger;
+  Color get pinColor  => this == _LocType.pickup ? AppTheme.accent : AppTheme.danger;
   String get hint {
     final l = AppLocalizations(appLocale.value);
     return this == _LocType.pickup ? l.tapToSetPickupLocation : l.tapToSetDeliveryLocation;
@@ -156,7 +156,7 @@ class _RentalCar {
 
   String get rateLabel {
     final fmt = NumberFormat('#,##0.##', 'en_US');
-    return '\$${fmt.format(dailyRateUsd)}/day';
+    return '\$${fmt.format(dailyRateUsd)}${l10n.trPerDay}';
   }
 }
 
@@ -322,7 +322,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-            colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: _emerald)),
+            colorScheme: Theme.of(ctx).colorScheme.copyWith(primary: AppTheme.accent)),
         child: child!,
       ),
     );
@@ -466,9 +466,9 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                   child: Center(child: Container(
                     width: 54, height: 54,
                     decoration: BoxDecoration(
-                      color: _emerald,
+                      color: AppTheme.accent,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.35),
+                      boxShadow: [BoxShadow(color: AppTheme.accent.withValues(alpha: 0.35),
                           blurRadius: 14, offset: const Offset(0, 5))],
                     ),
                     child: const Icon(Icons.check_rounded, color: Colors.white, size: 32),
@@ -539,7 +539,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
               ],
               const SizedBox(height: 20),
               SizedBox(
-                width: double.infinity, height: 50,
+                width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pushAndRemoveUntil(
@@ -547,15 +547,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                       (route) => route.isFirst,
                     );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _emerald,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14)),
-                    elevation: 0,
-                  ),
-                  child: Text(AppLocalizations.of(context).done,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  style: AppTheme.confirmButtonStyle(),
+                  child: Text(AppLocalizations.of(context).done),
                 ),
               ),
               SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
@@ -576,10 +569,15 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       return;
     }
     if (_isGuest) {
-      if (_guestNameCtrl.text.trim().isEmpty || _guestPhoneCtrl.text.trim().isEmpty) {
-        setState(() => _bookError = AppLocalizations.of(context).enterNamePhoneError);
+      final invalid = GuestFields.validate(AppLocalizations.of(context),
+          _guestNameCtrl.text, _guestPhoneCtrl.text);
+      if (invalid != null) {
+        setState(() => _bookError = invalid);
         return;
       }
+      // Guests confirm their phone by SMS code before booking.
+      if (!await ensureGuestPhoneVerified(context, _guestPhoneCtrl.text.trim())) return;
+      if (!mounted) return;
     }
     setState(() { _booking = true; _bookError = null; });
 
@@ -597,6 +595,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         paymentMethod:        _paymentId,
         notes:                _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
         promoCode:            _appliedCode,
+        guestName:            _isGuest ? _guestNameCtrl.text.trim()  : null,
+        guestPhone:           _isGuest ? _guestPhoneCtrl.text.trim() : null,
       );
       if (!mounted) return;
       _showConfirmation(result);
@@ -621,7 +621,9 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
     final topPad      = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: Theme.of(context).brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
       child: Scaffold(
         backgroundColor: context.appBackground,
         body: Column(children: [
@@ -631,35 +633,29 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 // ── Gradient header ───────────────────────────────────────
                 Container(
                   width: double.infinity,
-                  padding: EdgeInsets.fromLTRB(16, topPad + 12, 16, 48),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_emeraldDeep, _emerald],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
+                  padding: responsivePadding(context, maxWidth: 720, top: topPad + 12, bottom: 48),
+                  color: context.appSurface,
                   child: Row(children: [
                     Material(
-                      color: Colors.white.withValues(alpha: 0.16),
+                      color: context.appCardBg,
                       borderRadius: BorderRadius.circular(14),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(14),
                         onTap: () => Navigator.maybePop(context),
-                        child: const SizedBox(width: 44, height: 44,
+                        child: SizedBox(width: 44, height: 44,
                             child: Icon(Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white, size: 18)),
+                                color: context.appTextPrimary, size: 18)),
                       ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(l.rentalVehicleTitle, maxLines: 1, overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white,
-                                fontWeight: FontWeight.w800, fontSize: 24)),
+                            style: TextStyle(color: context.appTextPrimary,
+                                fontWeight: FontWeight.w800, fontSize: 22)),
                         const SizedBox(height: 4),
                         Text(l.rentalHeaderSubtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
+                            style: TextStyle(color: context.appTextSecondary,
                                 fontSize: 13)),
                       ]),
                     ),
@@ -677,11 +673,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                                 borderRadius: BorderRadius.circular(16),
                                 child: Image.network(car!.imageUrl!, fit: BoxFit.cover,
                                     errorBuilder: (_, __, ___) => const Icon(
-                                        Icons.electric_rickshaw, color: Colors.white, size: 64)),
+                                        Icons.electric_rickshaw, color: AppTheme.accent, size: 64)),
                               ),
                             )
-                          : Icon(Icons.electric_rickshaw,
-                              color: Colors.white.withValues(alpha: 0.9), size: 72),
+                          : const Icon(Icons.electric_rickshaw,
+                              color: AppTheme.accent, size: 72),
                     ),
                   ]),
                 ),
@@ -691,7 +687,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                   offset: const Offset(0, -28),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: responsivePadding(context, maxWidth: 720, top: 16),
                     decoration: BoxDecoration(
                       color: context.appBackground,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -734,7 +730,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                                       style: TextStyle(color: context.appTextPrimary,
                                           fontWeight: FontWeight.w800, fontSize: 15, height: 1.3)),
                                   const SizedBox(height: 4),
-                                  Text(car.rateLabel, style: const TextStyle(color: _emerald,
+                                  Text(car.rateLabel, style: const TextStyle(color: AppTheme.accent,
                                       fontWeight: FontWeight.w800, fontSize: 17)),
                                   if (car.specs.isNotEmpty) ...[
                                     const SizedBox(height: 8),
@@ -793,7 +789,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                         )),
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.arrow_forward_rounded, color: _emerald, size: 22),
+                          child: Icon(Icons.arrow_forward_rounded, color: AppTheme.accent, size: 22),
                         ),
                         Expanded(child: _DateTile(
                           label: l.endDateAutoLabel,
@@ -816,7 +812,6 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
 
                       // Guest info
                       if (_isGuest) ...[
-                        _SectionHeader(icon: Icons.person_rounded, text: l.yourInformationLabel),
                         GuestFields(nameCtrl: _guestNameCtrl, phoneCtrl: _guestPhoneCtrl),
                         const SizedBox(height: 20),
                       ],
@@ -840,7 +835,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                               borderSide: BorderSide.none),
                           focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(16),
-                              borderSide: BorderSide(color: _emerald.withValues(alpha: 0.5))),
+                              borderSide: BorderSide(color: AppTheme.accent.withValues(alpha: 0.5))),
                           contentPadding: const EdgeInsets.all(14),
                         ),
                       ),
@@ -852,16 +847,16 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: _emerald.withValues(alpha: 0.08),
+                    color: AppTheme.accent.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: _emerald.withValues(alpha: 0.3)),
+                    border: Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.local_offer_rounded, color: _emerald, size: 18),
+                    const Icon(Icons.local_offer_rounded, color: AppTheme.accent, size: 18),
                     const SizedBox(width: 10),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(_appliedCode!, style: const TextStyle(
-                          color: _emerald, fontWeight: FontWeight.w700, fontSize: 14)),
+                          color: AppTheme.accent, fontWeight: FontWeight.w700, fontSize: 14)),
                       Text('- ${AppTheme.khr(_discountKhr)} ${AppLocalizations.of(context).discountAppliedSuffix}',
                           style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                     ])),
@@ -897,7 +892,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                             borderSide: BorderSide.none),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                         prefixIcon: const Icon(Icons.local_offer_outlined,
-                            color: _emerald, size: 18),
+                            color: AppTheme.accent, size: 18),
                       ),
                     ),
                   ),
@@ -906,18 +901,11 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                     height: 50,
                     child: ElevatedButton(
                       onPressed: _applyingCoupon ? null : _applyCoupon,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _emerald,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: _emerald.withValues(alpha: 0.4),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 18),
-                      ),
+                      style: AppTheme.confirmButtonStyle(),
                       child: _applyingCoupon
                           ? const SizedBox(width: 18, height: 18,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : Text(AppLocalizations.of(context).apply, style: const TextStyle(fontWeight: FontWeight.w700)),
+                          : Text(AppLocalizations.of(context).apply),
                     ),
                   ),
                 ]),
@@ -954,7 +942,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                           const SizedBox(height: 8),
                           Row(children: [
                             Row(mainAxisSize: MainAxisSize.min, children: [
-                              const Icon(Icons.local_offer_outlined, size: 14, color: _emerald),
+                              const Icon(Icons.local_offer_outlined, size: 14, color: AppTheme.accent),
                               const SizedBox(width: 4),
                               Text(
                                 _appliedCode != null ? '${l.discountLabel} ($_appliedCode)' : l.discountLabel,
@@ -965,7 +953,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                             Text(
                               _discountKhr > 0 ? '- ${_usd(discountUsd)}' : '—',
                               style: TextStyle(
-                                color: _discountKhr > 0 ? _emerald : context.appTextSecondary,
+                                color: _discountKhr > 0 ? AppTheme.accent : context.appTextSecondary,
                                 fontWeight: _discountKhr > 0 ? FontWeight.w600 : FontWeight.w400,
                                 fontSize: 14,
                               ),
@@ -977,7 +965,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
                                 fontWeight: FontWeight.w800, fontSize: 16)),
                             const Spacer(),
                             Text(car == null ? '—' : _usd(finalUsd),
-                                style: const TextStyle(color: _emerald,
+                                style: const TextStyle(color: AppTheme.accent,
                                     fontWeight: FontWeight.w900, fontSize: 22)),
                           ]),
                         ]),
@@ -1011,40 +999,26 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
 
           // ── Book Now button ───────────────────────────────────────────────
           Container(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + MediaQuery.of(context).padding.bottom),
+            padding: responsivePadding(context, maxWidth: 720, top: 12, bottom: 12 + MediaQuery.of(context).padding.bottom),
             decoration: BoxDecoration(
               color: context.appSurface,
               boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07),
                   blurRadius: 12, offset: const Offset(0, -4))],
             ),
-            child: Opacity(
-              opacity: _booking ? 0.7 : 1,
-              child: Container(
-                height: 58,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_emeraldDeep, _emerald]),
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [BoxShadow(color: _emerald.withValues(alpha: 0.35),
-                      blurRadius: 14, offset: const Offset(0, 6))],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: _booking ? null : _bookNow,
-                    child: Center(
-                      child: _booking
-                          ? const SizedBox(width: 22, height: 22,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                          : Row(mainAxisSize: MainAxisSize.min, children: [
-                              const Icon(Icons.event_available_rounded, color: Colors.white, size: 24),
-                              const SizedBox(width: 12),
-                              Text(l.bookNowLabel, style: const TextStyle(color: Colors.white,
-                                  fontWeight: FontWeight.w800, fontSize: 18)),
-                            ]),
-                    ),
-                  ),
-                ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _booking ? null : _bookNow,
+                style: AppTheme.confirmButtonStyle(),
+                child: _booking
+                    ? const SizedBox(width: 22, height: 22,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                    : Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.event_available_rounded, size: 20),
+                        const SizedBox(width: 10),
+                        Flexible(child: Text(l.bookNowLabel,
+                            maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      ]),
               ),
             ),
           ),
@@ -1054,8 +1028,8 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
   }
 
   Widget _carFallback(_RentalCar car) => Container(
-    color: _emerald.withValues(alpha: 0.10),
-    child: Icon(car.icon, color: _emerald, size: 32),
+    color: AppTheme.accent.withValues(alpha: 0.10),
+    child: Icon(car.icon, color: AppTheme.accent, size: 32),
   );
 }
 
@@ -1114,23 +1088,23 @@ void _openSheet<T>({
                   Container(
                     width: 40, height: 40,
                     decoration: BoxDecoration(
-                      color: isSel ? _emerald.withValues(alpha: 0.12) : ctx.appCardBg,
+                      color: isSel ? AppTheme.accent.withValues(alpha: 0.12) : ctx.appCardBg,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(item.icon,
-                        color: isSel ? _emerald : ctx.appTextSecondary, size: 20),
+                        color: isSel ? AppTheme.accent : ctx.appTextSecondary, size: 20),
                   ),
                   const SizedBox(width: 14),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(item.label, style: TextStyle(
-                        color: isSel ? _emerald : ctx.appTextPrimary,
+                        color: isSel ? AppTheme.accent : ctx.appTextPrimary,
                         fontWeight: FontWeight.w600, fontSize: 14)),
                     if (item.subtitle.isNotEmpty)
                       Text(item.subtitle, style: TextStyle(
                           color: ctx.appTextSecondary, fontSize: 12)),
                   ])),
                   isSel
-                      ? const Icon(Icons.check_circle, color: _emerald, size: 20)
+                      ? const Icon(Icons.check_circle, color: AppTheme.accent, size: 20)
                       : Icon(Icons.radio_button_off, color: ctx.appTextSecondary, size: 20),
                 ]),
               ),
@@ -1182,7 +1156,7 @@ class _Bubble extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double size;
-  const _Bubble({required this.icon, this.color = _emerald, this.size = 46});
+  const _Bubble({required this.icon, this.color = AppTheme.accent, this.size = 46});
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1204,7 +1178,7 @@ class _SectionHeader extends StatelessWidget {
     child: Row(children: [
       Container(
         width: 36, height: 36,
-        decoration: const BoxDecoration(color: _emerald, shape: BoxShape.circle),
+        decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
         child: Icon(icon, color: Colors.white, size: 19),
       ),
       const SizedBox(width: 10),
@@ -1228,7 +1202,7 @@ class _SpecChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, color: _emerald, size: 15),
+      Icon(icon, color: AppTheme.accent, size: 15),
       const SizedBox(width: 5),
       Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
           style: TextStyle(color: context.appTextPrimary,
@@ -1253,7 +1227,7 @@ class _DateTile extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: radius,
         side: highlighted
-            ? BorderSide(color: _emerald.withValues(alpha: 0.4), width: 1.3)
+            ? BorderSide(color: AppTheme.accent.withValues(alpha: 0.4), width: 1.3)
             : BorderSide(color: context.appCardBg),
       ),
       child: InkWell(
@@ -1262,7 +1236,7 @@ class _DateTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           child: Row(children: [
-            const Icon(Icons.event_available_rounded, color: _emerald, size: 24),
+            const Icon(Icons.event_available_rounded, color: AppTheme.accent, size: 24),
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -1272,7 +1246,7 @@ class _DateTile extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.centerLeft,
                 child: Text(value, style: TextStyle(
-                    color: highlighted ? _emeraldDeep : context.appTextPrimary,
+                    color: highlighted ? AppTheme.accent : context.appTextPrimary,
                     fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ])),
@@ -1345,14 +1319,25 @@ class _SummaryRow extends StatelessWidget {
   final String label, value;
   const _SummaryRow(this.label, this.value);
   @override
-  Widget build(BuildContext context) => Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-    Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
-    const SizedBox(width: 12),
-    Expanded(
-      child: Text(value, textAlign: TextAlign.right, style: TextStyle(color: context.appTextPrimary,
-          fontWeight: FontWeight.w600, fontSize: 14)),
-    ),
-  ]);
+  // Label wraps in the remaining space; the value keeps its natural width,
+  // capped at ~55%, so a long title or label never squeezes the other side.
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Expanded(
+        child: Text(label, maxLines: 3, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: context.appTextSecondary, fontSize: 14, height: 1.35)),
+      ),
+      const SizedBox(width: 12),
+      ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: c.maxWidth * 0.55),
+        child: Text(value, textAlign: TextAlign.right, maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: context.appTextPrimary,
+                fontWeight: FontWeight.w600, fontSize: 14, height: 1.35)),
+      ),
+    ],
+  ));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1500,7 +1485,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
             icon: Badge(
               isLabelVisible: _hasActiveFilters,
               smallSize: 8,
-              backgroundColor: _emerald,
+              backgroundColor: AppTheme.accent,
               child: Icon(Icons.tune_rounded, color: context.appTextPrimary, size: 22),
             ),
           ),
@@ -1572,20 +1557,13 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                 blurRadius: 12, offset: const Offset(0, -4))],
           ),
           child: SizedBox(
-            width: double.infinity, height: 52,
+            width: double.infinity,
             child: ElevatedButton(
               onPressed: _selected == null ? null
                   : () => Navigator.pop(context, _toRentalCar(_selected!)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _emerald,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: _emerald.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
+              style: AppTheme.confirmButtonStyle(),
               child: Text(
                 _selected == null ? AppLocalizations.of(context).selectAVehicleLabel : '${AppLocalizations.of(context).rentDashPrefix} ${_selected!.title}',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                 maxLines: 1, overflow: TextOverflow.ellipsis,
               ),
             ),
@@ -1597,7 +1575,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
 
   Widget _buildBody(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: _emerald));
+      return const Center(child: CircularProgressIndicator(color: AppTheme.accent));
     }
     if (_error != null) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -1629,7 +1607,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
               color: context.appSurface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: selected ? _emerald : context.appCardBg,
+                color: selected ? AppTheme.accent : context.appCardBg,
                 width: selected ? 2 : 1,
               ),
               boxShadow: [BoxShadow(
@@ -1656,7 +1634,7 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                     child: Container(
                       padding: const EdgeInsets.all(5),
                       decoration: const BoxDecoration(
-                          color: _emerald, shape: BoxShape.circle),
+                          color: AppTheme.accent, shape: BoxShape.circle),
                       child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
                     ),
                   ),
@@ -1681,19 +1659,19 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
                     Expanded(
                       child: Text(p.title,
                           style: TextStyle(
-                            color: selected ? _emerald : context.appTextPrimary,
+                            color: selected ? AppTheme.accent : context.appTextPrimary,
                             fontWeight: FontWeight.w700, fontSize: 15,
                           )),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: _emerald.withValues(alpha: 0.10),
+                        color: AppTheme.accent.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text('${_usd(daily)}/day',
                           style: const TextStyle(
-                              color: _emerald,
+                              color: AppTheme.accent,
                               fontWeight: FontWeight.w800, fontSize: 13)),
                     ),
                   ]),
@@ -1764,12 +1742,12 @@ class _VehicleTypePill extends StatelessWidget {
       duration: const Duration(milliseconds: 150),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       decoration: BoxDecoration(
-        color: active ? _emerald.withValues(alpha: 0.1) : Colors.transparent,
+        color: active ? AppTheme.accent.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: active ? _emerald : const Color(0xFFE0E0E0), width: 1.5),
+        border: Border.all(color: active ? AppTheme.accent : const Color(0xFFE0E0E0), width: 1.5),
       ),
       child: Text(label,
-          style: TextStyle(color: active ? _emerald : Colors.grey.shade600,
+          style: TextStyle(color: active ? AppTheme.accent : Colors.grey.shade600,
               fontWeight: FontWeight.w600, fontSize: 12)),
     ),
   );
@@ -1784,17 +1762,17 @@ class _RentalFilterChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.only(left: 10, right: 4, top: 4, bottom: 4),
     decoration: BoxDecoration(
-      color: _emerald.withValues(alpha: 0.1),
+      color: AppTheme.accent.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: _emerald.withValues(alpha: 0.4)),
+      border: Border.all(color: AppTheme.accent.withValues(alpha: 0.4)),
     ),
     child: Row(mainAxisSize: MainAxisSize.min, children: [
-      Text(label, style: const TextStyle(color: _emerald, fontSize: 12, fontWeight: FontWeight.w600)),
+      Text(label, style: const TextStyle(color: AppTheme.accent, fontSize: 12, fontWeight: FontWeight.w600)),
       GestureDetector(
         onTap: onClear,
         child: const Padding(
           padding: EdgeInsets.all(4),
-          child: Icon(Icons.close_rounded, size: 14, color: _emerald),
+          child: Icon(Icons.close_rounded, size: 14, color: AppTheme.accent),
         ),
       ),
     ]),
@@ -1840,7 +1818,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
-        Checkbox(value: checked, activeColor: _emerald, onChanged: (_) => onTap()),
+        Checkbox(value: checked, activeColor: AppTheme.accent, onChanged: (_) => onTap()),
         Expanded(child: Text(label, style: TextStyle(color: context.appTextPrimary, fontSize: 14))),
       ]),
     ),
@@ -1877,7 +1855,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
               Text(AppLocalizations.of(context).filter, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 16)),
               GestureDetector(
                 onTap: () => setState(() { _vType = null; _vSize = null; _vColor = null; }),
-                child: Text(AppLocalizations.of(context).clearAll, style: const TextStyle(color: _emerald, fontSize: 13, fontWeight: FontWeight.w600)),
+                child: Text(AppLocalizations.of(context).clearAll, style: const TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             ]),
           ),
@@ -1913,7 +1891,7 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
                               color: _rentalSwatchFor(vc.code),
                               shape: BoxShape.circle,
                               border: Border.all(
-                                  color: _vColor == vc.id ? _emerald : const Color(0xFFE0E0E0),
+                                  color: _vColor == vc.id ? AppTheme.accent : const Color(0xFFE0E0E0),
                                   width: _vColor == vc.id ? 2.5 : 1),
                             ),
                             child: _vColor == vc.id
@@ -1936,15 +1914,11 @@ class _RentalFilterSheetState extends State<_RentalFilterSheet> {
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _emerald, foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                  style: AppTheme.confirmButtonStyle(),
                   onPressed: () => Navigator.pop(context, _RentalFilterSelection(
                     vehicleTypeId: _vType, vehicleSizeId: _vSize, vehicleColorId: _vColor,
                   )),
-                  child: Text(AppLocalizations.of(context).apply, style: const TextStyle(fontWeight: FontWeight.w700)),
+                  child: Text(AppLocalizations.of(context).apply),
                 ),
               ),
             ),
@@ -1966,7 +1940,7 @@ class _ConfRow extends StatelessWidget {
       Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
       const Spacer(),
       Text(value, style: TextStyle(
-        color: highlight ? _emerald : context.appTextPrimary,
+        color: highlight ? AppTheme.accent : context.appTextPrimary,
         fontWeight: highlight ? FontWeight.w800 : FontWeight.w600,
         fontSize: highlight ? 15 : 13,
       )),

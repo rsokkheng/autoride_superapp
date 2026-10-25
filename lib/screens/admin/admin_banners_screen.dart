@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminBannersScreen extends StatefulWidget {
   const AdminBannersScreen({super.key});
@@ -37,8 +38,8 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Banner', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Remove this banner?', style: TextStyle(color: context.appTextSecondary)),
+        title: Text(AppLocalizations.of(context).trDeleteBanner, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text(AppLocalizations.of(context).trRemoveBannerQ, style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Delete')),
@@ -69,7 +70,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: Text('Banners')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).trBanners)),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.accent,
         child: Icon(Icons.add, color: Colors.white),
@@ -84,7 +85,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _banners.isEmpty
-                  ? Center(child: Text('No banners yet.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoBannersYet, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -94,7 +95,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                         separatorBuilder: (_, __) => const SizedBox(height: 10),
                         itemBuilder: (_, i) {
                           final b     = _banners[i];
-                          final title = b['title'] as String? ?? 'Untitled';
+                          final title = b['title'] as String? ?? AppLocalizations.of(context).trUntitled;
                           final img   = b['image_url'] as String? ?? b['image'] as String? ?? '';
                           final active = b['active'] == true || b['is_active'] == true;
 
@@ -111,10 +112,10 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                                   : Container(width: 52, height: 52, decoration: BoxDecoration(color: context.appCardBg, borderRadius: BorderRadius.circular(8)), child: Icon(Icons.image_outlined, color: context.appTextSecondary, size: 24)),
                               title: Text(title, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
                               subtitle: active
-                                  ? Text('Active', style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600))
-                                  : Text('Inactive', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                                  ? Text(AppLocalizations.of(context).trActive, style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600))
+                                  : Text(AppLocalizations.of(context).trInactive, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                                IconButton(icon: Icon(Icons.edit_outlined, color: context.appTextSecondary, size: 20), onPressed: () => _showForm(b), tooltip: 'Edit'),
+                                IconButton(icon: Icon(Icons.edit_outlined, color: context.appTextSecondary, size: 20), onPressed: () => _showForm(b), tooltip: AppLocalizations.of(context).trEdit),
                                 IconButton(icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20), onPressed: () => _delete(b), tooltip: 'Delete'),
                               ]),
                               ),
@@ -191,7 +192,7 @@ class _BannerFormState extends State<_BannerForm> {
       padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text(widget.existing == null ? 'New Banner' : 'Edit Banner', style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
+          Expanded(child: Text(widget.existing == null ? AppLocalizations.of(context).trNewBanner : AppLocalizations.of(context).trEditBanner, style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
           IconButton(icon: Icon(Icons.close, color: context.appTextSecondary), onPressed: () => Navigator.pop(context)),
         ]),
         if (_error != null) ...[
@@ -199,14 +200,14 @@ class _BannerFormState extends State<_BannerForm> {
           Text(_error!, style: TextStyle(color: AppTheme.danger, fontSize: 13)),
         ],
         SizedBox(height: 16),
-        _FormField(controller: _titleCtrl,    hint: 'Title'),
+        _FormField(controller: _titleCtrl,    hint: AppLocalizations.of(context).trTitle),
         SizedBox(height: 10),
-        _FormField(controller: _subtitleCtrl, hint: 'Subtitle / Description'),
+        _FormField(controller: _subtitleCtrl, hint: AppLocalizations.of(context).trSubtitleDescription),
         SizedBox(height: 10),
-        _FormField(controller: _imgCtrl,      hint: 'Image URL (optional)'),
+        _FormField(controller: _imgCtrl,      hint: AppLocalizations.of(context).trImageUrlOptional),
         SizedBox(height: 12),
         Row(children: [
-          Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+          Text(AppLocalizations.of(context).trActive, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
           const Spacer(),
           Switch(value: _active, onChanged: (v) => setState(() => _active = v), activeColor: AppTheme.accent),
         ]),
@@ -214,7 +215,7 @@ class _BannerFormState extends State<_BannerForm> {
         SizedBox(width: double.infinity, child: ElevatedButton(
           onPressed: _saving ? null : _save,
           style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
-          child: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Banner'),
+          child: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(AppLocalizations.of(context).trSaveBanner),
         )),
       ]),
     );

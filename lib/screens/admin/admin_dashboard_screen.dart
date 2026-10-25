@@ -18,8 +18,9 @@ import 'admin_pricing_screen.dart';
 import 'admin_safety_screen.dart';
 import 'admin_transactions_screen.dart';
 import 'admin_notifications_screen.dart';
+import '../../widgets/tablet_frame.dart';
 
-class AdminDashboardScreen extends StatefulWidget {
+class AdminDashboardScreen extends StatefulWidget implements TabletFullWidth {
   const AdminDashboardScreen({super.key});
 
   @override
@@ -103,7 +104,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: const Icon(Icons.admin_panel_settings_rounded, color: Colors.white, size: 18),
           ),
           const SizedBox(width: 10),
-          const Flexible(child: Text('Admin Dashboard', overflow: TextOverflow.ellipsis)),
+          Flexible(child: Text(AppLocalizations.of(context).trAdminDashboard, overflow: TextOverflow.ellipsis)),
         ]),
         actions: [
           IconButton(
@@ -116,10 +117,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: const Icon(Icons.notifications_outlined),
             ),
           ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _load, tooltip: 'Refresh'),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _load, tooltip: AppLocalizations.of(context).trRefresh),
           IconButton(
             icon: const Icon(Icons.logout),
-            tooltip: 'Sign Out',
+            tooltip: AppLocalizations.of(context).trSignOut,
             onPressed: () async {
               await ApiService.adminLogout();
               if (!mounted) return;
@@ -235,7 +236,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (maxRevenue == 0) return const SizedBox.shrink();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Revenue (7 days)', style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+      Text(AppLocalizations.of(context).trRevenue7Days, style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
       SizedBox(height: 12),
       Container(
         padding: EdgeInsets.all(16),

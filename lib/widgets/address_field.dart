@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:autoride_superapp/theme/app_theme.dart';
+import '../l10n/app_localizations.dart';
 
 // Android key is unrestricted for HTTP — safe to use on both platforms.
 // The iOS key (in AppDelegate.swift) is SDK-only and cannot make HTTP calls.
@@ -435,7 +436,7 @@ class _PickerSheetState extends State<_PickerSheet>
           style: TextStyle(color: context.appTextPrimary),
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
-            hintText: 'Search address, place or landmark…',
+            hintText: AppLocalizations.of(context).trSearchAddressHint,
             hintStyle: TextStyle(color: context.appTextSecondary),
             prefixIcon: Icon(Icons.search,
                 color: context.appTextSecondary, size: 20),
@@ -522,12 +523,12 @@ class _PickerSheetState extends State<_PickerSheet>
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Use my current location',
+                    Text(AppLocalizations.of(context).trUseMyLocation,
                         style: TextStyle(
                             color: context.appTextPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14)),
-                    Text('Detected via GPS',
+                    Text(AppLocalizations.of(context).trDetectedViaGps,
                         style: TextStyle(
                             color: context.appTextSecondary, fontSize: 12)),
                   ]),
@@ -557,8 +558,8 @@ class _PickerSheetState extends State<_PickerSheet>
                       const SizedBox(height: 8),
                       Text(
                           _searchCtrl.text.isEmpty
-                              ? 'Type to search for a place'
-                              : 'No results for "${_searchCtrl.text}"',
+                              ? AppLocalizations.of(context).trTypeToSearchPlace
+                              : AppLocalizations.of(context).trNoResultsFor(_searchCtrl.text),
                           style: TextStyle(
                               color: context.appTextSecondary, fontSize: 13)),
                     ]),
@@ -687,7 +688,7 @@ class _PickerSheetState extends State<_PickerSheet>
                           else
                             Text(
                               addr.isEmpty
-                                  ? 'Move the map to set location'
+                                  ? AppLocalizations.of(context).trMoveTheMapToSet
                                   : addr,
                               style: TextStyle(
                                 color: addr.isEmpty
@@ -752,7 +753,7 @@ class _PickerSheetState extends State<_PickerSheet>
                   elevation: canConfirm ? 2 : 0,
                 ),
                 icon: const Icon(Icons.check_circle_outline),
-                label: const Text('Use this location',
+                label: Text(AppLocalizations.of(context).trUseThisLocation,
                     style: TextStyle(
                         fontWeight: FontWeight.w700, fontSize: 15)),
                 onPressed: canConfirm

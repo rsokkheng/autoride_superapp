@@ -137,7 +137,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('Could not send photo: $e'),
+        content: Text(AppLocalizations.of(context).couldNotSendPhoto(e)),
         backgroundColor: AppTheme.danger,
         behavior: SnackBarBehavior.floating,
       ));
@@ -156,7 +156,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
             leading: Icon(Icons.photo_camera_outlined, color: AppTheme.accent),
-            title: Text('Take a photo', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).takeAPhoto, style: TextStyle(color: context.appTextPrimary)),
             onTap: () {
               Navigator.pop(context);
               _pickAndSendImage(ImageSource.camera);
@@ -164,7 +164,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
           ),
           ListTile(
             leading: Icon(Icons.photo_library_outlined, color: AppTheme.accent),
-            title: Text('Upload from gallery', style: TextStyle(color: context.appTextPrimary)),
+            title: Text(AppLocalizations.of(context).uploadFromGallery, style: TextStyle(color: context.appTextPrimary)),
             onTap: () {
               Navigator.pop(context);
               _pickAndSendImage(ImageSource.gallery);
@@ -228,7 +228,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                         });
                         _initChat();
                       },
-                      child: const Text('Retry'),
+                      child: Text(AppLocalizations.of(context).retry),
                     ),
                   ]),
                 )
@@ -254,7 +254,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                             child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Text(
-                                  'Could not load messages: ${snapshot.error}',
+                                  AppLocalizations.of(context).couldNotLoadMessages(snapshot.error ?? ''),
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                       color: AppTheme.danger)),
@@ -273,7 +273,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                                           .withValues(alpha: 0.4),
                                       size: 56),
                                   SizedBox(height: 12),
-                                  Text('No messages yet. Say hello!',
+                                  Text(AppLocalizations.of(context).noMessagesSayHello,
                                       style: TextStyle(
                                           color:
                                               context.appTextSecondary)),
@@ -329,7 +329,7 @@ class _RideChatScreenState extends State<RideChatScreen> {
                             textInputAction: TextInputAction.newline,
                             onSubmitted: (_) => _send(),
                             decoration: InputDecoration(
-                              hintText: 'Type a message...',
+                              hintText: AppLocalizations.of(context).typeAMessageHint,
                               hintStyle: TextStyle(
                                   color: context.appTextSecondary),
                               filled: true,

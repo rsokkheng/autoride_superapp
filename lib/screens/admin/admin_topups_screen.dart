@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminTopupsScreen extends StatefulWidget {
   const AdminTopupsScreen({super.key});
@@ -36,7 +37,7 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
     try {
       await ApiService.approveAdminTopup(id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Top-up approved & wallet credited.'), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).trTopUpApproved), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
       await _load();
     } catch (e) {
       if (!mounted) return;
@@ -53,11 +54,11 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reject Top-up', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context).trRejectTopUp, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Reason:', style: TextStyle(color: context.appTextSecondary)), SizedBox(height: 10),
+          Text(AppLocalizations.of(context).trReasonColon, style: TextStyle(color: context.appTextSecondary)), SizedBox(height: 10),
           TextField(controller: ctrl, style: TextStyle(color: context.appTextPrimary),
-            decoration: InputDecoration(hintText: 'Enter reason', hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
+            decoration: InputDecoration(hintText: AppLocalizations.of(context).trEnterReason, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
@@ -69,7 +70,7 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
     try {
       await ApiService.rejectAdminTopup(id, ctrl.text.trim());
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rejected.'), backgroundColor: AppTheme.warning, behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).trRejectedDot), backgroundColor: AppTheme.warning, behavior: SnackBarBehavior.floating));
       await _load();
     } catch (e) {
       if (!mounted) return;
@@ -82,7 +83,7 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Top-up Requests'),
+        title: Text(AppLocalizations.of(context).trTopUpRequests),
         actions: [
           PopupMenuButton<String>(
             color: context.appSurface,
@@ -106,7 +107,7 @@ class _AdminTopupsScreenState extends State<AdminTopupsScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _items.isEmpty
-                  ? Center(child: Text('No top-up requests.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoTopUpRequests, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,

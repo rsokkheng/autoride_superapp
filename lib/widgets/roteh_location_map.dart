@@ -25,7 +25,7 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
   GoogleMapController? _ctrl;
   late final LatLng _resolved = widget.pin ?? kRotehPin;
 
-  static const _green = Color(0xFF0E9F6E);
+  static const _green = AppTheme.accent;
 
   @override
   void dispose() {
@@ -88,8 +88,8 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
                   icon: BitmapDescriptor.defaultMarkerWithHue(
                       BitmapDescriptor.hueGreen),
                   infoWindow: InfoWindow(
-                    title: widget.addressLabel ?? 'Pick-up Location',
-                    snippet: 'Tap to open Google Maps',
+                    title: widget.addressLabel ?? AppLocalizations.of(context).pickupLocation,
+                    snippet: AppLocalizations.of(context).trTapOpenGoogleMaps,
                     onTap: _openGoogleMaps,
                   ),
                   onTap: _openGoogleMaps,
@@ -112,18 +112,18 @@ class _RotehLocationMapState extends State<RotehLocationMap> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0B4F4A),
+                    color: AppTheme.confirmBlue,
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2),
                         blurRadius: 8, offset: const Offset(0, 3))],
                   ),
-                  child: const Row(
+                  child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                     Icon(Icons.open_in_new_rounded,
                         color: Colors.white, size: 16),
                     SizedBox(width: 6),
-                    Text('Open in Maps',
+                    Text(AppLocalizations.of(context).trOpenInMaps,
                         style: TextStyle(
                             color: Colors.white, fontSize: 12,
                             fontWeight: FontWeight.w600)),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -55,18 +56,18 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Credit $name', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context).trCreditName(name), style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _DialogField(controller: amtCtrl, hint: 'Amount (KHR)', type: TextInputType.number),
+          _DialogField(controller: amtCtrl, hint: AppLocalizations.of(context).trAmountKhr, type: TextInputType.number),
           SizedBox(height: 12),
-          _DialogField(controller: noteCtrl, hint: 'Note (optional)'),
+          _DialogField(controller: noteCtrl, hint: AppLocalizations.of(context).trNoteOptional),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-            child: const Text('Credit'),
+            child: Text(AppLocalizations.of(context).trCredit),
           ),
         ],
       ),
@@ -77,8 +78,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
     try {
       await ApiService.creditAdminUser(id, amt, note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Credit applied.'), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating,
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).trCreditApplied), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating,
       ));
     } catch (e) {
       if (!mounted) return;
@@ -97,11 +98,11 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete User', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Permanently delete $name?', style: TextStyle(color: context.appTextSecondary)),
+        title: Text(AppLocalizations.of(context).trDeleteUser, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text(AppLocalizations.of(context).trPermanentlyDelete(name), style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Delete')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: Text(AppLocalizations.of(context).trDelete)),
         ],
       ),
     );
@@ -121,7 +122,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: Text('Users')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).trUsers)),
       body: Column(children: [
         Padding(
           padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -131,7 +132,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                 controller: _searchCtrl,
                 style: TextStyle(color: context.appTextPrimary),
                 decoration: InputDecoration(
-                  hintText: 'Search by name / email…',
+                  hintText: AppLocalizations.of(context).trSearchNameEmail,
                   hintStyle: TextStyle(color: context.appTextSecondary),
                   prefixIcon: Icon(Icons.search, color: context.appTextSecondary, size: 20),
                   filled: true,
@@ -148,7 +149,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               icon: Icon(Icons.filter_list_rounded, color: _roleFilter != null ? AppTheme.accent : context.appTextSecondary),
               onSelected: (v) { setState(() => _roleFilter = v); _load(); },
               itemBuilder: (_) => [
-                PopupMenuItem(value: null,        child: Text('All Roles',  style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: null,        child: Text(AppLocalizations.of(context).trAllRoles,  style: TextStyle(color: context.appTextPrimary))),
                 PopupMenuItem(value: 'passenger', child: Text('Passenger',  style: TextStyle(color: context.appTextPrimary))),
                 PopupMenuItem(value: 'driver',    child: Text('Driver',     style: TextStyle(color: context.appTextPrimary))),
                 PopupMenuItem(value: 'admin',     child: Text('Admin',      style: TextStyle(color: context.appTextPrimary))),
@@ -171,7 +172,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       const SizedBox(height: 16),
       ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
     ]));
-    if (_users.isEmpty) return Center(child: Text('No users found.', style: TextStyle(color: context.appTextSecondary)));
+    if (_users.isEmpty) return Center(child: Text(AppLocalizations.of(context).trNoUsersFound, style: TextStyle(color: context.appTextSecondary)));
     return RefreshIndicator(
       onRefresh: _load,
       color: AppTheme.accent,
@@ -214,8 +215,8 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
                   if (v == 'delete') _deleteUser(u);
                 },
                 itemBuilder: (_) => [
-                  PopupMenuItem(value: 'credit', child: Text('Credit Wallet', style: TextStyle(color: context.appTextPrimary))),
-                  PopupMenuItem(value: 'delete', child: Text('Delete', style: TextStyle(color: AppTheme.danger))),
+                  PopupMenuItem(value: 'credit', child: Text(AppLocalizations.of(context).trCreditWallet, style: TextStyle(color: context.appTextPrimary))),
+                  PopupMenuItem(value: 'delete', child: Text(AppLocalizations.of(context).trDelete, style: TextStyle(color: AppTheme.danger))),
                 ],
               ),
             ),

@@ -47,6 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return [
       _OnboardPage(
         icon: Icons.electric_rickshaw,
+        image: 'assets/library/icon_fa.png', // ROTEH logo on the welcome page
         color: const Color(0xFF00B14F),
         title: l.onboardWelcomeTitle,
         subtitle: l.onboardWelcomeSubtitle,
@@ -202,7 +203,12 @@ class _PageView extends StatelessWidget {
               color: page.color.withValues(alpha: 0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(page.icon, color: page.color, size: 72),
+            child: page.image != null
+                ? Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Image.asset(page.image!, fit: BoxFit.contain),
+                  )
+                : Icon(page.icon, color: page.color, size: 72),
           ),
           SizedBox(height: 40),
           Text(
@@ -234,11 +240,14 @@ class _PageView extends StatelessWidget {
 
 class _OnboardPage {
   final IconData icon;
+  /// Optional asset image shown instead of [icon].
+  final String? image;
   final Color color;
   final String title;
   final String subtitle;
   const _OnboardPage({
     required this.icon,
+    this.image,
     required this.color,
     required this.title,
     required this.subtitle,

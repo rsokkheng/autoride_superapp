@@ -9,6 +9,7 @@ import 'onboarding/onboarding_screen.dart';
 import 'passenger/passenger_home.dart';
 import 'driver/driver_home.dart';
 import 'admin/admin_dashboard_screen.dart';
+import '../widgets/tablet_frame.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -64,7 +65,8 @@ class _SplashScreenState extends State<SplashScreen>
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, __, ___) => destination,
+        // PageRouteBuilder skips the theme's tablet framing — frame it here.
+        pageBuilder: (_, __, ___) => TabletFrame(child: destination),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
       ),

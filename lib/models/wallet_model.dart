@@ -1,3 +1,4 @@
+import '../l10n/l10n.dart';
 class WalletTransactionModel {
   final int     id;
   final int     userId;
@@ -59,12 +60,12 @@ class WalletTransactionModel {
   String get displayLabel {
     if (note != null && note!.isNotEmpty) return note!;
     switch (type) {
-      case 'top_up':              return 'Wallet Top-up';
-      case 'trip_earning':        return 'Trip Earning';
-      case 'platform_commission': return 'Platform Fee';
-      case 'bonus':               return 'Bonus Credit';
-      case 'trip_payment':        return 'Trip Payment';
-      case 'refund':              return 'Refund';
+      case 'top_up':              return l10n.trWalletTopUp;
+      case 'trip_earning':        return l10n.trTripEarning;
+      case 'platform_commission': return l10n.trPlatformFee;
+      case 'bonus':               return l10n.trBonusCredit;
+      case 'trip_payment':        return l10n.trTripPayment;
+      case 'refund':              return l10n.trRefund;
       default:                    return type.replaceAll('_', ' ');
     }
   }
@@ -75,9 +76,9 @@ class WalletTransactionModel {
       final now = DateTime.now();
       final diff = now.difference(dt);
       if (diff.inDays == 0) {
-        return 'Today, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+        return l10n.trTodayAt('${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}');
       } else if (diff.inDays == 1) {
-        return 'Yesterday';
+        return l10n.yesterday;
       } else {
         return '${dt.day}/${dt.month}/${dt.year}';
       }

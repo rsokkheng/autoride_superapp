@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/phone_utils.dart';
@@ -31,9 +32,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool    _loading    = false;
   String? _error;
 
+  // (backend value, icon) — labels come from AppLocalizations.
   static const _driverTypes = [
-    ('owner',    'Owner',    Icons.person_outlined),
-    ('rental',   'Rental',   Icons.car_rental_outlined),
+    ('owner',  Icons.person_outlined),
+    ('rental', Icons.car_rental_outlined),
   ];
 
   static const _cities = [
@@ -92,13 +94,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
         backgroundColor: context.appSurface,
         elevation: 0,
         leading: BackButton(color: context.appTextPrimary),
-        title: Text('Create Account',
+        title: Text(l.createAccount,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
       body: SafeArea(
@@ -118,29 +121,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Image.asset('assets/library/icon_fa.png', width: 40, height: 40),
                   ),
                   SizedBox(height: 12),
-                  Text('Join ROTEH',
+                  Text(l.regJoinTitle,
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: context.appTextPrimary)),
                   SizedBox(height: 4),
-                  Text('Fast, safe rides in Cambodia',
+                  Text(l.regTagline, textAlign: TextAlign.center,
                       style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ]),
               ),
               SizedBox(height: 28),
 
               // ── Role ──────────────────────────────────────────────────────
-              Text('I want to',
+              Text(l.regIWantTo,
                   style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
               SizedBox(height: 8),
               Row(children: [
                 _RoleChip(
-                  label: 'Ride as Passenger',
+                  label: l.regRideAsPassenger,
                   icon:  Icons.person_outline,
                   selected: _role == 'passenger',
                   onTap: () => setState(() => _role = 'passenger'),
                 ),
                 SizedBox(width: 10),
                 _RoleChip(
-                  label: 'Drive & Earn',
+                  label: l.regDriveAndEarn,
                   icon:  Icons.electric_rickshaw,
                   selected: _role == 'driver',
                   onTap: () => setState(() => _role = 'driver'),
@@ -150,7 +153,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
               // ── Driver-only fields ────────────────────────────────────────
               if (_role == 'driver') ...[
-                Text('Driver Type',
+                Text(l.driverType,
                     style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 Row(children: _driverTypes.map((t) {
@@ -168,9 +171,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           border: Border.all(color: selected ? _green : Colors.transparent, width: 1.5),
                         ),
                         child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(t.$3, color: selected ? _green : context.appTextSecondary, size: 20),
+                          Icon(t.$2, color: selected ? _green : context.appTextSecondary, size: 20),
                           SizedBox(height: 4),
-                          Text(t.$2,
+                          Text(t.$1 == 'owner' ? l.regOwner : l.rental,
                               style: TextStyle(
                                   color: selected ? _green : context.appTextSecondary,
                                   fontSize: 11, fontWeight: FontWeight.w600)),
@@ -182,16 +185,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(height: 14),
 
                 // City
-                _Label('City'),
+                _Label(l.city),
                 SizedBox(height: 6),
                 DropdownButtonFormField<String>(
                   value: _cityCtrl.text.isEmpty ? null : _cityCtrl.text,
                   dropdownColor: context.appSurface,
                   style: TextStyle(color: context.appTextPrimary, fontSize: 14),
-                  decoration: _inputDecoration('Select your city', Icons.location_city_outlined),
-                  items: _cities.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  decoration: _inputDecoration(l.regSelectCity, Icons.location_city_outlined),
+                  items: _cities.map((c) => DropdownMenuItem(value: c, child: Text(l.cityName(c)))).toList(),
                   onChanged: (v) => _cityCtrl.text = v ?? '',
-                  validator: (v) => (v == null || v.isEmpty) ? 'City is required' : null,
+                  validator: (v) => (v == null || v.isEmpty) ? l.regCityRequired : null,
                 ),
                 const SizedBox(height: 14),
               ],
@@ -199,26 +202,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
               // ── Common fields ─────────────────────────────────────────────
               _Field(
                 controller: _namCtrl,
-                label: 'Full Name', hint: 'Sokha Chan',
+                label: l.fullName, hint: 'Sokha Chan',
                 icon:  Icons.person_outline,
-                validator: (v) => (v?.trim().isEmpty ?? true) ? 'Name is required' : null,
+                validator: (v) => (v?.trim().isEmpty ?? true) ? l.regNameRequired : null,
               ),
               const SizedBox(height: 14),
               _Field(
                 controller: _emailCtrl,
-                label: 'Email', hint: 'you@example.com',
+                label: l.email, hint: 'you@example.com',
                 icon:  Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
                 validator: (v) {
-                  if (v == null || v.trim().isEmpty) return 'Email is required';
-                  if (!v.contains('@')) return 'Enter a valid email';
+                  if (v == null || v.trim().isEmpty) return l.regEmailRequired;
+                  if (!v.contains('@')) return l.regEmailInvalid;
                   return null;
                 },
               ),
               SizedBox(height: 14),
               _Field(
                 controller: _phoneCtrl,
-                label: 'Phone (optional)', hint: 'xxx xxx xxx',
+                label: l.regPhoneOptional, hint: '012 345 678',
                 icon:  Icons.phone_outlined,
                 keyboardType: TextInputType.phone,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -226,7 +229,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(height: 14),
               _Field(
                 controller: _passCtrl,
-                label: 'Password', hint: '••••••••',
+                label: l.password, hint: '••••••••',
                 icon:  Icons.lock_outline,
                 obscureText: _obscureP,
                 suffixIcon: IconButton(
@@ -234,12 +237,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: context.appTextSecondary, size: 20),
                   onPressed: () => setState(() => _obscureP = !_obscureP),
                 ),
-                validator: (v) => (v?.length ?? 0) < 8 ? 'At least 8 characters' : null,
+                validator: (v) => (v?.length ?? 0) < 8 ? l.regPasswordMin : null,
               ),
               SizedBox(height: 14),
               _Field(
                 controller: _confCtrl,
-                label: 'Confirm Password', hint: '••••••••',
+                label: l.confirmPassword, hint: '••••••••',
                 icon:  Icons.lock_outline,
                 obscureText: _obscureC,
                 suffixIcon: IconButton(
@@ -247,12 +250,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: context.appTextSecondary, size: 20),
                   onPressed: () => setState(() => _obscureC = !_obscureC),
                 ),
-                validator: (v) => v != _passCtrl.text ? 'Passwords do not match' : null,
+                validator: (v) => v != _passCtrl.text ? l.regPasswordMismatch : null,
               ),
               SizedBox(height: 14),
               _Field(
                 controller: _referCtrl,
-                label: 'Referral Code (optional)', hint: 'ROTEH2026',
+                label: l.regReferralOptional, hint: 'ROTEH2026',
                 icon:  Icons.card_giftcard_outlined,
               ),
               SizedBox(height: 20),
@@ -288,18 +291,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: _loading
                       ? SizedBox(width: 22, height: 22,
                           child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
-                      : Text(_role == 'driver' ? 'Register & Upload Documents' : 'Create Account',
+                      : Text(_role == 'driver' ? l.regRegisterUpload : l.createAccount,
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
               ),
               SizedBox(height: 16),
 
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('Already have an account? ',
+              Wrap(alignment: WrapAlignment.center, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                Text(l.alreadyHaveAccount,
                     style: TextStyle(color: context.appTextSecondary)),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Text('Sign In',
+                  child: Text(l.signIn,
                       style: TextStyle(color: _green, fontWeight: FontWeight.w700)),
                 ),
               ]),

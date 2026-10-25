@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class FareManagementScreen extends StatefulWidget {
   const FareManagementScreen({super.key});
@@ -55,10 +56,10 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Fare Rule',
+        title: Text(AppLocalizations.of(context).trDeleteFareRule,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text(
-          'Delete fare rule for "${rule['vehicle_type'] ?? rule['name'] ?? 'this vehicle'}"?',
+          'Delete fare rule for "${rule['vehicle_type'] ?? rule['name'] ?? AppLocalizations.of(context).trThisVehicle}"?',
           style: TextStyle(color: context.appTextSecondary),
         ),
         actions: [
@@ -91,7 +92,7 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Fare Management'),
+        title: Text(AppLocalizations.of(context).trFareManagement),
         actions: [
           IconButton(icon: Icon(Icons.refresh), onPressed: _load),
         ],
@@ -100,7 +101,7 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
         onPressed: () => _showEditSheet(),
         backgroundColor: AppTheme.accent,
         icon: Icon(Icons.add, color: Colors.white),
-        label: Text('Add Rule',
+        label: Text(AppLocalizations.of(context).trAddRule,
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
@@ -121,7 +122,7 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
                   color: AppTheme.accent,
                   child: _rules.isEmpty
                       ? Center(
-                          child: Text('No fare rules configured.',
+                          child: Text(AppLocalizations.of(context).trNoFareRules,
                               style: TextStyle(color: context.appTextSecondary)))
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -227,9 +228,9 @@ class _FareTile extends StatelessWidget {
         Divider(height: 1, color: context.appCardBg),
         const SizedBox(height: 12),
         Row(children: [
-          _FareStat(label: 'Base Fare', value: AppTheme.khr(baseFare is int ? baseFare : (baseFare as num).toInt())),
-          _FareStat(label: 'Per KM', value: AppTheme.khr(perKm is int ? perKm : (perKm as num).toInt())),
-          _FareStat(label: 'Minimum', value: AppTheme.khr(minFare is int ? minFare : (minFare as num).toInt())),
+          _FareStat(label: AppLocalizations.of(context).trBaseFare, value: AppTheme.khr(baseFare is int ? baseFare : (baseFare as num).toInt())),
+          _FareStat(label: AppLocalizations.of(context).trPerKm, value: AppTheme.khr(perKm is int ? perKm : (perKm as num).toInt())),
+          _FareStat(label: AppLocalizations.of(context).trMinimum, value: AppTheme.khr(minFare is int ? minFare : (minFare as num).toInt())),
         ]),
       ]),
     );
@@ -305,8 +306,8 @@ class _FareEditSheetState extends State<_FareEditSheet> {
     final min   = int.tryParse(_minCtrl.text.trim());
 
     if (base == null || perKm == null || min == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Please fill all fare fields with valid numbers.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).trFillFareFields),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -361,7 +362,7 @@ class _FareEditSheetState extends State<_FareEditSheet> {
                   borderRadius: BorderRadius.circular(2)))),
           SizedBox(height: 20),
 
-          Text(widget.rule != null ? 'Edit Fare Rule' : 'New Fare Rule',
+          Text(widget.rule != null ? AppLocalizations.of(context).trEditFareRule : AppLocalizations.of(context).trNewFareRule,
               style: TextStyle(color: context.appTextPrimary,
                   fontSize: 18, fontWeight: FontWeight.w800)),
           SizedBox(height: 20),
@@ -388,11 +389,11 @@ class _FareEditSheetState extends State<_FareEditSheet> {
           }).toList()),
 
           SizedBox(height: 16),
-          _Input(controller: _baseCtrl, label: 'Base Fare (KHR)', hint: 'e.g. 2000'),
+          _Input(controller: _baseCtrl, label: AppLocalizations.of(context).trBaseFareKhr, hint: 'e.g. 2000'),
           SizedBox(height: 12),
-          _Input(controller: _perKmCtrl, label: 'Per KM Rate (KHR)', hint: 'e.g. 1500'),
+          _Input(controller: _perKmCtrl, label: AppLocalizations.of(context).trPerKmRateKhr, hint: 'e.g. 1500'),
           SizedBox(height: 12),
-          _Input(controller: _minCtrl, label: 'Minimum Fare (KHR)', hint: 'e.g. 3000'),
+          _Input(controller: _minCtrl, label: AppLocalizations.of(context).trMinimumFareKhr, hint: 'e.g. 3000'),
           SizedBox(height: 16),
 
           Row(children: [
@@ -411,7 +412,7 @@ class _FareEditSheetState extends State<_FareEditSheet> {
               child: _submitting
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.rule != null ? 'Save Changes' : 'Create Rule'),
+                  : Text(widget.rule != null ? 'Save Changes' : AppLocalizations.of(context).trCreateRule),
             ),
           ),
         ]),

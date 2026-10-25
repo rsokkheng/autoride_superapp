@@ -4,6 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../theme/app_theme.dart';
 import '../services/maps_service.dart';
 import '../utils/location_display.dart';
+import 'tablet_frame.dart';
+import '../l10n/app_localizations.dart';
 
 /// Result of picking a location: a human-readable address plus coordinates.
 class LocationPickResult {
@@ -14,7 +16,7 @@ class LocationPickResult {
 
 /// Full-screen map picker — drag the map to move the center pin, or search
 /// for a location by name. Confirms with the resolved address + coordinates.
-class LocationPickerScreen extends StatefulWidget {
+class LocationPickerScreen extends StatefulWidget implements TabletFullWidth {
   final String title;
   final Color  pinColor;
   final LatLng? initial;
@@ -155,7 +157,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                       onChanged: _onSearchChanged,
                       style: TextStyle(color: context.appTextPrimary, fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Search location…',
+                        hintText: AppLocalizations.of(context).trSearchLocation,
                         hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
                         prefixIcon: _searching
                             ? Padding(
@@ -247,10 +249,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                               child: CircularProgressIndicator(
                                   color: AppTheme.accent, strokeWidth: 2)),
                           const SizedBox(width: 10),
-                          Text('Finding address…',
+                          Text(AppLocalizations.of(context).trFindingAddress,
                               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                         ])
-                      : Text(_address.isEmpty ? 'Move map to set location' : _address,
+                      : Text(_address.isEmpty ? AppLocalizations.of(context).trMoveMapToSet : _address,
                           style: TextStyle(
                             color: _address.isEmpty
                                 ? context.appTextSecondary
@@ -271,7 +273,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     ));
                   },
                   style: AppTheme.confirmButtonStyle(),
-                  child: const Text('Confirm Location'),
+                  child: Text(AppLocalizations.of(context).trConfirmLocation),
                 ),
               ),
             ]),

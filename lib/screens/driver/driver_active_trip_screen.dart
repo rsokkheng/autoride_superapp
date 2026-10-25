@@ -18,6 +18,7 @@ import '../../models/driver_marker_model.dart';
 import '../../models/ride_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'driver_trip_summary_screen.dart';
+import '../../widgets/tablet_frame.dart';
 
 enum _TripPhase { headingToPickup, waitingAtPickup, inProgress, completed }
 
@@ -26,7 +27,7 @@ const _kCambodiaSW = LatLng(10.4, 102.3);
 const _kCambodiaNE = LatLng(14.7, 107.6);
 final _kCambodiaBounds = LatLngBounds(southwest: _kCambodiaSW, northeast: _kCambodiaNE);
 
-class DriverActiveTripScreen extends StatefulWidget {
+class DriverActiveTripScreen extends StatefulWidget implements TabletFullWidth {
   final RideModel? ride;
   final String passengerName;
   final String passengerRating;
@@ -331,7 +332,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         position: LatLng(s.lat, s.lng),
         icon: BitmapDescriptor.defaultMarkerWithHue(
             s.arrived ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueOrange),
-        infoWindow: InfoWindow(title: 'Stop ${i + 1}: ${s.address}'),
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).trStopWithAddress(i + 1, s.address)),
       ));
     }
 
@@ -1121,10 +1122,10 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             Text(
               suggested != null
                   ? '${AppLocalizations.of(context).tripHadNoDestinationSuggested} '
-                    'from ${suggested.distanceKm.toStringAsFixed(1)} km ${AppLocalizations.of(context).fromDistanceTravelledAdjust}'
-                  : "This trip had no destination set — enter the metered fare to complete it.\n"
-                    "Couldn't auto-calculate a suggestion: "
-                    "${_meteredFareError ?? AppLocalizations.of(context).unknownError}",
+                    '${AppLocalizations.of(context).trFromKmTravelled(suggested.distanceKm.toStringAsFixed(1))} ${AppLocalizations.of(context).fromDistanceTravelledAdjust}'
+                  : '${AppLocalizations.of(context).trNoDestinationMeteredFare}\n'
+                    '${AppLocalizations.of(context).trCouldntAutoCalc}'
+                    '${_meteredFareError ?? AppLocalizations.of(context).unknownError}',
               style: TextStyle(color: context.appTextSecondary, fontSize: 13),
             ),
             const SizedBox(height: 14),
@@ -1225,7 +1226,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('SOS failed to send. Please call emergency services directly.'),
+        content: Text(AppLocalizations.of(context).trSosFailedCall),
         backgroundColor: AppTheme.danger,
         behavior: SnackBarBehavior.floating,
       ));

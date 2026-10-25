@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 /// Cream banner shown when a pull-to-refresh (or initial load) is taking
 /// unusually long — nudges the user that a manual swipe-to-refresh might
@@ -21,10 +22,10 @@ class SlowConnectionBanner extends StatelessWidget {
         const SizedBox(height: 10),
         const Icon(Icons.touch_app_outlined, color: Color(0xFF3A3A3A), size: 28),
         const SizedBox(height: 14),
-        const Text('Experiencing a slow connection?',
+        Text(AppLocalizations.of(context).trSlowConnection,
             style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 17, fontWeight: FontWeight.w800)),
         const SizedBox(height: 6),
-        Text('Swipe down and release to refresh',
+        Text(AppLocalizations.of(context).trSwipeToRefresh,
             style: TextStyle(color: Colors.black.withValues(alpha: 0.55), fontSize: 13)),
       ]),
     );

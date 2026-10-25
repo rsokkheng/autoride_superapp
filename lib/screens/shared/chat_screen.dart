@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:autoride_superapp/services/api_service.dart';
 import 'package:autoride_superapp/services/realtime_service.dart';
@@ -53,13 +54,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Messages & Support'),
+        title: Text(AppLocalizations.of(context).messages),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [Tab(text: 'Chats'), Tab(text: 'Support')],
+          tabs: [Tab(text: AppLocalizations.of(context).chatsTab), Tab(text: AppLocalizations.of(context).support)],
         ),
       ),
       body: TabBarView(
@@ -118,7 +119,7 @@ class _ConversationsTab extends StatelessWidget {
           SizedBox(height: 12),
           Text(error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          ElevatedButton(onPressed: onRefresh, child: const Text('Retry')),
+          ElevatedButton(onPressed: onRefresh, child: Text(AppLocalizations.of(context).retry)),
         ]),
       );
     }
@@ -128,9 +129,9 @@ class _ConversationsTab extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.chat_bubble_outline, color: context.appTextSecondary.withValues(alpha: 0.4), size: 64),
           SizedBox(height: 16),
-          Text('No conversations yet', style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
+          Text(AppLocalizations.of(context).noConversationsYet, style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
           SizedBox(height: 8),
-          Text('Messages with your driver will appear here',
+          Text(AppLocalizations.of(context).driverMessagesHint,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13), textAlign: TextAlign.center),
         ]),
       );
@@ -204,9 +205,9 @@ class _SupportTile extends StatelessWidget {
       backgroundColor: AppTheme.accent.withValues(alpha: 0.15),
       child: Icon(Icons.support_agent, color: AppTheme.accent, size: 24),
     ),
-    title: Text('ROTEH Support',
+    title: Text(AppLocalizations.of(context).rotehSupport,
         style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 15)),
-    subtitle: Text('Chat with our team',
+    subtitle: Text(AppLocalizations.of(context).chatWithOurTeam,
         style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
     trailing: Icon(Icons.chevron_right, color: context.appTextSecondary),
     onTap: () => Navigator.push(context,
@@ -350,7 +351,7 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
             child: _loading
                 ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
                 : _messages.isEmpty
-                    ? Center(child: Text('No messages yet. Say hello!',
+                    ? Center(child: Text(AppLocalizations.of(context).noMessagesSayHello,
                           style: TextStyle(color: context.appTextSecondary)))
                     : ListView.builder(
                         controller: _scrollCtrl,
@@ -377,7 +378,7 @@ class _ConversationDetailScreenState extends State<ConversationDetailScreen> {
                     minLines: 1,
                     textInputAction: TextInputAction.newline,
                     decoration: InputDecoration(
-                      hintText: 'Type a message...',
+                      hintText: AppLocalizations.of(context).typeAMessageHint,
                       hintStyle: TextStyle(color: context.appTextSecondary),
                       filled: true,
                       fillColor: context.appCardBg,
@@ -477,13 +478,13 @@ class _SupportTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('How can we help?',
+          Text(AppLocalizations.of(context).howCanWeHelp,
               style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w700)),
           SizedBox(height: 16),
           TextField(
             style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
-              hintText: 'Search for help...',
+              hintText: AppLocalizations.of(context).searchForHelp,
               hintStyle: TextStyle(color: context.appTextSecondary),
               prefixIcon: Icon(Icons.search, color: context.appTextSecondary),
               filled: true,
@@ -492,15 +493,15 @@ class _SupportTab extends StatelessWidget {
             ),
           ),
           SizedBox(height: 24),
-          Text('Quick Help',
+          Text(AppLocalizations.of(context).quickHelp,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
           SizedBox(height: 12),
           ...[
-            ('My driver is late',      Icons.schedule_outlined,    AppTheme.warning),
-            ('I was overcharged',      Icons.receipt_outlined,     AppTheme.danger),
-            ('Lost item in vehicle',   Icons.inventory_2_outlined, AppTheme.accent),
-            ('Report a safety issue',  Icons.shield_outlined,      AppTheme.danger),
-            ('Cancel my trip',         Icons.cancel_outlined,      context.appTextSecondary),
+            (AppLocalizations.of(context).qhDriverLate,  Icons.schedule_outlined,    AppTheme.warning),
+            (AppLocalizations.of(context).qhOvercharged, Icons.receipt_outlined,     AppTheme.danger),
+            (AppLocalizations.of(context).qhLostItem,    Icons.inventory_2_outlined, AppTheme.accent),
+            (AppLocalizations.of(context).qhSafetyIssue, Icons.shield_outlined,      AppTheme.danger),
+            (AppLocalizations.of(context).qhCancelTrip,  Icons.cancel_outlined,      context.appTextSecondary),
           ].map((item) => Padding(
             padding: EdgeInsets.only(bottom: 10),
             child: Material(
@@ -530,10 +531,10 @@ class _SupportTab extends StatelessWidget {
               ),
               SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('24/7 Support',
+                Text(AppLocalizations.of(context).support247,
                     style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                 SizedBox(height: 4),
-                Text('Open a ticket and our team will reply here',
+                Text(AppLocalizations.of(context).openTicketReplyHere,
                     style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ])),
               GestureDetector(
@@ -542,7 +543,7 @@ class _SupportTab extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(color: AppTheme.accent, borderRadius: BorderRadius.circular(10)),
-                  child: const Text('Chat Now',
+                  child: Text(AppLocalizations.of(context).chatNow,
                       style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w700, fontSize: 13)),
                 ),
               ),

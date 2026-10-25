@@ -1,5 +1,5 @@
-import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,29 +20,28 @@ import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'widgets/idle_timeout_wrapper.dart';
 
-// Resolved after WidgetsFlutterBinding.ensureInitialized() in main()
-final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('en'));
+// Khmer by default; replaced in main() by the language the user last picked.
+final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('km'));
 
 // Top-level so ApiService can also trigger a redirect to LoginScreen (e.g.
 // when a refresh token turns out to be invalid), not just IdleTimeoutWrapper.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-/// Returns the locale matching the device system language.
-/// Falls back to English if the device language is not supported.
-Locale _resolveDeviceLocale() {
+const _kLanguagePref = 'app_language';
+
+/// The language the user last picked, or Khmer — the app's default language
+/// regardless of the device's system language.
+Future<Locale> _resolveStartupLocale() async {
   const supported = ['km', 'en', 'zh'];
-  final device = PlatformDispatcher.instance.locale;
-  final code   = supported.contains(device.languageCode)
-      ? device.languageCode
-      : 'en';
-  return Locale(code);
+  final saved = (await SharedPreferences.getInstance()).getString(_kLanguagePref);
+  return Locale(supported.contains(saved) ? saved! : 'km');
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set app locale to match device language (Khmer / English / Chinese)
-  appLocale.value = _resolveDeviceLocale();
+  // Khmer unless the user picked another language before (Khmer / English / Chinese)
+  appLocale.value = await _resolveStartupLocale();
 
   // Sync language to all locale-aware services whenever the user changes it.
   void _applyLocale(String lang) {
@@ -50,9 +49,12 @@ void main() async {
     LocaleService.setLocale(lang);        // native Maps SDK tile language
   }
   _applyLocale(appLocale.value.languageCode);
-  appLocale.addListener(
-    () => _applyLocale(appLocale.value.languageCode),
-  );
+  appLocale.addListener(() {
+    _applyLocale(appLocale.value.languageCode);
+    // Remember the choice so the next launch opens in the same language.
+    SharedPreferences.getInstance().then(
+        (p) => p.setString(_kLanguagePref, appLocale.value.languageCode));
+  });
 
   FlutterError.onError = (details) {
     AppLog.e('Flutter', details.exceptionAsString(), details.exception, details.stack);
@@ -157,10 +159,19 @@ class _AutoRideAppState extends State<AutoRideApp> {
           locale: locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          builder: (context, child) => IdleTimeoutWrapper(
-            navigatorKey: navigatorKey,
-            child: child!,
-          ),
+          // Respect the user's font size, but cap it — very large system
+          // scaling (common on Samsung) breaks fixed-height layouts.
+          builder: (context, child) {
+            final mq = MediaQuery.of(context);
+            return MediaQuery(
+              data: mq.copyWith(
+                  textScaler: mq.textScaler.clamp(minScaleFactor: 0.85, maxScaleFactor: 1.25)),
+              child: IdleTimeoutWrapper(
+                navigatorKey: navigatorKey,
+                child: child!,
+              ),
+            );
+          },
           home: const SplashScreen(),
         );
       },

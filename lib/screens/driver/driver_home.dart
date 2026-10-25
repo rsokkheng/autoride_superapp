@@ -28,6 +28,7 @@ import 'driver_active_trip_screen.dart';
 import 'driver_delivery_active_screen.dart';
 import 'driver_missions_screen.dart';
 import 'driver_history_screen.dart';
+import 'driver_missed_requests_screen.dart';
 import 'driver_earnings_screen.dart';
 import 'helmet_check_screen.dart';
 
@@ -90,7 +91,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
             message ??
-                'Your wallet balance is too low to go online. Please top up at least ${AppTheme.khr(_minBalanceKhr)} to continue.',
+                AppLocalizations.of(context).drvTopUpMsg(AppTheme.khr(_minBalanceKhr)),
             style: TextStyle(color: context.appTextSecondary, fontSize: 13),
           ),
           if (shortfall > 0) ...[
@@ -102,7 +103,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                 color: AppTheme.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Text('Short by ${AppTheme.khr(shortfall)}',
+              child: Text(AppLocalizations.of(context).drvShortBy(AppTheme.khr(shortfall)),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w700, fontSize: 13)),
             ),
@@ -374,6 +375,46 @@ class _DriverDashboardState extends State<_DriverDashboard>
   );
   RealtimeSubscription? _offerSub;
   Timer? _surgeTimer;
+  int _missedUnseen = 0; // badge on the "missed requests" button
+
+  // Requests this driver already declined / let expire / failed to accept
+  // ('ride:12', 'delivery:5', 'rental:3') — never shown again this session,
+  // even if the server keeps returning them.
+  final Set<String> _dismissed = {};
+
+  RideModel? _firstRide(List<RideModel> l) =>
+      l.where((r) => !_dismissed.contains('ride:${r.id}')).firstOrNull;
+  DeliveryModel? _firstDelivery(List<DeliveryModel> l) =>
+      l.where((d) => !_dismissed.contains('delivery:${d.id}')).firstOrNull;
+  Map<String, dynamic>? _firstRental(List<Map<String, dynamic>> l) =>
+      l.where((r) => !_dismissed.contains('rental:${r['id']}')).firstOrNull;
+
+  // Accept was refused (taken, cancelled, or "already have an active trip"):
+  // drop the card and re-sync — a real active trip then shows as Resume.
+  void _onAcceptFailed(String key) {
+    _dismissed.add(key);
+    setState(() {
+      if (key.startsWith('ride:'))     _pendingRide = null;
+      if (key.startsWith('delivery:')) _pendingDelivery = null;
+      if (key.startsWith('rental:'))   _pendingRental = null;
+    });
+    _loadData();
+  }
+
+  Future<void> _loadMissedBadge() async {
+    final n = await DriverMissedRequestsScreen.unseenCount();
+    if (mounted) setState(() => _missedUnseen = n);
+  }
+
+  Future<void> _openMissedRequests() async {
+    setState(() => _missedUnseen = 0);
+    await Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const DriverMissedRequestsScreen()));
+    if (mounted) setState(() => _missedUnseen = 0);
+  }
+
+  // A request card was declined or timed out — it's now in the history.
+  void _onRequestMissed() => setState(() => _missedUnseen++);
 
   void _startRequestPolling({bool immediately = false}) {
     _requestPoller.start(immediately: immediately);
@@ -450,14 +491,14 @@ class _DriverDashboardState extends State<_DriverDashboard>
   String _surgeSubtitle(SurgeInfo info) {
     final parts = <String>[];
     if (!info.youAreInside && info.nearbyDistanceKm != null) {
-      parts.add('${info.nearbyDistanceKm!.toStringAsFixed(1)} km away');
+      parts.add(AppLocalizations.of(context).drvKmAway(info.nearbyDistanceKm!.toStringAsFixed(1)));
     }
     if (info.endsAt != null) {
       final diff = info.endsAt!.difference(DateTime.now());
       if (diff.inMinutes > 0) {
         parts.add(diff.inHours >= 1
-            ? 'ends in ${diff.inHours}h ${diff.inMinutes % 60}m'
-            : 'ends in ${diff.inMinutes} min');
+            ? AppLocalizations.of(context).drvEndsInHm(diff.inHours, diff.inMinutes % 60)
+            : AppLocalizations.of(context).drvEndsInMin(diff.inMinutes));
       }
     }
     if (parts.isNotEmpty) return parts.join(' · ');
@@ -496,6 +537,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
   }
 
   Future<void> _loadData() async {
+    _loadMissedBadge();
     try {
       final results = await Future.wait([
         ApiService.getDriverStats(),
@@ -516,12 +558,14 @@ class _DriverDashboardState extends State<_DriverDashboard>
           !rawDelivery.isCompleted && !rawDelivery.isCancelled &&
           rawDelivery.status != 'delivered') ? rawDelivery : null;
 
+      final onTrip = activeRide != null || activeDelivery != null;
       setState(() {
         _stats = results[0] as DriverStatsModel;
+        // While on a trip, no new requests are shown.
         final rides = results[1] as List<RideModel>;
-        _pendingRide = rides.isNotEmpty ? rides.first : null;
+        _pendingRide = onTrip ? null : _firstRide(rides);
         final deliveries = results[2] as List<DeliveryModel>;
-        _pendingDelivery = deliveries.isNotEmpty ? deliveries.first : null;
+        _pendingDelivery = onTrip ? null : _firstDelivery(deliveries);
         _activeRide     = activeRide;
         _activeDelivery = activeDelivery;
         _user           = results[5] as UserModel;
@@ -536,7 +580,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
     try {
       final rentals = await ApiService.getAvailableRentals();
       if (!mounted) return;
-      setState(() => _pendingRental = rentals.isNotEmpty ? rentals.first : null);
+      setState(() => _pendingRental = _firstRental(rentals));
     } catch (e) {
       debugPrint('[Driver] getAvailableRentals error: $e');
     }
@@ -582,6 +626,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
 
   Future<void> _pollRequests() async {
     if (widget.driverStatus != DriverStatus.online) return;
+    if (_activeRide != null || _activeDelivery != null) return; // on a trip
     // Always re-fetch, even while a request is already showing — /available
     // naturally excludes cancelled/taken rides, so this is how we detect a
     // passenger cancelling a request that's currently on screen. Previously
@@ -596,8 +641,9 @@ class _DriverDashboardState extends State<_DriverDashboard>
           title: AppLocalizations.of(context).requestCancelled,
           body:  AppLocalizations.of(context).thePassengerCancelledThatRide,
         );
-      } else if (_pendingRide == null && rides.isNotEmpty) {
-        setState(() => _pendingRide = rides.first);
+      } else if (_pendingRide == null) {
+        final next = _firstRide(rides);
+        if (next != null) setState(() => _pendingRide = next);
       }
     } catch (e) {
       debugPrint('[Driver] getAvailableRides error: $e');
@@ -607,8 +653,9 @@ class _DriverDashboardState extends State<_DriverDashboard>
       if (!mounted) return;
       if (_pendingDelivery != null && !deliveries.any((d) => d.id == _pendingDelivery!.id)) {
         setState(() => _pendingDelivery = null);
-      } else if (_pendingDelivery == null && deliveries.isNotEmpty) {
-        setState(() => _pendingDelivery = deliveries.first);
+      } else if (_pendingDelivery == null) {
+        final next = _firstDelivery(deliveries);
+        if (next != null) setState(() => _pendingDelivery = next);
       }
     } catch (e) {
       debugPrint('[Driver] getAvailableDeliveries error: $e');
@@ -618,8 +665,9 @@ class _DriverDashboardState extends State<_DriverDashboard>
       if (!mounted) return;
       if (_pendingRental != null && !rentals.any((r) => r['id'] == _pendingRental!['id'])) {
         setState(() => _pendingRental = null);
-      } else if (_pendingRental == null && rentals.isNotEmpty) {
-        setState(() => _pendingRental = rentals.first);
+      } else if (_pendingRental == null) {
+        final next = _firstRental(rentals);
+        if (next != null) setState(() => _pendingRental = next);
       }
     } catch (e) {
       debugPrint('[Driver] getAvailableRentals error: $e');
@@ -643,11 +691,22 @@ class _DriverDashboardState extends State<_DriverDashboard>
                   SizedBox(width: 4),
                   Text(_user?.rating != null ? _user!.rating!.toStringAsFixed(2) : '--',
                       style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
-                  Text(' · ${_user?.totalTrips ?? 0} Trips',
+                  Text(' · ${AppLocalizations.of(context).drvTripsCount(_user?.totalTrips ?? 0)}',
                       style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 ]),
               ]),
               Spacer(),
+              // Missed requests ("missed calls")
+              IconButton(
+                onPressed: _openMissedRequests,
+                tooltip: AppLocalizations.of(context).missedRequestsTitle,
+                icon: Badge(
+                  isLabelVisible: _missedUnseen > 0,
+                  label: Text(_missedUnseen > 99 ? '99+' : '$_missedUnseen'),
+                  backgroundColor: AppTheme.danger,
+                  child: Icon(Icons.phone_missed_outlined, color: context.appTextPrimary),
+                ),
+              ),
               Column(children: [
                 Switch(
                   value: widget.isOnline,
@@ -673,8 +732,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 final color  = inside ? AppTheme.danger : AppTheme.warning;
                 final icon   = inside ? Icons.local_fire_department : Icons.directions_outlined;
                 final title  = inside
-                    ? '🔥 ${_surgeInfo!.multiplier.toStringAsFixed(1)}× Surge Zone — You\'re Inside!'
-                    : '📍 ${_surgeInfo!.multiplier.toStringAsFixed(1)}× Surge Nearby — ${_surgeInfo!.zone ?? 'Zone'}';
+                    ? '🔥 ${AppLocalizations.of(context).drvSurgeInside(_surgeInfo!.multiplier.toStringAsFixed(1))}'
+                    : '📍 ${AppLocalizations.of(context).drvSurgeNearby(_surgeInfo!.multiplier.toStringAsFixed(1), _surgeInfo!.zone ?? AppLocalizations.of(context).drvZone)}';
                 return Container(
                   margin: EdgeInsets.only(bottom: 14),
                   padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -837,9 +896,10 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     const SizedBox(height: 14),
                     _RideRequestCard(
                       ride: _pendingRide!,
-                      onDeclined: () => setState(() => _pendingRide = null),
+                      onDeclined: () { _dismissed.add('ride:${_pendingRide?.id}'); setState(() => _pendingRide = null); _onRequestMissed(); },
+                      onAcceptFailed: () => _onAcceptFailed('ride:${_pendingRide?.id}'),
                       onAccept: (RideModel ride) async {
-                        setState(() { _pendingRide = null; _activeRide = ride; });
+                        setState(() { _pendingRide = null; _pendingDelivery = null; _activeRide = ride; });
                         widget.onBusy();
                         await Navigator.push(context, MaterialPageRoute(
                           builder: (_) => DriverActiveTripScreen(ride: ride),
@@ -866,9 +926,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     const SizedBox(height: 14),
                     _DeliveryRequestCard(
                       delivery: _pendingDelivery!,
-                      onDeclined: () => setState(() => _pendingDelivery = null),
+                      onDeclined: () { _dismissed.add('delivery:${_pendingDelivery?.id}'); setState(() => _pendingDelivery = null); _onRequestMissed(); },
+                      onAcceptFailed: () => _onAcceptFailed('delivery:${_pendingDelivery?.id}'),
                       onAccept: (DeliveryModel delivery) async {
-                        setState(() { _pendingDelivery = null; _activeDelivery = delivery; });
+                        // Same as rides: busy stops new offers until it's done.
+                        setState(() { _pendingDelivery = null; _pendingRide = null; _activeDelivery = delivery; });
+                        widget.onBusy();
                         final user = await ApiService.getSavedUser();
                         final driverIdStr = user?.id.toString() ?? 'unknown';
                         if (!mounted) return;
@@ -878,7 +941,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
                             driverIdStr: driverIdStr,
                           ),
                         ));
-                        if (mounted) setState(() => _activeDelivery = null);
+                        if (!mounted) return;
+                        // Backed out mid-job? Keep showing the resume card.
+                        final stillActive = await ApiService.getActiveDelivery();
+                        if (!mounted) return;
+                        if (stillActive != null) {
+                          setState(() => _activeDelivery = stillActive);
+                        } else {
+                          setState(() => _activeDelivery = null);
+                          widget.onTripCompleted();
+                        }
                       },
                     ),
                   ] else ...[
@@ -897,7 +969,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     const SizedBox(height: 14),
                     _RentalRequestCard(
                       rental: _pendingRental!,
-                      onDeclined: () => setState(() => _pendingRental = null),
+                      onDeclined: () { _dismissed.add('rental:${_pendingRental?['id']}'); setState(() => _pendingRental = null); _onRequestMissed(); },
+                      onAcceptFailed: () => _onAcceptFailed('rental:${_pendingRental?['id']}'),
                       onAccept: (rental) async {
                         setState(() => _pendingRental = null);
                         if (!context.mounted) return;
@@ -945,7 +1018,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${peak.active ? "Active" : "Inactive"} ${peak.windowStart}–${peak.windowEnd}',
+                          '${peak.active ? AppLocalizations.of(context).active : AppLocalizations.of(context).drvInactive} ${peak.windowStart}–${peak.windowEnd}',
                           style: TextStyle(color: peak.active ? AppTheme.warning : context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -953,7 +1026,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     SizedBox(height: 10),
                     Row(children: [
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Extra ${AppTheme.khr(peak.bonusPerTripKhr)} per trip during peak hours', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                        Text(AppLocalizations.of(context).drvPeakExtra(AppTheme.khr(peak.bonusPerTripKhr)), style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                         SizedBox(height: 6),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(4),
@@ -965,7 +1038,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                           ),
                         ),
                         SizedBox(height: 4),
-                        Text('${peak.tripsToday} of ${peak.tripTarget} peak-hour trips completed today', style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                        Text(AppLocalizations.of(context).drvPeakProgress(peak.tripsToday, peak.tripTarget), style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                       ])),
                       SizedBox(width: 14),
                       Column(children: [
@@ -997,12 +1070,12 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(AppLocalizations.of(context).n5StarStreak, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-                      Text('${streak.current} consecutive 5-star ratings!', style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                      Text(AppLocalizations.of(context).drvStreakCount(streak.current), style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                       SizedBox(height: 4),
                       Text(
                         streak.remaining > 0
-                            ? '${streak.remaining} more 5-star = Earn ${AppTheme.khr(streak.bonusKhr)} bonus'
-                            : 'Streak bonus unlocked — ${AppTheme.khr(streak.bonusKhr)}!',
+                            ? AppLocalizations.of(context).drvStreakRemaining(streak.remaining, AppTheme.khr(streak.bonusKhr))
+                            : AppLocalizations.of(context).drvStreakUnlocked(AppTheme.khr(streak.bonusKhr)),
                         style: TextStyle(color: AppTheme.gold, fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                     ])),
@@ -1142,11 +1215,13 @@ class _RideRequestCard extends StatefulWidget {
   // Parent dashboard owns navigation so it stays mounted for the full trip.
   final Future<void> Function(RideModel) onAccept;
   final VoidCallback onDeclined;
+  final VoidCallback? onAcceptFailed; // server refused the accept
 
   const _RideRequestCard({
     required this.ride,
     required this.onAccept,
     required this.onDeclined,
+    this.onAcceptFailed,
   });
 
   @override
@@ -1165,6 +1240,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
       if (!mounted) { t.cancel(); return; }
       if (_seconds <= 1) {
         t.cancel();
+        ApiService.recordMissedRequest('ride', widget.ride.id, 'missed');
         widget.onDeclined();
       } else {
         setState(() => _seconds--);
@@ -1203,6 +1279,11 @@ class _RideRequestCardState extends State<_RideRequestCard> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ));
+      // Refused by the server — this request can't be taken, so close it.
+      if (widget.onAcceptFailed != null) {
+        widget.onAcceptFailed!();
+        return;
+      }
       setState(() => _acting = false);
     } catch (_) {
       if (mounted) setState(() => _acting = false);
@@ -1213,6 +1294,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
     if (_acting) return;
     _timer?.cancel();
     setState(() => _acting = true);
+    ApiService.recordMissedRequest('ride', widget.ride.id, 'declined');
     try {
       await ApiService.declineRide(widget.ride.id);
     } catch (_) {}
@@ -1224,7 +1306,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
     final progress = _seconds / 30.0;
     final urgent   = _seconds <= 8;
     final accentColor = urgent ? AppTheme.danger : AppTheme.accent;
-    final passengerLabel = widget.ride.passenger?.name ?? 'Passenger #${widget.ride.passengerId}';
+    final passengerLabel = widget.ride.passenger?.name ?? AppLocalizations.of(context).drvPassengerNo(widget.ride.passengerId);
 
     return Container(
       padding: EdgeInsets.all(16),
@@ -1249,7 +1331,7 @@ class _RideRequestCardState extends State<_RideRequestCard> {
                     fontWeight: FontWeight.w800, fontSize: 11)),
           ),
           Spacer(),
-          Text('$_seconds s', style: TextStyle(
+          Text(AppLocalizations.of(context).drvSecondsShort(_seconds), style: TextStyle(
               color: accentColor, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         SizedBox(height: 8),
@@ -1362,11 +1444,13 @@ class _DeliveryRequestCard extends StatefulWidget {
   // Parent dashboard owns navigation so it stays mounted for the full delivery.
   final Future<void> Function(DeliveryModel) onAccept;
   final VoidCallback onDeclined;
+  final VoidCallback? onAcceptFailed; // server refused the accept
 
   const _DeliveryRequestCard({
     required this.delivery,
     required this.onAccept,
     required this.onDeclined,
+    this.onAcceptFailed,
   });
 
   @override
@@ -1385,6 +1469,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
       if (!mounted) { t.cancel(); return; }
       if (_seconds <= 1) {
         t.cancel();
+        ApiService.recordMissedRequest('delivery', widget.delivery.id, 'missed');
         widget.onDeclined();
       } else {
         setState(() => _seconds--);
@@ -1414,6 +1499,11 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ));
+      // Refused by the server — this request can't be taken, so close it.
+      if (widget.onAcceptFailed != null) {
+        widget.onAcceptFailed!();
+        return;
+      }
       setState(() => _acting = false);
     } catch (_) {
       if (mounted) setState(() => _acting = false);
@@ -1423,6 +1513,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
   Future<void> _decline() async {
     if (_acting) return;
     _timer?.cancel();
+    ApiService.recordMissedRequest('delivery', widget.delivery.id, 'declined');
     widget.onDeclined();
   }
 
@@ -1432,7 +1523,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
     final urgent   = _seconds <= 8;
     final senderLabel = widget.delivery.sender?.name
         ?? widget.delivery.senderName
-        ?? 'Sender #${widget.delivery.senderId}';
+        ?? AppLocalizations.of(context).drvSenderNo(widget.delivery.senderId);
 
     final cardColor = urgent ? AppTheme.danger : AppTheme.success;
 
@@ -1461,7 +1552,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
             ),
           ),
           const Spacer(),
-          Text('$_seconds s', style: TextStyle(
+          Text(AppLocalizations.of(context).drvSecondsShort(_seconds), style: TextStyle(
               color: cardColor, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 8),
@@ -1542,8 +1633,8 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                 Icon(Icons.apartment_outlined, color: context.appTextSecondary, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  'Floor: pickup ${widget.delivery.floorPickup ?? '?'} → '
-                  'dropoff ${widget.delivery.floorDropoff ?? '?'}',
+                  AppLocalizations.of(context).drvFloors(widget.delivery.floorPickup ?? '?',
+                      widget.delivery.floorDropoff ?? '?'),
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                 ),
               ]),
@@ -1552,7 +1643,7 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                 Icon(Icons.elevator_outlined, color: context.appTextPrimary, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                  'Elevator: ${(widget.delivery.hasElevator ?? true) ? "Yes" : "No"}',
+                  AppLocalizations.of(context).drvElevator((widget.delivery.hasElevator ?? true) ? AppLocalizations.of(context).yes : AppLocalizations.of(context).no),
                   style: TextStyle(color: context.appTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
                 ),
                 if (widget.delivery.needsStairsCarry == true) ...[
@@ -1568,8 +1659,8 @@ class _DeliveryRequestCardState extends State<_DeliveryRequestCard> {
                   Icon(Icons.people_outline, color: context.appTextSecondary, size: 14),
                   const SizedBox(width: 6),
                   Text(
-                    '${widget.delivery.requiresHelpers} helper(s) — '
-                    '${widget.delivery.helperType == 'heavy_carry' ? 'Heavy carry' : 'Normal carry'}',
+                    AppLocalizations.of(context).drvHelpers(widget.delivery.requiresHelpers!,
+                        widget.delivery.helperType == 'heavy_carry' ? AppLocalizations.of(context).drvHeavyCarry : AppLocalizations.of(context).drvNormalCarry),
                     style: TextStyle(color: context.appTextSecondary, fontSize: 12),
                   ),
                 ]),
@@ -1624,11 +1715,13 @@ class _RentalRequestCard extends StatefulWidget {
   final Map<String, dynamic> rental;
   final Future<void> Function(Map<String, dynamic>) onAccept;
   final VoidCallback onDeclined;
+  final VoidCallback? onAcceptFailed; // server refused the accept
 
   const _RentalRequestCard({
     required this.rental,
     required this.onAccept,
     required this.onDeclined,
+    this.onAcceptFailed,
   });
 
   @override
@@ -1649,6 +1742,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
       if (!mounted) { t.cancel(); return; }
       if (_seconds <= 1) {
         t.cancel();
+        ApiService.recordMissedRequest('rental', _id, 'missed');
         widget.onDeclined();
       } else {
         setState(() => _seconds--);
@@ -1680,6 +1774,11 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ));
+      // Refused by the server — this request can't be taken, so close it.
+      if (widget.onAcceptFailed != null) {
+        widget.onAcceptFailed!();
+        return;
+      }
       setState(() => _acting = false);
     } catch (_) {
       if (mounted) setState(() => _acting = false);
@@ -1689,6 +1788,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
   Future<void> _decline() async {
     if (_acting) return;
     _timer?.cancel();
+    ApiService.recordMissedRequest('rental', _id, 'declined');
     try {
       await ApiService.declineRentalRequest(_id);
     } catch (_) {}
@@ -1704,7 +1804,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
     final r = widget.rental;
     final customerName = (r['customer'] as Map<String, dynamic>?)?['name'] as String?
         ?? r['customer_name'] as String?
-        ?? 'Customer #${r['customer_id'] ?? ''}';
+        ?? AppLocalizations.of(context).trCustomerNo(r['customer_id'] ?? '');
     final vehicleType = r['vehicle_type'] as String?;
     final pickup = r['pickup_location'] as String? ?? '--';
     final startDate = r['start_date'] as String?;
@@ -1735,7 +1835,7 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
             ),
           ),
           const Spacer(),
-          Text('$_seconds s', style: TextStyle(
+          Text(AppLocalizations.of(context).drvSecondsShort(_seconds), style: TextStyle(
               color: cardColor, fontWeight: FontWeight.w900, fontSize: 16)),
         ]),
         const SizedBox(height: 8),
@@ -2056,7 +2156,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
               style: TextStyle(fontWeight: FontWeight.w800)),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Withdraw your full balance to $_bank?\nThis will be sent to admin for approval.',
+              Text(AppLocalizations.of(context).drvWithdrawConfirm(_bank),
                   style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
               const SizedBox(height: 12),
               Container(
@@ -2145,7 +2245,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
       if (!mounted) return;
       setState(() => _withdrawing = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text('✅ Withdrawal request for ${AppTheme.khr(balance)} submitted — pending admin approval'),
+        content: Text(AppLocalizations.of(context).drvWithdrawSubmitted(AppTheme.khr(balance))),
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2283,9 +2383,9 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             // ── Transaction history ───────────────────────────────────────
             Row(children: [
               Expanded(child: SectionHeader(
-                  title: _showAllTx ? AppLocalizations.of(context).transactionHistory : "Today's Transactions")),
+                  title: _showAllTx ? AppLocalizations.of(context).transactionHistory : AppLocalizations.of(context).drvTodaysTransactions)),
               if (_showAllTx && _total > 0)
-                Text('$_total total',
+                Text(AppLocalizations.of(context).drvTotalCount(_total),
                     style: TextStyle(
                         color: context.appTextSecondary, fontSize: 12)),
               if (!_showAllTx)
@@ -2428,11 +2528,11 @@ class _DriverEarningsState extends State<_DriverEarnings> {
               } else if (balance == 0) {
                 label = AppLocalizations.of(context).noBalanceToWithdraw;
               } else if (belowMin) {
-                label = 'Minimum withdrawal: ${AppTheme.khr(minWithdrawal)}';
+                label = AppLocalizations.of(context).drvMinWithdrawal(AppTheme.khr(minWithdrawal));
               } else if (!canWithdraw) {
                 label = AppLocalizations.of(context).withdrawalsUnavailable;
               } else {
-                label = '💸  Withdraw ${AppTheme.khr(balance)} to $_bank';
+                label = AppLocalizations.of(context).drvWithdrawTo(AppTheme.khr(balance), _bank);
               }
 
               return SizedBox(
@@ -2610,7 +2710,7 @@ class _TxnTile extends StatelessWidget {
                   color: itemColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 13)),
-          Text('Bal: ${AppTheme.khr(txn.balanceAfter)}',
+          Text(AppLocalizations.of(context).drvBalanceShort(AppTheme.khr(txn.balanceAfter)),
               style: TextStyle(
                   color: context.appTextSecondary, fontSize: 10)),
         ]),

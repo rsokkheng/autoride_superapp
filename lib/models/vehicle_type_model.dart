@@ -31,6 +31,11 @@ class VehicleTypeModel {
   final int    id;
   final String serviceType;
   final String label;
+  // Localized names (backend ride_pricing.name_en / name_kh / name_zh).
+  // Any of them may be missing — [localizedLabel] falls back to [label].
+  final String? nameEn;
+  final String? nameKh;
+  final String? nameZh;
   final String iconName; // FontAwesome name from backend, e.g. 'fa-motorcycle'
   final int    capacity;
   final VehiclePricing pricing;
@@ -39,6 +44,9 @@ class VehicleTypeModel {
     required this.id,
     required this.serviceType,
     required this.label,
+    this.nameEn,
+    this.nameKh,
+    this.nameZh,
     required this.iconName,
     required this.capacity,
     required this.pricing,
@@ -49,11 +57,27 @@ class VehicleTypeModel {
       id:          json['id'] is int ? json['id'] as int : int.tryParse(json['id']?.toString() ?? '') ?? 0,
       serviceType: json['service_type'] as String? ?? '',
       label:       json['label'] as String? ?? '',
+      nameEn:      _nonEmpty(json['name_en']),
+      nameKh:      _nonEmpty(json['name_kh'] ?? json['name_km']),
+      nameZh:      _nonEmpty(json['name_zh']),
       iconName:    json['icon'] as String? ?? '',
       capacity:    json['capacity'] is int ? json['capacity'] as int : int.tryParse(json['capacity']?.toString() ?? '') ?? 1,
       pricing:     VehiclePricing.fromJson((json['pricing'] as Map<String, dynamic>?) ?? const {}),
     );
   }
+
+  static String? _nonEmpty(dynamic v) {
+    final s = v?.toString().trim();
+    return (s == null || s.isEmpty) ? null : s;
+  }
+
+  /// Name in the app language ('en' | 'km' | 'zh'), falling back to English
+  /// and then the plain backend label.
+  String localizedLabel(String languageCode) => switch (languageCode) {
+    'km' => nameKh ?? nameEn ?? label,
+    'zh' => nameZh ?? nameEn ?? label,
+    _    => nameEn ?? label,
+  };
 
   // Maps the backend's FontAwesome icon name onto a bundled Material icon —
   // this app doesn't ship FontAwesome, so every 'fa-*' name gets translated.
@@ -69,5 +93,4 @@ class VehicleTypeModel {
     }
   }
 
-  String get seatsLabel => '$capacity seat${capacity == 1 ? '' : 's'}';
 }

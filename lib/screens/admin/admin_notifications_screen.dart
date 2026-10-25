@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n.dart';
 
 /// Shop-order alerts (new purchases, rentals, payments, cancellations) — the
 /// same inbox as the web admin panel's bell, so reading here clears it there.
@@ -111,12 +113,12 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: const Text('Notifications'),
+        title: Text(AppLocalizations.of(context).trNotifications),
         actions: [
           if (unread > 0)
             TextButton(
               onPressed: _markAll,
-              child: const Text('Mark all read', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+              child: Text(AppLocalizations.of(context).trMarkAllRead, style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
             ),
         ],
       ),
@@ -173,7 +175,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
           const SizedBox(height: 120),
           Icon(Icons.notifications_none_rounded, size: 56, color: context.appTextSecondary),
           const SizedBox(height: 12),
-          Center(child: Text('No notifications yet', style: TextStyle(color: context.appTextSecondary))),
+          Center(child: Text(AppLocalizations.of(context).trNoNotificationsYet, style: TextStyle(color: context.appTextSecondary))),
         ]),
       );
     }
@@ -216,10 +218,10 @@ String _when(String? iso) {
   final t = iso == null ? null : DateTime.tryParse(iso)?.toLocal();
   if (t == null) return '';
   final diff = DateTime.now().difference(t);
-  if (diff.inMinutes < 1) return 'Just now';
-  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-  if (diff.inDays < 1) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  if (diff.inMinutes < 1) return l10n.trJustNow;
+  if (diff.inHours < 1) return l10n.trMinutesAgo(diff.inMinutes);
+  if (diff.inDays < 1) return l10n.trHoursAgo(diff.inHours);
+  if (diff.inDays < 7) return l10n.trDaysAgo(diff.inDays);
   return DateFormat('MMM d, yyyy').format(t);
 }
 
@@ -283,7 +285,7 @@ class _DetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icon, color) = _style(n['type'] as String?);
-    final kind = n['order_kind'] == 'car_rental' ? 'Car rental' : 'Marketplace order';
+    final kind = n['order_kind'] == 'car_rental' ? AppLocalizations.of(context).trCarRental : AppLocalizations.of(context).trMarketplaceOrder;
     Widget row(String label, String? value) => value == null || value.isEmpty
         ? const SizedBox.shrink()
         : Padding(
@@ -315,7 +317,7 @@ class _DetailSheet extends StatelessWidget {
           row('Type', '$kind #${n['order_id'] ?? ''}'),
           row('Received', _when(n['created_at'] as String?)),
           const SizedBox(height: 4),
-          Text('Confirm or manage this order from the web admin panel.',
+          Text(AppLocalizations.of(context).trManageOnWebAdmin,
               style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
         ]),
       ),

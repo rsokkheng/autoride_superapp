@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminDeliveriesScreen extends StatefulWidget {
   const AdminDeliveriesScreen({super.key});
@@ -35,7 +36,7 @@ class _AdminDeliveriesScreenState extends State<AdminDeliveriesScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Deliveries'),
+        title: Text(AppLocalizations.of(context).trDeliveries),
         actions: [
           PopupMenuButton<String?>(
             color: context.appSurface,
@@ -60,7 +61,7 @@ class _AdminDeliveriesScreenState extends State<AdminDeliveriesScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _items.isEmpty
-                  ? Center(child: Text('No deliveries found.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoDeliveriesFound, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -96,7 +97,7 @@ class _AdminDeliveriesScreenState extends State<AdminDeliveriesScreen> {
                                     Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1), decoration: BoxDecoration(color: sc.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)), child: Text(status.toUpperCase(), style: TextStyle(color: sc, fontSize: 9, fontWeight: FontWeight.w700))),
                                   ]),
                                   SizedBox(height: 4),
-                                  Text('From: $from', style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  Text(AppLocalizations.of(context).trFromPlace(from), style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                                   Text('To: $to',     style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ]),
                               ),

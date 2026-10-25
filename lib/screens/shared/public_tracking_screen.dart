@@ -3,13 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/tablet_frame.dart';
+import '../../l10n/app_localizations.dart';
 
 const _green = Color(0xFF00B14F);
 
 /// Opened from a share link — no login required.
 /// Usage: Navigator.push(ctx, MaterialPageRoute(
 ///   builder: (_) => PublicTrackingScreen(token: 'abc123')));
-class PublicTrackingScreen extends StatefulWidget {
+class PublicTrackingScreen extends StatefulWidget implements TabletFullWidth {
   final String token;
   const PublicTrackingScreen({super.key, required this.token});
 
@@ -85,7 +87,7 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
         markerId: const MarkerId('dropoff'),
         position: LatLng(trip.dropoffLat, trip.dropoffLng),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: InfoWindow(title: 'Destination',
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).trDestination,
             snippet: trip.dropoffAddress),
       ),
     ]);
@@ -139,12 +141,12 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
 
   String get _statusLabel {
     switch (_trip?.status) {
-      case 'requested':   return 'Finding driver…';
-      case 'accepted':    return 'Driver on the way';
-      case 'picking_up':  return 'Driver en route to pickup';
-      case 'in_progress': return 'Trip in progress';
-      case 'completed':   return 'Trip completed';
-      case 'cancelled':   return 'Trip cancelled';
+      case 'requested':   return AppLocalizations.of(context).trFindingDriver;
+      case 'accepted':    return AppLocalizations.of(context).trDriverOnTheWay;
+      case 'picking_up':  return AppLocalizations.of(context).trDriverEnRoutePickup;
+      case 'in_progress': return AppLocalizations.of(context).trTripInProgress;
+      case 'completed':   return AppLocalizations.of(context).trTripCompleted;
+      case 'cancelled':   return AppLocalizations.of(context).trTripCancelled;
       default:            return _trip?.status ?? '';
     }
   }
@@ -166,7 +168,7 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
                 color: _green, size: 18),
           ),
           SizedBox(width: 10),
-          Text('ROTEH — Live Trip',
+          Text(AppLocalizations.of(context).trLiveTrip,
               style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w700, fontSize: 15)),
         ]),
@@ -250,7 +252,7 @@ class _InfoPanel extends StatelessWidget {
                   fontWeight: FontWeight.w700, fontSize: 13)),
           if (trip.etaMinutes != null) ...[
             const Text(' · ', style: TextStyle(color: Colors.grey)),
-            Text('ETA ${trip.etaMinutes} min',
+            Text(AppLocalizations.of(context).trEtaMin(trip.etaMinutes),
                 style: TextStyle(color: statusColor, fontSize: 13)),
           ],
         ]),
@@ -307,7 +309,7 @@ class _InfoPanel extends StatelessWidget {
                 ),
                 child: Text(
                   trip.serviceType == 'moving'
-                      ? 'Moving Service'
+                      ? AppLocalizations.of(context).trMovingService
                       : trip.serviceType == 'delivery'
                           ? 'Delivery'
                           : trip.serviceType!.toUpperCase(),
@@ -363,13 +365,13 @@ class _InfoPanel extends StatelessWidget {
           const Icon(Icons.location_searching,
               color: Color(0xFFFF9800), size: 14),
           const SizedBox(width: 6),
-          const Text('Waiting for driver GPS…',
+          Text(AppLocalizations.of(context).trWaitingDriverGps,
               style: TextStyle(color: Color(0xFFFF9800), fontSize: 12)),
         ]),
       ],
 
       const SizedBox(height: 8),
-      const Text('This page updates automatically every 8 seconds.',
+      Text(AppLocalizations.of(context).trPageAutoUpdates,
           style: TextStyle(color: Color(0xFF9E9E9E), fontSize: 11)),
     ]),
   );
@@ -388,7 +390,7 @@ class _ErrorBody extends StatelessWidget {
         Icon(Icons.link_off_rounded,
             color: AppTheme.danger, size: 56),
         SizedBox(height: 16),
-        Text('Trip not found',
+        Text(AppLocalizations.of(context).trTripNotFound,
             style: TextStyle(fontSize: 18,
                 fontWeight: FontWeight.w700, color: context.appTextPrimary)),
         SizedBox(height: 8),
@@ -404,7 +406,7 @@ class _ErrorBody extends StatelessWidget {
             shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12)),
           ),
-          child: const Text('Try again'),
+          child: Text(AppLocalizations.of(context).trTryAgain),
         ),
       ]),
     ),

@@ -7,6 +7,7 @@ import '../passenger/passenger_home.dart';
 import '../driver/driver_home.dart';
 import '../driver/driver_approval_pending_screen.dart';
 import 'login_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 // Local session cache — used by login/social/biometric to remember who logged in.
 class SavedAccount {
@@ -152,22 +153,22 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
 
   Future<void> _removeAccount(Map<String, dynamic> account) async {
     final id   = (account['id'] as num?)?.toInt();
-    final name = account['name'] as String? ?? account['email'] as String? ?? 'this account';
+    final name = account['name'] as String? ?? account['email'] as String? ?? AppLocalizations.of(context).trThisAccount;
     if (id == null) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Remove Account', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Unlink $name from your account?', style: TextStyle(color: context.appTextSecondary)),
+        title: Text(AppLocalizations.of(context).trRemoveAccount, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        content: Text(AppLocalizations.of(context).trUnlinkConfirm(name), style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
               child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            child: const Text('Remove'),
+            child: Text(AppLocalizations.of(context).trRemove),
           ),
         ],
       ),
@@ -201,7 +202,7 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: context.appBackground,
-      appBar: AppBar(title: const Text('Switch Account')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).trSwitchAccount)),
       body: Column(children: [
         Expanded(child: _buildBody()),
         Padding(
@@ -217,7 +218,7 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               icon: const Icon(Icons.link_rounded),
-              label: const Text('Link Account', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+              label: Text(AppLocalizations.of(context).trLinkAccount, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             ),
           ),
         ),
@@ -240,9 +241,9 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.manage_accounts_outlined, color: context.appTextSecondary, size: 56),
         SizedBox(height: 16),
-        Text('No linked accounts', style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
+        Text(AppLocalizations.of(context).trNoLinkedAccounts, style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
         SizedBox(height: 8),
-        Text('Link another account to switch between them.',
+        Text(AppLocalizations.of(context).trLinkAnotherAccount,
             style: TextStyle(color: context.appTextSecondary, fontSize: 13), textAlign: TextAlign.center),
       ]));
     }
@@ -326,7 +327,7 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
       padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text('Link Account', style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
+          Expanded(child: Text(AppLocalizations.of(context).trLinkAccount, style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),
           IconButton(
             icon: Icon(Icons.close, color: context.appTextSecondary),
             onPressed: () => Navigator.pop(context),
@@ -356,7 +357,7 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
           ),
         ),
         const SizedBox(height: 12),
-        _SheetField(controller: _labelCtrl, hint: 'Label (optional, e.g. "Work")', icon: Icons.label_outline),
+        _SheetField(controller: _labelCtrl, hint: AppLocalizations.of(context).trLabelOptionalWork, icon: Icons.label_outline),
         const SizedBox(height: 20),
 
         SizedBox(
@@ -371,7 +372,7 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
             ),
             child: _loading
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Link Account', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+                : Text(AppLocalizations.of(context).trLinkAccount, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
           ),
         ),
       ]),
@@ -437,7 +438,7 @@ class _AccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name  = account['name']  as String? ?? account['email'] as String? ?? 'Account';
+    final name  = account['name']  as String? ?? account['email'] as String? ?? AppLocalizations.of(context).trAccount;
     final email = account['email'] as String? ?? '';
     final label = account['label'] as String?;
     final role  = account['role']  as String? ?? 'passenger';
@@ -499,7 +500,7 @@ class _AccountTile extends StatelessWidget {
                     elevation: 0,
                     textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
-                  child: const Text('Switch'),
+                  child: Text(AppLocalizations.of(context).trSwitch),
                 ),
               ]),
         ),

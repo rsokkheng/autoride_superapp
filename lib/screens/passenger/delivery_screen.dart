@@ -564,9 +564,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       // Sender
       SectionHeader(title: AppLocalizations.of(context).sender),
       SizedBox(height: 14),
-      _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
+      _Field(hint: AppLocalizations.of(context).senderNameHint,  icon: Icons.person_outline,      controller: _senderNameCtrl),
       SizedBox(height: 10),
-      _Field(hint: "Sender's phone", icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
+      _Field(hint: AppLocalizations.of(context).senderPhoneHint, icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
@@ -580,9 +580,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       // Recipient
       SectionHeader(title: AppLocalizations.of(context).recipient),
       SizedBox(height: 14),
-      _Field(hint: "Recipient's name",  icon: Icons.person_outline, controller: _recipientNameCtrl),
+      _Field(hint: AppLocalizations.of(context).recipientNameHint,  icon: Icons.person_outline, controller: _recipientNameCtrl),
       SizedBox(height: 10),
-      _Field(hint: "Recipient's phone", icon: Icons.phone_outlined,  controller: _recipientPhoneCtrl,
+      _Field(hint: AppLocalizations.of(context).recipientPhoneHint, icon: Icons.phone_outlined,  controller: _recipientPhoneCtrl,
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
@@ -723,9 +723,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
        // Sender
       SectionHeader(title: AppLocalizations.of(context).informationOfMover),
       SizedBox(height: 14),
-      _Field(hint: "Sender's name",  icon: Icons.person_outline,      controller: _senderNameCtrl),
+      _Field(hint: AppLocalizations.of(context).senderNameHint,  icon: Icons.person_outline,      controller: _senderNameCtrl),
       SizedBox(height: 10),
-      _Field(hint: "Sender's phone", icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
+      _Field(hint: AppLocalizations.of(context).senderPhoneHint, icon: Icons.phone_outlined,       controller: _senderPhoneCtrl,
           keyboardType: TextInputType.phone,
           inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
       SizedBox(height: 10),
@@ -2235,7 +2235,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
                 _ConfirmRow(
                   icon: Icons.payment_outlined,
                   label: AppLocalizations.of(context).payment,
-                  value: '$payLabel (paid by ${paymentBy == 'recipient' ? 'recipient' : 'sender'})',
+                  value: '$payLabel (${paymentBy == 'recipient' ? AppLocalizations.of(context).trPaidByRecipient : AppLocalizations.of(context).trPaidBySender})',
                 ),
                 if (packageAmount != null && packageAmount! > 0) ...[
                   const SizedBox(height: 6),
@@ -2407,7 +2407,7 @@ class _MovingConfirmDialog extends StatelessWidget {
               _ConfirmRow(
                 icon: Icons.apartment_outlined,
                 label: AppLocalizations.of(context).floors,
-                value: 'Pickup: $floorPickup  •  Dropoff: $floorDropoff',
+                value: AppLocalizations.of(context).floorsPickupDropoff(floorPickup, floorDropoff),
               ),
               const SizedBox(height: 6),
               _ConfirmRow(
@@ -2415,14 +2415,14 @@ class _MovingConfirmDialog extends StatelessWidget {
                     ? Icons.elevator_outlined
                     : Icons.stairs_outlined,
                 label: AppLocalizations.of(context).elevator,
-                value: hasElevator ? 'Yes' : AppLocalizations.of(context).noStairsCarry,
+                value: hasElevator ? AppLocalizations.of(context).yes : AppLocalizations.of(context).noStairsCarry,
               ),
               const SizedBox(height: 6),
               _ConfirmRow(
                 icon: Icons.people_outline,
                 label: AppLocalizations.of(context).helpers,
-                value: '$requiresHelpers helper${requiresHelpers != 1 ? 's' : ''}'
-                    ' (${heavyItems ? 'heavy carry' : 'normal carry'})',
+                value: AppLocalizations.of(context).drvHelpers(requiresHelpers,
+                    heavyItems ? AppLocalizations.of(context).drvHeavyCarry : AppLocalizations.of(context).drvNormalCarry),
               ),
               const SizedBox(height: 6),
               _ConfirmRow(

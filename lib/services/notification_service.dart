@@ -11,6 +11,7 @@ import '../screens/passenger/marketplace_screen.dart';
 import '../screens/passenger/my_rentals_screen.dart';
 import '../utils/app_log.dart';
 import 'api_service.dart';
+import '../l10n/l10n.dart';
 
 // Mirrors the backend's FcmService::TYPE_SOUNDS map — keep both in sync.
 // channelId must match an AndroidNotificationChannel created in
@@ -40,7 +41,7 @@ const Map<String, ({String channelId, String asset})> _typeSounds = {
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (message.notification != null) return; // OS already showed it
   final data = message.data;
-  final title = data['title'] as String? ?? '🚗 New Ride Request';
+  final title = data['title'] as String? ?? l10n.trNewRideRequest;
   final body  = data['body']  as String? ??
       [data['pickup'], data['destination']].where((s) => s != null).join(' → ');
   if (body.isEmpty) return;
@@ -372,7 +373,7 @@ class NotificationService {
 
       if (type == 'ride_requested' || type == 'delivery_requested') {
         showRideRequest(
-          passengerName: data['passenger_name'] as String? ?? 'New request',
+          passengerName: data['passenger_name'] as String? ?? l10n.trNewRequest,
           pickup:        data['pickup'] as String? ?? '',
           destination:   data['destination'] as String? ?? '',
           fare:          data['fare'] as String? ?? '',
@@ -474,7 +475,7 @@ class NotificationService {
   }) async {
     await _plugin.show(
       1,
-      '🚗 New Ride Request',
+      l10n.trNewRideRequest,
       '$passengerName • $pickup → $destination • $fare',
       NotificationDetails(
         android: AndroidNotificationDetails(

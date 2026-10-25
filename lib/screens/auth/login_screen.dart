@@ -92,9 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
       final msg = e.toString().replaceFirst('Exception: ', '');
       setState(() {
         _error = msg.contains('network_error') || msg.contains('NETWORK_ERROR')
-            ? 'Network error. Check your connection and try again.'
+            ? AppLocalizations.of(context).connectionErrorRetry
             : msg.contains('sign_in_failed') || msg.contains('10:')
-                ? 'Google sign-in is not configured for this app. Contact support.'
+                ? AppLocalizations.of(context).trGoogleNotConfigured
                 : msg;
         _loading = false;
       });
@@ -600,14 +600,14 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
               ),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_codeSent ? 'Enter OTP' : 'Phone Login',
+                Text(_codeSent ? AppLocalizations.of(context).trEnterOtp : AppLocalizations.of(context).trPhoneLogin,
                     style: TextStyle(color: context.appTextPrimary,
                         fontSize: 20, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(
                   _codeSent
-                      ? 'Code sent to ${_sentPhone ?? ''}'
-                      : 'We\'ll send a one-time code via SMS',
+                      ? AppLocalizations.of(context).trCodeSentTo(_sentPhone ?? '')
+                      : AppLocalizations.of(context).trWeSendSmsCode,
                   style: TextStyle(color: context.appTextSecondary, fontSize: 13),
                 ),
               ]),
@@ -735,7 +735,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
             const SizedBox(height: 16),
             Center(
               child: _countdown > 0
-                  ? Text('Resend code in ${_countdown}s',
+                  ? Text(AppLocalizations.of(context).trResendCodeIn(_countdown),
                       style: TextStyle(color: context.appTextSecondary, fontSize: 13))
                   : TextButton(
                       onPressed: _loading ? null : _sendOtp,

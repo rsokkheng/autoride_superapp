@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminRidesScreen extends StatefulWidget {
   const AdminRidesScreen({super.key});
@@ -39,19 +40,19 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel Ride', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context).trCancelRide, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Reason for cancellation:', style: TextStyle(color: context.appTextSecondary)),
+          Text(AppLocalizations.of(context).trReasonForCancellation, style: TextStyle(color: context.appTextSecondary)),
           SizedBox(height: 10),
           TextField(
             controller: ctrl,
             style: TextStyle(color: context.appTextPrimary),
-            decoration: InputDecoration(hintText: 'e.g. Policy violation', hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
+            decoration: InputDecoration(hintText: AppLocalizations.of(context).trEgPolicyViolation, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none)),
           ),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Back', style: TextStyle(color: context.appTextSecondary))),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Cancel Ride')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: Text(AppLocalizations.of(context).trCancelRide)),
         ],
       ),
     );
@@ -70,7 +71,7 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Rides'),
+        title: Text(AppLocalizations.of(context).trRides),
         actions: [
           PopupMenuButton<String?>(
             color: context.appSurface,
@@ -97,7 +98,7 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _rides.isEmpty
-                  ? Center(child: Text('No rides found.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoRidesFound, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -153,9 +154,9 @@ class _RideTile extends StatelessWidget {
               ),
             ]),
             SizedBox(height: 4),
-            Text('From: $pickup', style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-            Text('To: $dropoff',   style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
-            Text('Fare: $fare ៛',  style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w600, fontSize: 12)),
+            Text(AppLocalizations.of(context).trFromPlace(pickup), style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(AppLocalizations.of(context).trToPlace(dropoff),   style: TextStyle(color: context.appTextSecondary, fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(AppLocalizations.of(context).trFareKhr(fare),  style: const TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w600, fontSize: 12)),
           ]),
         ),
         if (active)

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n.dart';
 
 const _green = Color(0xFF00C48C);
 
@@ -44,7 +46,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
         _drivers.removeWhere((d) => d['id'] == id);
         _processing.remove(id);
       });
-      _snack(action == 'approve' ? 'Driver approved' : 'Driver rejected',
+      _snack(action == 'approve' ? AppLocalizations.of(context).trDriverApproved : AppLocalizations.of(context).trDriverRejected,
              action == 'approve' ? _green : AppTheme.danger);
     } on ApiException catch (e) {
       if (mounted) { setState(() => _processing.remove(id)); _snack(e.message, AppTheme.danger); }
@@ -68,7 +70,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
       backgroundColor: context.appBackground,
       appBar: AppBar(
         backgroundColor: context.appSurface, elevation: 0,
-        title: Text('Driver Applications',
+        title: Text(AppLocalizations.of(context).trDriverApplications,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         actions: [
           IconButton(
@@ -90,7 +92,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
                   ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                       Icon(Icons.check_circle_outline_rounded, color: _green, size: 56),
                       SizedBox(height: 12),
-                      Text('No pending applications',
+                      Text(AppLocalizations.of(context).trNoPendingApplications,
                           style: TextStyle(color: context.appTextSecondary, fontSize: 16)),
                     ]))
                   : RefreshIndicator(
@@ -109,7 +111,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
                             processing: processing,
                             onReview:   () => Navigator.push(ctx, MaterialPageRoute(
                               builder: (_) => AdminDriverDetailScreen(driverId: id,
-                                  driverName: d['name'] as String? ?? 'Driver #$id'),
+                                  driverName: d['name'] as String? ?? AppLocalizations.of(context).trDriverNo(id)),
                             )).then((_) => _load()),
                             onApprove: () => _quickAction(d, 'approve'),
                             onReject:  () => _showRejectDialog(d),
@@ -126,9 +128,9 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: context.appSurface,
-        title: Text('Reject Driver', style: TextStyle(color: context.appTextPrimary)),
+        title: Text(AppLocalizations.of(context).trRejectDriver, style: TextStyle(color: context.appTextPrimary)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Provide a reason (optional):',
+          Text(AppLocalizations.of(context).trProvideReasonOptional,
               style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
           SizedBox(height: 8),
           TextField(
@@ -136,7 +138,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
             maxLines: 3,
             style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
-              hintText: 'e.g. Documents unclear, ID expired…',
+              hintText: AppLocalizations.of(context).trEgDocsUnclear,
               hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true, fillColor: AppTheme.primary,
               border: OutlineInputBorder(borderSide: BorderSide.none),
@@ -149,7 +151,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            child: const Text('Reject', style: TextStyle(color: Colors.white)),
+            child: Text(AppLocalizations.of(context).trReject, style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -162,7 +164,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
             reason: reasonCtrl.text.trim().isEmpty ? null : reasonCtrl.text.trim());
         if (!mounted) return;
         setState(() { _drivers.removeWhere((d) => d['id'] == id); _processing.remove(id); });
-        _snack('Driver rejected', AppTheme.danger);
+        _snack(AppLocalizations.of(context).trDriverRejected, AppTheme.danger);
       } on ApiException catch (e) {
         if (mounted) { setState(() => _processing.remove(id)); _snack(e.message, AppTheme.danger); }
       } catch (_) {
@@ -188,7 +190,7 @@ class _DriverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name  = driver['name']  as String? ?? 'Unknown';
+    final name  = driver['name']  as String? ?? AppLocalizations.of(context).trUnknown;
     final email = driver['email'] as String? ?? '';
     final type  = driver['driver_type'] as String? ?? '';
     final city  = driver['city']  as String? ?? '';
@@ -222,7 +224,7 @@ class _DriverCard extends StatelessWidget {
                 color: AppTheme.accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text('Review Docs',
+              child: Text(AppLocalizations.of(context).trReviewDocs,
                   style: TextStyle(color: AppTheme.accent,
                       fontSize: 12, fontWeight: FontWeight.w700)),
             ),
@@ -251,7 +253,7 @@ class _DriverCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
-                child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(AppLocalizations.of(context).trReject, style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ),
             const SizedBox(width: 10),
@@ -264,7 +266,7 @@ class _DriverCard extends StatelessWidget {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
-                child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.w700)),
+                child: Text(AppLocalizations.of(context).trApprove, style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ),
           ]),
@@ -302,13 +304,13 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
   final Set<int> _processing = {};
   bool _finalizing = false;
 
-  static const _docLabels = {
-    'id_card':              'National ID / Passport',
-    'driver_license':       'Driver License',
-    'vehicle_registration': 'Vehicle Registration',
-    'selfie_with_id':       'Selfie with ID',
-    'vehicle_insurance':    'Vehicle Insurance',
-    'other':                'Other Document',
+  static Map<String, String> get _docLabels => {
+    'id_card':              l10n.trNationalIdPassport,
+    'driver_license':       l10n.trDriverLicense,
+    'vehicle_registration': l10n.trVehicleRegistration,
+    'selfie_with_id':       l10n.trSelfieWithId,
+    'vehicle_insurance':    l10n.trVehicleInsurance,
+    'other':                l10n.trOtherDocument,
   };
 
   @override
@@ -335,13 +337,13 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
         context: context,
         builder: (_) => AlertDialog(
           backgroundColor: context.appSurface,
-          title: Text('Reject Document', style: TextStyle(color: context.appTextPrimary)),
+          title: Text(AppLocalizations.of(context).trRejectDocument, style: TextStyle(color: context.appTextPrimary)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
             style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
-              hintText: 'Reason (e.g. Image too blurry)',
+              hintText: AppLocalizations.of(context).trReasonImageBlurry,
               hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true, fillColor: AppTheme.primary,
               border: OutlineInputBorder(borderSide: BorderSide.none),
@@ -352,7 +354,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context, ctrl.text.trim()),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-              child: const Text('Reject', style: TextStyle(color: Colors.white)),
+              child: Text(AppLocalizations.of(context).trReject, style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -381,16 +383,16 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
         context: context,
         builder: (_) => AlertDialog(
           backgroundColor: context.appSurface,
-          title: Text('Approve Driver', style: TextStyle(color: context.appTextPrimary)),
+          title: Text(AppLocalizations.of(context).trApproveDriver, style: TextStyle(color: context.appTextPrimary)),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Service zone (optional):',
+            Text(AppLocalizations.of(context).trServiceZoneOptional,
                 style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
             SizedBox(height: 8),
             TextField(
               controller: ctrl,
               style: TextStyle(color: context.appTextPrimary),
               decoration: InputDecoration(
-                hintText: 'e.g. Phnom Penh Zone A',
+                hintText: AppLocalizations.of(context).trEgZoneA,
                 hintStyle: TextStyle(color: context.appTextSecondary),
                 filled: true, fillColor: AppTheme.primary,
                 border: OutlineInputBorder(borderSide: BorderSide.none),
@@ -402,7 +404,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context, ctrl.text.trim().isEmpty ? '' : ctrl.text.trim()),
               style: AppTheme.confirmButtonStyle(),
-              child: const Text('Confirm Approve'),
+              child: Text(AppLocalizations.of(context).trConfirmApprove),
             ),
           ],
         ),
@@ -417,7 +419,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
           action: action,
           serviceZone: serviceZone?.isEmpty == true ? null : serviceZone);
       if (!mounted) return;
-      _snack(action == 'approve' ? 'Driver approved!' : 'Driver rejected',
+      _snack(action == 'approve' ? AppLocalizations.of(context).trDriverApprovedExcl : AppLocalizations.of(context).trDriverRejected,
              action == 'approve' ? _green : AppTheme.danger);
       Navigator.pop(context);
     } on ApiException catch (e) {
@@ -468,7 +470,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                         SizedBox(height: 20),
 
                         // Documents
-                        Text('Documents',
+                        Text(AppLocalizations.of(context).trDocuments,
                             style: TextStyle(color: context.appTextPrimary,
                                 fontSize: 15, fontWeight: FontWeight.w700)),
                         const SizedBox(height: 12),
@@ -479,7 +481,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                           if (docs.isEmpty) {
                             return [Center(child: Padding(
                               padding: EdgeInsets.all(24),
-                              child: Text('No documents uploaded yet.',
+                              child: Text(AppLocalizations.of(context).trNoDocumentsYet,
                                   style: TextStyle(color: context.appTextSecondary)),
                             ))];
                           }
@@ -507,7 +509,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                 ]),
                                 if (note != null && note.isNotEmpty) ...[
                                   SizedBox(height: 4),
-                                  Text('Note: $note',
+                                  Text(AppLocalizations.of(context).trNoteWith(note),
                                       style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
                                 ],
                                 if (url != null) ...[
@@ -525,7 +527,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                         mainAxisSize: MainAxisSize.min, children: [
                                           Icon(Icons.image_outlined, color: context.appTextSecondary, size: 32),
                                           SizedBox(height: 4),
-                                          Text('View Document', style: TextStyle(
+                                          Text(AppLocalizations.of(context).trViewDocument, style: TextStyle(
                                               color: context.appTextSecondary, fontSize: 12)),
                                         ],
                                       )),
@@ -548,7 +550,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                             padding: const EdgeInsets.symmetric(vertical: 8),
                                           ),
-                                          child: const Text('Reject', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                          child: Text(AppLocalizations.of(context).trReject, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -561,7 +563,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                                             padding: const EdgeInsets.symmetric(vertical: 8),
                                           ),
-                                          child: const Text('Approve', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                                          child: Text(AppLocalizations.of(context).trApprove, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
                                         ),
                                       ),
                                     ]),
@@ -595,7 +597,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                 ),
-                                child: const Text('Reject Driver', style: TextStyle(fontWeight: FontWeight.w700)),
+                                child: Text(AppLocalizations.of(context).trRejectDriver, style: TextStyle(fontWeight: FontWeight.w700)),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -608,7 +610,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                   padding: const EdgeInsets.symmetric(vertical: 14),
                                 ),
-                                child: const Text('Approve Driver', style: TextStyle(fontWeight: FontWeight.w700)),
+                                child: Text(AppLocalizations.of(context).trApproveDriver, style: TextStyle(fontWeight: FontWeight.w700)),
                               ),
                             ),
                           ]),

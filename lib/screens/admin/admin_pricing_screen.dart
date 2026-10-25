@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminPricingScreen extends StatefulWidget {
   const AdminPricingScreen({super.key});
@@ -63,7 +64,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
     try {
       await ApiService.updateAdminPricingSettings(settings);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pricing settings saved.'), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).trPricingSaved), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message), backgroundColor: AppTheme.danger, behavior: SnackBarBehavior.floating));
@@ -80,14 +81,14 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Pricing Settings'),
+        title: Text(AppLocalizations.of(context).trPricingSettings),
         actions: [
           if (!_loading && _error == null)
             TextButton(
               onPressed: _saving ? null : _save,
               child: _saving
                   ? SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: AppTheme.accent, strokeWidth: 2))
-                  : Text('Save', style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
+                  : Text(AppLocalizations.of(context).trSave, style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w700)),
             ),
         ],
       ),
@@ -133,7 +134,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
                     SizedBox(width: double.infinity, child: ElevatedButton(
                       onPressed: _saving ? null : _save,
                       style: AppTheme.confirmButtonStyle(background: AppTheme.accent),
-                      child: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Save Settings'),
+                      child: _saving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : Text(AppLocalizations.of(context).trSaveSettings),
                     )),
                     const SizedBox(height: 32),
                   ],

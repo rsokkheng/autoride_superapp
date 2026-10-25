@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/tablet_frame.dart';
 
 class AppTheme {
   // ── Light (Grab-style) ───────────────────────────────────────────────────
@@ -63,6 +64,7 @@ class AppTheme {
 
   static ThemeData get lightTheme => ThemeData(
         brightness: Brightness.light,
+        pageTransitionsTheme: tabletAwarePageTransitions,
         primaryColor: accent,
         scaffoldBackgroundColor: primary,
         colorScheme: const ColorScheme.light(
@@ -117,6 +119,7 @@ class AppTheme {
 
   static ThemeData get darkModeTheme => ThemeData(
         brightness: Brightness.dark,
+        pageTransitionsTheme: tabletAwarePageTransitions,
         primaryColor: accent,
         scaffoldBackgroundColor: darkPrimary,
         colorScheme: const ColorScheme.dark(

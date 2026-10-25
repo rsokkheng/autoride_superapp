@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminWithdrawalsScreen extends StatefulWidget {
   const AdminWithdrawalsScreen({super.key});
@@ -39,12 +40,12 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Approve Withdrawal', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context).trApproveWithdrawal, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Add a note (optional):', style: TextStyle(color: context.appTextSecondary)),
+          Text(AppLocalizations.of(context).trAddNoteOptional, style: TextStyle(color: context.appTextSecondary)),
           SizedBox(height: 10),
           TextField(controller: noteCtrl, style: TextStyle(color: context.appTextPrimary),
-            decoration: InputDecoration(hintText: 'e.g. Transferred via ABA', hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
+            decoration: InputDecoration(hintText: AppLocalizations.of(context).trEgTransferredAba, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
@@ -55,7 +56,7 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
     if (ok != true || !mounted) return;
     try {
       await ApiService.approveAdminWithdrawal(id, note: noteCtrl.text.trim().isEmpty ? null : noteCtrl.text.trim());
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Approved.'), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).trApprovedDot), backgroundColor: AppTheme.success, behavior: SnackBarBehavior.floating));
       await _load();
     } catch (e) {
       if (!mounted) return;
@@ -72,12 +73,12 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Reject Withdrawal', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
+        title: Text(AppLocalizations.of(context).trRejectWithdrawal, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text('Reason (required):', style: TextStyle(color: context.appTextSecondary)),
+          Text(AppLocalizations.of(context).trReasonRequired, style: TextStyle(color: context.appTextSecondary)),
           SizedBox(height: 10),
           TextField(controller: ctrl, style: TextStyle(color: context.appTextPrimary),
-            decoration: InputDecoration(hintText: 'e.g. Invalid account number', hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
+            decoration: InputDecoration(hintText: AppLocalizations.of(context).trEgInvalidAccount, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
@@ -101,7 +102,7 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Withdrawals'),
+        title: Text(AppLocalizations.of(context).trWithdrawals),
         actions: [
           PopupMenuButton<String>(
             color: context.appSurface,
@@ -125,7 +126,7 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _items.isEmpty
-                  ? Center(child: Text('No withdrawals found.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoWithdrawalsFound, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,

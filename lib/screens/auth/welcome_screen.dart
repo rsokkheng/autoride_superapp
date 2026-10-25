@@ -15,47 +15,65 @@ class WelcomeScreen extends StatelessWidget {
   void _push(BuildContext context, Widget screen) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
 
+  // Side by side → equal widths; stacked → natural height.
+  static Widget _flexible(bool stacked, Widget child) =>
+      stacked ? child : Expanded(child: child);
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // Scale to the screen: Galaxy Z Flip cover screens / small phones are
+    // ~260–340 dp wide and short, so fixed 26pt titles and side-by-side
+    // buttons overflow or get cut off there.
+    final size    = MediaQuery.sizeOf(context);
+    final scale   = (size.width / 390).clamp(0.72, 1.0);
+    final compact = size.width < 360;   // stack the quick sign-in buttons
+    final short   = size.height < 640;  // flatter illustration
+    double fs(double v) => v * scale;
     return Scaffold(
       backgroundColor: context.appBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          padding: EdgeInsets.fromLTRB(fs(20), 12, fs(20), 24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             // ── Brand + language ─────────────────────────────────────────
             Row(children: [
-              Image.asset('assets/library/icon_fa.png', width: 52, height: 52),
-              const SizedBox(width: 10),
+              Image.asset('assets/library/icon_fa.png', width: fs(52), height: fs(52)),
+              SizedBox(width: fs(10)),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('ROTEH APP',
-                      style: TextStyle(
-                          color: _green, fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text('ROTEH APP',
+                        style: TextStyle(
+                            color: _green, fontSize: fs(24), fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  ),
                   const SizedBox(height: 2),
                   Text(l.welcomeTagline,
-                      style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                      maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: context.appTextSecondary, fontSize: fs(13))),
                 ]),
               ),
               const LanguagePickerButton(),
             ]),
 
-            const SizedBox(height: 20),
-            const _Hero(),
-            const SizedBox(height: 20),
+            SizedBox(height: fs(20)),
+            _Hero(aspectRatio: short ? 2.2 : 1.45),
+            SizedBox(height: fs(20)),
 
             // ── Headline ─────────────────────────────────────────────────
             Text(l.welcomeTitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: context.appTextPrimary, fontSize: 26, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
+                    color: context.appTextPrimary, fontSize: fs(26), fontWeight: FontWeight.w900,
+                    height: 1.3)),
+            SizedBox(height: fs(8)),
             Text(l.welcomeSubtitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: context.appTextSecondary, fontSize: 15, height: 1.4)),
+                style: TextStyle(color: context.appTextSecondary, fontSize: fs(15), height: 1.4)),
 
-            const SizedBox(height: 24),
+            SizedBox(height: fs(24)),
 
             // ── Primary actions ──────────────────────────────────────────
             GuestShopButton(onTap: () => _push(context, const MarketplaceScreen())),
@@ -70,11 +88,15 @@ class WelcomeScreen extends StatelessWidget {
               ),
               child: Row(children: [
                 const Spacer(),
-                const Icon(Icons.person_outline_rounded, size: 24),
+                Icon(Icons.person_outline_rounded, size: fs(24)),
                 const SizedBox(width: 10),
-                Text(l.signIn, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                Flexible(
+                  flex: 6,
+                  child: Text(l.signIn, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: fs(16), fontWeight: FontWeight.w800)),
+                ),
                 const Spacer(),
-                const Icon(Icons.chevron_right_rounded, size: 24),
+                Icon(Icons.chevron_right_rounded, size: fs(24)),
               ]),
             ),
 
@@ -90,26 +112,28 @@ class WelcomeScreen extends StatelessWidget {
             ]),
             const SizedBox(height: 16),
 
-            // ── Quick sign-in ────────────────────────────────────────────
-            Row(children: [
-              Expanded(
-                child: _QuickButton(
+            // ── Quick sign-in (stacked on narrow screens) ────────────────
+            Flex(
+              direction: compact ? Axis.vertical : Axis.horizontal,
+              // stretch = full-width buttons when stacked; side by side the
+              // height is unbounded (inside the scroll view), so centre instead.
+              crossAxisAlignment: compact ? CrossAxisAlignment.stretch : CrossAxisAlignment.center,
+              children: [
+                _flexible(compact, _QuickButton(
                   icon: const Icon(Icons.phone_rounded, color: _green, size: 22),
                   label: l.continueWithPhone,
                   onTap: () => _push(context, const LoginScreen(start: LoginStart.phone)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _QuickButton(
+                )),
+                const SizedBox(width: 12, height: 10),
+                _flexible(compact, _QuickButton(
                   icon: const Text('G',
                       style: TextStyle(
                           color: Color(0xFF4285F4), fontSize: 20, fontWeight: FontWeight.w900)),
                   label: l.continueWithGoogle,
                   onTap: () => _push(context, const LoginScreen(start: LoginStart.google)),
-                ),
-              ),
-            ]),
+                )),
+              ],
+            ),
 
             const SizedBox(height: 16),
             Center(
@@ -197,14 +221,15 @@ class _QuickButton extends StatelessWidget {
 
 /// Shop-and-deliver illustration built from icons, so it needs no image asset.
 class _Hero extends StatelessWidget {
-  const _Hero();
+  final double aspectRatio;
+  const _Hero({this.aspectRatio = 1.45});
 
   static const _green = GuestShopButton.green;
 
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
-      aspectRatio: 1.45,
+      aspectRatio: aspectRatio,
       child: LayoutBuilder(builder: (context, c) {
         final w = c.maxWidth, h = c.maxHeight;
         return Stack(clipBehavior: Clip.none, children: [
@@ -235,7 +260,7 @@ class _Hero extends StatelessWidget {
                 boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 18, offset: const Offset(0, 8))],
               ),
               child: Column(children: [
-                const SizedBox(height: 14),
+                SizedBox(height: h * 0.06),
                 const _Awning(),
                 const Spacer(),
                 Container(
@@ -251,11 +276,11 @@ class _Hero extends StatelessWidget {
                 ),
                 const Spacer(),
                 for (final f in [0.6, 0.45]) ...[
-                  Container(height: 6, width: w * 0.30 * f,
+                  Container(height: h * 0.025, width: w * 0.30 * f,
                       decoration: BoxDecoration(color: const Color(0xFFE5E7EB), borderRadius: BorderRadius.circular(3))),
-                  const SizedBox(height: 6),
+                  SizedBox(height: h * 0.025),
                 ],
-                const SizedBox(height: 10),
+                SizedBox(height: h * 0.04),
               ]),
             ),
           ),

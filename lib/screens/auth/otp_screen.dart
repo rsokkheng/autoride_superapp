@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../l10n/app_localizations.dart';
 
 const _green = Color(0xFF00C48C);
 
@@ -106,8 +107,8 @@ class _OtpScreenState extends State<OtpScreen> {
       await ApiService.sendOtp(widget.phone);
       if (!mounted) return;
       _startResendTimer();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('New code sent'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).trNewCodeSent),
         behavior: SnackBarBehavior.floating,
         backgroundColor: _green,
       ));
@@ -127,7 +128,7 @@ class _OtpScreenState extends State<OtpScreen> {
         backgroundColor: context.appSurface,
         elevation: 0,
         leading: BackButton(color: context.appTextPrimary),
-        title: Text('Verify Phone',
+        title: Text(AppLocalizations.of(context).trVerifyPhone,
             style: TextStyle(
                 color: context.appTextPrimary, fontWeight: FontWeight.w700)),
       ),
@@ -148,7 +149,7 @@ class _OtpScreenState extends State<OtpScreen> {
             ),
             SizedBox(height: 20),
 
-            Text('Enter verification code',
+            Text(AppLocalizations.of(context).trEnterVerificationCode,
                 style: TextStyle(fontSize: 20,
                     fontWeight: FontWeight.w800, color: context.appTextPrimary)),
             SizedBox(height: 8),
@@ -216,10 +217,10 @@ class _OtpScreenState extends State<OtpScreen> {
 
             // Resend
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text("Didn't receive the code? ",
+              Text(AppLocalizations.of(context).trDidntReceiveCode,
                   style: TextStyle(color: context.appTextSecondary)),
               _resendSecs > 0
-                  ? Text('Resend in ${_resendSecs}s',
+                  ? Text(AppLocalizations.of(context).trResendInSeconds(_resendSecs),
                       style: TextStyle(color: context.appTextSecondary))
                   : GestureDetector(
                       onTap: _resending ? null : _resend,

@@ -13,6 +13,7 @@ import '../../services/maps_service.dart';
 import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'driver_delivery_summary_screen.dart';
+import '../../widgets/tablet_frame.dart';
 
 // Default Phnom Penh centre — used until GPS fix obtained
 const _kPhnomPenh = LatLng(11.5680, 104.9195);
@@ -33,7 +34,7 @@ enum _MovingPhase {
   completed,
 }
 
-class DriverDeliveryActiveScreen extends StatefulWidget {
+class DriverDeliveryActiveScreen extends StatefulWidget implements TabletFullWidth {
   final DeliveryModel delivery;
   final String driverIdStr;
   /// When true: map + details shown but no action buttons (view from Missions)

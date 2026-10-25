@@ -21,6 +21,7 @@ import 'trip_tracking_screen.dart';
 import 'promo_screen.dart';
 import 'wallet_screen.dart' show showTopUpSheet, TopUpStatusScreen;
 import 'saved_places_screen.dart';
+import '../../widgets/tablet_frame.dart';
 
 const _kCambodiaSW = LatLng(10.4, 102.3);
 const _kCambodiaNE = LatLng(14.7, 107.6);
@@ -73,12 +74,12 @@ class _RideType {
 // still works if that call fails. The real list (with real pricing/capacity)
 // is fetched at runtime via ApiService.getVehicleTypes().
 List<_RideType> _fallbackRideTypesFor(AppLocalizations l) => [
-  _RideType(name: l.motorcycle,  serviceType: 'motorcycle', icon: Icons.two_wheeler,        eta: '', desc: '1 seat',  base: 2500),
-  _RideType(name: l.tukTuk3,     serviceType: 'tuk_tuk',    icon: Icons.electric_rickshaw,   eta: '', desc: '3 seats', base: 3500),
-  _RideType(name: l.carStandard, serviceType: 'standard',   icon: Icons.directions_car,      eta: '', desc: '4 seats', base: 5000),
-  _RideType(name: l.carPremium,  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '', desc: '4 seats', base: 8000),
-  _RideType(name: l.sharedRide,  serviceType: 'shared',     icon: Icons.groups,              eta: '', desc: '4 seats', base: 2500),
-  _RideType(name: l.vanXl,       serviceType: 'van',        icon: Icons.airport_shuttle,     eta: '', desc: '7 seats', base: 7000),
+  _RideType(name: l.motorcycle,  serviceType: 'motorcycle', icon: Icons.two_wheeler,        eta: '', desc: l.seatsLabel(1),  base: 2500),
+  _RideType(name: l.tukTuk3,     serviceType: 'tuk_tuk',    icon: Icons.electric_rickshaw,   eta: '', desc: l.seatsLabel(3), base: 3500),
+  _RideType(name: l.carStandard, serviceType: 'standard',   icon: Icons.directions_car,      eta: '', desc: l.seatsLabel(4), base: 5000),
+  _RideType(name: l.carPremium,  serviceType: 'premium',    icon: Icons.local_taxi,          eta: '', desc: l.seatsLabel(4), base: 8000),
+  _RideType(name: l.sharedRide,  serviceType: 'shared',     icon: Icons.groups,              eta: '', desc: l.seatsLabel(4), base: 2500),
+  _RideType(name: l.vanXl,       serviceType: 'van',        icon: Icons.airport_shuttle,     eta: '', desc: l.seatsLabel(7), base: 7000),
 ];
 
 // Stable, locale-independent keys for the ride-category filter — selection
@@ -336,7 +337,7 @@ void _paintVehicleGlyph(Canvas canvas, double size, IconData iconData) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 // step 0 = "Where to?" landing   step 1 = destination search   step 2 = confirm
 
-class RideBookingScreen extends StatefulWidget {
+class RideBookingScreen extends StatefulWidget implements TabletFullWidth {
   final FamilyMember? forFamilyMember;
   // Jump straight into "no destination" booking (pickup only, tell the
   // driver in person) — used by the dedicated home-screen shortcut.
@@ -474,18 +475,28 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     try {
       final types = await ApiService.getVehicleTypes();
       if (!mounted || types.isEmpty) return;
+      final l    = AppLocalizations.of(context);
+      final lang = appLocale.value.languageCode;
+      // Selection is keyed by the displayed name, which changes with the
+      // language — remember the service type so a reload keeps the pick.
+      final prevService = _visibleRideTypes
+          .where((r) => r.name == _selectedRide)
+          .map((r) => r.serviceType)
+          .firstOrNull;
       setState(() {
         _visibleRideTypes = types
             .map((v) => _RideType(
-                  name:        v.label,
+                  name:        v.localizedLabel(lang),
                   serviceType: v.serviceType,
                   icon:        v.icon,
                   eta:         '',
-                  desc:        v.seatsLabel,
+                  desc:        l.seatsLabel(v.capacity),
                   base:        v.pricing.base,
                 ))
             .toList();
         _rideTypesLoading = false;
+        final same = _visibleRideTypes.where((r) => r.serviceType == prevService);
+        if (same.isNotEmpty) _selectedRide = same.first.name;
         // Keep selection valid: default to tuk_tuk if present, else first.
         if (!_visibleRideTypes.any((r) => r.name == _selectedRide)) {
           _selectedRide = _visibleRideTypes
@@ -547,7 +558,11 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
     }
   }
 
-  void _onLocaleChanged() => setState(() {});
+  void _onLocaleChanged() {
+    setState(() {});
+    // Vehicle names come from the backend per language — re-map them.
+    _loadVehicleTypes();
+  }
 
   @override
   void didChangeDependencies() {
@@ -3362,8 +3377,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                 : const Offset(0.5, 1.0),
             infoWindow: InfoWindow(
               title: i == _stops.length - 1
-                  ? '🏁 Stop ${i + 1} — Destination'
-                  : '🔵 Stop ${i + 1}',
+                  ? '🏁 ${AppLocalizations.of(context).trStopDestination(i + 1)}'
+                  : '🔵 ${AppLocalizations.of(context).trStopN(i + 1)}',
               snippet: _stops[i].address,
             ),
           ),
@@ -3764,8 +3779,8 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                           color: Colors.white, strokeWidth: 2.5))
                   : Text(
                       _isScheduled
-                          ? '📅  Schedule — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}'
-                          : '🛺  Confirm — ${_fareByType[type.serviceType]?.formattedTotal ?? '...'}',
+                          ? '📅  ${AppLocalizations.of(context).trScheduleWithFare(_fareByType[type.serviceType]?.formattedTotal ?? '...')}'
+                          : '🛺  ${AppLocalizations.of(context).trConfirmWithFare(_fareByType[type.serviceType]?.formattedTotal ?? '...')}',
                     ),
             ),
           );

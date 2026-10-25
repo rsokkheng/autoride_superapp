@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class SurgePromoScreen extends StatefulWidget {
   const SurgePromoScreen({super.key});
@@ -30,7 +31,7 @@ class _SurgePromoScreenState extends State<SurgePromoScreen>
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Surge & Promo Control'),
+        title: Text(AppLocalizations.of(context).trSurgePromoControl),
         bottom: TabBar(
           controller: _tab,
           indicatorColor: AppTheme.accent,
@@ -108,15 +109,15 @@ class _SurgeTabState extends State<_SurgeTab> {
   Future<void> _delete(Map<String, dynamic> zone) async {
     final id = (zone['id'] as num?)?.toInt();
     if (id == null) return;
-    final name = zone['name'] as String? ?? 'this zone';
+    final name = zone['name'] as String? ?? AppLocalizations.of(context).trThisZone;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Surge Zone',
+        title: Text(AppLocalizations.of(context).trDeleteSurgeZone,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Delete "$name"?',
+        content: Text(AppLocalizations.of(context).trDeleteNamedQ(name),
             style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
@@ -160,7 +161,7 @@ class _SurgeTabState extends State<_SurgeTab> {
         onPressed: () => _showForm(),
         backgroundColor: AppTheme.warning,
         icon: Icon(Icons.add, color: Colors.white),
-        label: Text('New Zone',
+        label: Text(AppLocalizations.of(context).trNewZone,
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
@@ -183,7 +184,7 @@ class _SurgeTabState extends State<_SurgeTab> {
                       ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                           Icon(Icons.bolt_outlined, color: context.appTextSecondary, size: 48),
                           SizedBox(height: 12),
-                          Text('No surge zones configured.',
+                          Text(AppLocalizations.of(context).trNoSurgeZones,
                               style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
                         ]))
                       : ListView.separated(
@@ -336,7 +337,7 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
                   borderRadius: BorderRadius.circular(2)))),
           SizedBox(height: 20),
           Row(children: [
-            Expanded(child: Text(widget.zone == null ? 'New Surge Zone' : 'Edit Surge Zone',
+            Expanded(child: Text(widget.zone == null ? AppLocalizations.of(context).trNewSurgeZone : AppLocalizations.of(context).trEditSurgeZone,
                 style: TextStyle(color: context.appTextPrimary,
                     fontSize: 18, fontWeight: FontWeight.w800))),
             IconButton(icon: Icon(Icons.close, color: context.appTextSecondary),
@@ -347,11 +348,11 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
             Text(_error!, style: const TextStyle(color: AppTheme.danger, fontSize: 13)),
           ],
           const SizedBox(height: 16),
-          _SurgeInput(controller: _nameCtrl, label: 'Zone Name', hint: 'e.g. City Centre'),
+          _SurgeInput(controller: _nameCtrl, label: AppLocalizations.of(context).trZoneName, hint: AppLocalizations.of(context).trEgCityCentre),
           const SizedBox(height: 12),
-          _SurgeInput(controller: _descCtrl, label: 'Description (optional)', hint: 'e.g. High demand area'),
+          _SurgeInput(controller: _descCtrl, label: AppLocalizations.of(context).trDescriptionOptional, hint: AppLocalizations.of(context).trEgHighDemand),
           const SizedBox(height: 16),
-          Text('Multiplier: ×${_multiplier.toStringAsFixed(1)}',
+          Text(AppLocalizations.of(context).trMultiplierX(_multiplier.toStringAsFixed(1)),
               style: TextStyle(color: context.appTextPrimary,
                   fontWeight: FontWeight.w600, fontSize: 14)),
           Slider(
@@ -383,7 +384,7 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
               child: _saving
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.zone == null ? 'Create Zone' : 'Save Changes'),
+                  : Text(widget.zone == null ? AppLocalizations.of(context).trCreateZone : AppLocalizations.of(context).trSaveChanges),
             ),
           ),
         ]),
@@ -477,7 +478,7 @@ class _PromoTabState extends State<_PromoTab> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.appSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Promo',
+        title: Text(AppLocalizations.of(context).trDeletePromo,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text('Delete promo code "${promo['code']}"?',
             style: TextStyle(color: context.appTextSecondary)),
@@ -514,7 +515,7 @@ class _PromoTabState extends State<_PromoTab> {
         onPressed: _showCreateSheet,
         backgroundColor: AppTheme.accent,
         icon: Icon(Icons.add, color: Colors.white),
-        label: Text('New Promo',
+        label: Text(AppLocalizations.of(context).trNewPromo,
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
       ),
       body: _loading
@@ -534,7 +535,7 @@ class _PromoTabState extends State<_PromoTab> {
                   onRefresh: _load,
                   color: AppTheme.accent,
                   child: _promos.isEmpty
-                      ? Center(child: Text('No promo codes.',
+                      ? Center(child: Text(AppLocalizations.of(context).trNoPromoCodes,
                           style: TextStyle(color: context.appTextSecondary)))
                       : ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -595,14 +596,14 @@ class _PromoTile extends StatelessWidget {
                     fontFamily: 'monospace', letterSpacing: 2)),
             const SizedBox(height: 4),
             Row(children: [
-              Text('${AppTheme.khr(discount is int ? discount : (discount as num).toInt())} off',
+              Text(AppLocalizations.of(context).trAmountOff(AppTheme.khr(discount is int ? discount : (discount as num).toInt())),
                   style: TextStyle(color: context.appTextPrimary, fontSize: 12)),
               Text(' · ', style: TextStyle(color: context.appTextSecondary)),
-              Text('$usesLeft uses left',
+              Text(AppLocalizations.of(context).trUsesLeft(usesLeft),
                   style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               if (short.isNotEmpty) ...[
                 Text(' · ', style: TextStyle(color: context.appTextSecondary)),
-                Text('Exp $short',
+                Text(AppLocalizations.of(context).trExpShort(short),
                     style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
               ],
             ]),
@@ -666,8 +667,8 @@ class _PromoEditSheetState extends State<_PromoEditSheet> {
     final code     = _codeCtrl.text.trim().toUpperCase();
     final discount = int.tryParse(_discountCtrl.text.trim());
     if (code.isEmpty || discount == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Code and discount amount are required.'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).trCodeDiscountRequired),
         behavior: SnackBarBehavior.floating,
       ));
       return;
@@ -724,18 +725,18 @@ class _PromoEditSheetState extends State<_PromoEditSheet> {
                   borderRadius: BorderRadius.circular(2)))),
           SizedBox(height: 20),
 
-          Text(widget.promo != null ? 'Edit Promo Code' : 'New Promo Code',
+          Text(widget.promo != null ? AppLocalizations.of(context).trEditPromoCode : AppLocalizations.of(context).trNewPromoCode,
               style: TextStyle(color: context.appTextPrimary,
                   fontSize: 18, fontWeight: FontWeight.w800)),
           SizedBox(height: 20),
 
-          _SurgeInput(controller: _codeCtrl, label: 'Promo Code', hint: 'e.g. ROTEH2026'),
+          _SurgeInput(controller: _codeCtrl, label: AppLocalizations.of(context).trPromoCode, hint: 'e.g. ROTEH2026'),
           SizedBox(height: 12),
-          _SurgeInput(controller: _discountCtrl, label: 'Discount (KHR)', hint: 'e.g. 10000'),
+          _SurgeInput(controller: _discountCtrl, label: AppLocalizations.of(context).trDiscountKhr, hint: 'e.g. 10000'),
           SizedBox(height: 12),
-          _SurgeInput(controller: _usesCtrl, label: 'Max Uses (leave blank = unlimited)', hint: 'e.g. 100'),
+          _SurgeInput(controller: _usesCtrl, label: AppLocalizations.of(context).trMaxUsesHint, hint: 'e.g. 100'),
           SizedBox(height: 12),
-          _SurgeInput(controller: _expiresCtrl, label: 'Expires At (YYYY-MM-DD)', hint: 'e.g. 2026-12-31'),
+          _SurgeInput(controller: _expiresCtrl, label: AppLocalizations.of(context).trExpiresAtHint, hint: 'e.g. 2026-12-31'),
           SizedBox(height: 16),
 
           Row(children: [
@@ -754,7 +755,7 @@ class _PromoEditSheetState extends State<_PromoEditSheet> {
               child: _submitting
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.promo != null ? 'Save Changes' : 'Create Promo'),
+                  : Text(widget.promo != null ? AppLocalizations.of(context).trSaveChanges : AppLocalizations.of(context).trCreatePromo),
             ),
           ),
         ]),

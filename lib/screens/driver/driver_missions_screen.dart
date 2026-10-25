@@ -5,6 +5,7 @@ import '../../models/delivery_model.dart';
 import '../../models/ride_model.dart';
 import '../../services/api_service.dart';
 import 'driver_delivery_active_screen.dart';
+import 'driver_missed_requests_screen.dart';
 
 class DriverMissionsScreen extends StatefulWidget {
   const DriverMissionsScreen({super.key});
@@ -30,10 +31,23 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
 
   RideModel? _activeRide;
 
+  static const _missedTab = 3;
+  int _missedUnseen = 0;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
+    // Opening the Missed tab clears its badge.
+    _tabController.addListener(() {
+      if (_tabController.index == _missedTab && _missedUnseen > 0) {
+        setState(() => _missedUnseen = 0);
+        DriverMissedRequestsScreen.markSeen();
+      }
+    });
+    DriverMissedRequestsScreen.unseenCount().then((n) {
+      if (mounted && _tabController.index != _missedTab) setState(() => _missedUnseen = n);
+    });
     _loadDeliveries();
     _loadMovings();
     _loadRideHistory();
@@ -127,6 +141,8 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
         ),
         bottom: TabBar(
           controller: _tabController,
+          isScrollable: true,
+          tabAlignment: TabAlignment.start,
           indicatorColor: AppTheme.accentOrange,
           labelColor: AppTheme.accentOrange,
           unselectedLabelColor: context.appTextSecondary,
@@ -146,6 +162,14 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
                 icon: Icons.local_shipping_outlined,
                 label: AppLocalizations.of(context).moving,
                 count: _activeMovings.length,
+              ),
+            ),
+            Tab(
+              child: _TabLabel(
+                icon: Icons.phone_missed_outlined,
+                label: AppLocalizations.of(context).missedTab,
+                count: _missedUnseen,
+                badgeColor: AppTheme.danger,
               ),
             ),
           ],
@@ -177,6 +201,8 @@ class _DriverMissionsScreenState extends State<DriverMissionsScreen>
             type:     _MissionType.moving,
             onRefresh: _loadMovings,
           ),
+          // ── Missed requests tab ────────────────────────────────────────
+          const DriverMissedRequestsView(markSeenOnOpen: false),
         ],
       ),
     );
@@ -189,7 +215,9 @@ class _TabLabel extends StatelessWidget {
   final IconData icon;
   final String   label;
   final int      count;
-  const _TabLabel({required this.icon, required this.label, required this.count});
+  final Color    badgeColor;
+  const _TabLabel({required this.icon, required this.label, required this.count,
+      this.badgeColor = AppTheme.accentOrange});
 
   @override
   Widget build(BuildContext context) {
@@ -200,11 +228,13 @@ class _TabLabel extends StatelessWidget {
       if (count > 0) ...[
         const SizedBox(width: 4),
         Container(
-          width: 16, height: 16,
-          decoration: const BoxDecoration(
-              color: AppTheme.accentOrange, shape: BoxShape.circle),
+          constraints: const BoxConstraints(minWidth: 16),
+          height: 16,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+              color: badgeColor, borderRadius: BorderRadius.circular(8)),
           child: Center(
-            child: Text('$count',
+            child: Text(count > 99 ? '99+' : '$count',
                 style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800)),
           ),
         ),
@@ -274,7 +304,7 @@ class _MissionList extends StatelessWidget {
             size: 56,
           ),
           SizedBox(height: 16),
-          Text('No $label tasks right now',
+          Text(AppLocalizations.of(context).trNoTasksNow(label),
               textAlign: TextAlign.center,
               style: TextStyle(color: context.appTextSecondary, fontSize: 15)),
           SizedBox(height: 8),
@@ -834,7 +864,7 @@ class _RideHistoryCard extends StatelessWidget {
           ),
           SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(ride.passenger?.name ?? 'Passenger #${ride.passengerId}',
+            Text(ride.passenger?.name ?? AppLocalizations.of(context).drvPassengerNo(ride.passengerId),
                 style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
             SizedBox(height: 2),
             Text('${ride.pickupAddress} → ${ride.dropoffAddress}',

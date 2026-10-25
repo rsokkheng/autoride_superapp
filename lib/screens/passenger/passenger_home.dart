@@ -46,10 +46,14 @@ class PassengerHomeScreen extends StatefulWidget {
 class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
   int _tab = 0;
 
-  final List<Widget> _pages = [
+  // Index 1 (Market) opens the full Marketplace page instead of switching
+  // tabs, so it never renders here — the slot just keeps indices aligned.
+  // Built per frame so the Charging tab's back arrow can switch back to
+  // Home — popping here would remove the home screen itself (black screen).
+  List<Widget> get _pages => [
     const _HomeTab(),
-    const RideBookingScreen(skipDestination: true),
-    const ChargingStationsScreen(),
+    const SizedBox.shrink(),
+    ChargingStationsScreen(onBack: () => setState(() => _tab = 0)),
     const ChatScreen(isDriver: false),
     const _ProfileTab(),
   ];
@@ -71,11 +75,12 @@ class _PassengerHomeScreenState extends State<PassengerHomeScreen> {
               children: [
                 Expanded(child: _NavItem(icon: Icons.home_outlined, label: AppLocalizations.of(context).home, index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(
-                    icon: Icons.electric_rickshaw,
-                    label: AppLocalizations.of(context).bookRide,
+                    icon: Icons.storefront_outlined,
+                    label: AppLocalizations.of(context).marketplace,
                     index: 1,
                     current: _tab,
-                    onTap: (i) => setState(() => _tab = i),
+                    onTap: (_) => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const MarketplaceScreen())),
                   )),
                 Expanded(child: _NavItem(icon: Icons.ev_station_outlined, label: AppLocalizations.of(context).charging, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
                 Expanded(child: _NavItem(icon: Icons.chat_bubble_outline, label: AppLocalizations.of(context).chat, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
@@ -819,7 +824,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                 Text(_rating != null ? _rating!.toStringAsFixed(1) : '--',
                     style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
                 SizedBox(width: 4),
-                Text('${_totalTrips ?? 0} Trips', style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+                Text(AppLocalizations.of(context).drvTripsCount(_totalTrips ?? 0), style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
               ],
             ),
             const SizedBox(height: 24),

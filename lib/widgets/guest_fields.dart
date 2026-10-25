@@ -1,14 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
+/// Name + phone inputs for buying/renting without an account. Both are
+/// required, and the phone is then confirmed by SMS OTP
+/// (see ensureGuestPhoneVerified) before the order is sent.
 class GuestFields extends StatelessWidget {
   final TextEditingController nameCtrl;
   final TextEditingController phoneCtrl;
   const GuestFields({super.key, required this.nameCtrl, required this.phoneCtrl});
 
+  /// Returns an error message, or null when the guest details are usable.
+  /// Mirrors the backend rules (guest_phone: 8–16 digits).
+  static String? validate(AppLocalizations l, String name, String phone) {
+    final n = name.trim();
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (n.isEmpty && digits.isEmpty) return l.enterNamePhoneError;
+    if (n.length < 2) return l.guestFullNameRequired;
+    if (digits.length < 8 || digits.length > 16) return l.guestPhoneInvalid;
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -18,10 +34,10 @@ class GuestFields extends StatelessWidget {
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Icon(Icons.person_outline_rounded, color: AppTheme.accent, size: 16),
+          const Icon(Icons.person_outline_rounded, color: AppTheme.accent, size: 16),
           const SizedBox(width: 6),
-          Text('Guest Information',
-              style: TextStyle(
+          Text(l.yourInformationLabel,
+              style: const TextStyle(
                   color: AppTheme.accent,
                   fontSize: 12,
                   fontWeight: FontWeight.w700)),
@@ -29,17 +45,28 @@ class GuestFields extends StatelessWidget {
         const SizedBox(height: 12),
         _GuestInput(
           ctrl: nameCtrl,
-          hint: 'Full name',
+          hint: l.fullNameStarHint,
           icon: Icons.badge_outlined,
+          textCapitalization: TextCapitalization.words,
         ),
         const SizedBox(height: 10),
         _GuestInput(
           ctrl: phoneCtrl,
-          hint: 'Phone number (e.g. 012 345 678)',
+          hint: l.guestPhoneStarHint,
           icon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(16),
+          ],
         ),
+        const SizedBox(height: 8),
+        Row(children: [
+          Icon(Icons.sms_outlined, color: context.appTextSecondary, size: 14),
+          const SizedBox(width: 6),
+          Expanded(child: Text(l.guestOtpNote,
+              style: TextStyle(color: context.appTextSecondary, fontSize: 11))),
+        ]),
       ]),
     );
   }
@@ -50,12 +77,14 @@ class _GuestInput extends StatelessWidget {
   final String hint;
   final IconData icon;
   final TextInputType keyboardType;
+  final TextCapitalization textCapitalization;
   final List<TextInputFormatter>? inputFormatters;
   const _GuestInput({
     required this.ctrl,
     required this.hint,
     required this.icon,
     this.keyboardType = TextInputType.text,
+    this.textCapitalization = TextCapitalization.none,
     this.inputFormatters,
   });
 
@@ -64,6 +93,7 @@ class _GuestInput extends StatelessWidget {
     return TextField(
       controller: ctrl,
       keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
       inputFormatters: inputFormatters,
       style: TextStyle(color: context.appTextPrimary, fontSize: 14),
       decoration: InputDecoration(

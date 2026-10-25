@@ -28,6 +28,7 @@ import '../models/wallet_model.dart';
 import '../models/marketplace_model.dart';
 import '../models/trip_model.dart';
 import '../models/promo_event_model.dart';
+import '../l10n/l10n.dart';
 
 class ApiService {
   static String get _baseUrl =>
@@ -1907,6 +1908,38 @@ class ApiService {
     return jsonDecode(raw.body) as Map<String, dynamic>;
   }
 
+  // ── Driver "missed calls" ─────────────────────────────────────────────────
+
+  /// Records a request the driver declined or let time out
+  /// ([type]: ride | delivery | rental, [reason]: declined | missed).
+  /// Best-effort — never throws, it only feeds the history list.
+  static Future<void> recordMissedRequest(String type, int id, String reason) async {
+    try {
+      final token = await getToken();
+      if (token == null || id <= 0) return;
+      await _rawPost('/driver/missed-requests', {
+        'request_type': type,
+        'request_id':   id,
+        'reason':       reason,
+      }, token: token);
+    } catch (e) {
+      AppLog.w('API', 'recordMissedRequest failed: $e');
+    }
+  }
+
+  /// GET /driver/missed-requests — newest first.
+  static Future<List<Map<String, dynamic>>> getMissedRequests() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw  = await _rawGet('/driver/missed-requests', token: token);
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'Failed to load missed requests.', raw.statusCode);
+    }
+    final list = ((body['data'] as Map<String, dynamic>?) ?? body)['missed_requests'];
+    return list is List ? List<Map<String, dynamic>>.from(list) : [];
+  }
+
   static Future<RideModel> declineRide(int id) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
@@ -3001,13 +3034,79 @@ class ApiService {
     if (name == null || name.trim().isEmpty || phone == null || phone.trim().isEmpty) {
       throw const ApiException('Please enter your name and phone number.', 422);
     }
+    final proof = _guestPhoneProofs[_canonicalPhone(phone)];
+    // Every guest buy/rent must go through the SMS OTP step first
+    // (ensureGuestPhoneVerified) — refuse here so no screen can skip it.
+    if (!_guestVerifyUnsupported &&
+        (proof == null || proof.expiresAt.isBefore(DateTime.now()))) {
+      throw const ApiException('Please verify your phone number with the SMS code.', 422);
+    }
     final fcmToken = await NotificationService.instance.guestFcmToken();
     return {
       'guest_name':  name.trim(),
       'guest_phone': phone.trim(),
       'guest_token': await getGuestToken(),
       if (fcmToken != null) 'fcm_token': fcmToken,
+      if (proof != null) 'guest_phone_token': proof.token,
     };
+  }
+
+  // ── Guest phone verification (SMS OTP, no account) ────────────────────────
+  // Guest buy/rent requests must carry a server-issued proof that the phone
+  // was verified (POST /shop/guest-phone/verify). The app asks for a fresh
+  // code before every guest order; the latest proof is kept per number.
+
+  static final Map<String, ({String token, DateTime expiresAt})> _guestPhoneProofs = {};
+  // Set when the server answers 404 on verify (older backend without guest
+  // verification) — orders then go through without a token, as that server
+  // doesn't ask for one.
+  static bool _guestVerifyUnsupported = false;
+
+  /// '+855 12 345 678', '012345678' and '12345678' are the same number.
+  static String _canonicalPhone(String phone) {
+    var digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('855')) digits = digits.substring(3);
+    return digits.replaceFirst(RegExp(r'^0+'), '');
+  }
+
+  /// Phone as sent to the OTP endpoints — no spaces/dashes, since the
+  /// backend matches the stored code on the exact normalized string.
+  static String otpPhone(String phone) => phone.replaceAll(RegExp(r'[\s\-()]'), '');
+
+  /// Returns true when the server issued a verified-phone token, false when
+  /// the server doesn't support guest verification yet (see 404 below).
+  static Future<bool> verifyGuestPhone(String phone, String code) async {
+    final raw = await _rawPost('/shop/guest-phone/verify', {
+      'phone': otpPhone(phone),
+      'code':  code,
+    });
+    final Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      throw ApiException('Unexpected server response (${raw.statusCode}).', raw.statusCode);
+    }
+    // 404 = the server predates guest phone verification (route not
+    // deployed yet), and that server doesn't require the token either —
+    // don't block the order on it.
+    if (raw.statusCode == 404) {
+      _guestVerifyUnsupported = true;
+      return false;
+    }
+    if (raw.statusCode != 200) {
+      throw ApiException(body['message'] as String? ?? 'OTP verification failed.', raw.statusCode);
+    }
+    final data  = (body['data'] as Map<String, dynamic>?) ?? body;
+    final token = data['guest_phone_token'] as String?;
+    if (token == null) {
+      throw ApiException('Phone verified but no token returned.', raw.statusCode);
+    }
+    _guestPhoneProofs[_canonicalPhone(phone)] = (
+      token: token,
+      expiresAt: DateTime.tryParse(data['expires_at'] as String? ?? '')?.toLocal()
+          ?? DateTime.now().add(const Duration(minutes: 30)),
+    );
+    return true;
   }
 
   /// GET /marketplace/guest-orders — purchases and rentals placed from this
@@ -5845,7 +5944,7 @@ class ApiService {
     }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return body['message'] as String? ?? 'Subscribed!';
+      return body['message'] as String? ?? l10n.trSubscribed;
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
@@ -5862,7 +5961,7 @@ class ApiService {
     }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return body['message'] as String? ?? 'Plan upgraded!';
+      return body['message'] as String? ?? l10n.trPlanUpgraded;
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
@@ -5873,7 +5972,7 @@ class ApiService {
     final raw  = await _rawPost('/subscriptions/cancel', {}, token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return body['message'] as String? ?? 'Subscription cancelled.';
+      return body['message'] as String? ?? l10n.trSubscriptionCancelled;
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
@@ -5923,7 +6022,7 @@ class WalletTransferResult {
   factory WalletTransferResult.fromJson(Map<String, dynamic> j) {
     final recipient = j['recipient'] as Map<String, dynamic>? ?? {};
     return WalletTransferResult(
-      message:       j['message']       as String? ?? 'Transferred.',
+      message:       j['message']       as String? ?? l10n.trTransferred,
       balance:       j['balance']       as int?    ?? 0,
       recipientName: recipient['name']  as String? ?? '',
       recipientPhone: recipient['phone'] as String? ?? '',

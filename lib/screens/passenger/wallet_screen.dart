@@ -106,10 +106,10 @@ class _WalletScreenState extends State<WalletScreen> {
     if (dt == null) return '';
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours} hrs ago';
+    if (diff.inMinutes < 60) return AppLocalizations.of(context).trMinAgoLong(diff.inMinutes);
+    if (diff.inHours < 24) return AppLocalizations.of(context).trHrsAgoLong(diff.inHours);
     if (diff.inDays == 1) return 'Yesterday';
-    return '${diff.inDays} days ago';
+    return AppLocalizations.of(context).trDaysAgoLong(diff.inDays);
   }
 
   ({IconData icon, Color color}) _txStyle(WalletTransactionModel txn) {
@@ -994,7 +994,7 @@ class _TopUpStatusScreenState extends State<TopUpStatusScreen> {
                 Text(AppLocalizations.of(context).topUpApproved,
                     style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                Text('${AppTheme.khr(r.amount)} has been added to your wallet.',
+                Text(AppLocalizations.of(context).trAddedToWallet(AppTheme.khr(r.amount)),
                     textAlign: TextAlign.center,
                     style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
                 const SizedBox(height: 24),
@@ -1160,7 +1160,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             style: TextStyle(color: context.appTextPrimary),
             decoration: InputDecoration(
-              hintText: "Recipient's phone number",
+              hintText: AppLocalizations.of(context).trRecipientPhoneNumber,
               hintStyle: TextStyle(color: context.appTextSecondary),
               filled: true,
               fillColor: context.appCardBg,

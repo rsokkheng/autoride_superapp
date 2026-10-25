@@ -10,6 +10,7 @@ import '../../services/locale_service.dart';
 import '../../utils/location_display.dart';
 import '../../l10n/app_localizations.dart';
 import 'ride_booking.dart';
+import '../../widgets/tablet_frame.dart';
 
 // Restrict the map to Cambodia only.
 const _kCambodiaSW = LatLng(10.4, 102.3);
@@ -184,7 +185,7 @@ String _filterLabel(BuildContext context, String f) {
   };
 }
 
-class ChargingStationsScreen extends StatefulWidget {
+class ChargingStationsScreen extends StatefulWidget implements TabletFullWidth {
   // Drivers only browse station locations on the map — they don't book
   // rides to them, so tapping a station just centers the map instead of
   // pushing the passenger ride-booking flow.
@@ -583,7 +584,8 @@ class _ChargingStationsScreenState extends State<ChargingStationsScreen> {
       });
       return;
     }
-    widget.onBack != null ? widget.onBack!() : Navigator.of(context).pop();
+    // maybePop: never removes the last route (that leaves a black screen).
+    widget.onBack != null ? widget.onBack!() : Navigator.of(context).maybePop();
   }
 
   // Driver mode: full-map focus on a station — shows the driver's current

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminTransactionsScreen extends StatefulWidget {
   const AdminTransactionsScreen({super.key});
@@ -35,7 +36,7 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Transactions'),
+        title: Text(AppLocalizations.of(context).trTransactions),
         actions: [
           PopupMenuButton<String?>(
             color: context.appSurface,
@@ -60,7 +61,7 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _items.isEmpty
-                  ? Center(child: Text('No transactions.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoTransactions, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,

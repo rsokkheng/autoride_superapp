@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../l10n/app_localizations.dart';
 
 class AdminSupportScreen extends StatefulWidget {
   const AdminSupportScreen({super.key});
@@ -35,7 +36,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text('Support Tickets'),
+        title: Text(AppLocalizations.of(context).trSupportTickets),
         actions: [
           PopupMenuButton<String>(
             color: context.appSurface,
@@ -60,7 +61,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
                 ]))
               : _tickets.isEmpty
-                  ? Center(child: Text('No tickets found.', style: TextStyle(color: context.appTextSecondary)))
+                  ? Center(child: Text(AppLocalizations.of(context).trNoTicketsFound, style: TextStyle(color: context.appTextSecondary)))
                   : RefreshIndicator(
                       onRefresh: _load,
                       color: AppTheme.accent,
@@ -100,7 +101,7 @@ class _TicketTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final id       = ticket['id']?.toString() ?? '—';
-    final subject  = ticket['subject']  as String? ?? ticket['title'] as String? ?? 'No subject';
+    final subject  = ticket['subject']  as String? ?? ticket['title'] as String? ?? AppLocalizations.of(context).trNoSubject;
     final status   = ticket['status']   as String? ?? 'open';
     final priority = ticket['priority'] as String? ?? 'low';
     final user     = (ticket['user'] as Map?)?['name'] as String? ?? 'User';
@@ -214,17 +215,17 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
     return Scaffold(
       backgroundColor: context.appBackground,
       appBar: AppBar(
-        title: Text(_ticket['subject'] as String? ?? 'Ticket #${widget.ticketId}'),
+        title: Text(_ticket['subject'] as String? ?? AppLocalizations.of(context).trTicketNo(widget.ticketId)),
         actions: [
           PopupMenuButton<String>(
             color: context.appSurface,
             icon: Icon(Icons.more_vert),
             onSelected: _updateStatus,
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'open',        child: Text('Mark Open',        style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'in_progress', child: Text('Mark In Progress', style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'resolved',    child: Text('Mark Resolved',    style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'closed',      child: Text('Mark Closed',      style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'open',        child: Text(AppLocalizations.of(context).trMarkOpen,        style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'in_progress', child: Text(AppLocalizations.of(context).trMarkInProgress, style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'resolved',    child: Text(AppLocalizations.of(context).trMarkResolved,    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'closed',      child: Text(AppLocalizations.of(context).trMarkClosed,      style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -287,7 +288,7 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
                             controller: _replyCtrl,
                             style: TextStyle(color: context.appTextPrimary),
                             decoration: InputDecoration(
-                              hintText: 'Type a reply…',
+                              hintText: AppLocalizations.of(context).trTypeReply,
                               hintStyle: TextStyle(color: context.appTextSecondary),
                               filled: true, fillColor: context.appCardBg,
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
