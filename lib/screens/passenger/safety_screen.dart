@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
@@ -217,7 +218,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
         padding: EdgeInsets.fromLTRB(20, 20, 20,
-            MediaQuery.of(ctx).viewInsets.bottom + 20),
+            MediaQuery.of(ctx).sheetBottomInset + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(AppLocalizations.of(context).addEmergencyContactTitle,
@@ -283,7 +284,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
         padding: EdgeInsets.fromLTRB(20, 20, 20,
-            MediaQuery.of(ctx).viewInsets.bottom + 20),
+            MediaQuery.of(ctx).sheetBottomInset + 20),
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(AppLocalizations.of(context).editContactTitle,
@@ -799,7 +800,7 @@ void showReportIncidentSheet(BuildContext context, {int? rideId}) {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
     builder: (ctx) => StatefulBuilder(builder: (ctx, setLocal) => Padding(
       padding: EdgeInsets.fromLTRB(20, 20, 20,
-          MediaQuery.of(ctx).viewInsets.bottom + 20),
+          MediaQuery.of(ctx).sheetBottomInset + 20),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(AppLocalizations.of(context).reportIncidentLabel,

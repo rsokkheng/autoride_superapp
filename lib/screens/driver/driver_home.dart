@@ -3,6 +3,8 @@ import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart' show DateFormat;
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/theme_provider.dart';
@@ -266,8 +268,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     void go(int i) => setState(() => _tab = i);
     return Scaffold(
       body: pages[_tab],
-      // Home · Missions · [Accept rides] · Earnings · Account. Charging lives
-      // in the dashboard's quick actions.
+      // Charging · Missions · [Home / accept rides] · Earnings · Account.
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: context.appSurface,
@@ -280,7 +281,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(child: _NavItem(icon: Icons.home_rounded,                    label: l.home,     index: 0, current: _tab, onTap: go)),
+                Expanded(child: _NavItem(icon: Icons.ev_station_rounded,              label: l.charging, index: 3, current: _tab, onTap: go)),
                 Expanded(child: _NavItem(icon: Icons.format_list_bulleted_rounded,    label: l.missions, index: 2, current: _tab, onTap: go)),
                 Expanded(child: _AcceptRidesButton(
                   label: _driverStatus == DriverStatus.busy
@@ -336,7 +337,7 @@ class _NavItem extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: selected ? AppTheme.accent : context.appTextSecondary,
-                fontSize: 11, fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                fontSize: 11, fontWeight: selected ? FontWeight.w500 : FontWeight.w500,
               )),
         ]),
       ),
@@ -359,19 +360,23 @@ class _AcceptRidesButton extends StatelessWidget {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
           width: 62, height: 62,
+          padding: online ? const EdgeInsets.all(8) : EdgeInsets.zero,
           decoration: BoxDecoration(
-            color: color,
+            // Online: ride illustration on white. Offline: the solid power icon.
+            color: online ? Colors.white : color,
             shape: BoxShape.circle,
-            border: Border.all(color: context.appSurface, width: 4),
+            border: Border.all(color: online ? color : context.appSurface, width: online ? 3 : 4),
             boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 4))],
           ),
-          child: Icon(online ? Icons.directions_car_filled_rounded : Icons.power_settings_new_rounded,
-              color: Colors.white, size: 28),
+          child: online
+              ? Image.asset('assets/ride.png', fit: BoxFit.contain,
+                  errorBuilder: (_, _e, _s) => Icon(Icons.directions_car_filled_rounded, color: color, size: 28))
+              : const Icon(Icons.power_settings_new_rounded, color: Colors.white, size: 28),
         ),
         const SizedBox(height: 3),
         Text(label,
             maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w500)),
       ]),
     );
   }
@@ -412,6 +417,9 @@ class _DriverDashboardState extends State<_DriverDashboard>
   DriverStatsModel? _stats;
   UserModel? _user;
   DriverEarningsSummaryModel? _earnings;
+  // Admin-managed driver banners (GET /banners) shown in the hero card.
+  List<Map<String, dynamic>> _heroBanners = const [];
+  int _heroPage = 0; // banner currently shown — its title is the hero title
   List<Map<String, dynamic>> _recentTrips = const [];
   RideModel?     _pendingRide;
   DeliveryModel? _pendingDelivery;
@@ -632,6 +640,11 @@ class _DriverDashboardState extends State<_DriverDashboard>
     } catch (_) {}
 
     // Dashboard extras — each on its own so one failing never blanks the rest.
+    ApiService.getBanners().then((list) {
+      final usable = list.where((b) =>
+          ((b['image_url'] as String?) ?? (b['image'] as String?) ?? '').isNotEmpty).toList();
+      if (mounted) setState(() { _heroBanners = usable; _heroPage = 0; });
+    }, onError: (Object e) => debugPrint('[Driver] banners error: $e'));
     ApiService.getDriverEarningsSummary().then((e) {
       if (mounted) setState(() => _earnings = e);
     }, onError: (Object e) => debugPrint('[Driver] earnings summary error: $e'));
@@ -764,7 +777,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
           backgroundImage: (photo != null && photo.isNotEmpty) ? NetworkImage(photo) : null,
           child: (photo == null || photo.isEmpty)
               ? Text(name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
-                  style: const TextStyle(color: AppTheme.accent, fontSize: 22, fontWeight: FontWeight.w800))
+                  style: const TextStyle(color: AppTheme.accent, fontSize: 19, fontWeight: FontWeight.w500))
               : null,
         ),
       ),
@@ -773,13 +786,13 @@ class _DriverDashboardState extends State<_DriverDashboard>
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(name.isEmpty ? '${l.hello}!' : l.drvGreeting(name),
               maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: context.appTextPrimary, fontSize: 19, fontWeight: FontWeight.w900)),
+              style: TextStyle(color: context.appTextPrimary, fontSize: 16, fontWeight: FontWeight.w500)),
           const SizedBox(height: 2),
           Row(children: [
             const Icon(Icons.star_rounded, color: AppTheme.gold, size: 18),
             const SizedBox(width: 3),
             Text(_user?.rating != null ? _user!.rating!.toStringAsFixed(2) : '--',
-                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w500, fontSize: 13)),
             Flexible(
               child: Text(' (${l.drvTripsCount(_user?.totalTrips ?? 0)})',
                   maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -807,10 +820,13 @@ class _DriverDashboardState extends State<_DriverDashboard>
             onChanged: widget.isBusy ? null : widget.onToggle,
             activeThumbColor: Colors.white,
             activeTrackColor: widget.isBusy ? AppTheme.warning : AppTheme.accent,
+            // No extra 48px tap padding — keeps the label snug under the switch.
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
+        const SizedBox(height: 4),
         Text(_statusLabel(l),
-            style: TextStyle(color: _statusColor, fontSize: 11, fontWeight: FontWeight.w800)),
+            style: TextStyle(color: _statusColor, fontSize: 11, fontWeight: FontWeight.w500)),
       ]),
     ]);
   }
@@ -822,23 +838,30 @@ class _DriverDashboardState extends State<_DriverDashboard>
     final accent = widget.isBusy
         ? AppTheme.warning
         : widget.isOnline ? AppTheme.accent : context.appTextSecondary;
+    // Online: the current backend banner's title (localized by the server via
+    // X-Locale); the built-in text when there is no banner or it has no title.
+    // Busy / offline keep their status text — it tells the driver what to do.
+    final bannerTitle = _heroBanners.isEmpty
+        ? ''
+        : (_heroBanners[_heroPage.clamp(0, _heroBanners.length - 1)]['title'] as String? ?? '').trim();
     final title = widget.isBusy
         ? l.busyOnATrip
-        : widget.isOnline ? l.drvFindingRides : l.offline2;
+        : widget.isOnline
+            ? (bannerTitle.isNotEmpty ? bannerTitle : l.drvFindingRides)
+            : l.offline2;
     // Online needs no explanation — the title says it all.
     final String? subtitle = widget.isBusy
         ? l.completeYourTripToReceive
         : widget.isOnline ? null : l.toggleOnlineToAcceptRides;
 
-    Widget banner = Image.asset('assets/driver_banner.jpg',
-        fit: BoxFit.cover, alignment: Alignment.centerRight,
-        // Asset missing from an old build (added without a full rebuild) —
-        // plain green instead of Flutter's red error box.
-        errorBuilder: (_, _e, _s) => const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Color(0xFF0F9D58), Color(0xFF34C77B)]),
-              ),
-            ));
+    // Backend banners (auto-sliding); the bundled artwork when none are set.
+    Widget banner = _HeroBanners(
+      banners: _heroBanners,
+      fallbackAsset: 'assets/driver_banner.png',
+      onPageChanged: (i) => setState(() => _heroPage = i),
+      // During a trip the whole card opens the trip instead of a banner link.
+      onTapOverride: widget.isBusy ? _openActiveTrip : null,
+    );
     // Offline: same artwork, greyed out.
     if (!widget.isOnline) {
       banner = ColorFiltered(
@@ -854,6 +877,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
 
     return GestureDetector(
       onTap: widget.isBusy ? _openActiveTrip : null,
+      behavior: HitTestBehavior.deferToChild,
       child: AspectRatio(
         aspectRatio: 2.4,
         child: Container(
@@ -865,7 +889,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
           ),
           child: Stack(fit: StackFit.expand, children: [
             banner,
-            Padding(
+            IgnorePointer(child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 0, 14),
               child: FractionallySizedBox(
                 alignment: Alignment.centerLeft,
@@ -892,7 +916,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                                 : _statusLabel(l),
                             maxLines: 1, overflow: TextOverflow.ellipsis,
                             style: TextStyle(color: accent == context.appTextSecondary ? const Color(0xFF334155) : accent,
-                                fontSize: 11.5, fontWeight: FontWeight.w800),
+                                fontSize: 11.5, fontWeight: FontWeight.w500),
                           ),
                         ),
                         if (widget.isBusy)
@@ -903,7 +927,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     Flexible(
                       child: Text(title,
                           maxLines: 2, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: ink, fontSize: 20, fontWeight: FontWeight.w900,
+                          style: const TextStyle(color: ink, fontSize: 17, fontWeight: FontWeight.w500,
                               height: 1.3, shadows: shadow)),
                     ),
                     if (subtitle != null) ...[
@@ -918,7 +942,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                   ],
                 ),
               ),
-            ),
+            )),
           ]),
         ),
       ),
@@ -948,14 +972,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
         Row(children: [
           Expanded(
             child: Text(l.drvTodayStats,
-                style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w900)),
+                style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
           ),
           Icon(Icons.calendar_month_outlined, size: 18, color: context.appTextSecondary),
           const SizedBox(width: 6),
-          Text(date, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(date, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w500)),
         ]),
         const SizedBox(height: 14),
-        Row(children: [
+        // Equal heights even when one label wraps to two lines.
+        IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _StatTile(icon: Icons.check_circle_rounded, color: AppTheme.accent,
               value: '${_stats?.acceptedRides ?? 0}', label: l.accepted),
           const SizedBox(width: 8),
@@ -967,7 +992,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
           const SizedBox(width: 8),
           _StatTile(icon: Icons.verified_rounded, color: AppTheme.confirmBlue,
               value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', label: l.acceptanceRate),
-        ]),
+        ])),
       ]),
     );
   }
@@ -994,7 +1019,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerLeft,
                     child: Text(value,
-                        style: const TextStyle(color: AppTheme.accent, fontSize: 18, fontWeight: FontWeight.w900)),
+                        style: const TextStyle(color: AppTheme.accent, fontSize: 15, fontWeight: FontWeight.w500)),
                   ),
                 ]),
               ),
@@ -1049,7 +1074,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
               const SizedBox(height: 8),
               Text(label,
                   maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
-                  style: TextStyle(color: context.appTextPrimary, fontSize: 11.5, fontWeight: FontWeight.w600, height: 1.25)),
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 11.5, fontWeight: FontWeight.w500, height: 1.25)),
             ]),
           ),
       ],
@@ -1062,14 +1087,14 @@ class _DriverDashboardState extends State<_DriverDashboard>
       Row(children: [
         Expanded(
           child: Text(l.recentTrips,
-              style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w900)),
+              style: TextStyle(color: context.appTextPrimary, fontSize: 14, fontWeight: FontWeight.w500)),
         ),
         TextButton(
           onPressed: () => Navigator.push(context,
               MaterialPageRoute(builder: (_) => const DriverHistoryScreen())),
           style: TextButton.styleFrom(foregroundColor: AppTheme.accent, padding: EdgeInsets.zero),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(l.seeAll, style: const TextStyle(fontWeight: FontWeight.w800)),
+            Text(l.seeAll, style: const TextStyle(fontWeight: FontWeight.w500)),
             const Icon(Icons.chevron_right_rounded, size: 20),
           ]),
         ),
@@ -1143,15 +1168,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
 
             // Service modes (multi-select, at least one active)
             Row(children: [
-              _ModeTile(icon: Icons.directions_car_filled_rounded, title: AppLocalizations.of(context).rideLabel,
+              _ModeTile(image: 'assets/ride.png', tint: AppTheme.accent, title: AppLocalizations.of(context).rideLabel,
                   subtitle: AppLocalizations.of(context).drvRideSub, active: widget.modeRide,
                   onTap: () => widget.onModeRide(!widget.modeRide)),
               const SizedBox(width: 10),
-              _ModeTile(icon: Icons.inventory_2_rounded, title: AppLocalizations.of(context).delivery,
+              _ModeTile(image: 'assets/Delivery.png', tint: AppTheme.accentOrange, title: AppLocalizations.of(context).delivery,
                   subtitle: AppLocalizations.of(context).drvDeliverySub, active: widget.modeDelivery,
                   onTap: () => widget.onModeDelivery(!widget.modeDelivery)),
               const SizedBox(width: 10),
-              _ModeTile(icon: Icons.car_rental_rounded, title: AppLocalizations.of(context).rental,
+              _ModeTile(image: 'assets/Rental.png', tint: const Color(0xFF9C27B0), title: AppLocalizations.of(context).rental,
                   subtitle: AppLocalizations.of(context).drvRentalSub, active: widget.modeRental,
                   onTap: () => widget.onModeRental(!widget.modeRental)),
             ]),
@@ -1231,7 +1256,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     ),
                   ] else ...[
                     _ModeEmptyCard(
-                      icon: Icons.electric_rickshaw,
+                      image: 'assets/ride.png',
                       color: AppTheme.accent,
                       title: AppLocalizations.of(context).lookingForRideRequests,
                       subtitle: AppLocalizations.of(context).youLlBeNotifiedWhen,
@@ -1274,7 +1299,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     ),
                   ] else ...[
                     _ModeEmptyCard(
-                      icon: Icons.delivery_dining_outlined,
+                      image: 'assets/Delivery.png',
                       color: AppTheme.accentOrange,
                       title: AppLocalizations.of(context).deliveryModeActive,
                       subtitle: AppLocalizations.of(context).waitingForDeliveryOrdersIn,
@@ -1302,7 +1327,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
                     ),
                   ] else ...[
                     _ModeEmptyCard(
-                      icon: Icons.car_rental_outlined,
+                      image: 'assets/Rental.png',
                       color: const Color(0xFF9C27B0),
                       title: AppLocalizations.of(context).rentalModeActive,
                       subtitle: AppLocalizations.of(context).yourVehicleIsListedFor,
@@ -1427,38 +1452,161 @@ class _DriverDashboardState extends State<_DriverDashboard>
   }
 }
 
+// ─── Hero banner background ───────────────────────────────────────────────────
+// Admin-managed images (GET /banners, filtered to drivers by the server),
+// auto-sliding when there are several; the bundled artwork when there are none.
+class _HeroBanners extends StatefulWidget {
+  final List<Map<String, dynamic>> banners;
+  final String fallbackAsset;
+  final VoidCallback? onTapOverride;
+  final ValueChanged<int>? onPageChanged;
+  const _HeroBanners({required this.banners, required this.fallbackAsset, this.onTapOverride, this.onPageChanged});
+
+  @override
+  State<_HeroBanners> createState() => _HeroBannersState();
+}
+
+class _HeroBannersState extends State<_HeroBanners> {
+  final _controller = PageController();
+  Timer? _timer;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _restartTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _HeroBanners old) {
+    super.didUpdateWidget(old);
+    if (old.banners.length != widget.banners.length) {
+      _page = 0;
+      _restartTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _restartTimer() {
+    _timer?.cancel();
+    if (widget.banners.length < 2) return;
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (!mounted || !_controller.hasClients) return;
+      _controller.animateToPage((_page + 1) % widget.banners.length,
+          duration: const Duration(milliseconds: 450), curve: Curves.easeOutCubic);
+    });
+  }
+
+  Widget get _fallback => Image.asset(widget.fallbackAsset,
+      fit: BoxFit.cover, alignment: Alignment.centerRight,
+      // Asset missing from an old build (added without a full rebuild) —
+      // plain green instead of Flutter's red error box.
+      errorBuilder: (_, _e, _s) => const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF0F9D58), Color(0xFF34C77B)]),
+            ),
+          ));
+
+  Future<void> _open(Map<String, dynamic> b) async {
+    if (widget.onTapOverride != null) return widget.onTapOverride!();
+    final uri = Uri.tryParse((b['deeplink'] as String?)?.trim() ?? '');
+    if (uri == null || !uri.hasScheme) return;
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final banners = widget.banners;
+    if (banners.isEmpty) return _fallback;
+    return Stack(fit: StackFit.expand, children: [
+      PageView.builder(
+        controller: _controller,
+        itemCount: banners.length,
+        onPageChanged: (i) {
+          setState(() => _page = i);
+          widget.onPageChanged?.call(i);
+          _restartTimer(); // a manual swipe resets the countdown
+        },
+        itemBuilder: (_, i) {
+          final b = banners[i];
+          return GestureDetector(
+            onTap: () => _open(b),
+            child: CachedNetworkImage(
+              imageUrl: (b['image_url'] as String?) ?? (b['image'] as String?) ?? '',
+              fit: BoxFit.cover,
+              alignment: Alignment.centerRight,
+              placeholder: (_, _u) => _fallback,
+              errorWidget: (_, _u, _e) => _fallback,
+            ),
+          );
+        },
+      ),
+      if (banners.length > 1)
+        Positioned(
+          right: 14, bottom: 10,
+          child: IgnorePointer(
+            child: Row(children: List.generate(banners.length, (i) => AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: _page == i ? 16 : 6,
+              height: 6,
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: _page == i ? 0.95 : 0.55),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ))),
+          ),
+        ),
+    ]);
+  }
+}
+
 // ─── Service mode tile ────────────────────────────────────────────────────────
 class _ModeTile extends StatelessWidget {
-  final IconData icon;
+  final String image; // same illustrations as the passenger home
+  final Color tint;   // matches this mode's waiting card below
   final String title, subtitle;
   final bool active;
   final VoidCallback onTap; // toggles this mode; parent guards against all-off
 
-  const _ModeTile({required this.icon, required this.title, required this.subtitle, required this.active, required this.onTap});
+  const _ModeTile({required this.image, required this.tint, required this.title, required this.subtitle, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppTheme.accent : context.appTextSecondary;
+    final color = active ? tint : context.appTextSecondary;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
           decoration: BoxDecoration(
-            color: active ? AppTheme.accent.withValues(alpha: 0.10) : context.appSurface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: active ? AppTheme.accent : Colors.transparent, width: 1.5),
+            color: active ? tint.withValues(alpha: 0.10) : context.appSurface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: active ? tint : Colors.transparent, width: 1.5),
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: color, size: 30),
-            const SizedBox(height: 6),
+            // Inactive modes are shown greyed out.
+            Opacity(
+              opacity: active ? 1 : 0.45,
+              child: Image.asset(image, height: 40, fit: BoxFit.contain,
+                  errorBuilder: (_, _e, _s) => Icon(Icons.image_not_supported_outlined, color: color, size: 30)),
+            ),
+            const SizedBox(height: 4),
             Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: active ? AppTheme.accent : context.appTextPrimary,
-                    fontSize: 14, fontWeight: FontWeight.w800)),
+                style: TextStyle(color: active ? tint : context.appTextPrimary,
+                    fontSize: 12, fontWeight: FontWeight.w500)),
             const SizedBox(height: 2),
             Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                style: TextStyle(color: context.appTextSecondary, fontSize: 10)),
           ]),
         ),
       ),
@@ -1468,13 +1616,13 @@ class _ModeTile extends StatelessWidget {
 
 // ─── Mode empty/waiting card ──────────────────────────────────────────────────
 class _ModeEmptyCard extends StatelessWidget {
-  final IconData icon;
+  final String image; // same illustration as the mode tile above
   final Color color;
   final String title;
   final String subtitle;
 
   const _ModeEmptyCard({
-    required this.icon,
+    required this.image,
     required this.color,
     required this.title,
     required this.subtitle,
@@ -1497,7 +1645,8 @@ class _ModeEmptyCard extends StatelessWidget {
             color: color.withValues(alpha: 0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: color, size: 28),
+          child: Image.asset(image, width: 34, height: 34, fit: BoxFit.contain,
+              errorBuilder: (_, _e, _s) => Icon(Icons.hourglass_empty_rounded, color: color, size: 28)),
         ),
         SizedBox(height: 12),
         Text(title,
@@ -1542,7 +1691,7 @@ class _StatTile extends StatelessWidget {
             const SizedBox(height: 8),
             FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)),
+              child: Text(value, style: TextStyle(color: color, fontSize: 17, fontWeight: FontWeight.w500)),
             ),
             const SizedBox(height: 2),
             Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -1573,7 +1722,7 @@ class _RecentTripRow extends StatelessWidget {
             const SizedBox(width: 3),
             Expanded(child: Text(text.isEmpty ? '--' : text,
                 maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600))),
+                style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w500))),
           ]),
         );
     return Material(
@@ -1597,7 +1746,7 @@ class _RecentTripRow extends StatelessWidget {
             const SizedBox(width: 8),
             Text(fare > 0 ? AppTheme.khr(fare) : '--',
                 style: TextStyle(color: done ? AppTheme.accent : context.appTextSecondary,
-                    fontSize: 14, fontWeight: FontWeight.w900)),
+                    fontSize: 13, fontWeight: FontWeight.w500)),
             Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
           ]),
         ),

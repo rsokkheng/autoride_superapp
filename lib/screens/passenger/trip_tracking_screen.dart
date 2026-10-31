@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:math' show min, max, cos, pi, sqrt;
 import 'dart:ui' show lerpDouble;
 import 'package:cached_network_image/cached_network_image.dart';
@@ -2190,7 +2191,7 @@ class _TripShareSheet extends StatelessWidget {
       ),
       padding: EdgeInsets.only(
         left: 24, right: 24, top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        bottom: MediaQuery.of(context).sheetBottomInset + 32,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

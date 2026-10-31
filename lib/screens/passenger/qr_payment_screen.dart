@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -175,7 +176,7 @@ class _MyQrTabState extends State<_MyQrTab> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).sheetBottomInset + 24),
       child: _qrData == null ? _buildForm() : _buildQr(),
     );
   }

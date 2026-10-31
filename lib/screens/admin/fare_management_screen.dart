@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -353,7 +354,7 @@ class _FareEditSheetState extends State<_FareEditSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+          20, 0, 20, MediaQuery.of(context).sheetBottomInset + 24),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(height: 12),

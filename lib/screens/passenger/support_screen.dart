@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/realtime_service.dart';
@@ -410,7 +411,7 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
     ),
     padding: EdgeInsets.only(
       left: 24, right: 24, top: 16,
-      bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      bottom: MediaQuery.of(context).sheetBottomInset + 24,
     ),
     child: Column(mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -622,7 +623,7 @@ class _TicketDetailScreenState extends State<_TicketDetailScreen> {
         Container(
           padding: EdgeInsets.only(
             left: 16, right: 8, top: 10,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 10,
+            bottom: MediaQuery.of(context).sheetBottomInset + 10,
           ),
           decoration: BoxDecoration(
             color: context.appSurface,

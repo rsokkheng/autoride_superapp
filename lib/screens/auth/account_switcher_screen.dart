@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../theme/app_theme.dart';
@@ -324,7 +325,7 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).sheetBottomInset + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(child: Text(AppLocalizations.of(context).trLinkAccount, style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),

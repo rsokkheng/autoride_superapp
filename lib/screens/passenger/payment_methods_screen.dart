@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -491,7 +492,7 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
       ),
       padding: EdgeInsets.only(
         left: 24, right: 24, top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).sheetBottomInset + 24,
       ),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Center(child: Container(

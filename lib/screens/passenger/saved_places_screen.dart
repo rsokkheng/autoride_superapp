@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show LatLng;
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
@@ -461,7 +462,7 @@ class _AddEditSheetState extends State<_AddEditSheet> {
       ),
       padding: EdgeInsets.only(
         left: 24, right: 24, top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).sheetBottomInset + 24,
       ),
       child: Column(mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start, children: [

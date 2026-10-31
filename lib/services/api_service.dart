@@ -5069,8 +5069,12 @@ class ApiService {
     final raw   = await _rawGet('/banners', token: token);
     final body  = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
-      return list.whereType<Map<String, dynamic>>().toList();
+      // GET /banners → {data: {banners: [...]}} (already filtered by the
+      // user's role and validity window); older servers sent {data: [...]}.
+      var list = body['data'];
+      if (list is Map) list = list['banners'];
+      return (list is List ? list : const [])
+          .whereType<Map<String, dynamic>>().toList();
     }
     return [];
   }

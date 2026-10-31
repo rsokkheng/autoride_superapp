@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -731,7 +732,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          20, 0, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+          20, 0, 20, MediaQuery.of(context).sheetBottomInset + 24),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1129,7 +1130,7 @@ class _SendMoneySheetState extends State<_SendMoneySheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          24, 0, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          24, 0, 24, MediaQuery.of(context).sheetBottomInset + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

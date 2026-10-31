@@ -2713,7 +2713,7 @@ class AppLocalizations {
       'drvWalletBalance': 'សមតុល្យកាបូប',
       'drvAcceptRides': 'ទទួលដំណើរ',
       'drvRideSub': 'អ្នកដំណើរ',
-      'drvDeliverySub': 'អីវ៉ាន់ និងម្ហូប',
+      'drvDeliverySub': 'អីវ៉ាន់',
       'drvRentalSub': 'ជួលយានយន្ត',
       'drvNoRecentTrips': 'មិនទាន់មានដំណើរនៅឡើយ — បើកទទួលដំណើរដើម្បីរកចំណូល។',
       'drvHelp': 'ជំនួយ',

@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -342,7 +343,7 @@ class _VehicleFormSheetState extends State<_VehicleFormSheet> {
       ),
       padding: EdgeInsets.only(
         left: 24, right: 24, top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+        bottom: MediaQuery.of(context).sheetBottomInset + 24,
       ),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min,

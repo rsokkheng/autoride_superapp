@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -610,7 +611,7 @@ class _MembersTabState extends State<_MembersTab> {
       builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
         return Padding(
           padding: EdgeInsets.fromLTRB(20, 20, 20,
-              20 + MediaQuery.of(ctx).viewInsets.bottom),
+              20 + MediaQuery.of(ctx).sheetBottomInset),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text('${AppLocalizations.of(context).edit} ${m['name'] ?? AppLocalizations.of(context).member}',
                 style: TextStyle(color: context.appTextPrimary,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -280,7 +281,7 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
                   ),
                   if (status != 'closed' && status != 'resolved')
                     Container(
-                      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).viewInsets.bottom + 16),
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).sheetBottomInset + 16),
                       color: context.appSurface,
                       child: Row(children: [
                         Expanded(

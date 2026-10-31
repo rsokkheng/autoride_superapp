@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -577,7 +578,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          24, 0, 24, MediaQuery.of(context).viewInsets.bottom + 32),
+          24, 0, 24, MediaQuery.of(context).sheetBottomInset + 32),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [

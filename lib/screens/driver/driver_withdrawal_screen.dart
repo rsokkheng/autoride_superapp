@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -161,7 +162,7 @@ class _WithdrawFormState extends State<_WithdrawForm> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.of(context).sheetBottomInset + 24),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (_error != null) ...[
           Container(

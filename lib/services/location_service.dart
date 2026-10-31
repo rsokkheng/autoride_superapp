@@ -68,6 +68,7 @@ class LocationService {
     // the Admin SDK — its own Firestore sync) doesn't depend on this
     // client's Firebase Auth state at all. Only the direct `.set()` below
     // needs it, and that's already best-effort with its own .catchError.
+    _firebaseReady = false; // re-confirm for the current account
     AuthService.ensureSignedIn().then((ok) => _firebaseReady = ok);
     _onlineSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -114,14 +115,30 @@ class LocationService {
     _modeRide     = modeRide;
     _modeDelivery = modeDelivery;
     _modeRental   = modeRental;
+    await _writeLive(driverId, {
+      'mode_ride':     modeRide,
+      'mode_delivery': modeDelivery,
+      'mode_rental':   modeRental,
+    });
+  }
+
+  // Direct drivers_live write, only once Firebase is signed in as this driver
+  // (custom token, uid user_{id}). Before that the rules reject it with
+  // PERMISSION_DENIED — and Firestore keeps retrying the queued write, which
+  // floods the log. Merge-set so a missing doc doesn't fail like update().
+  // The backend mirrors status/location via the Admin SDK regardless.
+  Future<void> _writeLive(String driverId, Map<String, dynamic> data) async {
+    if (driverId.isEmpty) return;
+    if (!await AuthService.ensureSignedIn()) return;
+    _firebaseReady = true;
     try {
-      await _db.collection('drivers_live').doc(driverId).update({
-        'mode_ride':     modeRide,
-        'mode_delivery': modeDelivery,
-        'mode_rental':   modeRental,
-        'updated_at':    FieldValue.serverTimestamp(),
-      });
-    } catch (_) {}
+      await _db.collection('drivers_live').doc(driverId).set({
+        ...data,
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      AppLog.w('LocationService', 'drivers_live/$driverId write failed: $e');
+    }
   }
 
   // ── Push a status transition to Firestore immediately ─────────────────────
@@ -132,13 +149,10 @@ class LocationService {
       DriverStatus.busy    => 'busy',
       DriverStatus.offline => 'offline',
     };
-    try {
-      await _db.collection('drivers_live').doc(driverId).update({
-        'status':     statusStr,
-        'online':     status != DriverStatus.offline,
-        'updated_at': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {}
+    await _writeLive(driverId, {
+      'status': statusStr,
+      'online': status != DriverStatus.offline,
+    });
   }
 
   // ── Trip tracking ──────────────────────────────────────────────────────────
@@ -162,6 +176,7 @@ class LocationService {
     // Auth hiccup killed the REST channel too, when the two are
     // independent — the direct `.set()` below is just a best-effort extra
     // and already logs its own failures via .catchError.
+    _firebaseReady = false; // re-confirm for the current account
     AuthService.ensureSignedIn().then((ok) => _firebaseReady = ok);
     _tripSub?.cancel();
     _tripSub = Geolocator.getPositionStream(
@@ -200,10 +215,7 @@ class LocationService {
     _tripSub = null;
     await _onlineSub?.cancel();
     _onlineSub = null;
-    try {
-      await _db.collection('drivers_live').doc(driverId)
-          .update({'online': false, 'updated_at': FieldValue.serverTimestamp()});
-    } catch (_) {}
+    await _writeLive(driverId, {'online': false});
   }
 
   // ── Passenger side: listen to a driver's live position ────────────────────

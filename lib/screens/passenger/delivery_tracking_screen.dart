@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -1583,7 +1584,7 @@ class _DeliveryShareSheet extends StatelessWidget {
         left: 24,
         right: 24,
         top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+        bottom: MediaQuery.of(context).sheetBottomInset + 32,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

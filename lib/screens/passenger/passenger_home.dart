@@ -475,8 +475,8 @@ class _HomeTabState extends State<_HomeTab> {
           ),
         ),
             const SizedBox(height: 16),
-            const BannerCarousel(),
-            const SizedBox(height: 24),
+            const BannerCarousel(bottomSpacing: 8),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

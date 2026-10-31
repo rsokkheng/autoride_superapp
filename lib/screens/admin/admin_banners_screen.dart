@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -189,7 +190,7 @@ class _BannerFormState extends State<_BannerForm> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 24),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).sheetBottomInset + 24),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(child: Text(widget.existing == null ? AppLocalizations.of(context).trNewBanner : AppLocalizations.of(context).trEditBanner, style: TextStyle(color: context.appTextPrimary, fontSize: 18, fontWeight: FontWeight.w800))),

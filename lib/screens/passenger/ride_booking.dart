@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -1070,7 +1071,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             return Padding(
               padding: EdgeInsets.only(
                   left: 20, right: 20, top: 20,
-                  bottom: MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+                  bottom: MediaQuery.of(sheetCtx).sheetBottomInset + 24),
               child: Column(mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Center(child: Container(

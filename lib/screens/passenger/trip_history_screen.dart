@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -516,7 +517,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             left: 20,
             right: 20,
             top: 20,
-            bottom: 20 + MediaQuery.of(context).viewInsets.bottom),
+            bottom: 20 + MediaQuery.of(context).sheetBottomInset),
         child: SingleChildScrollView(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
