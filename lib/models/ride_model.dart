@@ -32,10 +32,39 @@ class RideStopEntry {
   );
 }
 
+/// The three receipt lines both apps show, from [RideModel.fareBreakdown].
+/// All null when the ride has no saved breakdown (older rides) — screens then
+/// show just the total instead of inventing a split.
+extension RideFareLines on RideModel {
+  int _part(List<String> keys) =>
+      keys.fold(0, (sum, k) => sum + (fareBreakdown?[k]?.round() ?? 0));
+
+  /// Base fare + booking fee.
+  int? get baseLineKhr => fareBreakdown == null ? null : _part(['base_fare', 'booking_fee']);
+
+  /// Distance + slow-traffic time charge.
+  int? get distanceLineKhr => fareBreakdown == null ? null : _part(['distance_fare', 'time_fare']);
+
+  /// Night / weekend / holiday surcharges, surge (incl. minimum-fare top-up
+  /// and rounding) and any manual adjustment.
+  int? get surchargeLineKhr => fareBreakdown == null ? null : _part([
+        'night_surcharge', 'weekend_surcharge', 'holiday_surcharge',
+        'surge_amount', 'adjustment',
+      ]);
+}
+
 class RideModel {
   final int    id;
   final int    passengerId;
   final int?   driverId;
+  // Driver's last position reported to the backend (ride.driver.current_*) —
+  // fallback for the passenger map when the Firestore live feed is silent.
+  final double? driverLat;
+  // Real fare components saved at completion (base_fare, booking_fee,
+  // distance_fare, time_fare, *_surcharge, surge_amount, adjustment) — the
+  // driver summary and passenger receipt both show these, never a guess.
+  final Map<String, num>? fareBreakdown;
+  final double? driverLng;
   final int?   vehicleId;
   final String pickupAddress;
   final String dropoffAddress;
@@ -78,6 +107,9 @@ class RideModel {
     required this.id,
     required this.passengerId,
     this.driverId,
+    this.driverLat,
+    this.fareBreakdown,
+    this.driverLng,
     this.vehicleId,
     required this.pickupAddress,
     required this.dropoffAddress,
@@ -132,6 +164,14 @@ class RideModel {
       id:             _toInt(json['id']),
       passengerId:    _toInt(json['passenger_id']),
       driverId:       _toIntOrNull(json['driver_id']),
+      driverLat:      _toDoubleOrNull((json['driver'] as Map?)?['current_latitude']),
+      fareBreakdown:  json['fare_breakdown'] is Map
+          ? {
+              for (final e in (json['fare_breakdown'] as Map).entries)
+                if (e.value is num) e.key.toString(): e.value as num,
+            }
+          : null,
+      driverLng:      _toDoubleOrNull((json['driver'] as Map?)?['current_longitude']),
       vehicleId:      _toIntOrNull(json['vehicle_id']),
       pickupAddress:  json['pickup_address']?.toString()  ?? '',
       dropoffAddress: json['dropoff_address']?.toString() ?? '',

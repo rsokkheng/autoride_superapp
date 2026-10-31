@@ -182,17 +182,30 @@ class DriverTripSummaryScreen extends StatelessWidget {
                   Text(AppLocalizations.of(context).fareSummary,
                       style: TextStyle(color: context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                   const SizedBox(height: 14),
-                  if (_distKm != null) ...[
-                    _FareRow(
-                      label: AppLocalizations.of(context).baseFare,
-                      value: AppTheme.khr(3000),
-                    ),
-                    const SizedBox(height: 8),
-                    _FareRow(
-                      label: AppLocalizations.of(context).trDistanceKm(_distKm!.toStringAsFixed(1)),
-                      value: AppTheme.khr((fareKhr - 3000).clamp(0, fareKhr)),
-                    ),
-                    SizedBox(height: 8),
+                  // Server-saved breakdown — the same lines the passenger's
+                  // receipt shows. Older rides without one show only the total.
+                  if (ride.fareBreakdown != null) ...[
+                    if ((ride.baseLineKhr ?? 0) > 0) ...[
+                      _FareRow(
+                        label: AppLocalizations.of(context).baseFare,
+                        value: AppTheme.khr(ride.baseLineKhr!),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if ((ride.distanceLineKhr ?? 0) > 0) ...[
+                      _FareRow(
+                        label: AppLocalizations.of(context).trDistanceKm((_distKm ?? 0).toStringAsFixed(1)),
+                        value: AppTheme.khr(ride.distanceLineKhr!),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if ((ride.surchargeLineKhr ?? 0) != 0) ...[
+                      _FareRow(
+                        label: AppLocalizations.of(context).trSurchargesLine,
+                        value: AppTheme.khr(ride.surchargeLineKhr!),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                     Divider(color: Theme.of(context).dividerColor, height: 16),
                   ],
                   if (ride.promoCode != null && ride.promoCode!.isNotEmpty) ...[
@@ -241,7 +254,9 @@ class DriverTripSummaryScreen extends StatelessWidget {
               width: double.infinity,
               height: 52,
               child: ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
+                // Pops back to the trip screen, which then closes itself —
+                // never pop the last route (black screen).
+                onPressed: () => Navigator.of(context).maybePop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _kGreen,
                   foregroundColor: Colors.white,

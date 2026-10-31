@@ -147,6 +147,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   // going to pick up.
   Timer? _noDriverTimeoutTimer;
 
+  // Live meter for a no-destination trip (passenger tells the driver where
+  // to go): km driven and fare so far, from the server's GPS-track meter —
+  // the same numbers the driver sees.
+  Timer?  _meterTimer;
+  double? _liveKm;
+  int?    _liveFareKhr;
+
   // One-shot guard so the "driver is arriving" alert fires only once per
   // driver, the moment they first come within 50m of the pickup point.
   bool _arrivingAlertShown = false;
@@ -233,6 +240,19 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
 
   Future<void> _autoCancelNoDriver() async {
     if (!mounted || _driverAssigned || widget.rideId == null) return;
+    // Check the server first — local state can miss an assignment, and
+    // cancelling here would cancel a ride a driver is already driving.
+    try {
+      final ride = await ApiService.getRide(widget.rideId!);
+      if (!mounted) return;
+      if (ride.driverId != null || !const {'requested', 'pending'}.contains(ride.status)) {
+        await _pollRide(); // pick up the driver and current status instead
+        return;
+      }
+    } catch (_) {
+      // Can't confirm — don't cancel a possibly-active ride on a guess.
+      return;
+    }
     try {
       await ApiService.cancelRideWithReason(widget.rideId!, reason: 'no_driver_available');
     } catch (_) {}
@@ -433,6 +453,29 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   //
   // Receives a full DriverMarkerModel from Firestore, which now carries
   // heading and vehicle_type alongside lat/lng.
+
+  // Last time Firestore's live feed delivered a driver position.
+  DateTime? _lastLiveFix;
+
+  void _onLiveDriverMarker(DriverMarkerModel model) {
+    _lastLiveFix = DateTime.now();
+    _onDriverMarker(model);
+  }
+
+  // Backend fallback: the driver app also reports its position to the server
+  // (~every 50 m). Used when the Firestore feed hasn't delivered anything for
+  // a while — otherwise the passenger sat on "Locating your driver…" with no
+  // marker whenever the driver's direct Firestore write was blocked.
+  void _applyServerDriverPosition(RideModel ride) {
+    if (ride.driverLat == null || ride.driverLng == null) return;
+    final live = _lastLiveFix;
+    if (live != null && DateTime.now().difference(live) < const Duration(seconds: 20)) return;
+    _onDriverMarker(DriverMarkerModel(
+      driverId:    _currentDriverId,
+      position:    LatLng(ride.driverLat!, ride.driverLng!),
+      vehicleType: _vehicleType,
+    ));
+  }
 
   void _onDriverMarker(DriverMarkerModel model) {
     final pos = model.position;
@@ -737,7 +780,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (_currentDriverId.isNotEmpty) {
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
-          .listen(_onDriverMarker);
+          .listen(_onLiveDriverMarker);
     }
 
     // Firestore ride-status stream — replaces the 5-second poll timer.
@@ -762,6 +805,13 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (!mounted) return;
     final prevStatus = _rideStatus;
     setState(() => _rideStatus = status);
+    // A driver has the ride but no assignment was picked up yet (Firestore
+    // payload without driver_id, missed push…) — fetch it right away instead
+    // of showing "looking for a driver" until the next poll.
+    if (!_driverAssigned &&
+        const {'accepted', 'driver_arrived', 'in_progress'}.contains(status)) {
+      _pollRide();
+    }
     if (status == 'driver_arrived' && prevStatus != 'driver_arrived' &&
         !_driverArrivedAlertShown) {
       _driverArrivedAlertShown = true;
@@ -777,6 +827,27 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     if (status == 'completed' || status == 'cancelled') {
       _stopRidePoll();
     }
+    if (status == 'in_progress' && widget.destLatLng == null &&
+        widget.rideId != null && _meterTimer == null) {
+      _refreshLiveMeter();
+      _meterTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refreshLiveMeter());
+    } else if (status != 'in_progress') {
+      _meterTimer?.cancel();
+      _meterTimer = null;
+    }
+  }
+
+  Future<void> _refreshLiveMeter() async {
+    try {
+      final meter = await ApiService.getRideMeter(widget.rideId!);
+      if (!mounted || _rideStatus != 'in_progress') return;
+      setState(() {
+        _liveKm      = meter.distanceKm;
+        _liveFareKhr = meter.fare > 0 ? meter.fare : null;
+      });
+    } catch (e) {
+      AppLog.w('TripTracking', 'live meter refresh failed: $e');
+    }
   }
 
   Future<void> _navigateToRating() async {
@@ -791,15 +862,20 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     String  payMethod    = 'cash';
     int?    baseFareKhr;
     int?    distFeeKhr;
+    int?    surchargeKhr;
     // Was set once at booking time — for a metered (no-destination) ride
     // the real fare isn't known until completion, so this starts as a
     // placeholder. Overwritten below once the fresh fare comes back.
     String  fareText = widget.fare;
     String? promoCode;
     int?    promoDiscountKhr;
+    bool    serverAnswered = false;
+    bool    metered        = false;
     if (widget.rideId != null) {
       try {
         final r = await ApiService.getRide(widget.rideId!);
+        serverAnswered = true;
+        metered = r.noDestination;
         distKm = r.distanceKm;
         durMin = r.durationMin;
         if (r.pickupAddress.isNotEmpty)  fromAddr = r.pickupAddress;
@@ -809,20 +885,20 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
         }
         promoCode        = r.promoCode;
         promoDiscountKhr = r.discountAmountKhr;
-        // Derive base fare and distance fee from total. Base fare is ~40%
-        // of total; distance fee is the remainder (both pre-surge).
         final totalKhr = r.fareKhr;
-        if (totalKhr > 0) {
-          fareText = AppTheme.khr(totalKhr);
-          final surge = r.surgeMultiplier ?? 1.0;
-          final preSurge = (totalKhr / surge).round();
-          baseFareKhr = (preSurge * 0.4).round();
-          distFeeKhr  = totalKhr - baseFareKhr;
-        }
+        if (totalKhr > 0) fareText = AppTheme.khr(totalKhr);
+        // The server's saved breakdown — identical to the driver's summary.
+        baseFareKhr  = r.baseLineKhr;
+        distFeeKhr   = r.distanceLineKhr;
+        surchargeKhr = r.surchargeLineKhr;
       } catch (_) {}
     }
-    // Fall back to live-tracked distance if the server didn't return one.
-    if ((distKm == null || distKm <= 0) && _distanceKm > 0) {
+    // The receipt must show the server's final distance — the same figure
+    // the driver confirmed and the fare was priced on. _distanceKm is the
+    // live *route-to-next-point* estimate (and a 2.4 km placeholder before
+    // the first route), so it's only a last resort when the server couldn't
+    // be reached, and never for metered trips (it isn't distance travelled).
+    if (!serverAnswered && !metered && (distKm == null || distKm <= 0) && _distanceKm > 0) {
       distKm = _distanceKm;
     }
     if (!mounted) return;
@@ -845,6 +921,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                 paymentMethod:  payMethod,
                 baseFareKhr:    baseFareKhr,
                 distanceFeeKhr: distFeeKhr,
+                surchargeKhr:   surchargeKhr,
                 promoCode:        promoCode,
                 promoDiscountKhr: promoDiscountKhr,
               )),
@@ -872,7 +949,11 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _pollRide();
     }
 
-    if (status == 'accepted' && driverId.isNotEmpty &&
+    // Any driver-assigned status — the 'accepted' write can be missed or
+    // overtaken (driver taps Arrived/Start quickly), and then the passenger
+    // stayed on "looking for a driver" while the trip was already running.
+    const assignedStatuses = {'accepted', 'driver_arrived', 'in_progress'};
+    if (assignedStatuses.contains(status) && driverId.isNotEmpty &&
         driverId != _currentDriverId) {
       // New driver assigned — re-subscribe to their live position
       _noDriverTimeoutTimer?.cancel();
@@ -882,7 +963,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(driverId)
-          .listen(_onDriverMarker);
+          .listen(_onLiveDriverMarker);
       _notifyDriverFound();
       // Firestore's driver-location doc doesn't include name/vehicle/plate
       // — fetch those separately.
@@ -914,6 +995,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
   void dispose() {
     _stopRidePoll();
     _noDriverTimeoutTimer?.cancel();
+    _meterTimer?.cancel();
     _etaCountdownTimer?.cancel();
     _firestoreSub?.cancel();
     _rideStatusSub?.cancel();
@@ -939,6 +1021,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
     final poller = _ridePoller = AdaptivePoller(
       onPoll:       _pollRide,
       fastInterval: const Duration(seconds: 5),
+      // Realtime pushes normally trigger an immediate poll; if they don't
+      // arrive (e.g. the server's queue worker is down), 10s keeps the
+      // driver-found / status updates from lagging far behind.
+      slowInterval: const Duration(seconds: 10),
     )..start();
     _rideSub = RealtimeService.instance.subscribe('ride.${widget.rideId}', (event, _) {
       if (event == 'ride.updated') poller.pokeNow();
@@ -965,7 +1051,10 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       }
       if (ride.driverId == null) return;
       final newId = ride.driverId.toString();
-      if (newId == _currentDriverId) return;
+      if (newId == _currentDriverId) {
+        _applyServerDriverPosition(ride);
+        return;
+      }
       _noDriverTimeoutTimer?.cancel();
       setState(() {
         _currentDriverId = newId;
@@ -978,7 +1067,8 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       _firestoreSub?.cancel();
       _firestoreSub = LocationService.instance
           .listenDriver(_currentDriverId)
-          .listen(_onDriverMarker);
+          .listen(_onLiveDriverMarker);
+      _applyServerDriverPosition(ride);
     } catch (e, s) {
       // This used to fail silently, so a persistent auth/network/parse
       // error here looked identical to "still searching for a driver" —
@@ -1483,6 +1573,19 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                   style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
                               const Spacer(),
                               Text(widget.fare,
+                                  style: TextStyle(color: _kGreen,
+                                      fontSize: 15, fontWeight: FontWeight.w800)),
+                            ]),
+                          ] else if (_rideStatus == 'in_progress' && _liveKm != null) ...[
+                            SizedBox(height: 8),
+                            Row(children: [
+                              Icon(Icons.speed, size: 16, color: context.appTextSecondary),
+                              const SizedBox(width: 6),
+                              Text(AppLocalizations.of(context).trMeterSoFar,
+                                  style: TextStyle(fontSize: 13, color: context.appTextSecondary)),
+                              const Spacer(),
+                              Text('${_liveKm!.toStringAsFixed(1)} km'
+                                  '${_liveFareKhr != null ? '  ·  ${AppTheme.khr(_liveFareKhr!)}' : ''}',
                                   style: TextStyle(color: _kGreen,
                                       fontSize: 15, fontWeight: FontWeight.w800)),
                             ]),

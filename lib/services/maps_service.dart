@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../utils/app_log.dart';
@@ -197,6 +198,63 @@ class MapsService {
       AppLog.e('Maps', 'reverseGeocode failed', e, s);
       return null;
     }
+  }
+
+  /// Name of the closest notable place within [radiusM] of [pos] — a temple,
+  /// market, mall, hotel… (e.g. "វត្តភ្នំ") — or null. Reverse geocoding only
+  /// returns street addresses, so a trip ending at Wat Phnom was recorded as
+  /// "St. 94, Phnom Penh" instead of the landmark's name.
+  static Future<String?> nearbyPlaceName(LatLng pos, {int radiusM = 80}) async {
+    if (!_isInCambodia(pos)) return null;
+    final url = Uri.https('maps.googleapis.com', '/maps/api/place/nearbysearch/json', {
+      'location': '${pos.latitude},${pos.longitude}',
+      'radius':   '$radiusM',
+      'language': language,
+      'key':      _apiKey,
+    });
+    try {
+      final res = await http.get(url).timeout(const Duration(seconds: 8));
+      if (res.statusCode != 200) return null;
+      final body    = jsonDecode(res.body) as Map<String, dynamic>;
+      final results = (body['results'] as List<dynamic>? ?? const [])
+          .cast<Map<String, dynamic>>();
+      // Skip areas (city / khan / sangkat / route) — only real places count.
+      const areaTypes = {
+        'locality', 'political', 'sublocality', 'sublocality_level_1',
+        'administrative_area_level_1', 'administrative_area_level_2',
+        'administrative_area_level_3', 'neighborhood', 'route', 'country',
+        'postal_code', 'plus_code',
+      };
+      // Google returns results by prominence, so the first real place inside
+      // the radius is the landmark people know (Wat Phnom), not whatever tiny
+      // spot happens to be nearest (a public toilet, a kiosk).
+      for (final r in results) {
+        final types = ((r['types'] as List<dynamic>?) ?? const []).cast<String>();
+        if (types.any(areaTypes.contains)) continue;
+        final name = (r['name'] as String?)?.trim();
+        final loc  = (r['geometry'] as Map?)?['location'] as Map?;
+        if (name == null || name.isEmpty || loc == null) continue;
+        final d = Geolocator.distanceBetween(pos.latitude, pos.longitude,
+            (loc['lat'] as num).toDouble(), (loc['lng'] as num).toDouble());
+        if (d <= radiusM * 1.5) return name;
+      }
+      return null;
+    } catch (e, s) {
+      AppLog.e('Maps', 'nearbyPlaceName failed', e, s);
+      return null;
+    }
+  }
+
+  /// Drop-off label for a trip that ended at [pos]: "<landmark>, <address>"
+  /// when a named place is right there (e.g. "វត្តភ្នំ, ផ្លូវ ៩៤, ភ្នំពេញ"),
+  /// otherwise just the street address.
+  static Future<String?> placeLabel(LatLng pos) async {
+    final results = await Future.wait([nearbyPlaceName(pos), reverseGeocode(pos)]);
+    final name = results[0], address = results[1];
+    if (name == null) return address;
+    if (address == null || address.contains(name)) return name;
+    final label = '$name, $address';
+    return label.length > 250 ? label.substring(0, 250) : label;
   }
 
   // Returns a short area name like "ដូនពេញ, ភ្នំពេញ" in Khmer.

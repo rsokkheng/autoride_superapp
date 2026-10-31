@@ -42,6 +42,10 @@ class LocationService {
   // Broadcasts position every 50 m so the backend can match nearby drivers.
   // Includes service modes and vehicle type for dispatch + passenger icon.
 
+  // True once AuthService.ensureSignedIn() confirmed the driver's Firebase
+  // session — direct drivers_live writes wait for it.
+  bool _firebaseReady = false;
+
   Future<void> startOnlineTracking(
     String driverId, {
     bool   modeRide     = true,
@@ -64,14 +68,17 @@ class LocationService {
     // the Admin SDK — its own Firestore sync) doesn't depend on this
     // client's Firebase Auth state at all. Only the direct `.set()` below
     // needs it, and that's already best-effort with its own .catchError.
-    AuthService.ensureSignedIn();
+    AuthService.ensureSignedIn().then((ok) => _firebaseReady = ok);
     _onlineSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy:       LocationAccuracy.medium,
         distanceFilter: 50,
       ),
     ).listen((pos) {
-      _db.collection('drivers_live').doc(driverId).set({
+      // Skip the direct write until Firebase is signed in as this driver —
+      // earlier writes are rejected by the rules (PERMISSION_DENIED). The
+      // REST location push keeps the backend/Firestore updated meanwhile.
+      if (_firebaseReady) _db.collection('drivers_live').doc(driverId).set({
         'lat':           pos.latitude,
         'lng':           pos.longitude,
         'speed':         pos.speed,
@@ -155,7 +162,7 @@ class LocationService {
     // Auth hiccup killed the REST channel too, when the two are
     // independent — the direct `.set()` below is just a best-effort extra
     // and already logs its own failures via .catchError.
-    AuthService.ensureSignedIn();
+    AuthService.ensureSignedIn().then((ok) => _firebaseReady = ok);
     _tripSub?.cancel();
     _tripSub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
@@ -163,7 +170,10 @@ class LocationService {
         distanceFilter: 5,
       ),
     ).listen((position) {
-      _db.collection('drivers_live').doc(driverId).set({
+      // Skip the direct write until Firebase is signed in as this driver —
+      // earlier writes are rejected by the rules (PERMISSION_DENIED). The
+      // REST location push keeps the backend/Firestore updated meanwhile.
+      if (_firebaseReady) _db.collection('drivers_live').doc(driverId).set({
         'lat':           position.latitude,
         'lng':           position.longitude,
         'speed':         position.speed,

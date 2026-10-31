@@ -1867,7 +1867,8 @@ class ApiService {
       if (dropoffLat      != null) 'dropoff_lat':     dropoffLat,
       if (dropoffLng      != null) 'dropoff_lng':     dropoffLng,
     };
-    final raw = await _rawPost('/rides/$id/complete', body, token: token);
+    // Idempotent: retrying after a timeout can never complete/charge twice.
+    final raw = await _rawPost('/rides/$id/complete', body, token: token, idempotent: true);
     return _parseRideResponse(raw);
   }
 

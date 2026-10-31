@@ -18,6 +18,7 @@ import '../../models/driver_marker_model.dart';
 import '../../models/ride_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'driver_trip_summary_screen.dart';
+import 'driver_home.dart';
 import '../../widgets/tablet_frame.dart';
 import '../../l10n/l10n.dart';
 
@@ -72,6 +73,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   // Client-side trip distance/duration fallback when API doesn't return them
   double?   _tripDistanceKm;
   DateTime? _tripStartTime;
+
+  // Live meter for a no-destination trip: km driven and fare so far, from
+  // the server's GPS-track meter — the same numbers the passenger sees.
+  Timer?  _meterTimer;
+  double? _liveKm;
+  int?    _liveFareKhr;
 
   // Driver position — plain field; updated in GPS callback without setState
   LatLng? _driverLatLng;
@@ -283,6 +290,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     LocationService.instance.stopTracking(_driverId);
+    _meterTimer?.cancel();
     if (_prevMapsLanguage != null) {
       MapsService.language = _prevMapsLanguage!;
       LocaleService.setLocale(_prevMapsLanguage!);
@@ -763,7 +771,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
 
   Future<void> _advancePhase() async {
     if (_phase == _TripPhase.completed) {
-      Navigator.pop(context);
+      _exitTrip();
       return;
     }
 
@@ -813,8 +821,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       String? meteredDropoffAddress;
       if (_isMetered && meteredDropoff != null) {
         try {
-          meteredDropoffAddress = await MapsService.reverseGeocode(meteredDropoff)
-              .timeout(const Duration(seconds: 5));
+          // Landmark name when there is one ("វត្តភ្នំ, …"), else the address.
+          meteredDropoffAddress = await MapsService.placeLabel(meteredDropoff)
+              .timeout(const Duration(seconds: 8));
         } catch (_) {}
       }
       RideModel? completedRide;
@@ -837,8 +846,27 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
               }
             } catch (_) {}
           }
-        } catch (_) {
-          completedRide = widget.ride;
+        } catch (e) {
+          // The server did NOT record the completion (timeout, no network,
+          // server error). Stay on the trip so the driver can retry —
+          // showing "Trip completed" here left the ride in progress on the
+          // server and the passenger stuck.
+          if (!mounted) return;
+          setState(() => _completing = false);
+          final l = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e is ApiException && e.statusCode != 0 && e.message.isNotEmpty
+                ? e.message
+                : l.trCouldNotCompleteTrip),
+            backgroundColor: AppTheme.danger,
+            duration: const Duration(seconds: 8),
+            action: SnackBarAction(
+              label: l.retry,
+              textColor: Colors.white,
+              onPressed: () { if (mounted) _advancePhase(); },
+            ),
+          ));
+          return;
         }
       }
       if (!mounted) return;
@@ -881,7 +909,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         ),
       );
       if (!mounted) return;
-      Navigator.pop(context);
+      _exitTrip();
       return;
     }
 
@@ -913,6 +941,51 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         _lastRouteFetch = null;
         _fetchLiveRoute(_driverLatLng!);
       }
+      if (_isMetered) _startLiveMeter();
+    }
+  }
+
+  // Leave the trip screen. If it is the last route (opened from a restored
+  // session or a notification), popping would leave a black, empty
+  // navigator — go to the driver dashboard instead.
+  void _exitTrip() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      nav.pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+        (_) => false,
+      );
+    }
+  }
+
+  void _startLiveMeter() {
+    _meterTimer?.cancel();
+    _refreshLiveMeter();
+    _meterTimer = Timer.periodic(const Duration(seconds: 15), (_) => _refreshLiveMeter());
+  }
+
+  Future<void> _refreshLiveMeter() async {
+    if (widget.ride == null || _phase != _TripPhase.inProgress) {
+      _meterTimer?.cancel();
+      return;
+    }
+    final pos = _driverLatLng;
+    final usable = pos != null && _inCambodia(pos.latitude, pos.longitude);
+    try {
+      final meter = await ApiService.getRideMeter(
+        widget.ride!.id,
+        lat: usable ? pos.latitude  : null,
+        lng: usable ? pos.longitude : null,
+      );
+      if (!mounted || _phase != _TripPhase.inProgress) return;
+      setState(() {
+        _liveKm      = meter.distanceKm;
+        _liveFareKhr = meter.fare > 0 ? meter.fare : null;
+      });
+    } catch (e) {
+      AppLog.w('DriverTrip', 'live meter refresh failed: $e');
     }
   }
 
@@ -1437,7 +1510,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
             padding: EdgeInsets.all(16),
             child: Row(children: [
               GestureDetector(
-                onTap: () => Navigator.pop(context),
+                onTap: _exitTrip,
                 child: Container(
                   padding: EdgeInsets.all(10),
                   decoration: BoxDecoration(
@@ -1657,7 +1730,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(_isMetered ? AppLocalizations.of(context).metered : _fare,
+                        child: Text(
+                            _isMetered
+                                ? (_liveKm != null
+                                    ? '${_liveKm!.toStringAsFixed(1)} km'
+                                        '${_liveFareKhr != null ? '  ·  ${AppTheme.khr(_liveFareKhr!)}' : ''}'
+                                    : AppLocalizations.of(context).metered)
+                                : _fare,
                             style: TextStyle(color: context.appTextPrimary,
                                 fontWeight: FontWeight.w800, fontSize: 15)),
                       ),

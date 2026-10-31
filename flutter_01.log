@@ -1,0 +1,94 @@
+Flutter crash report.
+Please report a bug at https://github.com/flutter/flutter/issues.
+
+## command
+
+flutter run
+
+## exception
+
+PathExistsException: PathExistsException: Cannot create link, path = '/Users/npcapro/Development/autoride_superapp/ios/Flutter/ephemeral/Packages/.packages/geolocator_apple-2.3.13' (OS Error: File exists, errno = 17)
+
+```
+#0      _Link.throwIfError (dart:io/link.dart:358:7)
+#1      _Link.createSync (dart:io/link.dart:276:5)
+#2      ForwardingLink.createSync (package:file/src/forwarding/forwarding_link.dart:20:16)
+#3      ForwardingLink.createSync (package:file/src/forwarding/forwarding_link.dart:20:16)
+#4      SwiftPackageManager._dependenciesForPlugins (package:flutter_tools/src/macos/swift_package_manager.dart:177:21)
+#5      SwiftPackageManager.generatePluginsSwiftPackage (package:flutter_tools/src/macos/swift_package_manager.dart:72:9)
+#6      DarwinDependencyManagement.setUp (package:flutter_tools/src/macos/darwin_dependency_management.dart:77:34)
+#7      injectPlugins (package:flutter_tools/src/flutter_plugins.dart:1378:42)
+<asynchronous suspension>
+#8      FlutterProject.ensureReadyForPlatformSpecificTooling (package:flutter_tools/src/project.dart:420:5)
+<asynchronous suspension>
+#9      FlutterCommand.regeneratePlatformSpecificToolingIfApplicable (package:flutter_tools/src/runner/flutter_command.dart:2010:5)
+<asynchronous suspension>
+#10     FlutterCommand.verifyThenRunCommand (package:flutter_tools/src/runner/flutter_command.dart:1966:7)
+<asynchronous suspension>
+#11     FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1630:27)
+<asynchronous suspension>
+#12     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#13     CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+<asynchronous suspension>
+#14     FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:496:9)
+<asynchronous suspension>
+#15     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#16     FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:431:5)
+<asynchronous suspension>
+#17     FlutterCommandRunner.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:307:33)
+<asynchronous suspension>
+#18     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+<asynchronous suspension>
+#19     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#20     main (package:flutter_tools/executable.dart:103:3)
+<asynchronous suspension>
+```
+
+## flutter doctor
+
+```
+[32m[✓][39m Flutter (Channel stable, 3.44.0, on macOS 26.6.2 25G83 darwin-arm64, locale en-GB) [705ms]
+    [32m•[39m Flutter version 3.44.0 on channel stable at /Users/npcapro/Development/flutter
+    [32m•[39m Upstream repository https://github.com/flutter/flutter.git
+    [32m•[39m Framework revision 559ffa3f75 (6 months ago), 2026-05-15 14:13:13 -0700
+    [32m•[39m Engine revision 4c525dac5e
+    [32m•[39m Dart version 3.12.0
+    [32m•[39m DevTools version 2.57.0
+    [32m•[39m Feature flags: enable-web, enable-linux-desktop, enable-macos-desktop, enable-windows-desktop, enable-android, enable-ios, cli-animations, enable-native-assets,
+      enable-swift-package-manager, omit-legacy-version-file, enable-lldb-debugging, enable-uiscene-migration
+
+[33m[!][39m Android toolchain - develop for Android devices (Android SDK version 35.0.0) [2.2s]
+    [32m•[39m Android SDK at /Users/npcapro/Library/Android/sdk
+    [32m•[39m Emulator version 36.5.11.0 (build_id 15261927) (CL:N/A)
+    [32m•[39m Platform android-36-ext19, build-tools 35.0.0
+    [32m•[39m Java binary at: /Applications/Android Studio.app/Contents/jbr/Contents/Home/bin/java
+      This is the JDK bundled with the latest Android Studio installation on this machine.
+      To manually set the JDK path, use: `flutter config --jdk-dir="path/to/jdk"`.
+    [32m•[39m Java version OpenJDK Runtime Environment (build 17.0.9+0-17.0.9b1087.7-11185874)
+    [33m![39m Some Android licenses not accepted. To resolve this, run: flutter doctor --android-licenses
+
+[32m[✓][39m Xcode - develop for iOS and macOS (Xcode 26.5) [1,643ms]
+    [32m•[39m Xcode at /Applications/Xcode.app/Contents/Developer
+    [32m•[39m Build 17F42
+    [32m•[39m CocoaPods version 1.16.2
+
+[32m[✓][39m Chrome - develop for the web [3ms]
+    [32m•[39m Chrome at /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+
+[32m[✓][39m Connected device (5 available) [6.0s]
+    [32m•[39m sdk gphone64 arm64 (mobile)         • emulator-5554                        • android-arm64  • Android 16 (API 36) (emulator)
+    [32m•[39m iPhone Sokkheng (wireless) (mobile) • 00008130-000429AE11D0001C            • ios            • iOS 26.6.1 23G83
+    [32m•[39m iPhone 16 Pro (mobile)              • 02F293FD-BA8B-4B1A-8A6A-EDF396A1A8F9 • ios            • com.apple.CoreSimulator.SimRuntime.iOS-26-5 (simulator)
+    [32m•[39m macOS (desktop)                     • macos                                • darwin-arm64   • macOS 26.6.2 25G83 darwin-arm64
+    [32m•[39m Chrome (web)                        • chrome                               • web-javascript • Google Chrome 156.0.8078.79
+    [33m![39m Error: Browsing on the local area network for iPhone SK. Ensure the device is unlocked and attached with a cable or associated with the same local area network as this Mac.
+      The device must be opted into Developer Mode to connect wirelessly. (code -27)
+
+[32m[✓][39m Network resources [489ms]
+    [32m•[39m All expected network resources are available.
+
+[33m![39m Doctor found issues in 1 category.
+```

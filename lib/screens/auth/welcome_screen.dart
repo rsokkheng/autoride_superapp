@@ -86,17 +86,22 @@ class WelcomeScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              child: Row(children: [
-                const Spacer(),
-                Icon(Icons.person_outline_rounded, size: fs(24)),
-                const SizedBox(width: 10),
-                Flexible(
-                  flex: 6,
-                  child: Text(l.signIn, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: fs(16), fontWeight: FontWeight.w800)),
+              child: Stack(alignment: Alignment.center, children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.person_outline_rounded, size: fs(24)),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(l.signIn, maxLines: 1, overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: fs(16), fontWeight: FontWeight.w800)),
+                    ),
+                  ]),
                 ),
-                const Spacer(),
-                Icon(Icons.chevron_right_rounded, size: fs(24)),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Icon(Icons.chevron_right_rounded, size: fs(24)),
+                ),
               ]),
             ),
 

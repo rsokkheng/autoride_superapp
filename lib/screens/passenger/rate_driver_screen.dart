@@ -15,6 +15,7 @@ class RateDriverScreen extends StatefulWidget {
   final String  to;
   final int?    baseFareKhr;
   final int?    distanceFeeKhr;
+  final int?    surchargeKhr;
   final String? promoCode;
   final int?    promoDiscountKhr;
   /// Intermediate stop addresses, in order — carried through to the receipt.
@@ -32,6 +33,7 @@ class RateDriverScreen extends StatefulWidget {
     this.to   = '',
     this.baseFareKhr,
     this.distanceFeeKhr,
+    this.surchargeKhr,
     this.promoCode,
     this.promoDiscountKhr,
     this.stops = const [],
@@ -107,7 +109,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                   fareTotal:        widget.fare,
                   baseFareKhr:      widget.baseFareKhr ?? 0,
                   distanceFeeKhr:   widget.distanceFeeKhr ?? 0,
-                  surgeKhr:         0,
+                  surgeKhr:         widget.surchargeKhr ?? 0,
                   promoCode:        widget.promoCode,
                   promoDiscountKhr: widget.promoDiscountKhr ?? 0,
                   distanceKm:       widget.distanceKm,
@@ -378,7 +380,7 @@ class _RateDriverScreenState extends State<RateDriverScreen> {
                             fareTotal:        widget.fare,
                             baseFareKhr:      widget.baseFareKhr ?? 0,
                             distanceFeeKhr:   widget.distanceFeeKhr ?? 0,
-                            surgeKhr:         0,
+                            surgeKhr:         widget.surchargeKhr ?? 0,
                             promoCode:        widget.promoCode,
                             promoDiscountKhr: widget.promoDiscountKhr ?? 0,
                             distanceKm:       widget.distanceKm,

@@ -573,6 +573,9 @@ class AppLocalizations {
       'deleteAccountMessage': 'This permanently deletes your name, email, phone number, saved places and emergency contacts, and signs you out on every device. Trip and payment history is kept for accounting but no longer linked to you. This cannot be undone.',
       'deleteAccountConfirm': 'Delete permanently',
       'deleteAccountDone': 'Your account has been deleted.',
+      'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
+      'trSurchargesLine': 'Surcharges & minimum fare',
+      'trMeterSoFar': 'Distance so far',
       'trRecipientLine2': 'Recipient: {name}',
       'trForName': 'For: {name}',
       'trClassicTukTuk': 'Classic tuk-tuk',
@@ -2689,6 +2692,9 @@ class AppLocalizations {
       'deleteAccountMessage': 'សកម្មភាពនេះនឹងលុបឈ្មោះ អ៊ីមែល លេខទូរស័ព្ទ ទីកន្លែងដែលបានរក្សាទុក និងទំនាក់ទំនងសង្គ្រោះបន្ទាន់របស់អ្នកជាអចិន្ត្រៃយ៍ ហើយចាកចេញពីគ្រប់ឧបករណ៍។ ប្រវត្តិដំណើរ និងការទូទាត់ត្រូវបានរក្សាទុកសម្រាប់គណនេយ្យ ប៉ុន្តែលែងភ្ជាប់នឹងអ្នកទៀតហើយ។ មិនអាចត្រឡប់វិញបានទេ។',
       'deleteAccountConfirm': 'លុបជាអចិន្ត្រៃយ៍',
       'deleteAccountDone': 'គណនីរបស់អ្នកត្រូវបានលុបហើយ។',
+      'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
+      'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
+      'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
       'trRecipientLine2': 'អ្នកទទួល៖ {name}',
       'trForName': 'សម្រាប់៖ {name}',
       'trClassicTukTuk': 'កង់បីធម្មតា',
@@ -3155,7 +3161,7 @@ class AppLocalizations {
       'anSosAlertWillBe': 'សារព្រមាន SOS នឹងត្រូវបញ្ជូនទៅកាន់លេខទំនាក់ទំនងភ្លាមៗ.',
       'call': 'ខល',
       'destination': 'ទីតាំងទៅដល់',
-      'locatingYourDriver': 'កំពុងរកអ្នកបើកបរ…',
+      'locatingYourDriver': 'កំពុងទាញយកទីតាំងអ្នកបើកបរ…',
       'driverArrived': '✅ អ្នកបើកបរបានមកដល់!',
       'driverFound': '🛺 រកបានអ្នកបើកបរហើយ!',
       'yourDriverIsAlmostHere': '🛺 អ្នកបើកបររបស់អ្នកជិតមកដល់ហើយ',
@@ -4808,6 +4814,9 @@ class AppLocalizations {
       'deleteAccountMessage': '此操作将永久删除您的姓名、邮箱、手机号、已保存地点和紧急联系人，并在所有设备上退出登录。行程和付款记录会因会计原因保留，但不再与您关联。此操作无法撤销。',
       'deleteAccountConfirm': '永久删除',
       'deleteAccountDone': '您的账户已删除。',
+      'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
+      'trSurchargesLine': '附加费与最低车费',
+      'trMeterSoFar': '目前里程',
       'trRecipientLine2': '收件人：{name}',
       'trForName': '收件人：{name}',
       'trClassicTukTuk': '经典嘟嘟车',
@@ -6928,6 +6937,9 @@ class AppLocalizations {
   String get deleteAccountMessage => tr('deleteAccountMessage');
   String get deleteAccountConfirm => tr('deleteAccountConfirm');
   String get deleteAccountDone => tr('deleteAccountDone');
+  String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
+  String get trSurchargesLine => tr('trSurchargesLine');
+  String get trMeterSoFar => tr('trMeterSoFar');
   String trRecipientLine2(Object? name) => _fill('trRecipientLine2', {'name': name});
   String trForName(Object? name) => _fill('trForName', {'name': name});
   String get trClassicTukTuk => tr('trClassicTukTuk');
