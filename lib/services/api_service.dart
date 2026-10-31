@@ -1922,7 +1922,35 @@ class ApiService {
     if (filter != null && filter != 'all') url += '&filter=$filter';
     final raw = await _rawGet(url, token: token);
     if (raw.statusCode != 200) return {'data': [], 'total': 0};
-    return jsonDecode(raw.body) as Map<String, dynamic>;
+    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    return _normalizeDriverTrips(body['data'] is Map ? body['data'] as Map : body);
+  }
+
+  /// The server sends `{rides: [...], deliveries: [...], pagination}` with
+  /// short keys (pickup, dropoff, date, type); screens read one newest-first
+  /// list of `{pickup_address, dropoff_address, created_at, service_type, …}`.
+  static Map<String, dynamic> _normalizeDriverTrips(Map data) {
+    if (data['data'] is List) {
+      return {'data': data['data'], 'total': data['total'] ?? (data['data'] as List).length};
+    }
+    Map<String, dynamic> norm(dynamic t) {
+      final m = Map<String, dynamic>.from(t as Map);
+      return {
+        ...m,
+        'pickup_address':  m['pickup_address']  ?? m['pickup'],
+        'dropoff_address': m['dropoff_address'] ?? m['dropoff'],
+        'created_at':      m['created_at']      ?? m['date'],
+        'service_type':    m['service_type']    ?? m['type'],
+      };
+    }
+    final items = [
+      ...((data['rides'] as List?) ?? const []).map(norm),
+      ...((data['deliveries'] as List?) ?? const []).map(norm),
+    ]..sort((a, b) => (b['created_at']?.toString() ?? '').compareTo(a['created_at']?.toString() ?? ''));
+    final pg = data['pagination'] as Map?;
+    final total = ((pg?['rides_total'] as num?)?.toInt() ?? 0) +
+        ((pg?['deliveries_total'] as num?)?.toInt() ?? 0);
+    return {'data': items, 'total': total};
   }
 
   // ── Driver "missed calls" ─────────────────────────────────────────────────

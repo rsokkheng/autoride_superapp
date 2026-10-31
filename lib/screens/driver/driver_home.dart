@@ -2,6 +2,7 @@ import 'dart:async';
 import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart' show DateFormat;
 import 'package:provider/provider.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/theme_provider.dart';
@@ -252,6 +253,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         onModeRental:   (v) => _changeMode(rental:   v),
         onBusy:         _setBusy,
         onTripCompleted: _setOnlineAfterTrip,
+        onOpenTab:      (i) => setState(() => _tab = i),
       ),
       _DriverEarnings(onWalletChanged: _loadGoOnlineGate),
       const DriverMissionsScreen(),
@@ -260,23 +262,39 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
           onWalletChanged: _loadGoOnlineGate),
     ];
 
+    final l = AppLocalizations.of(context);
+    void go(int i) => setState(() => _tab = i);
     return Scaffold(
       body: pages[_tab],
+      // Home · Missions · [Accept rides] · Earnings · Account. Charging lives
+      // in the dashboard's quick actions.
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: context.appSurface,
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 20)],
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 20, offset: const Offset(0, -4))],
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(child: _NavItem(icon: Icons.dashboard_outlined,           label: AppLocalizations.of(context).home,     index: 0, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.account_balance_wallet_outlined, label: AppLocalizations.of(context).earnings, index: 1, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.rocket_launch_outlined,       label: AppLocalizations.of(context).missions, index: 2, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.ev_station_outlined,          label: AppLocalizations.of(context).charging, index: 3, current: _tab, onTap: (i) => setState(() => _tab = i))),
-                Expanded(child: _NavItem(icon: Icons.person_outline,               label: AppLocalizations.of(context).profile,  index: 4, current: _tab, onTap: (i) => setState(() => _tab = i))),
+                Expanded(child: _NavItem(icon: Icons.home_rounded,                    label: l.home,     index: 0, current: _tab, onTap: go)),
+                Expanded(child: _NavItem(icon: Icons.format_list_bulleted_rounded,    label: l.missions, index: 2, current: _tab, onTap: go)),
+                Expanded(child: _AcceptRidesButton(
+                  label: _driverStatus == DriverStatus.busy
+                      ? l.busy
+                      : _isOnline ? l.online : l.drvAcceptRides,
+                  online: _isOnline,
+                  busy: _driverStatus == DriverStatus.busy,
+                  onTap: () {
+                    go(0);
+                    if (!_isOnline && !_togglingOnline) _toggleOnline(true);
+                  },
+                )),
+                Expanded(child: _NavItem(icon: Icons.account_balance_wallet_outlined, label: l.earnings, index: 1, current: _tab, onTap: go)),
+                Expanded(child: _NavItem(icon: Icons.person_outline_rounded,          label: l.profile,  index: 4, current: _tab, onTap: go)),
               ],
             ),
           ),
@@ -306,22 +324,55 @@ class _NavItem extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 2),
         padding: EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? AppTheme.accentOrange.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? AppTheme.accent.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: selected ? AppTheme.accentOrange : context.appTextSecondary, size: 22),
+          Icon(icon, color: selected ? AppTheme.accent : context.appTextSecondary, size: 24),
           SizedBox(height: 3),
           Text(label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: selected ? AppTheme.accentOrange : context.appTextSecondary,
-                fontSize: 10, fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
+                color: selected ? AppTheme.accent : context.appTextSecondary,
+                fontSize: 11, fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
               )),
         ]),
       ),
+    );
+  }
+}
+
+// ─── Centre "accept rides" button ─────────────────────────────────────────────
+class _AcceptRidesButton extends StatelessWidget {
+  final String label;
+  final bool online, busy;
+  final VoidCallback onTap;
+  const _AcceptRidesButton({required this.label, required this.online, required this.busy, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = busy ? AppTheme.warning : AppTheme.accent;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 62, height: 62,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: context.appSurface, width: 4),
+            boxShadow: [BoxShadow(color: color.withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 4))],
+          ),
+          child: Icon(online ? Icons.directions_car_filled_rounded : Icons.power_settings_new_rounded,
+              color: Colors.white, size: 28),
+        ),
+        const SizedBox(height: 3),
+        Text(label,
+            maxLines: 1, overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800)),
+      ]),
     );
   }
 }
@@ -333,6 +384,7 @@ class _DriverDashboard extends StatefulWidget {
   final Function(bool) onToggle, onModeRide, onModeDelivery, onModeRental;
   final VoidCallback onBusy;
   final VoidCallback onTripCompleted;
+  final ValueChanged<int> onOpenTab;
 
   const _DriverDashboard({
     required this.driverStatus,
@@ -345,6 +397,7 @@ class _DriverDashboard extends StatefulWidget {
     required this.onModeRental,
     required this.onBusy,
     required this.onTripCompleted,
+    required this.onOpenTab,
   });
 
   bool get isOnline => driverStatus != DriverStatus.offline;
@@ -358,6 +411,8 @@ class _DriverDashboardState extends State<_DriverDashboard>
     with WidgetsBindingObserver {
   DriverStatsModel? _stats;
   UserModel? _user;
+  DriverEarningsSummaryModel? _earnings;
+  List<Map<String, dynamic>> _recentTrips = const [];
   RideModel?     _pendingRide;
   DeliveryModel? _pendingDelivery;
   Map<String, dynamic>? _pendingRental;
@@ -576,6 +631,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
       }
     } catch (_) {}
 
+    // Dashboard extras — each on its own so one failing never blanks the rest.
+    ApiService.getDriverEarningsSummary().then((e) {
+      if (mounted) setState(() => _earnings = e);
+    }, onError: (Object e) => debugPrint('[Driver] earnings summary error: $e'));
+    ApiService.getDriverTrips().then((res) {
+      final trips = ((res['data'] as List<dynamic>?) ?? const [])
+          .whereType<Map<String, dynamic>>().take(3).toList();
+      if (mounted) setState(() => _recentTrips = trips);
+    }, onError: (Object e) => debugPrint('[Driver] recent trips error: $e'));
+
     // Fetched separately so a failure here (e.g. endpoint not yet deployed)
     // doesn't take down rides/deliveries loading above.
     try {
@@ -675,55 +740,373 @@ class _DriverDashboardState extends State<_DriverDashboard>
     }
   }
 
+
+  // ── Dashboard sections ───────────────────────────────────────────────────
+
+  Color get _statusColor => widget.isBusy
+      ? AppTheme.warning
+      : widget.isOnline ? AppTheme.accent : context.appTextSecondary;
+
+  String _statusLabel(AppLocalizations l) =>
+      widget.isBusy ? l.busy : widget.isOnline ? l.online : l.offline;
+
+  Widget _buildHeader(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final name  = (_user?.name ?? '').trim();
+    final photo = _user?.photoUrl;
+    return Row(children: [
+      Container(
+        padding: const EdgeInsets.all(2.5),
+        decoration: const BoxDecoration(color: AppTheme.accent, shape: BoxShape.circle),
+        child: CircleAvatar(
+          radius: 26,
+          backgroundColor: AppTheme.accent.withValues(alpha: 0.12),
+          backgroundImage: (photo != null && photo.isNotEmpty) ? NetworkImage(photo) : null,
+          child: (photo == null || photo.isEmpty)
+              ? Text(name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
+                  style: const TextStyle(color: AppTheme.accent, fontSize: 22, fontWeight: FontWeight.w800))
+              : null,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(name.isEmpty ? '${l.hello}!' : l.drvGreeting(name),
+              maxLines: 1, overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: context.appTextPrimary, fontSize: 19, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Row(children: [
+            const Icon(Icons.star_rounded, color: AppTheme.gold, size: 18),
+            const SizedBox(width: 3),
+            Text(_user?.rating != null ? _user!.rating!.toStringAsFixed(2) : '--',
+                style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
+            Flexible(
+              child: Text(' (${l.drvTripsCount(_user?.totalTrips ?? 0)})',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+            ),
+          ]),
+        ]),
+      ),
+      // Missed requests ("missed calls")
+      IconButton(
+        onPressed: _openMissedRequests,
+        tooltip: l.missedRequestsTitle,
+        icon: Badge(
+          isLabelVisible: _missedUnseen > 0,
+          label: Text(_missedUnseen > 99 ? '99+' : '$_missedUnseen'),
+          backgroundColor: AppTheme.danger,
+          child: Icon(Icons.notifications_none_rounded, color: context.appTextPrimary, size: 28),
+        ),
+      ),
+      Column(mainAxisSize: MainAxisSize.min, children: [
+        Transform.scale(
+          scale: 1.1,
+          child: Switch(
+            value: widget.isOnline,
+            onChanged: widget.isBusy ? null : widget.onToggle,
+            activeThumbColor: Colors.white,
+            activeTrackColor: widget.isBusy ? AppTheme.warning : AppTheme.accent,
+          ),
+        ),
+        Text(_statusLabel(l),
+            style: TextStyle(color: _statusColor, fontSize: 11, fontWeight: FontWeight.w800)),
+      ]),
+    ]);
+  }
+
+  Widget _buildHero(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    const ink = Colors.white; // on the banner's green left side
+    const shadow = [Shadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 1))];
+    final accent = widget.isBusy
+        ? AppTheme.warning
+        : widget.isOnline ? AppTheme.accent : context.appTextSecondary;
+    final title = widget.isBusy
+        ? l.busyOnATrip
+        : widget.isOnline ? l.drvFindingRides : l.offline2;
+    // Online needs no explanation — the title says it all.
+    final String? subtitle = widget.isBusy
+        ? l.completeYourTripToReceive
+        : widget.isOnline ? null : l.toggleOnlineToAcceptRides;
+
+    Widget banner = Image.asset('assets/driver_banner.jpg',
+        fit: BoxFit.cover, alignment: Alignment.centerRight,
+        // Asset missing from an old build (added without a full rebuild) —
+        // plain green instead of Flutter's red error box.
+        errorBuilder: (_, _e, _s) => const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [Color(0xFF0F9D58), Color(0xFF34C77B)]),
+              ),
+            ));
+    // Offline: same artwork, greyed out.
+    if (!widget.isOnline) {
+      banner = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0.2126, 0.7152, 0.0722, 0, 0,
+          0,      0,      0,      1, 0,
+        ]),
+        child: banner,
+      );
+    }
+
+    return GestureDetector(
+      onTap: widget.isBusy ? _openActiveTrip : null,
+      child: AspectRatio(
+        aspectRatio: 2.4,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            border: widget.isBusy ? Border.all(color: AppTheme.warning, width: 2) : null,
+            boxShadow: [BoxShadow(color: accent.withValues(alpha: 0.25), blurRadius: 16, offset: const Offset(0, 6))],
+          ),
+          child: Stack(fit: StackFit.expand, children: [
+            banner,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 0, 14),
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: 0.52, // the tuk-tuk fills the right half
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: accent.withValues(alpha: 0.6)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Container(width: 8, height: 8,
+                            decoration: BoxDecoration(color: accent, shape: BoxShape.circle)),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            _locationZone != null
+                                ? '${_statusLabel(l)} – $_locationZone'
+                                : _statusLabel(l),
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: accent == context.appTextSecondary ? const Color(0xFF334155) : accent,
+                                fontSize: 11.5, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        if (widget.isBusy)
+                          const Icon(Icons.chevron_right_rounded, color: AppTheme.warning, size: 16),
+                      ]),
+                    ),
+                    const SizedBox(height: 10),
+                    Flexible(
+                      child: Text(title,
+                          maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: ink, fontSize: 20, fontWeight: FontWeight.w900,
+                              height: 1.3, shadows: shadow)),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Flexible(
+                        child: Text(subtitle,
+                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: ink.withValues(alpha: 0.92), fontSize: 12,
+                                height: 1.4, shadows: shadow)),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _card({required Widget child, EdgeInsets? padding, VoidCallback? onTap}) => Material(
+        color: context.appSurface,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(padding: padding ?? const EdgeInsets.all(16), child: child),
+        ),
+      );
+
+  Widget _buildTodayStats(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    String date;
+    try {
+      date = DateFormat.yMMMd(Localizations.localeOf(context).languageCode).format(DateTime.now());
+    } catch (_) {
+      date = DateFormat('dd/MM/yyyy').format(DateTime.now());
+    }
+    return _card(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Text(l.drvTodayStats,
+                style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w900)),
+          ),
+          Icon(Icons.calendar_month_outlined, size: 18, color: context.appTextSecondary),
+          const SizedBox(width: 6),
+          Text(date, style: TextStyle(color: context.appTextSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+        ]),
+        const SizedBox(height: 14),
+        Row(children: [
+          _StatTile(icon: Icons.check_circle_rounded, color: AppTheme.accent,
+              value: '${_stats?.acceptedRides ?? 0}', label: l.accepted),
+          const SizedBox(width: 8),
+          _StatTile(icon: Icons.task_alt_rounded, color: AppTheme.accentOrange,
+              value: '${_stats?.completedRides ?? 0}', label: l.completed),
+          const SizedBox(width: 8),
+          _StatTile(icon: Icons.schedule_rounded, color: const Color(0xFF7C3AED),
+              value: _stats == null ? '--' : '${_stats!.hoursOnline.toStringAsFixed(1)}h', label: l.hoursOnline),
+          const SizedBox(width: 8),
+          _StatTile(icon: Icons.verified_rounded, color: AppTheme.confirmBlue,
+              value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', label: l.acceptanceRate),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _buildMoneyRow(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    Widget money(IconData icon, Color color, String label, String value, VoidCallback onTap) => Expanded(
+          child: _card(
+            onTap: onTap,
+            padding: const EdgeInsets.fromLTRB(12, 14, 8, 14),
+            child: Row(children: [
+              Container(
+                width: 46, height: 46,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(label, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value,
+                        style: const TextStyle(color: AppTheme.accent, fontSize: 18, fontWeight: FontWeight.w900)),
+                  ),
+                ]),
+              ),
+              Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
+            ]),
+          ),
+        );
+    return Row(children: [
+      money(Icons.monetization_on_rounded, const Color(0xFFF59E0B), l.drvTodayEarnings,
+          _earnings == null ? '--' : AppTheme.khr(_earnings!.todayKhr), () => widget.onOpenTab(1)),
+      const SizedBox(width: 10),
+      money(Icons.account_balance_wallet_rounded, AppTheme.accent, l.drvWalletBalance,
+          _earnings == null ? '--' : AppTheme.khr(_earnings!.walletBalance), () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()));
+        if (mounted) _loadData();
+      }),
+    ]);
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    void push(Widget w) => Navigator.push(context, MaterialPageRoute(builder: (_) => w));
+    final items = <(IconData, Color, String, VoidCallback, int)>[
+      (Icons.rocket_launch_rounded,          AppTheme.accent,         l.missions,            () => widget.onOpenTab(2), 0),
+      (Icons.payments_rounded,               AppTheme.danger,         l.earnings,            () => widget.onOpenTab(1), 0),
+      (Icons.receipt_long_rounded,           AppTheme.confirmBlue,    l.tripHistory,         () => push(const DriverHistoryScreen()), 0),
+      (Icons.phone_missed_rounded,           const Color(0xFF7C3AED), l.missedRequestsTitle, _openMissedRequests, _missedUnseen),
+      (Icons.ev_station_rounded,             AppTheme.accentOrange,   l.charging,            () => widget.onOpenTab(3), 0),
+      (Icons.headset_mic_rounded,            AppTheme.confirmBlue,    l.drvHelp,             () => push(const ChatScreen(isDriver: true)), 0),
+      (Icons.account_balance_wallet_rounded, const Color(0xFF0D9488), l.wallet,              () => push(const WalletScreen()), 0),
+      (Icons.settings_rounded,               const Color(0xFF475569), l.settings,            () => widget.onOpenTab(4), 0),
+    ];
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 4,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 0.92,
+      children: [
+        for (final (icon, color, label, onTap, badge) in items)
+          _card(
+            onTap: onTap,
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Badge(
+                isLabelVisible: badge > 0,
+                label: Text(badge > 99 ? '99+' : '$badge'),
+                backgroundColor: AppTheme.danger,
+                child: Icon(icon, color: color, size: 30),
+              ),
+              const SizedBox(height: 8),
+              Text(label,
+                  maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center,
+                  style: TextStyle(color: context.appTextPrimary, fontSize: 11.5, fontWeight: FontWeight.w600, height: 1.25)),
+            ]),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRecentTrips(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(
+          child: Text(l.recentTrips,
+              style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w900)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const DriverHistoryScreen())),
+          style: TextButton.styleFrom(foregroundColor: AppTheme.accent, padding: EdgeInsets.zero),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(l.seeAll, style: const TextStyle(fontWeight: FontWeight.w800)),
+            const Icon(Icons.chevron_right_rounded, size: 20),
+          ]),
+        ),
+      ]),
+      const SizedBox(height: 6),
+      if (_recentTrips.isEmpty)
+        _card(
+          child: Row(children: [
+            Icon(Icons.history_rounded, color: context.appTextSecondary),
+            const SizedBox(width: 10),
+            Expanded(child: Text(l.drvNoRecentTrips,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 13))),
+          ]),
+        )
+      else
+        for (final t in _recentTrips) ...[
+          _RecentTripRow(
+            trip: t,
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const DriverHistoryScreen())),
+          ),
+          const SizedBox(height: 10),
+        ],
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            Row(children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(AppLocalizations.of(context).driverDashboard, style: TextStyle(color: context.appTextPrimary, fontSize: 20, fontWeight: FontWeight.w800)),
-                Row(children: [
-                  Icon(Icons.star, color: AppTheme.gold, size: 16),
-                  SizedBox(width: 4),
-                  Text(_user?.rating != null ? _user!.rating!.toStringAsFixed(2) : '--',
-                      style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
-                  Text(' · ${AppLocalizations.of(context).drvTripsCount(_user?.totalTrips ?? 0)}',
-                      style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
-                ]),
-              ]),
-              Spacer(),
-              // Missed requests ("missed calls")
-              IconButton(
-                onPressed: _openMissedRequests,
-                tooltip: AppLocalizations.of(context).missedRequestsTitle,
-                icon: Badge(
-                  isLabelVisible: _missedUnseen > 0,
-                  label: Text(_missedUnseen > 99 ? '99+' : '$_missedUnseen'),
-                  backgroundColor: AppTheme.danger,
-                  child: Icon(Icons.phone_missed_outlined, color: context.appTextPrimary),
-                ),
-              ),
-              Column(children: [
-                Switch(
-                  value: widget.isOnline,
-                  onChanged: widget.isBusy ? null : widget.onToggle,
-                  activeThumbColor: widget.isBusy ? AppTheme.warning : AppTheme.success,
-                  activeTrackColor: (widget.isBusy ? AppTheme.warning : AppTheme.success).withValues(alpha: 0.4),
-                ),
-                Text(
-                  widget.isBusy ? AppLocalizations.of(context).busy : widget.isOnline ? AppLocalizations.of(context).online : AppLocalizations.of(context).offline,
-                  style: TextStyle(
-                    color: widget.isBusy ? AppTheme.warning : widget.isOnline ? AppTheme.success : context.appTextSecondary,
-                    fontSize: 11,
-                  ),
-                ),
-              ]),
-            ]),
+            _buildHeader(context),
+            const SizedBox(height: 18),
+            _buildHero(context),
             const SizedBox(height: 16),
 
             // Surge zone banner — red when inside, amber when nearby
@@ -758,86 +1141,21 @@ class _DriverDashboardState extends State<_DriverDashboard>
                 );
               }),
 
-            // Status card
-            GradientCard(
-              colors: widget.isBusy
-                  ? [Color(0xFFE65100), Color(0xFFBF360C)]
-                  : widget.isOnline
-                      ? [Color(0xFF00C48C), Color(0xFF00A37A)]
-                      : [context.appSurface, context.appCardBg],
-              child: Row(children: [
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  StatusBadge(
-                    label: widget.isBusy ? AppLocalizations.of(context).busyOnATrip : widget.isOnline ? AppLocalizations.of(context).onlineReady : AppLocalizations.of(context).offline2,
-                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : context.appTextSecondary,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    widget.isBusy ? AppLocalizations.of(context).completeYourTripToReceive : widget.isOnline ? AppLocalizations.of(context).waitingForRequests : AppLocalizations.of(context).toggleOnlineToAcceptRides,
-                    style: TextStyle(
-                      color: (widget.isBusy || widget.isOnline) ? Colors.white : context.appTextPrimary,
-                      fontSize: 14, fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (_locationZone != null) ...[
-                    SizedBox(height: 6),
-                    Row(children: [
-                      Icon(Icons.location_on_outlined,
-                          color: (widget.isBusy || widget.isOnline)
-                              ? Colors.white70
-                              : context.appTextSecondary,
-                          size: 13),
-                      SizedBox(width: 3),
-                      Flexible(child: Text(
-                        _locationZone!,
-                        style: TextStyle(
-                          color: (widget.isBusy || widget.isOnline)
-                              ? Colors.white70
-                              : context.appTextSecondary,
-                          fontSize: 12,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      )),
-                    ]),
-                  ],
-                ])),
-                Icon(Icons.electric_rickshaw,
-                    color: widget.isBusy ? Colors.white : widget.isOnline ? Colors.white : context.appTextSecondary,
-                    size: 50),
-              ]),
-            ),
-            const SizedBox(height: 16),
-
             // Service modes (multi-select, at least one active)
-            SectionHeader(title: AppLocalizations.of(context).serviceModes),
-            const SizedBox(height: 10),
             Row(children: [
-              _ModeChip(icon: Icons.electric_rickshaw,  label: AppLocalizations.of(context).rideLabel,     active: widget.modeRide,     color: AppTheme.accent,         onTap: () => widget.onModeRide(!widget.modeRide)),
-              const SizedBox(width: 8),
-              _ModeChip(icon: Icons.delivery_dining_outlined, label: AppLocalizations.of(context).delivery, active: widget.modeDelivery, color: AppTheme.accentOrange,    onTap: () => widget.onModeDelivery(!widget.modeDelivery)),
-              const SizedBox(width: 8),
-              _ModeChip(icon: Icons.car_rental_outlined,      label: AppLocalizations.of(context).rental,   active: widget.modeRental,   color: const Color(0xFF9C27B0), onTap: () => widget.onModeRental(!widget.modeRental)),
+              _ModeTile(icon: Icons.directions_car_filled_rounded, title: AppLocalizations.of(context).rideLabel,
+                  subtitle: AppLocalizations.of(context).drvRideSub, active: widget.modeRide,
+                  onTap: () => widget.onModeRide(!widget.modeRide)),
+              const SizedBox(width: 10),
+              _ModeTile(icon: Icons.inventory_2_rounded, title: AppLocalizations.of(context).delivery,
+                  subtitle: AppLocalizations.of(context).drvDeliverySub, active: widget.modeDelivery,
+                  onTap: () => widget.onModeDelivery(!widget.modeDelivery)),
+              const SizedBox(width: 10),
+              _ModeTile(icon: Icons.car_rental_rounded, title: AppLocalizations.of(context).rental,
+                  subtitle: AppLocalizations.of(context).drvRentalSub, active: widget.modeRental,
+                  onTap: () => widget.onModeRental(!widget.modeRental)),
             ]),
-            const SizedBox(height: 20),
-
-            // Today's stats
-            SectionHeader(title: AppLocalizations.of(context).todayPerformance),
-            const SizedBox(height: 14),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.6,
-              children: [
-                _StatCard(label: AppLocalizations.of(context).accepted,       value: '${_stats?.acceptedRides  ?? 0}',                                     icon: Icons.check_circle_outline, color: AppTheme.accent),
-                _StatCard(label: AppLocalizations.of(context).completed,      value: '${_stats?.completedRides ?? 0}',                                     icon: Icons.electric_rickshaw,       color: AppTheme.accentOrange),
-                _StatCard(label: AppLocalizations.of(context).hoursOnline,   value: _stats == null ? '--' : '${_stats!.hoursOnline.toStringAsFixed(1)}h', icon: Icons.access_time,          color: const Color(0xFF9C27B0)),
-                _StatCard(label: AppLocalizations.of(context).acceptanceRate,value: _stats == null ? '--' : '${_stats!.acceptanceRate.toStringAsFixed(0)}%', icon: Icons.thumb_up_outlined, color: AppTheme.success),
-              ],
-            ),
-            SizedBox(height: 20),
+            const SizedBox(height: 18),
 
             // Active mode cards (one per active mode)
             if (widget.isOnline) ...[
@@ -995,6 +1313,15 @@ class _DriverDashboardState extends State<_DriverDashboard>
               ],
             ],
 
+            _buildTodayStats(context),
+            const SizedBox(height: 14),
+            _buildMoneyRow(context),
+            const SizedBox(height: 14),
+            _buildQuickActions(context),
+            const SizedBox(height: 20),
+            _buildRecentTrips(context),
+            const SizedBox(height: 20),
+
             // Peak hour bonus tracker
             if (_stats != null) ...[
               Builder(builder: (context) {
@@ -1100,36 +1427,43 @@ class _DriverDashboardState extends State<_DriverDashboard>
   }
 }
 
-// ─── Service mode chip ────────────────────────────────────────────────────────
-class _ModeChip extends StatelessWidget {
+// ─── Service mode tile ────────────────────────────────────────────────────────
+class _ModeTile extends StatelessWidget {
   final IconData icon;
-  final String label;
+  final String title, subtitle;
   final bool active;
-  final Color color;
   final VoidCallback onTap; // toggles this mode; parent guards against all-off
 
-  const _ModeChip({required this.icon, required this.label, required this.active, required this.color, required this.onTap});
+  const _ModeTile({required this.icon, required this.title, required this.subtitle, required this.active, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Expanded(
-    child: GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? color.withValues(alpha: 0.15) : context.appSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: active ? color : context.appSurface),
+  Widget build(BuildContext context) {
+    final color = active ? AppTheme.accent : context.appTextSecondary;
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+          decoration: BoxDecoration(
+            color: active ? AppTheme.accent.withValues(alpha: 0.10) : context.appSurface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: active ? AppTheme.accent : Colors.transparent, width: 1.5),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, color: color, size: 30),
+            const SizedBox(height: 6),
+            Text(title, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: active ? AppTheme.accent : context.appTextPrimary,
+                    fontSize: 14, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 2),
+            Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+          ]),
         ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, color: active ? color : context.appTextSecondary, size: 20),
-          SizedBox(height: 4),
-          Text(label, style: TextStyle(color: active ? color : context.appTextSecondary, fontSize: 11, fontWeight: FontWeight.w600)),
-        ]),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ─── Mode empty/waiting card ──────────────────────────────────────────────────
@@ -1187,25 +1521,87 @@ class _ModeEmptyCard extends StatelessWidget {
   }
 }
 
-// ─── Stat card ────────────────────────────────────────────────────────────────
-class _StatCard extends StatelessWidget {
-  final String label, value;
+// ─── Today stat tile ──────────────────────────────────────────────────────────
+class _StatTile extends StatelessWidget {
   final IconData icon;
   final Color color;
+  final String value, label;
 
-  const _StatCard({required this.label, required this.value, required this.icon, required this.color});
+  const _StatTile({required this.icon, required this.color, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 12, 6, 12),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(icon, color: color, size: 26),
+            const SizedBox(height: 8),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900)),
+            ),
+            const SizedBox(height: 2),
+            Text(label, maxLines: 2, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 11, height: 1.25)),
+          ]),
+        ),
+      );
+}
+
+// ─── Recent trip row ──────────────────────────────────────────────────────────
+class _RecentTripRow extends StatelessWidget {
+  final Map<String, dynamic> trip;
+  final VoidCallback onTap;
+  const _RecentTripRow({required this.trip, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(16)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: color, size: 20),
-        Spacer(),
-        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
-        Text(label, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
-      ]),
+    final created = DateTime.tryParse(trip['created_at']?.toString() ?? '')?.toLocal();
+    final time    = created == null ? '--:--' : DateFormat('HH:mm').format(created);
+    final from    = (trip['pickup_address']  as String?)?.trim() ?? '';
+    final to      = (trip['dropoff_address'] as String?)?.trim() ?? '';
+    final fare    = (trip['fare_khr'] as num?)?.toInt() ?? 0;
+    final status  = trip['status']?.toString() ?? 'completed';
+    final done    = status == 'completed';
+    Widget place(Color color, String text) => Expanded(
+          child: Row(children: [
+            Icon(Icons.location_on_rounded, color: color, size: 18),
+            const SizedBox(width: 3),
+            Expanded(child: Text(text.isEmpty ? '--' : text,
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600))),
+          ]),
+        );
+    return Material(
+      color: context.appSurface,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 8, 14),
+          child: Row(children: [
+            Container(width: 10, height: 10,
+                decoration: BoxDecoration(
+                    color: done ? AppTheme.accent : context.appTextSecondary, shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Text(time, style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+            const SizedBox(width: 10),
+            place(AppTheme.accent, from),
+            const SizedBox(width: 6),
+            place(AppTheme.danger, to),
+            const SizedBox(width: 8),
+            Text(fare > 0 ? AppTheme.khr(fare) : '--',
+                style: TextStyle(color: done ? AppTheme.accent : context.appTextSecondary,
+                    fontSize: 14, fontWeight: FontWeight.w900)),
+            Icon(Icons.chevron_right_rounded, color: context.appTextSecondary, size: 20),
+          ]),
+        ),
+      ),
     );
   }
 }

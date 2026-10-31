@@ -576,6 +576,17 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
       'trSurchargesLine': 'Surcharges & minimum fare',
       'trMeterSoFar': 'Distance so far',
+      'drvGreeting': 'Hello, {name}!',
+      'drvFindingRides': 'Looking for new rides…',
+      'drvTodayStats': 'Today\'s stats',
+      'drvTodayEarnings': 'Today\'s earnings',
+      'drvWalletBalance': 'Wallet balance',
+      'drvAcceptRides': 'Accept rides',
+      'drvRideSub': 'Passengers',
+      'drvDeliverySub': 'Parcels & food',
+      'drvRentalSub': 'Rent out vehicle',
+      'drvNoRecentTrips': 'No trips yet — go online to start earning.',
+      'drvHelp': 'Help',
       'trRecipientLine2': 'Recipient: {name}',
       'trForName': 'For: {name}',
       'trClassicTukTuk': 'Classic tuk-tuk',
@@ -2695,6 +2706,17 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
       'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
       'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
+      'drvGreeting': 'ជំរាបសួរ {name}!',
+      'drvFindingRides': 'ស្វែងរកដំណើរថ្មី…',
+      'drvTodayStats': 'ស្ថិតិថ្ងៃនេះ',
+      'drvTodayEarnings': 'ចំណូលថ្ងៃនេះ',
+      'drvWalletBalance': 'សមតុល្យកាបូប',
+      'drvAcceptRides': 'ទទួលដំណើរ',
+      'drvRideSub': 'អ្នកដំណើរ',
+      'drvDeliverySub': 'អីវ៉ាន់ និងម្ហូប',
+      'drvRentalSub': 'ជួលយានយន្ត',
+      'drvNoRecentTrips': 'មិនទាន់មានដំណើរនៅឡើយ — បើកទទួលដំណើរដើម្បីរកចំណូល។',
+      'drvHelp': 'ជំនួយ',
       'trRecipientLine2': 'អ្នកទទួល៖ {name}',
       'trForName': 'សម្រាប់៖ {name}',
       'trClassicTukTuk': 'កង់បីធម្មតា',
@@ -4817,6 +4839,17 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
       'trSurchargesLine': '附加费与最低车费',
       'trMeterSoFar': '目前里程',
+      'drvGreeting': '你好，{name}！',
+      'drvFindingRides': '正在寻找新行程…',
+      'drvTodayStats': '今日统计',
+      'drvTodayEarnings': '今日收入',
+      'drvWalletBalance': '钱包余额',
+      'drvAcceptRides': '接单',
+      'drvRideSub': '乘客',
+      'drvDeliverySub': '包裹与外卖',
+      'drvRentalSub': '出租车辆',
+      'drvNoRecentTrips': '暂无行程——上线开始赚钱。',
+      'drvHelp': '帮助',
       'trRecipientLine2': '收件人：{name}',
       'trForName': '收件人：{name}',
       'trClassicTukTuk': '经典嘟嘟车',
@@ -6940,6 +6973,17 @@ class AppLocalizations {
   String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
   String get trSurchargesLine => tr('trSurchargesLine');
   String get trMeterSoFar => tr('trMeterSoFar');
+  String drvGreeting(String name) => _fill('drvGreeting', {'name': name});
+  String get drvFindingRides => tr('drvFindingRides');
+  String get drvTodayStats => tr('drvTodayStats');
+  String get drvTodayEarnings => tr('drvTodayEarnings');
+  String get drvWalletBalance => tr('drvWalletBalance');
+  String get drvAcceptRides => tr('drvAcceptRides');
+  String get drvRideSub => tr('drvRideSub');
+  String get drvDeliverySub => tr('drvDeliverySub');
+  String get drvRentalSub => tr('drvRentalSub');
+  String get drvNoRecentTrips => tr('drvNoRecentTrips');
+  String get drvHelp => tr('drvHelp');
   String trRecipientLine2(Object? name) => _fill('trRecipientLine2', {'name': name});
   String trForName(Object? name) => _fill('trForName', {'name': name});
   String get trClassicTukTuk => tr('trClassicTukTuk');
