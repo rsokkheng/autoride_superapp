@@ -81,7 +81,7 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
         markerId: const MarkerId('pickup'),
         position: LatLng(trip.pickupLat, trip.pickupLng),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: InfoWindow(title: 'Pickup', snippet: trip.pickupAddress),
+        infoWindow: InfoWindow(title: AppLocalizations.of(context).pickup, snippet: trip.pickupAddress),
       ),
       Marker(
         markerId: const MarkerId('dropoff'),
@@ -98,7 +98,7 @@ class _PublicTrackingScreenState extends State<PublicTrackingScreen> {
         icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure),
         infoWindow: InfoWindow(
-            title: trip.driverName.isNotEmpty ? trip.driverName : 'Driver'),
+            title: trip.driverName.isNotEmpty ? trip.driverName : AppLocalizations.of(context).driver),
       ));
     }
     if (mounted) setState(() {});
@@ -311,7 +311,7 @@ class _InfoPanel extends StatelessWidget {
                   trip.serviceType == 'moving'
                       ? AppLocalizations.of(context).trMovingService
                       : trip.serviceType == 'delivery'
-                          ? 'Delivery'
+                          ? AppLocalizations.of(context).delivery
                           : trip.serviceType!.toUpperCase(),
                   style: const TextStyle(
                     color: _green,
@@ -325,7 +325,7 @@ class _InfoPanel extends StatelessWidget {
             if (trip.recipientName != null && trip.recipientName!.isNotEmpty)
               Expanded(
                 child: Text(
-                  'Recipient: ${trip.recipientName}',
+                  AppLocalizations.of(context).trRecipientLine2(trip.recipientName),
                   style: TextStyle(
                     color: context.appTextSecondary,
                     fontSize: 12,

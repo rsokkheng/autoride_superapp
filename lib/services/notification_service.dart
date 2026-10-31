@@ -576,8 +576,8 @@ class NotificationService {
   }) async {
     await _plugin.show(
       4,
-      '✅ Payment Successful',
-      '$amount paid via $method',
+      l10n.trPaymentSuccessful,
+      l10n.trPaidVia(amount, method),
       NotificationDetails(
         android: AndroidNotificationDetails(
           _rideChannel.id,

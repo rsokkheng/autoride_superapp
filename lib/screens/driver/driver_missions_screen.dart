@@ -360,14 +360,14 @@ class _MissionList extends StatelessWidget {
 
           // ── Active tasks ────────────────────────────────────────────────
           if (active.isNotEmpty) ...[
-            _SectionLabel('Active (${active.length})'),
+            _SectionLabel(AppLocalizations.of(context).trActiveCount(active.length)),
             ...active.map((d) => _MissionCard(d: d, type: type)),
             const SizedBox(height: 8),
           ],
 
           // ── Completed / cancelled tasks ─────────────────────────────────
           if (completed.isNotEmpty) ...[
-            _SectionLabel('Completed (${completed.length})'),
+            _SectionLabel(AppLocalizations.of(context).trCompletedCount(completed.length)),
             ...completed.map((d) => _MissionCard(d: d, type: type)),
           ],
         ],

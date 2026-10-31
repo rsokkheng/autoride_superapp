@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final account = await gsi.signIn();
       if (!mounted) return;
       if (account == null) {
-        setState(() { _loading = false; _error = 'Google sign-in was cancelled.'; });
+        setState(() { _loading = false; _error = AppLocalizations.of(context).trGoogleCancelled; });
         return;
       }
       final auth    = await account.authentication;
@@ -142,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordCtrl.text;
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _error = 'Please enter your email and password.');
+      setState(() => _error = AppLocalizations.of(context).trEnterEmailPassword);
       return;
     }
 
@@ -192,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _error = e.message);
     } on SocketException catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Cannot reach server.\n${e.message}');
+      setState(() => _error = '${AppLocalizations.of(context).trCannotReachServer}\n${e.message}');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString());
@@ -446,11 +446,11 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             if (_showDemo)
               Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 8, children: [
-                _DemoTile(label: 'Passenger', icon: Icons.person_outline_rounded,
+                _DemoTile(label: AppLocalizations.of(context).passenger, icon: Icons.person_outline_rounded,
                     onTap: () => _fillDemo('sokkhnegry168@gmail.com')),
-                _DemoTile(label: 'Driver', icon: Icons.drive_eta_outlined,
+                _DemoTile(label: AppLocalizations.of(context).driver, icon: Icons.drive_eta_outlined,
                     onTap: () => _fillDemo('driver@example.com')),
-                _DemoTile(label: 'Admin', icon: Icons.admin_panel_settings_outlined,
+                _DemoTile(label: AppLocalizations.of(context).trAdminRole, icon: Icons.admin_panel_settings_outlined,
                     onTap: () => _fillDemo('admin@example.com')),
               ]),
           ]),
@@ -518,7 +518,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
   Future<void> _sendOtp() async {
     final raw = _phoneCtrl.text.trim();
     if (raw.isEmpty) {
-      setState(() => _error = 'Enter your phone number.');
+      setState(() => _error = AppLocalizations.of(context).trEnterYourPhone);
       return;
     }
     final phoneError = validateLocalPhone(normalizeLocalPhone(raw));
@@ -553,7 +553,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
   Future<void> _verifyOtp() async {
     final code = _otpCtrls.map((c) => c.text).join();
     if (code.length < 6) {
-      setState(() => _error = 'Enter the 6-digit code.');
+      setState(() => _error = AppLocalizations.of(context).enterSixDigitCode);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -627,7 +627,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Dev mode — no real SMS sent. Your code is $_devCode',
+                    AppLocalizations.of(context).trDevModeCode(_devCode),
                     style: const TextStyle(color: AppTheme.accent, fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                 ),
@@ -657,7 +657,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
 
           if (!_codeSent) ...[
             // Phone number input
-            Text('Phone Number',
+            Text(AppLocalizations.of(context).phoneNumber,
                 style: TextStyle(color: context.appTextSecondary,
                     fontSize: 13, fontWeight: FontWeight.w600)),
             SizedBox(height: 8),
@@ -694,7 +694,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
                 child: _loading
                     ? const SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : const Text('Send OTP'),
+                    : Text(AppLocalizations.of(context).sendOtp),
               ),
             ),
           ] else ...[
@@ -728,7 +728,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
                 child: _loading
                     ? const SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                    : const Text('Verify & Sign In',
+                    : Text(AppLocalizations.of(context).verifyAndSignIn,
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
               ),
             ),
@@ -739,7 +739,7 @@ class _PhoneOtpSheetState extends State<_PhoneOtpSheet> {
                       style: TextStyle(color: context.appTextSecondary, fontSize: 13))
                   : TextButton(
                       onPressed: _loading ? null : _sendOtp,
-                      child: const Text('Resend OTP',
+                      child: Text(AppLocalizations.of(context).resendOtp,
                           style: TextStyle(color: AppTheme.accent,
                               fontWeight: FontWeight.w700, fontSize: 14)),
                     ),

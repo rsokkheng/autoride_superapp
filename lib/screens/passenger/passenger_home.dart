@@ -35,6 +35,7 @@ import 'car_rental_screen.dart';
 import 'family_screen.dart';
 import 'subscription_screen.dart';
 import 'my_rentals_screen.dart';
+import 'package:autoride_superapp/widgets/delete_account_dialog.dart';
 
 class PassengerHomeScreen extends StatefulWidget {
   const PassengerHomeScreen({super.key});
@@ -390,7 +391,7 @@ class _HomeTabState extends State<_HomeTab> {
                   const SizedBox(width: 8),
                   Expanded(child: Text(
                     _surgeInfo!.message ??
-                        '${_surgeInfo!.multiplier.toStringAsFixed(1)}× surge pricing active in your area',
+                        AppLocalizations.of(context).trSurgeActiveArea(_surgeInfo!.multiplier.toStringAsFixed(1)),
                     style: const TextStyle(
                         color: AppTheme.danger, fontSize: 12,
                         fontWeight: FontWeight.w600),
@@ -865,6 +866,12 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SupportScreen()))),
                 _ProfileMenuItem(icon: Icons.settings_outlined, label: l.settings,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
+                _ProfileMenuItem(
+                  icon: Icons.delete_forever_outlined,
+                  label: l.deleteAccountLabel,
+                  color: AppTheme.danger,
+                  onTap: () => confirmAndDeleteAccount(context),
+                ),
                 _ProfileMenuItem(
                   icon: Icons.logout,
                   label: l.signOut,

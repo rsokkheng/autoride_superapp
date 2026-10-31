@@ -478,6 +478,22 @@ class ApiService {
     await clearSession();
   }
 
+  /// DELETE /auth/account — permanently deletes the signed-in user's account
+  /// (personal data erased, all sessions revoked), then clears this device.
+  static Future<void> deleteAccount() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawDelete('/auth/account', token: token);
+    if (raw.statusCode != 200) {
+      String? message;
+      try {
+        message = (jsonDecode(raw.body) as Map<String, dynamic>)['message'] as String?;
+      } catch (_) {}
+      throw ApiException(message ?? 'Could not delete account.', raw.statusCode);
+    }
+    await clearSession();
+  }
+
   // ── Auth/me ───────────────────────────────────────────────────────────────
 
   static Future<UserModel> getMe() async {

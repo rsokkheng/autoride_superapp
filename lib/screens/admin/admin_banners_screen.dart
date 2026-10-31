@@ -41,8 +41,8 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
         title: Text(AppLocalizations.of(context).trDeleteBanner, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text(AppLocalizations.of(context).trRemoveBannerQ, style: TextStyle(color: context.appTextSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: Text(AppLocalizations.of(context).trDelete)),
         ],
       ),
     );
@@ -82,7 +82,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _banners.isEmpty
                   ? Center(child: Text(AppLocalizations.of(context).trNoBannersYet, style: TextStyle(color: context.appTextSecondary)))
@@ -116,7 +116,7 @@ class _AdminBannersScreenState extends State<AdminBannersScreen> {
                                   : Text(AppLocalizations.of(context).trInactive, style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
                               trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                                 IconButton(icon: Icon(Icons.edit_outlined, color: context.appTextSecondary, size: 20), onPressed: () => _showForm(b), tooltip: AppLocalizations.of(context).trEdit),
-                                IconButton(icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20), onPressed: () => _delete(b), tooltip: 'Delete'),
+                                IconButton(icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 20), onPressed: () => _delete(b), tooltip: AppLocalizations.of(context).trDelete),
                               ]),
                               ),
                             ),
@@ -162,7 +162,7 @@ class _BannerFormState extends State<_BannerForm> {
   }
 
   Future<void> _save() async {
-    if (_titleCtrl.text.trim().isEmpty) { setState(() => _error = 'Title is required.'); return; }
+    if (_titleCtrl.text.trim().isEmpty) { setState(() => _error = AppLocalizations.of(context).trTitleRequired); return; }
     setState(() { _saving = true; _error = null; });
     final data = {
       'title':     _titleCtrl.text.trim(),

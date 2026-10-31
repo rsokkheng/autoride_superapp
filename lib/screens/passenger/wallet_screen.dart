@@ -7,6 +7,7 @@ import '../../models/wallet_model.dart';
 import '../../services/api_service.dart';
 import '../../services/realtime_service.dart';
 import '../../utils/phone_utils.dart';
+import '../../l10n/l10n.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -105,7 +106,7 @@ class _WalletScreenState extends State<WalletScreen> {
     final dt = DateTime.tryParse(isoString);
     if (dt == null) return '';
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 1) return AppLocalizations.of(context).trJustNow;
     if (diff.inMinutes < 60) return AppLocalizations.of(context).trMinAgoLong(diff.inMinutes);
     if (diff.inHours < 24) return AppLocalizations.of(context).trHrsAgoLong(diff.inHours);
     if (diff.inDays == 1) return 'Yesterday';
@@ -653,8 +654,8 @@ class _TopUpSheet extends StatefulWidget {
 class _TopUpSheetState extends State<_TopUpSheet> {
   static const _amounts = [5000, 10000, 20000, 50000, 100000];
 
-  static const _methods = [
-    {'key': 'cash', 'label': 'Cash'},
+  static List<Map<String, String>> get _methods => [
+    {'key': 'cash', 'label': l10n.trCash},
     {'key': 'aba', 'label': 'ABA Pay'},
     {'key': 'acleda', 'label': 'ACLEDA'},
   ];

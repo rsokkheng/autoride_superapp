@@ -37,9 +37,9 @@ class _SurgePromoScreenState extends State<SurgePromoScreen>
           indicatorColor: AppTheme.accent,
           labelColor: AppTheme.accent,
           unselectedLabelColor: context.appTextSecondary,
-          tabs: const [
-            Tab(icon: Icon(Icons.bolt_outlined), text: 'Surge'),
-            Tab(icon: Icon(Icons.local_offer_outlined), text: 'Promos'),
+          tabs: [
+            Tab(icon: Icon(Icons.bolt_outlined), text: AppLocalizations.of(context).trSurge),
+            Tab(icon: Icon(Icons.local_offer_outlined), text: AppLocalizations.of(context).trPromos),
           ],
         ),
       ),
@@ -121,10 +121,10 @@ class _SurgeTabState extends State<_SurgeTab> {
             style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-              child: const Text('Delete')),
+              child: Text(AppLocalizations.of(context).trDelete)),
         ],
       ),
     );
@@ -175,7 +175,7 @@ class _SurgeTabState extends State<_SurgeTab> {
                   SizedBox(height: 16),
                   ElevatedButton(onPressed: _load,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                      child: Text('Retry')),
+                      child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
@@ -301,7 +301,7 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
 
   Future<void> _save() async {
     if (_nameCtrl.text.trim().isEmpty) {
-      setState(() => _error = 'Zone name is required.');
+      setState(() => _error = AppLocalizations.of(context).trZoneNameRequired);
       return;
     }
     setState(() { _saving = true; _error = null; });
@@ -370,7 +370,7 @@ class _SurgeZoneSheetState extends State<_SurgeZoneSheet> {
           ]),
           SizedBox(height: 12),
           Row(children: [
-            Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+            Text(AppLocalizations.of(context).trActive, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             const Spacer(),
             Switch(value: _active, onChanged: (v) => setState(() => _active = v),
                 activeColor: AppTheme.warning),
@@ -480,15 +480,15 @@ class _PromoTabState extends State<_PromoTab> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(AppLocalizations.of(context).trDeletePromo,
             style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
-        content: Text('Delete promo code "${promo['code']}"?',
+        content: Text(AppLocalizations.of(context).trDeletePromoCodeQ(promo['code']),
             style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context).trDelete),
           ),
         ],
       ),
@@ -529,7 +529,7 @@ class _PromoTabState extends State<_PromoTab> {
                   SizedBox(height: 16),
                   ElevatedButton(onPressed: _load,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                      child: Text('Retry')),
+                      child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
@@ -740,7 +740,7 @@ class _PromoEditSheetState extends State<_PromoEditSheet> {
           SizedBox(height: 16),
 
           Row(children: [
-            Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+            Text(AppLocalizations.of(context).trActive, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             const Spacer(),
             Switch(value: _active, onChanged: (v) => setState(() => _active = v),
                 activeColor: AppTheme.accent),

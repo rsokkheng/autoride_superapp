@@ -31,6 +31,7 @@ import 'driver_history_screen.dart';
 import 'driver_missed_requests_screen.dart';
 import 'driver_earnings_screen.dart';
 import 'helmet_check_screen.dart';
+import '../../widgets/delete_account_dialog.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -2829,6 +2830,7 @@ class _DriverProfileState extends State<_DriverProfile> {
                 (l.safetySettings,  Icons.shield_outlined,          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())),  false),
                 (l.documents,       Icons.description_outlined,     () {}, false),
                 (l.tripHistory,     Icons.history_outlined,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverHistoryScreen())), false),
+                (l.deleteAccountLabel, Icons.delete_forever_outlined, () => confirmAndDeleteAccount(context), true),
                 (l.signOut, Icons.logout, () async {
                   await ApiService.logout();
                   if (!context.mounted) return;

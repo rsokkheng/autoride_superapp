@@ -51,7 +51,7 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Back', style: TextStyle(color: context.appTextSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).trBack, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: Text(AppLocalizations.of(context).trCancelRide)),
         ],
       ),
@@ -78,11 +78,11 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
             icon: Icon(Icons.filter_list_rounded, color: _statusFilter != null ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: null,         child: Text('All',       style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'pending',    child: Text('Pending',   style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'active',     child: Text('Active',    style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'completed',  child: Text('Completed', style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'cancelled',  child: Text('Cancelled', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: null,         child: Text(AppLocalizations.of(context).all,       style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'pending',    child: Text(AppLocalizations.of(context).trPending,   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'active',     child: Text(AppLocalizations.of(context).trActive,    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'completed',  child: Text(AppLocalizations.of(context).completed, style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'cancelled',  child: Text(AppLocalizations.of(context).cancelled2, style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -95,7 +95,7 @@ class _AdminRidesScreenState extends State<AdminRidesScreen> {
                   SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
                   SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _rides.isEmpty
                   ? Center(child: Text(AppLocalizations.of(context).trNoRidesFound, style: TextStyle(color: context.appTextSecondary)))
@@ -163,7 +163,7 @@ class _RideTile extends StatelessWidget {
           TextButton(
             onPressed: onCancel,
             style: TextButton.styleFrom(foregroundColor: AppTheme.danger, padding: EdgeInsets.zero, minimumSize: const Size(50, 30)),
-            child: const Text('Cancel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+            child: Text(AppLocalizations.of(context).cancel, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
           ),
       ]),
     );

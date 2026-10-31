@@ -64,11 +64,11 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            child: const Text('Delete'),
+            child: Text(AppLocalizations.of(context).trDelete),
           ),
         ],
       ),
@@ -115,7 +115,7 @@ class _FareManagementScreenState extends State<FareManagementScreen> {
                   SizedBox(height: 16),
                   ElevatedButton(onPressed: _load,
                       style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
-                      child: Text('Retry')),
+                      child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,
@@ -207,7 +207,7 @@ class _FareTile extends StatelessWidget {
                       : context.appTextSecondary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(isActive ? 'Active' : 'Inactive',
+                child: Text(isActive ? AppLocalizations.of(context).trActive : AppLocalizations.of(context).trInactive,
                     style: TextStyle(
                       color: isActive ? AppTheme.success : context.appTextSecondary,
                       fontSize: 11, fontWeight: FontWeight.w600,
@@ -368,7 +368,7 @@ class _FareEditSheetState extends State<_FareEditSheet> {
           SizedBox(height: 20),
 
           // Vehicle type chips
-          Text('Vehicle Type',
+          Text(AppLocalizations.of(context).vehicleType,
               style: TextStyle(color: context.appTextSecondary,
                   fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
@@ -397,7 +397,7 @@ class _FareEditSheetState extends State<_FareEditSheet> {
           SizedBox(height: 16),
 
           Row(children: [
-            Text('Active', style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
+            Text(AppLocalizations.of(context).trActive, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600)),
             const Spacer(),
             Switch(value: _active, onChanged: (v) => setState(() => _active = v),
                 activeColor: AppTheme.accent),
@@ -412,7 +412,7 @@ class _FareEditSheetState extends State<_FareEditSheet> {
               child: _submitting
                   ? const SizedBox(width: 22, height: 22,
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                  : Text(widget.rule != null ? 'Save Changes' : AppLocalizations.of(context).trCreateRule),
+                  : Text(widget.rule != null ? AppLocalizations.of(context).trSaveChanges : AppLocalizations.of(context).trCreateRule),
             ),
           ),
         ]),

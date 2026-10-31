@@ -6,12 +6,13 @@ import '../services/maps_service.dart';
 import '../utils/location_display.dart';
 import 'tablet_frame.dart';
 import '../l10n/app_localizations.dart';
+import '../l10n/l10n.dart';
 
 /// Result of picking a location: a human-readable address plus coordinates.
 class LocationPickResult {
   final String address;
   final LatLng latLng;
-  const LocationPickResult({required this.address, required this.latLng});
+  LocationPickResult({required this.address, required this.latLng});
 }
 
 /// Full-screen map picker — drag the map to move the center pin, or search
@@ -22,7 +23,7 @@ class LocationPickerScreen extends StatefulWidget implements TabletFullWidth {
   final LatLng? initial;
   const LocationPickerScreen({
     super.key,
-    this.title    = 'Set Location',
+    this.title    = '',
     this.pinColor = AppTheme.accent,
     this.initial,
   });

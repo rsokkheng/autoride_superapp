@@ -298,7 +298,7 @@ class PromoEventCard extends StatelessWidget {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text('View',
+                        child: Text(AppLocalizations.of(context).trView,
                             style: TextStyle(
                                 color: AppTheme.accent,
                                 fontSize: 12,

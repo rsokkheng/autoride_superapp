@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/tablet_frame.dart';
+import '../l10n/app_localizations.dart';
+import '../l10n/l10n.dart';
 
 class AppTheme {
   // ── Light (Grab-style) ───────────────────────────────────────────────────
@@ -34,15 +36,15 @@ class AppTheme {
     foregroundColor: foreground ?? Colors.white,
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     minimumSize: const Size(0, 44),
-    textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+    textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     elevation: 0,
   );
 
   // ── Vehicle types ─────────────────────────────────────────────────────────
-  static const List<VehicleTypeOption> vehicleTypes = [
-    VehicleTypeOption(type: 'tuk_tuk', label: 'Tuk-Tuk', icon: Icons.electric_rickshaw, description: 'Classic tuk-tuk'),
-    VehicleTypeOption(type: 'van',     label: 'Car',     icon: Icons.directions_car,    description: 'Standard, Premium & Van'),
+  static List<VehicleTypeOption> vehicleTypes = [
+    VehicleTypeOption(type: 'tuk_tuk', label: l10n.trTukTuk, icon: Icons.electric_rickshaw, description: l10n.trClassicTukTuk),
+    VehicleTypeOption(type: 'van',     label: l10n.trCar,     icon: Icons.directions_car,    description: l10n.trStdPremiumVan),
   ];
 
   // ── Currency helpers ──────────────────────────────────────────────────────

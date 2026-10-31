@@ -190,8 +190,9 @@ class _AirportTripScreenState extends State<AirportTripScreen>
   }
 
   String _formatDateTime(DateTime dt) {
-    const months = ['Jan','Feb','Mar','Apr','May','Jun',
-                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    final l = AppLocalizations.of(context);
+    final months = [l.jan, l.feb, l.mar, l.apr, l.may, l.jun,
+                    l.jul, l.aug, l.sep, l.oct, l.nov, l.dec];
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
     return '${dt.day} ${months[dt.month - 1]} · $h:$m';

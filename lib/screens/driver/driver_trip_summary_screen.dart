@@ -2,6 +2,7 @@ import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../models/ride_model.dart';
+import '../../l10n/l10n.dart';
 
 class DriverTripSummaryScreen extends StatelessWidget {
   final RideModel ride;
@@ -30,7 +31,7 @@ class DriverTripSummaryScreen extends StatelessWidget {
   static const _kBg    = Color(0xFFF7F7F7);
 
   String get _passengerName =>
-      ride.passenger?.name ?? 'Passenger #${ride.passengerId}';
+      ride.passenger?.name ?? l10n.drvPassengerNo(ride.passengerId);
 
   String get _passengerRating =>
       ride.passengerRating != null ? ride.passengerRating!.toStringAsFixed(1) : '5.0';

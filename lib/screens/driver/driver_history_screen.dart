@@ -75,9 +75,10 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
     final d     = DateTime(dt.year, dt.month, dt.day);
     if (d == today) return AppLocalizations.of(context).today;
     if (d == today.subtract(const Duration(days: 1))) return AppLocalizations.of(context).yesterday;
-    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months   = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final l = AppLocalizations.of(context);
+    final weekdays = [l.mon, l.tue, l.wed, l.thu, l.fri, l.sat, l.sun];
+    final months   = [l.jan, l.feb, l.mar, l.apr, l.may, l.jun,
+                      l.jul, l.aug, l.sep, l.oct, l.nov, l.dec];
     return '${weekdays[dt.weekday - 1]}, ${months[dt.month - 1]} ${dt.day}';
   }
 

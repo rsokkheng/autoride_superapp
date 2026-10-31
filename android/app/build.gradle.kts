@@ -1,3 +1,15 @@
+import java.io.FileInputStream
+import java.util.Properties
+
+// Release signing: android/key.properties (never committed) points at the
+// upload keystore. Without it, release builds fall back to the debug key so
+// `flutter run --release` still works — but Play rejects debug-signed bundles.
+val keystoreProperties = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) load(FileInputStream(f))
+}
+val hasReleaseKey = keystoreProperties.getProperty("storeFile") != null
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -34,13 +46,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKey) signingConfigs.getByName("release")
+                            else signingConfigs.getByName("debug")
         }
     }
 }

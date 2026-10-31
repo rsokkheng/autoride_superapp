@@ -48,8 +48,8 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
             decoration: InputDecoration(hintText: AppLocalizations.of(context).trEgTransferredAba, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success), child: const Text('Approve')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success), child: Text(AppLocalizations.of(context).trApprove)),
         ],
       ),
     );
@@ -81,15 +81,15 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
             decoration: InputDecoration(hintText: AppLocalizations.of(context).trEgInvalidAccount, hintStyle: TextStyle(color: context.appTextSecondary), filled: true, fillColor: context.appCardBg, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none))),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: const Text('Reject')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: Text(AppLocalizations.of(context).trReject)),
         ],
       ),
     );
     if (ok != true || !mounted || ctrl.text.trim().isEmpty) return;
     try {
       await ApiService.rejectAdminWithdrawal(id, ctrl.text.trim());
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Rejected.'), backgroundColor: AppTheme.warning, behavior: SnackBarBehavior.floating));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).trRejectedDot), backgroundColor: AppTheme.warning, behavior: SnackBarBehavior.floating));
       await _load();
     } catch (e) {
       if (!mounted) return;
@@ -109,10 +109,10 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
             icon: Icon(Icons.filter_list_rounded, color: _statusFilter != 'all' ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'pending',   child: Text('Pending',   style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'approved',  child: Text('Approved',  style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'rejected',  child: Text('Rejected',  style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'all',       child: Text('All',       style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'pending',   child: Text(AppLocalizations.of(context).trPending,   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'approved',  child: Text(AppLocalizations.of(context).trApproved,  style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'rejected',  child: Text(AppLocalizations.of(context).trRejected,  style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'all',       child: Text(AppLocalizations.of(context).all,       style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -123,7 +123,7 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _items.isEmpty
                   ? Center(child: Text(AppLocalizations.of(context).trNoWithdrawalsFound, style: TextStyle(color: context.appTextSecondary)))
@@ -161,13 +161,13 @@ class _AdminWithdrawalsScreenState extends State<AdminWithdrawalsScreen> {
                                   Expanded(child: ElevatedButton(
                                     onPressed: () => _approve(w),
                                     style: ElevatedButton.styleFrom(backgroundColor: AppTheme.success, padding: const EdgeInsets.symmetric(vertical: 10), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                                    child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.w700)),
+                                    child: Text(AppLocalizations.of(context).trApprove, style: TextStyle(fontWeight: FontWeight.w700)),
                                   )),
                                   const SizedBox(width: 10),
                                   Expanded(child: OutlinedButton(
                                     onPressed: () => _reject(w),
                                     style: OutlinedButton.styleFrom(foregroundColor: AppTheme.danger, side: const BorderSide(color: AppTheme.danger), padding: const EdgeInsets.symmetric(vertical: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                                    child: const Text('Reject', style: TextStyle(fontWeight: FontWeight.w700)),
+                                    child: Text(AppLocalizations.of(context).trReject, style: TextStyle(fontWeight: FontWeight.w700)),
                                   )),
                                 ]),
                               ],

@@ -164,7 +164,7 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
         content: Text(AppLocalizations.of(context).trUnlinkConfirm(name), style: TextStyle(color: context.appTextSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+              child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -234,7 +234,7 @@ class _AccountSwitcherScreenState extends State<AccountSwitcherScreen> {
         SizedBox(height: 12),
         Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 16),
-        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_linked.isEmpty) {
@@ -299,7 +299,7 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
     final email = _emailCtrl.text.trim();
     final pass  = _passCtrl.text;
     if (email.isEmpty || pass.isEmpty) {
-      setState(() => _error = 'Enter email and password.');
+      setState(() => _error = AppLocalizations.of(context).trEnterEmailPassword);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -348,9 +348,9 @@ class _LinkAccountSheetState extends State<_LinkAccountSheet> {
           ),
         ],
 
-        _SheetField(controller: _emailCtrl, hint: 'Email', icon: Icons.email_outlined, type: TextInputType.emailAddress),
+        _SheetField(controller: _emailCtrl, hint: AppLocalizations.of(context).email, icon: Icons.email_outlined, type: TextInputType.emailAddress),
         SizedBox(height: 12),
-        _SheetField(controller: _passCtrl, hint: 'Password', icon: Icons.lock_outline, obscure: _obscure,
+        _SheetField(controller: _passCtrl, hint: AppLocalizations.of(context).password, icon: Icons.lock_outline, obscure: _obscure,
           suffix: GestureDetector(
             onTap: () => setState(() => _obscure = !_obscure),
             child: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: context.appTextSecondary, size: 20),
@@ -477,7 +477,7 @@ class _AccountTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              isDriver ? 'Driver' : 'Passenger',
+              isDriver ? AppLocalizations.of(context).driver : AppLocalizations.of(context).passenger,
               style: TextStyle(color: isDriver ? AppTheme.accentOrange : AppTheme.accent, fontSize: 10, fontWeight: FontWeight.w700),
             ),
           ),
@@ -488,7 +488,7 @@ class _AccountTile extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.delete_outline, color: context.appTextSecondary, size: 20),
                   onPressed: onRemove,
-                  tooltip: 'Remove',
+                  tooltip: AppLocalizations.of(context).trRemove,
                 ),
                 ElevatedButton(
                   onPressed: onSwitch,

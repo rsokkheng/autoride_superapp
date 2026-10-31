@@ -43,11 +43,11 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
             icon: Icon(Icons.filter_list_rounded, color: _statusFilter != 'all' ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'open',        child: Text('Open',        style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'in_progress', child: Text('In Progress', style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'resolved',    child: Text('Resolved',    style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'closed',      child: Text('Closed',      style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'all',         child: Text('All',         style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'open',        child: Text(AppLocalizations.of(context).trOpen,        style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'in_progress', child: Text(AppLocalizations.of(context).trInProgress, style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'resolved',    child: Text(AppLocalizations.of(context).trResolved,    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'closed',      child: Text(AppLocalizations.of(context).trClosed,      style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'all',         child: Text(AppLocalizations.of(context).all,         style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -58,7 +58,7 @@ class _AdminSupportScreenState extends State<AdminSupportScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _tickets.isEmpty
                   ? Center(child: Text(AppLocalizations.of(context).trNoTicketsFound, style: TextStyle(color: context.appTextSecondary)))
@@ -236,7 +236,7 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary)), const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : Column(children: [
                   Expanded(
@@ -248,7 +248,7 @@ class _AdminTicketDetailScreenState extends State<AdminTicketDetailScreen> {
                         final m       = messages[i] as Map;
                         final isAdmin = m['sender_type'] == 'admin' || m['is_admin'] == true;
                         final text    = m['message'] as String? ?? m['body'] as String? ?? '';
-                        final name    = m['sender_name'] as String? ?? (isAdmin ? 'Admin' : 'User');
+                        final name    = m['sender_name'] as String? ?? (isAdmin ? AppLocalizations.of(context).trAdminRole : 'User');
                         return Row(
                           mainAxisAlignment: isAdmin ? MainAxisAlignment.end : MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.end,

@@ -19,6 +19,7 @@ import '../../models/ride_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'driver_trip_summary_screen.dart';
 import '../../widgets/tablet_frame.dart';
+import '../../l10n/l10n.dart';
 
 enum _TripPhase { headingToPickup, waitingAtPickup, inProgress, completed }
 
@@ -38,7 +39,7 @@ class DriverActiveTripScreen extends StatefulWidget implements TabletFullWidth {
   const DriverActiveTripScreen({
     super.key,
     this.ride,
-    this.passengerName   = 'Passenger',
+    this.passengerName   = '', // empty → shown as "Passenger" in the app language
     this.passengerRating = '5.0',
     this.pickup          = '--',
     this.destination     = '--',
@@ -127,7 +128,9 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   String get _passengerName => widget.ride?.passenger?.name
       ?? (widget.ride != null
           ? '${AppLocalizations.of(context).passengerNumberPrefix}${widget.ride!.passengerId}'
-          : widget.passengerName);
+          : widget.passengerName.isNotEmpty
+              ? widget.passengerName
+              : AppLocalizations.of(context).passenger);
   String get _pickupAddr    => widget.ride?.pickupAddress  ?? widget.pickup;
   String get _destAddr      => (widget.ride?.dropoffAddress.isNotEmpty ?? false)
       ? widget.ride!.dropoffAddress
@@ -844,7 +847,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       final notifiedFareKhr = (completedRide ?? widget.ride)?.fareKhr ?? 0;
       await NotificationService.instance.showTripUpdate(
         title: AppLocalizations.of(context).tripCompleted2,
-        body:  'You earned ${AppTheme.khr(notifiedFareKhr > 0 ? notifiedFareKhr : (finalFareKhr ?? 0))}',
+        body:  AppLocalizations.of(context).trYouEarned(AppTheme.khr(notifiedFareKhr > 0 ? notifiedFareKhr : (finalFareKhr ?? 0))),
       );
       if (!mounted) return;
       final finalRide = completedRide ?? widget.ride ?? _fakeSummaryRide();

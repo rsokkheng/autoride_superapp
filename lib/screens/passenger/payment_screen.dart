@@ -67,7 +67,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       MaterialPageRoute(
         builder: (_) => RateDriverScreen(
           rideId:        widget.rideId,
-          driverName:    widget.driverName ?? 'Driver',
+          driverName:    widget.driverName ?? AppLocalizations.of(context).driver,
           fare:          AppTheme.khr(_total),
           paymentMethod: _selectedMethod,
         ),
@@ -159,11 +159,11 @@ class _PaymentScreenState extends State<PaymentScreen> {
             const Divider(color: _kDivider, height: 1),
             const SizedBox(height: 14),
 
-            _FareRow('Base fare',                                       AppTheme.khr(widget.baseFare)),
+            _FareRow(AppLocalizations.of(context).trBaseFareLower,                                       AppTheme.khr(widget.baseFare)),
             const SizedBox(height: 8),
-            _FareRow('Distance (${widget.distanceKm.toStringAsFixed(1)} km)', AppTheme.khr(_distanceFare)),
+            _FareRow(AppLocalizations.of(context).trDistanceKm(widget.distanceKm.toStringAsFixed(1)), AppTheme.khr(_distanceFare)),
             const SizedBox(height: 8),
-            _FareRow('Time (${widget.durationMin} min)',                 AppTheme.khr(_timeFare)),
+            _FareRow(AppLocalizations.of(context).trTimeMin(widget.durationMin),                 AppTheme.khr(_timeFare)),
             const SizedBox(height: 8),
             Row(children: [
               Text(AppLocalizations.of(context).serviceFee2, style: TextStyle(color: _kTextSub, fontSize: 14)),
@@ -265,9 +265,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         ])),
 
                         if (m.key == 'cash')
-                          _Badge('No fee', Colors.green)
+                          _Badge(AppLocalizations.of(context).trNoFee, Colors.green)
                         else if (m.key == 'wallet')
-                          _Badge('Instant', _kGreen),
+                          _Badge(AppLocalizations.of(context).trInstant, _kGreen),
                       ]),
                     ),
                   ),

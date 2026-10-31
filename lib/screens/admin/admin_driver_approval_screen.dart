@@ -85,7 +85,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: context.appTextSecondary)),
                   SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, child: Text('Retry'),
+                  ElevatedButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry),
                       style: ElevatedButton.styleFrom(backgroundColor: _green)),
                 ]))
               : _drivers.isEmpty
@@ -147,7 +147,7 @@ class _AdminDriverApprovalScreenState extends State<AdminDriverApprovalScreen> {
         ]),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+              child: Text(AppLocalizations.of(context).cancel)),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -350,7 +350,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context).cancel)),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, ctrl.text.trim()),
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
@@ -400,7 +400,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
             ),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(AppLocalizations.of(context).cancel)),
             ElevatedButton(
               onPressed: () => Navigator.pop(context, ctrl.text.trim().isEmpty ? '' : ctrl.text.trim()),
               style: AppTheme.confirmButtonStyle(),
@@ -456,7 +456,7 @@ class _AdminDriverDetailScreenState extends State<AdminDriverDetailScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Text(_error!, style: TextStyle(color: context.appTextSecondary)),
                   SizedBox(height: 12),
-                  ElevatedButton(onPressed: _load, child: Text('Retry'),
+                  ElevatedButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry),
                       style: ElevatedButton.styleFrom(backgroundColor: _green)),
                 ]))
               : Column(children: [
@@ -629,7 +629,7 @@ class _InfoSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rows = <(IconData, String, String?)>[
-      (Icons.email_outlined,        'Email',       data['email']       as String?),
+      (Icons.email_outlined,        AppLocalizations.of(context).email,       data['email']       as String?),
       (Icons.phone_outlined,         'Phone',       data['phone']       as String?),
       (Icons.badge_outlined,         'Driver Type', data['driver_type'] as String?),
       (Icons.location_city_outlined, 'City',        data['city']        as String?),
@@ -663,10 +663,10 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, label) = status == 'approved'
-        ? (_green,         'Approved')
+        ? (_green,         AppLocalizations.of(context).trApproved)
         : status == 'rejected'
-        ? (AppTheme.danger, 'Rejected')
-        : (AppTheme.warning, 'Pending');
+        ? (AppTheme.danger, AppLocalizations.of(context).trRejected)
+        : (AppTheme.warning, AppLocalizations.of(context).trPending);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

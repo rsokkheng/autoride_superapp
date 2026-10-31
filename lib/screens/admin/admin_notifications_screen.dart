@@ -15,11 +15,12 @@ class AdminNotificationsScreen extends StatefulWidget {
 }
 
 class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
-  static const _filters = [
-    (null,       'All'),
-    ('purchase', 'Purchases'),
-    ('rental',   'Rentals'),
-    ('system',   'Payments & Cancels'),
+  // Getter so the labels follow the current language.
+  static List<(String?, String)> get _filters => [
+    (null,       l10n.all),
+    ('purchase', l10n.trPurchases),
+    ('rental',   l10n.trRentals),
+    ('system',   l10n.trPaymentsCancels),
   ];
 
   String? _category;
@@ -165,7 +166,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen> {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
         const SizedBox(height: 12),
-        ElevatedButton(onPressed: _load, child: const Text('Retry')),
+        ElevatedButton(onPressed: _load, child: Text(AppLocalizations.of(context).retry)),
       ]));
     }
     if (_items.isEmpty) {
@@ -311,7 +312,7 @@ class _DetailSheet extends StatelessWidget {
                 style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w800))),
           ]),
           const SizedBox(height: 16),
-          row('Order', n['message'] as String?),
+          row(AppLocalizations.of(context).trStepOrder, n['message'] as String?),
           row('Details', n['detail'] as String?),
           row('Customer', n['customer'] as String?),
           row('Type', '$kind #${n['order_id'] ?? ''}'),

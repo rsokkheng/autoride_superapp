@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import 'dart:io';
 import '../services/api_service.dart';
 import '../models/user_model.dart';
+import '../l10n/l10n.dart';
 
 class BiometricProvider extends ChangeNotifier {
   static const _kDeviceIdKey  = 'bio_device_id';
@@ -90,7 +91,7 @@ class BiometricProvider extends ChangeNotifier {
 
   /// Enable biometric login: prompts locally then registers device with server.
   Future<void> enable({required String email}) async {
-    final ok = await _promptBiometric('Enable biometric login for ROTEH');
+    final ok = await _promptBiometric(l10n.trEnableBiometric);
     if (!ok) throw Exception('Biometric prompt cancelled or failed.');
 
     final deviceId   = await _ensureDeviceId();
@@ -127,7 +128,7 @@ class BiometricProvider extends ChangeNotifier {
       throw Exception('Biometric not available or not enabled.');
     }
 
-    final ok = await _promptBiometric('Sign in to ROTEH');
+    final ok = await _promptBiometric(l10n.trSignInToRoteh);
     if (!ok) throw Exception('Biometric cancelled.');
 
     final deviceId = await _ensureDeviceId();

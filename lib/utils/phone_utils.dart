@@ -33,7 +33,7 @@ String? validateLocalPhone(String localPhone) {
   if (localPhone.length < 3) {
     return _phoneMsg(lang,
         en: 'Invalid phone number.',
-        km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ។',
+        km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ',
         zh: '无效的电话号码。');
   }
   final prefix = localPhone.substring(0, 3);
@@ -41,19 +41,19 @@ String? validateLocalPhone(String localPhone) {
     if (localPhone.length == 10) return null;
     return _phoneMsg(lang,
         en: 'Invalid phone number. $prefix numbers must have 10 digits.',
-        km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ។ លេខដែលចាប់ផ្តើមដោយ $prefix ត្រូវមាន ១០ ខ្ទង់។',
+        km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ លេខដែលចាប់ផ្តើមដោយ $prefix ត្រូវមាន ១០ ខ្ទង់',
         zh: '无效的电话号码。以 $prefix 开头的号码必须为10位数字。');
   }
   if (_kSixDigitPrefixes.contains(prefix)) {
     if (localPhone.length == 9) return null;
     return _phoneMsg(lang,
         en: 'Invalid phone number. $prefix numbers must have 9 digits.',
-        km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ។ លេខដែលចាប់ផ្តើមដោយ $prefix ត្រូវមាន ៩ ខ្ទង់។',
+        km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ លេខដែលចាប់ផ្តើមដោយ $prefix ត្រូវមាន ៩ ខ្ទង់',
         zh: '无效的电话号码。以 $prefix 开头的号码必须为9位数字。');
   }
   return _phoneMsg(lang,
       en: 'Invalid phone number. Please enter a valid Cambodian mobile number.',
-      km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ។ សូមបញ្ចូលលេខទូរស័ព្ទកម្ពុជាដែលត្រឹមត្រូវ។',
+      km: 'លេខទូរស័ព្ទមិនត្រឹមត្រូវ សូមបញ្ចូលលេខទូរស័ព្ទកម្ពុជាដែលត្រឹមត្រូវ',
       zh: '无效的电话号码。请输入有效的柬埔寨手机号码。');
 }
 

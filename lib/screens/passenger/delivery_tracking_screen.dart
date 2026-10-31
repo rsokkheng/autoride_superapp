@@ -11,6 +11,7 @@ import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
 import 'passenger_delivery_summary_screen.dart';
 import '../../widgets/tablet_frame.dart';
+import '../../l10n/l10n.dart';
 
 const _kGreen   = Color(0xFF00B14F);
 // Phnom Penh fallback coords used when no geocoded positions are available.
@@ -319,8 +320,8 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
           driverId:    driverId,
           passengerId: saved?.id ?? 0,
           myId:        saved?.id ?? 0,
-          myName:      saved?.name ?? 'Sender',
-          otherName:   _delivery?.driver?.name ?? 'Driver',
+          myName:      saved?.name ?? AppLocalizations.of(context).sender,
+          otherName:   _delivery?.driver?.name ?? AppLocalizations.of(context).driver,
           isDriver:    false,
         ),
       ),
@@ -409,7 +410,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   void _shareLocationFallback() {
     final isMoving = widget.serviceType == 'moving';
-    final serviceLabel = isMoving ? 'Moving Service' : AppLocalizations.of(context).trPackageDelivery;
+    final serviceLabel = isMoving ? AppLocalizations.of(context).trMovingService : AppLocalizations.of(context).trPackageDelivery;
     final recipient = widget.recipientName.isNotEmpty
         ? widget.recipientName
         : (_delivery?.recipientName ?? '');
@@ -914,7 +915,7 @@ class _BottomSheet extends StatelessWidget {
                   if (canCancel)
                     _ActionBtn(
                       icon: Icons.cancel_outlined,
-                      label: cancelling ? '...' : 'Cancel',
+                      label: cancelling ? '...' : AppLocalizations.of(context).cancel,
                       onTap: onCancel ?? () {},
                       danger: true,
                       loading: cancelling,
@@ -986,25 +987,25 @@ class _StatusProgressBar extends StatelessWidget {
   final int  stepIndex;
   final bool isMoving;
 
-  const _StatusProgressBar({
+  _StatusProgressBar({
     required this.stepIndex,
     this.isMoving = false,
   });
 
-  static const _deliveryLabels = [
-    'Order',
-    'Driver\nAssigned',
-    'Picked Up',
-    'On the\nWay',
-    'Delivered',
+  static List<String> get _deliveryLabels => [
+    l10n.trStepOrder,
+    l10n.trStepDriverAssigned,
+    l10n.trStepPickedUp,
+    l10n.trStepOnTheWay,
+    l10n.trStepDelivered,
   ];
 
-  static const _movingLabels = [
-    'Accepted',
-    'Arrived',
-    'Loading',
-    'In Transit',
-    'Done',
+  static List<String> get _movingLabels => [
+    l10n.trStepAccepted,
+    l10n.trStepArrived,
+    l10n.trStepLoading,
+    l10n.trStepInTransit,
+    l10n.trStepDone,
   ];
 
   List<String> get _labels => isMoving ? _movingLabels : _deliveryLabels;
@@ -1070,7 +1071,7 @@ class _DriverCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name  = driver.name  as String? ?? 'Driver';
+    final name  = driver.name  as String? ?? AppLocalizations.of(context).driver;
     final phone = driver.phone as String? ?? '--';
 
     return Row(children: [
@@ -1550,7 +1551,7 @@ class _DeliveryShareSheet extends StatelessWidget {
 
   void _shareNative(BuildContext context) {
     final box = context.findRenderObject() as RenderBox?;
-    final title = isMoving ? 'Moving Service' : AppLocalizations.of(context).trPackageDelivery;
+    final title = isMoving ? AppLocalizations.of(context).trMovingService : AppLocalizations.of(context).trPackageDelivery;
     final recipientText = recipientName.isNotEmpty ? '${AppLocalizations.of(context).trRecipientLine(recipientName)}\n' : '';
     final driverText = (driverName != null && driverName!.isNotEmpty) ? '${AppLocalizations.of(context).trDriverLine(driverName)}\n' : '';
 
@@ -1698,7 +1699,7 @@ class _DeliveryShareSheet extends StatelessWidget {
                         Icon(Icons.person_outline, color: textSecondary, size: 14),
                         const SizedBox(width: 4),
                         Text(
-                          'For: $recipientName',
+                          AppLocalizations.of(context).trForName(recipientName),
                           style: TextStyle(color: textSecondary, fontSize: 12),
                         ),
                       ],
@@ -1707,7 +1708,7 @@ class _DeliveryShareSheet extends StatelessWidget {
                         Icon(Icons.directions_car_outlined, color: textSecondary, size: 14),
                         const SizedBox(width: 4),
                         Text(
-                          'Driver: $driverName',
+                          AppLocalizations.of(context).trDriverLine(driverName),
                           style: TextStyle(color: textSecondary, fontSize: 12),
                         ),
                       ],

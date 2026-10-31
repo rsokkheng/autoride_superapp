@@ -63,7 +63,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
           _DialogField(controller: noteCtrl, hint: AppLocalizations.of(context).trNoteOptional),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent),
@@ -101,7 +101,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
         title: Text(AppLocalizations.of(context).trDeleteUser, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700)),
         content: Text(AppLocalizations.of(context).trPermanentlyDelete(name), style: TextStyle(color: context.appTextSecondary)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Cancel', style: TextStyle(color: context.appTextSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(AppLocalizations.of(context).cancel, style: TextStyle(color: context.appTextSecondary))),
           ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger), child: Text(AppLocalizations.of(context).trDelete)),
         ],
       ),
@@ -150,9 +150,9 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
               onSelected: (v) { setState(() => _roleFilter = v); _load(); },
               itemBuilder: (_) => [
                 PopupMenuItem(value: null,        child: Text(AppLocalizations.of(context).trAllRoles,  style: TextStyle(color: context.appTextPrimary))),
-                PopupMenuItem(value: 'passenger', child: Text('Passenger',  style: TextStyle(color: context.appTextPrimary))),
-                PopupMenuItem(value: 'driver',    child: Text('Driver',     style: TextStyle(color: context.appTextPrimary))),
-                PopupMenuItem(value: 'admin',     child: Text('Admin',      style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: 'passenger', child: Text(AppLocalizations.of(context).passenger,  style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: 'driver',    child: Text(AppLocalizations.of(context).driver,     style: TextStyle(color: context.appTextPrimary))),
+                PopupMenuItem(value: 'admin',     child: Text(AppLocalizations.of(context).trAdminRole,      style: TextStyle(color: context.appTextPrimary))),
               ],
             ),
           ]),
@@ -170,7 +170,7 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
       SizedBox(height: 12),
       Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
       const SizedBox(height: 16),
-      ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+      ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
     ]));
     if (_users.isEmpty) return Center(child: Text(AppLocalizations.of(context).trNoUsersFound, style: TextStyle(color: context.appTextSecondary)));
     return RefreshIndicator(

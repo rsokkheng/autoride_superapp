@@ -288,7 +288,7 @@ class _PickerSheetState extends State<_PickerSheet>
       if (mounted) {
         setState(() {
           _searching = false;
-          _searchError = 'Network error — check your connection';
+          _searchError = AppLocalizations.of(context).trNetworkErrorCheck;
         });
       }
     }
@@ -405,10 +405,10 @@ class _PickerSheetState extends State<_PickerSheet>
                   borderRadius: BorderRadius.circular(10)),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerColor: Colors.transparent,
-              padding: const EdgeInsets.all(4),
-              tabs: const [
-                Tab(icon: Icon(Icons.search, size: 18), text: 'Search'),
-                Tab(icon: Icon(Icons.map_outlined, size: 18), text: 'Map'),
+              padding: EdgeInsets.all(4),
+              tabs: [
+                Tab(icon: Icon(Icons.search, size: 18), text: AppLocalizations.of(context).trSearch),
+                Tab(icon: Icon(Icons.map_outlined, size: 18), text: AppLocalizations.of(context).trMap),
               ],
             ),
           ),

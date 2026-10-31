@@ -154,7 +154,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     fontWeight: FontWeight.w800, color: context.appTextPrimary)),
             SizedBox(height: 8),
             Text(
-              'A 6-digit code was sent to $maskedPhone',
+              '${AppLocalizations.of(context).codeSentToPrefix} $maskedPhone',
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: context.appTextSecondary, fontSize: 14),
@@ -208,7 +208,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     ? SizedBox(width: 22, height: 22,
                         child: CircularProgressIndicator(
                             strokeWidth: 2.5, color: Colors.white))
-                    : Text('Verify',
+                    : Text(AppLocalizations.of(context).verify,
                         style: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.w700)),
               ),
@@ -228,7 +228,7 @@ class _OtpScreenState extends State<OtpScreen> {
                           ? const SizedBox(width: 14, height: 14,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: _green))
-                          : const Text('Resend',
+                          : Text(AppLocalizations.of(context).resendShort,
                               style: TextStyle(color: _green,
                                   fontWeight: FontWeight.w700)),
                     ),

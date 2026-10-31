@@ -1812,7 +1812,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                   autofocus:  i == 0 && _focusDestinationOnEntry,
                                   style: TextStyle(color: context.appTextPrimary, fontSize: 14),
                                   decoration: InputDecoration(
-                                    hintText: i == 0 ? AppLocalizations.of(context).whereTo : 'Stop ${i + 1}',
+                                    hintText: i == 0 ? AppLocalizations.of(context).whereTo : AppLocalizations.of(context).trStopN(i + 1),
                                     hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
                                     border: InputBorder.none,
                                     isDense: true,
@@ -1829,7 +1829,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                                   onTap: () => setState(() { _activeStopIdx = i; _searchCtrl.clear(); }),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(vertical: 9),
-                                    child: Text(i == 0 ? AppLocalizations.of(context).whereTo : 'Stop ${i + 1}',
+                                    child: Text(i == 0 ? AppLocalizations.of(context).whereTo : AppLocalizations.of(context).trStopN(i + 1),
                                         style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
                                   ),
                                 ),
@@ -2548,7 +2548,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                               autofocus: true,
                               style: TextStyle(color: context.appTextPrimary, fontSize: 14),
                               decoration: InputDecoration(
-                                hintText: i == 0 ? AppLocalizations.of(context).whereTo : 'Stop ${i + 1}',
+                                hintText: i == 0 ? AppLocalizations.of(context).whereTo : AppLocalizations.of(context).trStopN(i + 1),
                                 hintStyle: TextStyle(color: context.appTextSecondary, fontSize: 14),
                                 border: InputBorder.none,
                                 isDense: true,
@@ -2565,7 +2565,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                               onTap: () => setState(() { _activeStopIdx = i; _searchCtrl.clear(); }),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(vertical: 9),
-                                child: Text(i == 0 ? AppLocalizations.of(context).whereTo : 'Stop ${i + 1}',
+                                child: Text(i == 0 ? AppLocalizations.of(context).whereTo : AppLocalizations.of(context).trStopN(i + 1),
                                     style: TextStyle(color: context.appTextSecondary, fontSize: 14)),
                               ),
                             ),
@@ -3607,7 +3607,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                     const Icon(Icons.local_fire_department, color: AppTheme.warning, size: 18),
                     const SizedBox(width: 8),
                     Expanded(child: Text(
-                      '${_surgeInfo!.multiplier.toStringAsFixed(1)}× surge pricing — high demand in your area',
+                      AppLocalizations.of(context).trSurgeHighDemand(_surgeInfo!.multiplier.toStringAsFixed(1)),
                       style: TextStyle(color: AppTheme.warning, fontSize: 12, fontWeight: FontWeight.w600),
                     )),
                   ]),

@@ -2466,7 +2466,7 @@ class _OrderScreenState extends State<_OrderScreen> {
           // that product doesn't even offer.
           _selectedAccessoryIds.clear();
         } else {
-          _filterNoMatch = 'No listing matches that filter — showing your original pick.';
+          _filterNoMatch = AppLocalizations.of(context).trNoListingMatchesFilter;
         }
         _swappingProduct = false;
       });

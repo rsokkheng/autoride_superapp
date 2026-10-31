@@ -108,7 +108,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ]),
         actions: [
           IconButton(
-            tooltip: 'Notifications',
+            tooltip: AppLocalizations.of(context).trNotifications,
             onPressed: _openNotifications,
             icon: Badge(
               isLabelVisible: _unreadAlerts > 0,
@@ -140,7 +140,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center),
                   const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: const Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : RefreshIndicator(
                   onRefresh: _load,

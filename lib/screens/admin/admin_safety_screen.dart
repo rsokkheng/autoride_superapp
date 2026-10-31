@@ -43,10 +43,10 @@ class _AdminSafetyScreenState extends State<AdminSafetyScreen> {
             icon: Icon(Icons.filter_list_rounded, color: _typeFilter != null ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _typeFilter = v); _load(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: null,    child: Text('All',         style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: null,    child: Text(AppLocalizations.of(context).all,         style: TextStyle(color: context.appTextPrimary))),
               PopupMenuItem(value: 'sos',   child: Text('SOS',         style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'crash', child: Text('Crash',       style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'report',child: Text('User Report', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'crash', child: Text(AppLocalizations.of(context).trCrash,       style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'report',child: Text(AppLocalizations.of(context).trUserReport, style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -57,7 +57,7 @@ class _AdminSafetyScreenState extends State<AdminSafetyScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _incidents.isEmpty
                   ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [

@@ -43,11 +43,11 @@ class _AdminDeliveriesScreenState extends State<AdminDeliveriesScreen> {
             icon: Icon(Icons.filter_list_rounded, color: _statusFilter != null ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _statusFilter = v); _load(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: null,          child: Text('All',         style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'pending',     child: Text('Pending',     style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'in_progress', child: Text('In Progress', style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'completed',   child: Text('Completed',   style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'cancelled',   child: Text('Cancelled',   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: null,          child: Text(AppLocalizations.of(context).all,         style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'pending',     child: Text(AppLocalizations.of(context).trPending,     style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'in_progress', child: Text(AppLocalizations.of(context).trInProgress, style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'completed',   child: Text(AppLocalizations.of(context).completed,   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'cancelled',   child: Text(AppLocalizations.of(context).cancelled2,   style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -58,7 +58,7 @@ class _AdminDeliveriesScreenState extends State<AdminDeliveriesScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _items.isEmpty
                   ? Center(child: Text(AppLocalizations.of(context).trNoDeliveriesFound, style: TextStyle(color: context.appTextSecondary)))

@@ -588,7 +588,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       switch (appLocale.value.languageCode) {
         case 'km':
           title = '🔔 ជិតដល់គោលដៅហើយ';
-          body  = 'សូមពិនិត្យមើលសម្ភារៈរបស់អ្នក មុនចុះចេញពីកង់បី។';
+          body  = 'សូមពិនិត្យមើលសម្ភារៈរបស់អ្នក មុនចុះចេញពីកង់បី';
           break;
         case 'zh':
           title = '🔔 即将到达目的地';
@@ -1442,7 +1442,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
                                       fontWeight: FontWeight.w800)),
                             ),
                             if (_driverAssigned)
-                              Text(_isArrived ? 'Now' : '$eta min',
+                              Text(_isArrived ? AppLocalizations.of(context).trNow : '$eta min',
                                   style: TextStyle(
                                       color: context.appTextPrimary,
                                       fontSize: 16,
@@ -1863,7 +1863,7 @@ class _StopEtaList extends StatelessWidget {
     int etaIdx = 0;
     for (int i = nextStopIndex; i < wayStops.length; i++) {
       rows.add(_EtaRow(
-        label: 'Stop ${i + 1}',
+        label: AppLocalizations.of(context).trStopN(i + 1),
         address: wayStops[i].address,
         etaMinutes: etaIdx < stopEtas.length ? stopEtas[etaIdx] : null,
         isCurrent: i == nextStopIndex,

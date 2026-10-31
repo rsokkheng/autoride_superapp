@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../l10n/l10n.dart';
 
 class AdminPricingScreen extends StatefulWidget {
   const AdminPricingScreen({super.key});
@@ -17,16 +18,17 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
   bool _saving  = false;
   String? _error;
 
-  static const _editableKeys = [
-    ('Base Fare (KHR)',              'base_fare_khr'),
-    ('Per KM Rate (KHR)',            'per_km_khr'),
-    ('Per Minute Rate (KHR)',        'per_minute_khr'),
-    ('Minimum Fare (KHR)',           'minimum_fare_khr'),
-    ('Cancel Fee After Arrival',     'cancel_fee_after_arrival'),
-    ('Waiting Free Minutes',         'waiting_free_minutes'),
-    ('Waiting Fee Per Minute (KHR)', 'waiting_fee_per_minute_khr'),
-    ('Night Surcharge (%)',          'night_surcharge_pct'),
-    ('Platform Commission (%)',      'commission_pct'),
+  // Getter so the labels follow the current language.
+  static List<(String, String)> get _editableKeys => [
+    (l10n.trBaseFareKhr,              'base_fare_khr'),
+    (l10n.trPerKmRateKhr,            'per_km_khr'),
+    (l10n.trPerMinuteRateKhr,        'per_minute_khr'),
+    (l10n.trMinimumFareKhr,           'minimum_fare_khr'),
+    (l10n.trCancelFeeAfterArrival,     'cancel_fee_after_arrival'),
+    (l10n.trWaitingFreeMinutes,         'waiting_free_minutes'),
+    (l10n.trWaitingFeePerMinuteKhr, 'waiting_fee_per_minute_khr'),
+    (l10n.trNightSurchargePct,          'night_surcharge_pct'),
+    (l10n.trPlatformCommissionPct,      'commission_pct'),
   ];
 
   @override
@@ -98,7 +100,7 @@ class _AdminPricingScreenState extends State<AdminPricingScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : ListView(
                   padding: EdgeInsets.all(16),

@@ -43,11 +43,11 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen> {
             icon: Icon(Icons.filter_list_rounded, color: _typeFilter != null ? AppTheme.accent : context.appTextSecondary),
             onSelected: (v) { setState(() => _typeFilter = v); _load(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: null,       child: Text('All',      style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'credit',   child: Text('Credit',   style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'debit',    child: Text('Debit',    style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'topup',    child: Text('Top-up',   style: TextStyle(color: context.appTextPrimary))),
-              PopupMenuItem(value: 'withdraw', child: Text('Withdraw', style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: null,       child: Text(AppLocalizations.of(context).all,      style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'credit',   child: Text(AppLocalizations.of(context).trCredit,   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'debit',    child: Text(AppLocalizations.of(context).trDebit,    style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'topup',    child: Text(AppLocalizations.of(context).trTopUp,   style: TextStyle(color: context.appTextPrimary))),
+              PopupMenuItem(value: 'withdraw', child: Text(AppLocalizations.of(context).trWithdraw, style: TextStyle(color: context.appTextPrimary))),
             ],
           ),
         ],
@@ -58,7 +58,7 @@ class _AdminTransactionsScreenState extends State<AdminTransactionsScreen> {
               ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.error_outline, color: AppTheme.danger, size: 40), SizedBox(height: 12),
                   Text(_error!, style: TextStyle(color: context.appTextSecondary), textAlign: TextAlign.center), SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text('Retry')),
+                  ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
               : _items.isEmpty
                   ? Center(child: Text(AppLocalizations.of(context).trNoTransactions, style: TextStyle(color: context.appTextSecondary)))
