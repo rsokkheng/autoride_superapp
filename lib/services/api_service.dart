@@ -2435,10 +2435,29 @@ class ApiService {
 
   // ── Driver availability ───────────────────────────────────────────────────
 
-  static Future<void> goOnline() async {
+  /// [ride]/[delivery]/[rental] are the driver's service-mode toggles; the
+  /// server only offers those job types.
+  /// POST /driver/modes — which job types (ride / delivery / rental) the
+  /// server dispatches and pushes to this driver. Best-effort: never throws.
+  static Future<void> setDriverModes({required bool ride, required bool delivery, required bool rental}) async {
+    try {
+      final token = await getToken();
+      if (token == null) return;
+      await _rawPost('/driver/modes',
+          {'ride': ride, 'delivery': delivery, 'rental': rental}, token: token);
+    } catch (e) {
+      AppLog.w('API', 'setDriverModes failed: $e');
+    }
+  }
+
+  static Future<void> goOnline({bool? ride, bool? delivery, bool? rental}) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw = await _rawPost('/driver/go-online', {}, token: token);
+    final raw = await _rawPost('/driver/go-online', {
+      if (ride != null && delivery != null && rental != null) ...{
+        'ride': ride, 'delivery': delivery, 'rental': rental,
+      },
+    }, token: token);
     if (raw.statusCode != 200) {
       final body = jsonDecode(raw.body) as Map<String, dynamic>? ?? {};
       throw ApiException(

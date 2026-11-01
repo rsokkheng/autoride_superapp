@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../l10n/l10n.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:math' show min, max, cos, pi, sqrt;
 import 'dart:ui' show lerpDouble;
@@ -285,7 +286,7 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
           markerId: MarkerId('stop_$i'),
           position: widget.wayStops[i].latLng,
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          infoWindow: InfoWindow(title: AppLocalizations.of(context).trStopWithAddress(i + 1, widget.wayStops[i].address)),
+          infoWindow: InfoWindow(title: l10n.trStopWithAddress(i + 1, widget.wayStops[i].address)),
         ),
       Marker(
         markerId: const MarkerId('destination'),

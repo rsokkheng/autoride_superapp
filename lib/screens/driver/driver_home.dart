@@ -2,6 +2,7 @@ import 'dart:async';
 import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart' show DateFormat;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -64,6 +65,34 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   void initState() {
     super.initState();
     _loadGoOnlineGate();
+    _loadModes();
+  }
+
+  static const _kModesPref = 'driver_service_modes'; // "ride,delivery,rental" as 1/0
+
+  // The toggles survive restarts, and the server is told on every launch —
+  // it only dispatches / pushes job types that are on (a Ride-only driver
+  // must not get delivery alerts).
+  Future<void> _loadModes() async {
+    try {
+      final saved = (await SharedPreferences.getInstance()).getString(_kModesPref);
+      final bits  = saved?.split(',');
+      if (bits != null && bits.length == 3 && bits.contains('1') && mounted) {
+        setState(() {
+          _modeRide     = bits[0] == '1';
+          _modeDelivery = bits[1] == '1';
+          _modeRental   = bits[2] == '1';
+        });
+      }
+    } catch (_) {}
+    await ApiService.setDriverModes(ride: _modeRide, delivery: _modeDelivery, rental: _modeRental);
+  }
+
+  Future<void> _saveModes() async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(_kModesPref,
+          [_modeRide, _modeDelivery, _modeRental].map((m) => m ? '1' : '0').join(','));
+    } catch (_) {}
   }
 
   Future<void> _loadGoOnlineGate() async {
@@ -148,7 +177,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       final driverId = user?.id.toString() ?? '';
 
       if (value) {
-        await ApiService.goOnline();
+        await ApiService.goOnline(ride: _modeRide, delivery: _modeDelivery, rental: _modeRental);
         if (driverId.isNotEmpty) {
           await LocationService.instance.startOnlineTracking(
             driverId,
@@ -227,6 +256,8 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
       _modeDelivery = newDelivery;
       _modeRental   = newRental;
     });
+    _saveModes();
+    await ApiService.setDriverModes(ride: newRide, delivery: newDelivery, rental: newRental);
     if (_isOnline) {
       final user     = await ApiService.getSavedUser();
       final driverId = user?.id.toString() ?? '';
@@ -486,9 +517,65 @@ class _DriverDashboardState extends State<_DriverDashboard>
       if (!mounted || id == null || !_requestPoller.isRunning || _offerSub != null) return;
       _offerSub = RealtimeService.instance.subscribe(
         'driver.$id',
-        (_, __) => _requestPoller.pokeNow(),
+        (event, data) {
+          _onOfferWithdrawn(event, data);
+          _requestPoller.pokeNow();
+        },
       );
     });
+  }
+
+  // A request on screen was cancelled by the passenger / sender: drop the card
+  // at once (no Accept on a dead booking) and say why. Taken by another
+  // driver ('taken') just disappears quietly.
+  void _onOfferWithdrawn(String event, Map<String, dynamic> data) {
+    if (!mounted) return;
+    final cancelled = data['reason'] == 'cancelled';
+    if (event == 'ride.offer_withdrawn') {
+      final id = (data['ride_id'] as num?)?.toInt();
+      if (id == null) return;
+      _dismissed.add('ride:$id');
+      if (_pendingRide?.id != id) return;
+      setState(() => _pendingRide = null);
+    } else if (event == 'delivery.offer_withdrawn') {
+      final id = (data['delivery_id'] as num?)?.toInt();
+      if (id == null) return;
+      _dismissed.add('delivery:$id');
+      if (_pendingDelivery?.id != id) return;
+      setState(() => _pendingDelivery = null);
+    } else {
+      return;
+    }
+    if (cancelled) _showRequestCancelled(isRide: event.startsWith('ride.'));
+  }
+
+  /// [unknownReason]: gone from the list without a realtime notice — can't
+  /// tell a cancel from another driver taking it, so don't blame the passenger.
+  void _showRequestCancelled({required bool isRide, bool unknownReason = false}) {
+    final l = AppLocalizations.of(context);
+    final body = unknownReason
+        ? l.drvRequestNoLongerAvailable
+        : isRide ? l.thePassengerCancelledThatRide : l.drvSenderCancelledDelivery;
+    NotificationService.instance.showTripUpdate(title: l.requestCancelled, body: body);
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        icon: const Icon(Icons.cancel_rounded, color: AppTheme.danger, size: 46),
+        title: Text(l.requestCancelled, textAlign: TextAlign.center),
+        content: Text(body, textAlign: TextAlign.center),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: AppTheme.confirmButtonStyle(),
+              child: Text(l.ok),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _stopRequestPolling() {
@@ -627,9 +714,9 @@ class _DriverDashboardState extends State<_DriverDashboard>
         _stats = results[0] as DriverStatsModel;
         // While on a trip, no new requests are shown.
         final rides = results[1] as List<RideModel>;
-        _pendingRide = onTrip ? null : _firstRide(rides);
+        _pendingRide = (onTrip || !widget.modeRide) ? null : _firstRide(rides);
         final deliveries = results[2] as List<DeliveryModel>;
-        _pendingDelivery = onTrip ? null : _firstDelivery(deliveries);
+        _pendingDelivery = (onTrip || !widget.modeDelivery) ? null : _firstDelivery(deliveries);
         _activeRide     = activeRide;
         _activeDelivery = activeDelivery;
         _user           = results[5] as UserModel;
@@ -711,15 +798,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
     // passenger cancelling a request that's currently on screen. Previously
     // this only ran when _pendingRide was null, so a cancelled request just
     // sat there forever until the driver manually accepted/declined it.
-    try {
+    // Only job types the driver switched on (the server filters too).
+    if (widget.modeRide) try {
       final rides = await ApiService.getAvailableRides();
       if (!mounted) return;
       if (_pendingRide != null && !rides.any((r) => r.id == _pendingRide!.id)) {
+        // Gone from /available without a realtime notice (socket down):
+        // cancelled or taken — either way it can't be accepted any more.
+        _dismissed.add('ride:${_pendingRide!.id}');
         setState(() => _pendingRide = null);
-        NotificationService.instance.showTripUpdate(
-          title: AppLocalizations.of(context).requestCancelled,
-          body:  AppLocalizations.of(context).thePassengerCancelledThatRide,
-        );
+        _showRequestCancelled(isRide: true, unknownReason: true);
       } else if (_pendingRide == null) {
         final next = _firstRide(rides);
         if (next != null) setState(() => _pendingRide = next);
@@ -727,7 +815,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
     } catch (e) {
       debugPrint('[Driver] getAvailableRides error: $e');
     }
-    try {
+    if (widget.modeDelivery) try {
       final deliveries = await ApiService.getAvailableDeliveries();
       if (!mounted) return;
       if (_pendingDelivery != null && !deliveries.any((d) => d.id == _pendingDelivery!.id)) {
@@ -739,7 +827,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
     } catch (e) {
       debugPrint('[Driver] getAvailableDeliveries error: $e');
     }
-    try {
+    if (widget.modeRental) try {
       final rentals = await ApiService.getAvailableRentals();
       if (!mounted) return;
       if (_pendingRental != null && !rentals.any((r) => r['id'] == _pendingRental!['id'])) {

@@ -831,7 +831,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _selectResult(PlaceResult r) {
-    if (_activeStopIdx < 0) return;
+    if (!_ensureActiveStop()) return;
     setState(() {
       _stops[_activeStopIdx].address = r.address;
       _stops[_activeStopIdx].latLng  = r.latLng;
@@ -840,7 +840,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _selectPreset(_Preset p) {
-    if (_activeStopIdx < 0) return;
+    if (!_ensureActiveStop()) return;
     setState(() {
       _stops[_activeStopIdx].address = p.name;
       _stops[_activeStopIdx].latLng  = p.latLng;
@@ -849,7 +849,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
   }
 
   void _selectSavedPlace(SavedPlaceModel place) {
-    if (_activeStopIdx < 0) return;
+    if (!_ensureActiveStop()) return;
     setState(() {
       _stops[_activeStopIdx].address = place.address;
       _stops[_activeStopIdx].latLng  = LatLng(place.lat, place.lng);
@@ -909,6 +909,17 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         ]),
       ),
     );
+  }
+
+  /// Every stop filled leaves no stop selected (-1). Tapping a place then
+  /// replaces the final destination instead of doing nothing — the passenger
+  /// shouldn't have to tap the destination row first to change it.
+  bool _ensureActiveStop() {
+    if (_stops.isEmpty) return false;
+    if (_activeStopIdx < 0 || _activeStopIdx >= _stops.length) {
+      _activeStopIdx = _stops.length - 1;
+    }
+    return true;
   }
 
   void _afterStopFilled() {
@@ -1895,7 +1906,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   icon: Icons.add_home_outlined,
                   label: AppLocalizations.of(context).home2,
                   onTap: () {
-                    if (_activeStopIdx < 0) return;
+                    if (!_ensureActiveStop()) return;
                     final home = _findSavedPlace(['home']);
                     if (home != null) {
                       _selectSavedPlace(home);
@@ -1909,7 +1920,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   icon: Icons.add_business_outlined,
                   label: AppLocalizations.of(context).office,
                   onTap: () {
-                    if (_activeStopIdx < 0) return;
+                    if (!_ensureActiveStop()) return;
                     final office = _findSavedPlace(['work', 'office']);
                     if (office != null) {
                       _selectSavedPlace(office);
@@ -1928,7 +1939,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
                   icon: Icons.flight_outlined,
                   label: AppLocalizations.of(context).airport,
                   onTap: () {
-                    if (_activeStopIdx < 0) return;
+                    if (!_ensureActiveStop()) return;
                     _selectPreset(_presetsFor(AppLocalizations.of(context)).first);
                   },
                 ),
@@ -2727,7 +2738,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
         iconColor: AppTheme.accent,
         title: AppLocalizations.of(context).chooseOnMap,
         onTap: () {
-          if (_activeStopIdx < 0) return;
+          if (!_ensureActiveStop()) return;
           final activeStop = _stops[_activeStopIdx];
           setState(() {
             // Start at the stop's existing position; fall back to pickup center

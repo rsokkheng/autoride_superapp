@@ -49,9 +49,11 @@ class _DriverApprovalPendingScreenState extends State<DriverApprovalPendingScree
         // Small delay so the green tick is visible before navigating
         await Future.delayed(const Duration(milliseconds: 800));
         if (!mounted) return;
-        Navigator.pushReplacement(
+        // Home becomes the first route — nothing of sign-up left underneath.
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const DriverHomeScreen()),
+          (_) => false,
         );
       }
     } on ApiException catch (e) {

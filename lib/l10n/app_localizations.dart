@@ -576,6 +576,17 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
       'trSurchargesLine': 'Surcharges & minimum fare',
       'trMeterSoFar': 'Distance so far',
+      'drvRequestNoLongerAvailable': 'This request is no longer available — it was cancelled or taken by another driver.',
+      'drvSenderCancelledDelivery': 'The customer cancelled that delivery request.',
+      'trCancelledStatus': 'Cancelled',
+      'trDeliveryCancelledTitle': 'Delivery cancelled',
+      'trMovingCancelledTitle': 'Moving cancelled',
+      'trCancelledByDriver': 'The driver cancelled this order.',
+      'trCancelledByAdmin': 'Our support team cancelled this order.',
+      'trCancelledByYou': 'You cancelled this order.',
+      'trCancelledGeneric': 'This order was cancelled.',
+      'trCancelReason': 'Reason: {reason}',
+      'trGoBack': 'Go back',
       'drvGreeting': 'Hello, {name}!',
       'drvFindingRides': 'Looking for new rides…',
       'drvTodayStats': 'Today\'s stats',
@@ -2706,6 +2717,17 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
       'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
       'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
+      'drvRequestNoLongerAvailable': 'ការស្នើនេះលែងមានទៀតហើយ — ត្រូវបានលុបចោល ឬអ្នកបើកបរផ្សេងបានទទួល។',
+      'drvSenderCancelledDelivery': 'អតិថិជនបានលុបចោលការកម្ម៉ង់ដឹកជញ្ជូននេះ។',
+      'trCancelledStatus': 'បានលុបចោល',
+      'trDeliveryCancelledTitle': 'ការដឹកជញ្ជូនត្រូវបានលុបចោល',
+      'trMovingCancelledTitle': 'ការដឹកជញ្ជូនផ្លាស់ប្តូរត្រូវបានលុបចោល',
+      'trCancelledByDriver': 'អ្នកបើកបរបានលុបចោលការកម្ម៉ង់នេះ។',
+      'trCancelledByAdmin': 'ក្រុមការងារជំនួយបានលុបចោលការកម្ម៉ង់នេះ។',
+      'trCancelledByYou': 'អ្នកបានលុបចោលការកម្ម៉ង់នេះ។',
+      'trCancelledGeneric': 'ការកម្ម៉ង់នេះត្រូវបានលុបចោល។',
+      'trCancelReason': 'មូលហេតុ៖ {reason}',
+      'trGoBack': 'ត្រឡប់ក្រោយ',
       'drvGreeting': 'ជំរាបសួរ {name}!',
       'drvFindingRides': 'ស្វែងរកដំណើរថ្មី…',
       'drvTodayStats': 'ស្ថិតិថ្ងៃនេះ',
@@ -4839,6 +4861,17 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
       'trSurchargesLine': '附加费与最低车费',
       'trMeterSoFar': '目前里程',
+      'drvRequestNoLongerAvailable': '此请求已不可用——已被取消或由其他司机接单。',
+      'drvSenderCancelledDelivery': '客户取消了该配送请求。',
+      'trCancelledStatus': '已取消',
+      'trDeliveryCancelledTitle': '配送已取消',
+      'trMovingCancelledTitle': '搬家已取消',
+      'trCancelledByDriver': '司机取消了此订单。',
+      'trCancelledByAdmin': '客服团队取消了此订单。',
+      'trCancelledByYou': '您取消了此订单。',
+      'trCancelledGeneric': '此订单已取消。',
+      'trCancelReason': '原因：{reason}',
+      'trGoBack': '返回',
       'drvGreeting': '你好，{name}！',
       'drvFindingRides': '正在寻找新行程…',
       'drvTodayStats': '今日统计',
@@ -6973,6 +7006,17 @@ class AppLocalizations {
   String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
   String get trSurchargesLine => tr('trSurchargesLine');
   String get trMeterSoFar => tr('trMeterSoFar');
+  String get drvRequestNoLongerAvailable => tr('drvRequestNoLongerAvailable');
+  String get drvSenderCancelledDelivery => tr('drvSenderCancelledDelivery');
+  String get trCancelledStatus => tr('trCancelledStatus');
+  String get trDeliveryCancelledTitle => tr('trDeliveryCancelledTitle');
+  String get trMovingCancelledTitle => tr('trMovingCancelledTitle');
+  String get trCancelledByDriver => tr('trCancelledByDriver');
+  String get trCancelledByAdmin => tr('trCancelledByAdmin');
+  String get trCancelledByYou => tr('trCancelledByYou');
+  String get trCancelledGeneric => tr('trCancelledGeneric');
+  String trCancelReason(String reason) => _fill('trCancelReason', {'reason': reason});
+  String get trGoBack => tr('trGoBack');
   String drvGreeting(String name) => _fill('drvGreeting', {'name': name});
   String get drvFindingRides => tr('drvFindingRides');
   String get drvTodayStats => tr('drvTodayStats');

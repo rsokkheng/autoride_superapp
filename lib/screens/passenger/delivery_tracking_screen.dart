@@ -116,12 +116,20 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     try {
       final d = await ApiService.getDelivery(widget.deliveryId);
       if (!mounted) return;
+      final wasCancelled = _delivery?.isCancelled ?? true;
       setState(() {
         _delivery = d;
         _loading  = false;
         _error    = null;
       });
       _updateMarkersFromDelivery(d);
+      // Cancelled while the customer was watching (driver / support) — tell
+      // them who and why, then take them back. Opening an already-cancelled
+      // order just shows the card in the sheet.
+      if (d.isCancelled && !wasCancelled && !_cancelling) {
+        _poller.stop();
+        _showCancelledDialog();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -232,7 +240,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
         case 'loading':   return AppLocalizations.of(context).trLoadingItems;
         case 'in_transit':return AppLocalizations.of(context).trOnWayToDestination;
         case 'completed': return AppLocalizations.of(context).trMovingCompletedExcl;
-        case 'cancelled': return 'Cancelled';
+        case 'cancelled': return AppLocalizations.of(context).trCancelledStatus;
         default:          return AppLocalizations.of(context).trProcessingDots;
       }
     }
@@ -242,7 +250,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
       case 'picked_up':   return AppLocalizations.of(context).trPackagePickedUp;
       case 'in_progress': return AppLocalizations.of(context).trOnWayToRecipient;
       case 'delivered':   return AppLocalizations.of(context).trDeliveredExcl;
-      case 'cancelled':   return 'Cancelled';
+      case 'cancelled':   return AppLocalizations.of(context).trCancelledStatus;
       default:            return AppLocalizations.of(context).trProcessingDots;
     }
   }
@@ -254,6 +262,64 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   bool get _driverAssigned =>
       _status != 'requested' && _status != 'pending' &&
       _delivery?.driver != null;
+
+  // ── Cancellation ─────────────────────────────────────────────────────────────
+
+  String get _cancelledTitle => _isMoving
+      ? AppLocalizations.of(context).trMovingCancelledTitle
+      : AppLocalizations.of(context).trDeliveryCancelledTitle;
+
+  String get _cancelledMessage {
+    final l = AppLocalizations.of(context);
+    return switch (_delivery?.cancelledBy) {
+      'driver' => l.trCancelledByDriver,
+      'admin'  => l.trCancelledByAdmin,
+      'sender' => l.trCancelledByYou,
+      _        => l.trCancelledGeneric,
+    };
+  }
+
+  String? get _cancelledReason {
+    final reason = _delivery?.cancellationReason;
+    return reason == null ? null : AppLocalizations.of(context).trCancelReason(reason);
+  }
+
+  void _goBack() {
+    final nav = Navigator.of(context);
+    if (nav.canPop()) nav.pop();
+  }
+
+  Future<void> _showCancelledDialog() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        icon: const Icon(Icons.cancel_rounded, color: Colors.red, size: 48),
+        title: Text(_cancelledTitle, textAlign: TextAlign.center,
+            style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(_cancelledMessage, textAlign: TextAlign.center),
+          if (_cancelledReason != null) ...[
+            const SizedBox(height: 8),
+            Text(_cancelledReason!, textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[700], fontSize: 13)),
+          ],
+        ]),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: AppTheme.confirmButtonStyle(),
+              child: Text(AppLocalizations.of(context).trGoBack),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (mounted) _goBack();
+  }
 
   // ── Actions ──────────────────────────────────────────────────────────────────
 
@@ -631,6 +697,10 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             onRate:      _isDelivered ? _showRatingDialog : null,
             onViewSummary: _isDelivered ? _openDeliverySummary : null,
             onShare:     _shareDelivery,
+            cancelledTitle:   _status == 'cancelled' ? _cancelledTitle : null,
+            cancelledMessage: _status == 'cancelled' ? _cancelledMessage : null,
+            cancelledReason:  _status == 'cancelled' ? _cancelledReason : null,
+            onBack:      _goBack,
           ),
         ),
       ],
@@ -647,6 +717,10 @@ class _BottomSheet extends StatelessWidget {
   final int     stepIndex;
   final bool    isDelivered;
   final bool    canCancel;
+  final String? cancelledTitle;   // non-null when the order was cancelled
+  final String? cancelledMessage;
+  final String? cancelledReason;
+  final VoidCallback? onBack;
   final bool    driverAssigned;
   final String  fareDisplay;
   final String  serviceType;
@@ -666,6 +740,10 @@ class _BottomSheet extends StatelessWidget {
     required this.stepIndex,
     required this.isDelivered,
     required this.canCancel,
+    this.cancelledTitle,
+    this.cancelledMessage,
+    this.cancelledReason,
+    this.onBack,
     required this.driverAssigned,
     required this.fareDisplay,
     required this.serviceType,
@@ -745,12 +823,53 @@ class _BottomSheet extends StatelessWidget {
               ]),
               const SizedBox(height: 14),
 
-              // Progress bar
-              _StatusProgressBar(
-                stepIndex:   stepIndex,
-                isMoving:    serviceType == 'moving',
-              ),
-              const SizedBox(height: 18),
+              // Progress bar — replaced by the cancellation notice when cancelled
+              if (cancelledTitle != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.cancel_rounded, color: Colors.red, size: 26),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(cancelledTitle!,
+                            style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w800, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        Text(cancelledMessage ?? '', style: const TextStyle(fontSize: 13, height: 1.4)),
+                        if (cancelledReason != null) ...[
+                          const SizedBox(height: 4),
+                          Text(cancelledReason!,
+                              style: TextStyle(color: Colors.grey[700], fontSize: 12.5, height: 1.4)),
+                        ],
+                      ]),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: onBack,
+                    style: AppTheme.confirmButtonStyle(),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: Text(AppLocalizations.of(context).trGoBack),
+                  ),
+                ),
+                const SizedBox(height: 18),
+              ] else ...[
+                _StatusProgressBar(
+                  stepIndex:   stepIndex,
+                  isMoving:    serviceType == 'moving',
+                ),
+                const SizedBox(height: 18),
+              ],
 
               // Delivered completion summary card
               if (isDelivered && delivery != null) ...[

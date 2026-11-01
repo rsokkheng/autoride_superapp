@@ -343,7 +343,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
         position: LatLng(s.lat, s.lng),
         icon: BitmapDescriptor.defaultMarkerWithHue(
             s.arrived ? BitmapDescriptor.hueGreen : BitmapDescriptor.hueOrange),
-        infoWindow: InfoWindow(title: AppLocalizations.of(context).trStopWithAddress(i + 1, s.address)),
+        infoWindow: InfoWindow(title: l10n.trStopWithAddress(i + 1, s.address)),
       ));
     }
 

@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import '../../l10n/l10n.dart';
 import 'dart:async';
 import 'dart:math' show pi, sin, cos, atan2;
 import 'dart:ui' show lerpDouble;
@@ -172,8 +173,8 @@ class _DriverDeliveryActiveScreenState
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
         infoWindow: InfoWindow(
           title: _isMoving
-              ? AppLocalizations.of(context).movingFrom
-              : AppLocalizations.of(context).pickup,
+              ? l10n.movingFrom
+              : l10n.pickup,
           snippet: widget.delivery.pickupAddress,
         ),
       ),
@@ -183,8 +184,8 @@ class _DriverDeliveryActiveScreenState
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         infoWindow: InfoWindow(
           title: _isMoving
-              ? AppLocalizations.of(context).movingTo
-              : AppLocalizations.of(context).dropoff,
+              ? l10n.movingTo
+              : l10n.dropoff,
           snippet: widget.delivery.dropoffAddress,
         ),
       ),

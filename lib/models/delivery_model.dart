@@ -15,6 +15,8 @@ class DeliveryModel {
   final String dropoffAddress;
   final String? scheduledAt;
   final String status;
+  final String? cancelledBy;        // sender | driver | admin
+  final String? cancellationReason;
   final String packageDetails;
   final int fee;
   final String paymentBy;
@@ -72,6 +74,8 @@ class DeliveryModel {
     required this.dropoffAddress,
     this.scheduledAt,
     required this.status,
+    this.cancelledBy,
+    this.cancellationReason,
     required this.packageDetails,
     required this.fee,
     this.paymentBy     = 'sender',
@@ -146,6 +150,9 @@ class DeliveryModel {
       dropoffAddress: json['dropoff_address'] as String,
       scheduledAt:    json['scheduled_at'] as String?,
       status:         json['status'] as String,
+      cancelledBy:    json['cancelled_by']?.toString(),
+      cancellationReason: (json['cancellation_reason']?.toString().trim().isEmpty ?? true)
+          ? null : json['cancellation_reason'].toString().trim(),
       packageDetails: json['package_details'] as String? ?? '',
       fee:            _toInt(json['fee']),
       paymentBy:      json['payment_by']?.toString()     ?? 'sender',

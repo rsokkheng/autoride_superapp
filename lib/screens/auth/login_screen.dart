@@ -135,7 +135,9 @@ class _LoginScreenState extends State<LoginScreen> {
       destination = const PassengerHomeScreen();
     }
     if (!mounted) return;
-    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => destination));
+    // Clear Welcome/Login underneath — the home screen must be the first
+    // route, or "back to home" (popUntil isFirst) lands on Welcome.
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => destination), (_) => false);
   }
 
   Future<void> _login() async {
@@ -184,9 +186,11 @@ class _LoginScreenState extends State<LoginScreen> {
       NotificationService.instance.initFcm();
 
       if (!mounted) return;
-      Navigator.pushReplacement(
+      // Home becomes the first route (see above).
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => destination),
+        (_) => false,
       );
     } on ApiException catch (e) {
       if (!mounted) return;
