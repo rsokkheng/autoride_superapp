@@ -93,7 +93,11 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(onPressed: _load, style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accent), child: Text(AppLocalizations.of(context).retry)),
                 ]))
-              : ListView(
+              : RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: _load,
+        child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.all(16),
                   children: [
                     _Section(title: AppLocalizations.of(context).visualSection, children: [
@@ -167,6 +171,7 @@ class _AccessibilityScreenState extends State<AccessibilityScreen> {
                     const SizedBox(height: 16),
                   ],
                 ),
+      ),
     );
   }
 }

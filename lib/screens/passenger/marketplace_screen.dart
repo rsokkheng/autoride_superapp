@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import 'car_rental_screen.dart';
 import 'my_rentals_screen.dart';
@@ -3023,14 +3024,7 @@ class _OrderScreenState extends State<_OrderScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(children: [
-                  Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: isSel ? _color.withValues(alpha: 0.12) : ctx.appCardBg,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: isSel ? _color : Colors.grey, size: 20),
-                  ),
+                  PaymentLogo(method: id, size: 40),
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(label, style: TextStyle(
@@ -3052,10 +3046,9 @@ class _OrderScreenState extends State<_OrderScreen> {
   List<(String, String, IconData, String)> _pays(AppLocalizations l) => [
     ('cash',         l.cash,          Icons.money_rounded,             l.payInCashOnPickup),
     ('aba',          'ABA',           Icons.account_balance_rounded,   l.abaMobileBanking),
-    ('wing',         'Wing',          Icons.account_balance_wallet_rounded, l.wingMobileWallet),
+    ('acleda',       'ACLEDA',        Icons.account_balance_rounded,   l.abaMobileBanking.replaceAll('ABA', 'ACLEDA')),
     if (!_isGuest)
       ('wallet',     l.walletLabel,   Icons.wallet_rounded,            l.inAppWalletBalance),
-    ('other_online', l.onlineLabel,   Icons.phone_android_rounded,     l.otherOnlinePayment),
   ];
 
   @override

@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'rate_driver_screen.dart';
@@ -48,12 +49,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
   double get _total        => widget.baseFare + _distanceFare + _timeFare + widget.serviceFee;
 
   // Built per-frame rather than held as a `static const`, so the labels follow
-  // the active locale. Brand names (ABA, ACLEDA, Wing, ROTEH Pay) stay as-is.
+  // the active locale. Brand names (ABA, ACLEDA, ROTEH Pay) stay as-is.
+  // Supported methods: cash, ABA, ACLEDA, ROTEH Pay.
   List<_PayMethod> _methodsFor(AppLocalizations l) => [
     _PayMethod(key: 'cash',    label: l.cash,        subtitle: l.payDriverDirectly,      color: const Color(0xFF6B7280), icon: Icons.payments_outlined),
     _PayMethod(key: 'aba',     label: 'ABA Pay',     subtitle: 'ABA Mobile / QR',        color: const Color(0xFF004B87), icon: Icons.account_balance),
     _PayMethod(key: 'acleda',  label: 'ACLEDA',      subtitle: 'ACLEDA Mobile Banking',  color: const Color(0xFF006B3F), icon: Icons.account_balance),
-    _PayMethod(key: 'wing',    label: 'Wing',        subtitle: l.wingMobileWallet2,      color: const Color(0xFFFF6B00), icon: Icons.flutter_dash),
     _PayMethod(key: 'wallet',  label: 'ROTEH Pay',   subtitle: l.yourWalletBalance,      color: _kGreen,                 icon: Icons.account_balance_wallet_outlined),
   ];
 
@@ -248,7 +249,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             color: m.color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(m.icon, color: m.color, size: 18),
+                          child: PaymentLogo(method: m.key, size: 22),
                         ),
                         const SizedBox(width: 12),
 

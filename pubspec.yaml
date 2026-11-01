@@ -70,6 +70,7 @@ flutter:
   assets:
     - .env
     - assets/library/icon_fa.png
+    - assets/banks/
     - assets/driver_banner.png
     - assets/driver_banner.jpg
     - assets/Delivery.png

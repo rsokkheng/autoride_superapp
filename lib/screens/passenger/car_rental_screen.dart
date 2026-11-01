@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -232,8 +233,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       _PayOpt(id: 'cash',         label: l.cash,        subtitle: l.payInCashOnPickup,      icon: Icons.payments_outlined),
       _PayOpt(id: 'wallet',       label: l.rotehPay,     subtitle: l.inAppWalletBalance,    icon: Icons.account_balance_wallet_outlined),
       _PayOpt(id: 'aba',          label: l.abaPay,       subtitle: l.abaMobileBanking,      icon: Icons.account_balance),
-      _PayOpt(id: 'wing',         label: l.wing,         subtitle: l.wingMobileWallet,      icon: Icons.flight_takeoff),
-      _PayOpt(id: 'other_online', label: l.otherOnline,  subtitle: l.otherOnlinePayment,    icon: Icons.language_outlined),
+      _PayOpt(id: 'acleda',       label: l.acleda,       subtitle: l.abaMobileBanking.replaceAll('ABA', 'ACLEDA'), icon: Icons.account_balance),
     ];
   }
 
@@ -373,7 +373,7 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
       context: context,
       title: AppLocalizations.of(context).paymentMethod,
       items: _payments.map((p) => _SheetItem(
-        value: p.id, label: p.label, subtitle: p.subtitle, icon: p.icon,
+        value: p.id, label: p.label, subtitle: p.subtitle, icon: p.icon, logo: p.id,
       )).toList(),
       selected: _paymentId,
       onSelect: (v) => setState(() => _paymentId = v),
@@ -1041,8 +1041,9 @@ class _SheetItem<T> {
   final T value;
   final String label, subtitle;
   final IconData icon;
+  final String? logo; // payment method → PaymentLogo instead of the icon
   const _SheetItem({required this.value, required this.label,
-      required this.subtitle, required this.icon});
+      required this.subtitle, required this.icon, this.logo});
 }
 
 void _openSheet<T>({
@@ -1085,6 +1086,9 @@ void _openSheet<T>({
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(children: [
+                  if (item.logo != null)
+                    PaymentLogo(method: item.logo!, size: 40)
+                  else
                   Container(
                     width: 40, height: 40,
                     decoration: BoxDecoration(
@@ -1591,7 +1595,11 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
       return Center(child: Text(AppLocalizations.of(context).noVehicleAvailableForRent,
           style: TextStyle(color: context.appTextSecondary)));
     }
-    return ListView.separated(
+    return RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: _load,
+        child: ListView.separated(
+        physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: _products.length,
       separatorBuilder: (_, __) => const SizedBox(height: 14),
@@ -1699,7 +1707,8 @@ class _CarBrowsePageState extends State<_CarBrowsePage> {
           ),
         );
       },
-    );
+    ),
+      );
   }
 
   Widget _imagePlaceholder(BuildContext context, MarketplaceProductModel p) =>

@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:autoride_superapp/utils/phone_utils.dart';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -151,18 +153,6 @@ class _PaymentMethodsScreenState extends State<PaymentMethodsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _AddMethodTile(onTap: _openAddSheet),
-                const SizedBox(height: 20),
-
-                _SectionLabel(AppLocalizations.of(context).cardsSection),
-                const SizedBox(height: 8),
-                if (_cards.isEmpty)
-                  _EmptyRow(text: AppLocalizations.of(context).noCardsAddedYet)
-                else
-                  ..._cards.map((c) => _MethodTile(
-                        method: c,
-                        onSetDefault: () => _setDefault(c),
-                        onRemove: () => _remove(c),
-                      )),
                 const SizedBox(height: 20),
 
                 _SectionLabel(AppLocalizations.of(context).linkedAccountsSection),
@@ -347,11 +337,7 @@ class _LinkedAccountTile extends StatelessWidget {
         decoration: BoxDecoration(color: context.appSurface, borderRadius: BorderRadius.circular(14)),
         child: ListTile(
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            width: 44, height: 44,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: Icon(Icons.account_balance, color: color, size: 22),
-          ),
+          leading: PaymentLogo(method: label.startsWith('ABA') ? 'aba' : 'acleda', size: 44),
           title: Text(label, style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14)),
           subtitle: Text(
             linked ? (method!.label.isEmpty ? AppLocalizations.of(context).linkedLabel : method!.label) : AppLocalizations.of(context).notLinkedLabel,
@@ -476,6 +462,11 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
       setState(() => _error = AppLocalizations.of(context).enterAccountPhoneNumber);
       return;
     }
+    final phoneError = validateLocalPhone(normalizeLocalPhone(phone));
+    if (phoneError != null) {
+      setState(() => _error = phoneError);
+      return;
+    }
     Navigator.pop(context, SavedPaymentMethod(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       type: type,
@@ -505,14 +496,6 @@ class _AddMethodSheetState extends State<_AddMethodSheet> {
         const SizedBox(height: 18),
 
         if (_picked == null) ...[
-          _MethodOption(
-            icon: Icons.credit_card,
-            color: const Color(0xFF1A1F71),
-            label: AppLocalizations.of(context).cardOptionLabel,
-            subtitle: AppLocalizations.of(context).cardOptionSubtitle,
-            onTap: () => setState(() { _picked = PayMethodType.card; _error = null; }),
-          ),
-          const SizedBox(height: 10),
           _MethodOption(
             icon: Icons.account_balance,
             color: const Color(0xFF004B87),
@@ -632,11 +615,7 @@ class _MethodOption extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(children: [
-                Container(
-                  width: 42, height: 30,
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(icon, color: color, size: 18),
-                ),
+                PaymentLogo(method: label.startsWith('ABA') ? 'aba' : 'acleda', size: 38),
                 const SizedBox(width: 12),
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(label, style: const TextStyle(color: Color(0xFF1A1A1A), fontWeight: FontWeight.w700, fontSize: 14)),

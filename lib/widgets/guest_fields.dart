@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/phone_utils.dart';
 import 'package:flutter/services.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
@@ -12,14 +13,15 @@ class GuestFields extends StatelessWidget {
   const GuestFields({super.key, required this.nameCtrl, required this.phoneCtrl});
 
   /// Returns an error message, or null when the guest details are usable.
-  /// Mirrors the backend rules (guest_phone: 8–16 digits).
+  /// The phone must be a real Cambodian mobile number (prefix table in
+  /// phone_utils, same as the backend) — every OTP is a paid SMS.
   static String? validate(AppLocalizations l, String name, String phone) {
     final n = name.trim();
     final digits = phone.replaceAll(RegExp(r'\D'), '');
     if (n.isEmpty && digits.isEmpty) return l.enterNamePhoneError;
     if (n.length < 2) return l.guestFullNameRequired;
-    if (digits.length < 8 || digits.length > 16) return l.guestPhoneInvalid;
-    return null;
+    if (digits.isEmpty) return l.guestPhoneInvalid;
+    return validateLocalPhone(normalizeLocalPhone(phone));
   }
 
   @override
@@ -57,7 +59,7 @@ class GuestFields extends StatelessWidget {
           keyboardType: TextInputType.phone,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
-            LengthLimitingTextInputFormatter(16),
+            LengthLimitingTextInputFormatter(13), // +855 form at most
           ],
         ),
         const SizedBox(height: 8),

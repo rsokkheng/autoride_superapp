@@ -66,14 +66,12 @@ class _WithdrawFormState extends State<_WithdrawForm> {
   final _accNumCtrl  = TextEditingController();
   final _accNameCtrl = TextEditingController();
   final _bankCtrl    = TextEditingController();
-  String _method     = 'bank_transfer';
+  String _method     = 'aba';
   bool _submitting   = false;
   String? _error;
 
   List<(String, String, IconData)> _methodsFor(AppLocalizations l) => [
-    ('bank_transfer', l.bankTransfer, Icons.account_balance_rounded),
     ('aba',           l.abaBank,      Icons.credit_card_rounded),
-    ('wing',          l.wing,         Icons.phone_android_rounded),
     ('acleda',        l.acleda,       Icons.account_balance_outlined),
   ];
 
@@ -148,6 +146,36 @@ class _WithdrawFormState extends State<_WithdrawForm> {
         backgroundColor: AppTheme.success,
         behavior: SnackBarBehavior.floating,
       ));
+      // The hold may leave the wallet under the minimum to work — the server
+      // then takes the driver offline; say so right here, not later.
+      try {
+        final status = await ApiService.getDriverStatus();
+        if (mounted && !status.canGoOnline) {
+          final l = AppLocalizations.of(context);
+          await showDialog<void>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              icon: const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.danger, size: 44),
+              title: Text(l.drvLowBalanceOfflineTitle, textAlign: TextAlign.center),
+              content: Text(
+                l.drvLowBalanceOfflineMsg(AppTheme.khr(status.walletBalanceKhr), AppTheme.khr(status.minBalanceKhr)),
+                textAlign: TextAlign.center,
+              ),
+              actions: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: AppTheme.confirmButtonStyle(),
+                    child: Text(l.ok),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      } catch (_) {}
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);

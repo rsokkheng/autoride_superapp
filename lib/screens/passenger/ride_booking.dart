@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -1023,14 +1024,13 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
 
   // ── Payment method ────────────────────────────────────────────────────────────
 
-  static const _kPaymentMethods = ['cash', 'wallet', 'aba', 'acleda', 'wing'];
+  static const _kPaymentMethods = ['cash', 'wallet', 'aba', 'acleda'];
 
   static String _paymentLabel(AppLocalizations l, String method) {
     switch (method) {
       case 'wallet': return l.rotehPay;
       case 'aba':    return l.abaPay;
       case 'acleda': return l.acleda;
-      case 'wing':   return l.wingMoney;
       default:       return l.cash;
     }
   }
@@ -1300,12 +1300,7 @@ class _RideBookingScreenState extends State<RideBookingScreen> {
             ),
           ),
           ..._kPaymentMethods.map((m) => ListTile(
-            leading: Icon(
-              m == 'cash'   ? Icons.money :
-              m == 'wallet' ? Icons.account_balance_wallet_outlined :
-              Icons.credit_card_outlined,
-              color: _paymentMethod == m ? AppTheme.accent : context.appTextSecondary,
-            ),
+            leading: PaymentLogo(method: m, size: 36),
             title: Text(_paymentLabel(AppLocalizations.of(context), m),
                 style: TextStyle(
                     color: _paymentMethod == m ? AppTheme.accent : context.appTextPrimary,

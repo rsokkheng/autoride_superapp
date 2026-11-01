@@ -1,4 +1,6 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -17,8 +19,20 @@ class WalletScreen extends StatefulWidget {
   State<WalletScreen> createState() => _WalletScreenState();
 }
 
+const _kLastTopUpPref = 'wallet_last_topup_id';
+
+/// Remembers the top-up just submitted, so it can be shown as pending even
+/// when the server's wallet response doesn't list pending top-ups.
+Future<void> _rememberTopUp(int id) async {
+  try { await (await SharedPreferences.getInstance()).setInt(_kLastTopUpPref, id); } catch (_) {}
+}
+
 class _WalletScreenState extends State<WalletScreen> {
   WalletModel? _wallet;
+  Map<String, dynamic>? _localPendingTopUp;
+
+  /// Server's pending top-up, or the remembered one still pending.
+  Map<String, dynamic>? get _pendingTopUp => _wallet?.pendingTopUp ?? _localPendingTopUp;
   bool _balanceLoading = true;
   String? _balanceError;
 
@@ -51,6 +65,7 @@ class _WalletScreenState extends State<WalletScreen> {
         _wallet = w;
         _balanceLoading = false;
       });
+      if (w.pendingTopUp == null) _checkRememberedTopUp();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -138,6 +153,17 @@ class _WalletScreenState extends State<WalletScreen> {
   }
 
   void _showTopUpSheet() {
+    // A request is already waiting for admin — don't start another; show it.
+    final pending = _pendingTopUp;
+    if (pending != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).topUpPendingBlocked),
+        behavior: SnackBarBehavior.floating,
+      ));
+      final id = (pending['id'] as num?)?.toInt();
+      if (id != null) _openPendingTopUp(id);
+      return;
+    }
     showTopUpSheet(
       context,
       onSubmitted: (request) async {
@@ -159,6 +185,80 @@ class _WalletScreenState extends State<WalletScreen> {
         }
         _loadAll();
       },
+    );
+  }
+
+  Future<void> _checkRememberedTopUp() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final id = prefs.getInt(_kLastTopUpPref);
+      if (id == null) return;
+      final t = await ApiService.getTopUpRequest(id);
+      if (!mounted) return;
+      if (t.status == 'pending') {
+        setState(() => _localPendingTopUp = {
+          'id': t.id, 'amount': t.amount, 'method': t.method, 'created_at': t.createdAt,
+        });
+      } else {
+        await prefs.remove(_kLastTopUpPref); // approved / rejected — done
+        if (mounted) setState(() => _localPendingTopUp = null);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _openPendingTopUp(int id) async {
+    await Navigator.push<bool>(context,
+        MaterialPageRoute(builder: (_) => TopUpStatusScreen(topUpId: id)));
+    if (mounted) _loadAll();
+  }
+
+  static String _methodLabel(String? method) => switch (method) {
+        'aba'           => 'ABA Pay',
+        'acleda'        => 'ACLEDA',
+        'wing'          => 'Wing',
+        'bank_transfer' => l10n.bankTransfer,
+        _               => l10n.trCash,
+      };
+
+  // Pending top-up shown first in recent transactions, so the user sees it is
+  // waiting for approval instead of tapping Top up again.
+  Widget _pendingTopUpTile(Map<String, dynamic> p) {
+    final amount = (p['amount'] as num?)?.toInt() ?? 0;
+    final id     = (p['id'] as num?)?.toInt();
+    // Material (not a coloured Container) so the ListTile's tap ripple and
+    // background paint correctly.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+      color: AppTheme.warning.withValues(alpha: 0.10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: AppTheme.warning.withValues(alpha: 0.45)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        onTap: id == null ? null : () => _openPendingTopUp(id),
+        leading: Container(
+          width: 42, height: 42,
+          decoration: BoxDecoration(
+            color: AppTheme.warning.withValues(alpha: 0.18),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.hourglass_top_rounded, color: AppTheme.warning),
+        ),
+        title: Text(AppLocalizations.of(context).topUpPendingTitle,
+            style: TextStyle(color: context.appTextPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+        subtitle: Text('${_methodLabel(p['method'] as String?)} · ${_relativeTime(p['created_at']?.toString() ?? '')}',
+            style: TextStyle(color: context.appTextSecondary, fontSize: 12)),
+        trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('+${AppTheme.khr(amount)}',
+              style: const TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w800, fontSize: 14)),
+          const SizedBox(height: 2),
+          Text(AppLocalizations.of(context).topUpPendingStatus,
+              style: const TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+      ),
     );
   }
 
@@ -382,6 +482,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 fontWeight: FontWeight.w700),
           ),
           SizedBox(height: 12),
+          if (_pendingTopUp != null) _pendingTopUpTile(_pendingTopUp!),
           if (_txLoading && _transactions.isEmpty)
             Center(
               child: Padding(
@@ -394,7 +495,7 @@ class _WalletScreenState extends State<WalletScreen> {
               message: _txError!,
               onRetry: () => _loadTransactions(reset: true),
             )
-          else if (_transactions.isEmpty)
+          else if (_transactions.isEmpty && _pendingTopUp == null)
             Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
@@ -706,6 +807,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
     setState(() => _submitting = true);
     try {
       final request = await ApiService.requestTopUp(amount: amount, method: _selectedMethod);
+      await _rememberTopUp(request.id);
       if (!mounted) return;
       Navigator.pop(context);
       widget.onSubmitted(request);
@@ -846,6 +948,7 @@ class _TopUpSheetState extends State<_TopUpSheet> {
                 final label = m['label']!;
                 final selected = _selectedMethod == key;
                 return ChoiceChip(
+                  avatar: PaymentLogo(method: key, size: 22),
                   label: Text(label),
                   selected: selected,
                   onSelected: (_) =>

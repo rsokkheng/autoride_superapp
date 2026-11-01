@@ -20,10 +20,13 @@ void main() {
     expect(check('S', '012345678'), l.guestFullNameRequired);
   });
 
-  test('phone must be 8–16 digits', () {
+  test('phone must be a real Cambodian mobile number', () {
     expect(check('Sokha Chan', ''), l.guestPhoneInvalid);
-    expect(check('Sokha Chan', '0123'), l.guestPhoneInvalid);
-    expect(check('Sokha Chan', '12345678901234567'), l.guestPhoneInvalid);
+    expect(check('Sokha Chan', '0123'), isNotNull);
+    expect(check('Sokha Chan', '12345678901234567'), isNotNull);
+    expect(check('Sokha Chan', '020123456'), isNotNull);   // no such operator prefix
+    expect(check('Sokha Chan', '097123456'), isNotNull);   // 097 needs 10 digits
+    expect(check('Sokha Chan', '0000000000'), isNotNull);
   });
 
   test('valid name and phone pass', () {

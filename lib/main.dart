@@ -27,6 +27,9 @@ final ValueNotifier<Locale> appLocale = ValueNotifier(const Locale('km'));
 // when a refresh token turns out to be invalid), not just IdleTimeoutWrapper.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// Lets a screen refresh when the user comes back to it (RouteAware.didPopNext).
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+
 const _kLanguagePref = 'app_language';
 
 /// The language the user last picked, or Khmer — the app's default language
@@ -136,6 +139,7 @@ class _AutoRideAppState extends State<AutoRideApp> {
           title: 'ROTEH APP',
           debugShowCheckedModeBanner: false,
           navigatorKey: navigatorKey,
+          navigatorObservers: [routeObserver],
           theme:     AppTheme.lightTheme,
           darkTheme: AppTheme.darkModeTheme,
           themeMode: themeProvider.mode,

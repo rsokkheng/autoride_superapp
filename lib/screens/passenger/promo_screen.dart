@@ -158,7 +158,11 @@ class _PromosTabState extends State<_PromosTab> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: _loadPromos,
+        child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(16),
       children: [
         // Enter code
@@ -251,7 +255,8 @@ class _PromosTabState extends State<_PromosTab> {
         else
           ..._promos.map((p) => _PromoCard(promo: p, onUseCode: () => _useCode(p.code))),
       ],
-    );
+    ),
+      );
   }
 }
 

@@ -99,7 +99,11 @@ class _Body extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: () async => onRefresh(),
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.all(20),
       child: Column(children: [
         SizedBox(height: 12),
@@ -188,7 +192,8 @@ class _Body extends StatelessWidget {
         ),
         const SizedBox(height: 24),
       ]),
-    );
+    ),
+      );
   }
 }
 

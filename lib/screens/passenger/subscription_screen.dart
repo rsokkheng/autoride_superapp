@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../l10n/app_localizations.dart';
@@ -185,10 +186,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
         SizedBox(height: 16),
         ...[
           ('wallet', Icons.account_balance_wallet_rounded, AppLocalizations.of(context).autoRideWalletLabel),
-          ('card',   Icons.credit_card_rounded,            AppLocalizations.of(context).creditDebitCardLabel),
-          ('qr',     Icons.qr_code_rounded,                AppLocalizations.of(context).qrPayment),
+          ('aba',    Icons.account_balance_rounded,        'ABA Pay'),
+          ('acleda', Icons.account_balance_rounded,        'ACLEDA'),
         ].map((e) => ListTile(
-          leading: Icon(e.$2, color: AppTheme.accent),
+          leading: PaymentLogo(method: e.$1, size: 36),
           title: Text(e.$3, style: TextStyle(color: context.appTextPrimary)),
           contentPadding: EdgeInsets.zero,
           onTap: () => Navigator.pop(context, e.$1),
@@ -271,17 +272,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
       body: TabBarView(
         controller: _tab,
         children: [
-          _PlansTab(
-            plans:      _plans,
-            my:         _my,
-            loading:    _loadingPlans || _loadingMy,
-            onSubscribe: _subscribe,
-            onCancel:    _cancel,
-            onAutoRenew: _setAutoRenew,
+          RefreshIndicator(
+            color: AppTheme.accent,
+            onRefresh: _loadAll,
+            child: _PlansTab(
+              plans:      _plans,
+              my:         _my,
+              loading:    _loadingPlans || _loadingMy,
+              onSubscribe: _subscribe,
+              onCancel:    _cancel,
+              onAutoRenew: _setAutoRenew,
+            ),
           ),
-          _HistoryTab(
-            bills:   _bills,
-            loading: _loadingHistory,
+          RefreshIndicator(
+            color: AppTheme.accent,
+            onRefresh: _loadHistory,
+            child: _HistoryTab(
+              bills:   _bills,
+              loading: _loadingHistory,
+            ),
           ),
         ],
       ),
@@ -311,6 +320,7 @@ class _PlansTab extends StatelessWidget {
           child: CircularProgressIndicator(color: AppTheme.accent));
     }
     return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         // Active subscription card
@@ -721,6 +731,7 @@ class _HistoryTab extends StatelessWidget {
       );
     }
     return ListView.separated(
+      physics: const AlwaysScrollableScrollPhysics(), // pull to refresh
       padding: const EdgeInsets.all(16),
       itemCount: bills.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),

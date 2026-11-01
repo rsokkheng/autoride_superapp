@@ -225,9 +225,23 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
 
   List<String> get _steps => _isMoving ? _kMovingSteps : _kDeliverySteps;
 
+  // Server statuses → progress step. Deliveries finish as "completed" (and
+  // partner jobs as "delivered"); "pending"/"assigned"/"in_transit" are the
+  // partner-flow names. Unknown statuses fell back to step 0, so a finished
+  // delivery showed only the first step ticked.
+  static const _kStatusAlias = {
+    'pending':   'requested',
+    'created':   'requested',
+    'assigned':  'accepted',
+    'in_transit': 'in_progress',
+    'completed': 'delivered',
+  };
+
   int get _stepIndex {
-    final idx = _steps.indexOf(_status);
-    return idx < 0 ? 0 : idx;
+    if (_isDelivered) return _steps.length - 1;
+    final status = _isMoving ? _status : (_kStatusAlias[_status] ?? _status);
+    final idx = _steps.indexOf(status);
+    return idx < 0 ? (_isMoving ? -1 : 0) : idx;
   }
 
   String get _statusLabel {
@@ -244,7 +258,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
         default:          return AppLocalizations.of(context).trProcessingDots;
       }
     }
-    switch (_status) {
+    switch (_kStatusAlias[_status] ?? _status) {
       case 'requested':   return AppLocalizations.of(context).trLookingForDriver;
       case 'accepted':    return AppLocalizations.of(context).trDriverAssigned;
       case 'picked_up':   return AppLocalizations.of(context).trPackagePickedUp;
@@ -585,96 +599,18 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
                 const SizedBox(width: 10),
                 Expanded(child: _RouteCard(from: widget.from, to: widget.to)),
                 const SizedBox(width: 10),
-                _ShareHeaderButton(
-                  loading: _sharing,
-                  onTap: _shareDelivery,
-                ),
+                // Live-location sharing only while the job is under way.
+                if (!_isDelivered && _status != 'cancelled')
+                  _ShareHeaderButton(
+                    loading: _sharing,
+                    onTap: _shareDelivery,
+                  )
+                else
+                  const SizedBox(width: 44),
               ],
             ),
           ),
         ),
-
-        // ── Delivered banner ──────────────────────────────────────────────
-        if (_isDelivered)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 90,
-            left: 16,
-            right: 16,
-            child: GestureDetector(
-              onTap: _openDeliverySummary,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: _kGreen,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _kGreen.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.white, size: 22),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _isMoving ? AppLocalizations.of(context).trMovingCompletedExcl : AppLocalizations.of(context).trDeliveredExcl,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          if (_delivery != null) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '${PassengerDeliverySummaryScreen.formatDateTimeStr(_delivery!.updatedAt, locale: Localizations.localeOf(context))} • ${widget.fareDisplay}',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            AppLocalizations.of(context).summary,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          SizedBox(width: 2),
-                          Icon(Icons.chevron_right,
-                              color: Colors.white, size: 14),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
 
         // ── Bottom sheet ──────────────────────────────────────────────────
         Positioned(
@@ -907,7 +843,7 @@ class _BottomSheet extends StatelessWidget {
                               size: 14, color: context.appTextSecondary),
                           const SizedBox(width: 6),
                           Text(
-                            AppLocalizations.of(context).completedAt2,
+                            '${AppLocalizations.of(context).completedAt}: ',
                             style: TextStyle(
                                 fontSize: 12, color: context.appTextSecondary),
                           ),
@@ -932,7 +868,7 @@ class _BottomSheet extends StatelessWidget {
                               size: 14, color: context.appTextSecondary),
                           const SizedBox(width: 6),
                           Text(
-                            AppLocalizations.of(context).deliveryFee2,
+                            '${AppLocalizations.of(context).deliveryFee}: ',
                             style: TextStyle(
                                 fontSize: 12, color: context.appTextSecondary),
                           ),
@@ -955,7 +891,7 @@ class _BottomSheet extends StatelessWidget {
                                 size: 14, color: context.appTextSecondary),
                             const SizedBox(width: 6),
                             Text(
-                              AppLocalizations.of(context).packageAmount2,
+                              '${AppLocalizations.of(context).packageAmount}: ',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: context.appTextSecondary),
@@ -981,7 +917,7 @@ class _BottomSheet extends StatelessWidget {
               if (driverAssigned && delivery?.driver != null) ...[
                 _DriverCard(driver: delivery!.driver!),
                 const SizedBox(height: 16),
-                Divider(color: Theme.of(context).dividerColor, height: 1),
+                Divider(color: context.appCardBg, height: 1),
                 const SizedBox(height: 14),
               ],
 
@@ -999,7 +935,9 @@ class _BottomSheet extends StatelessWidget {
                     ? Icons.local_shipping_outlined
                     : Icons.delivery_dining_outlined,
                 label: AppLocalizations.of(context).service,
-                value: serviceType == 'moving' ? 'Moving' : 'Delivery',
+                value: serviceType == 'moving'
+                    ? AppLocalizations.of(context).trMoving
+                    : AppLocalizations.of(context).delivery,
               ),
               if (delivery?.packageAmount != null && delivery!.packageAmount! > 0) ...[
                 const SizedBox(height: 6),
@@ -1010,11 +948,12 @@ class _BottomSheet extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 16),
-              Divider(color: Theme.of(context).dividerColor, height: 1),
+              Divider(color: context.appCardBg, height: 1),
               const SizedBox(height: 14),
 
-              // Action buttons row
-              Row(
+              // Action buttons row — chat / live-location share are pointless
+              // once the job is finished (summary + rating below instead).
+              if (!isDelivered) Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   // Chat Driver

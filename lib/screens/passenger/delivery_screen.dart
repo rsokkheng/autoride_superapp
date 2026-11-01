@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
@@ -276,6 +277,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     if (from.isEmpty || to.isEmpty) {
       setState(() => _error = AppLocalizations.of(context).fromAndToAddressesAre);
       return;
+    }
+    if (_senderPhoneCtrl.text.trim().isNotEmpty) {
+      final phoneError = validateLocalPhone(normalizeLocalPhone(_senderPhoneCtrl.text));
+      if (phoneError != null) {
+        setState(() => _error = phoneError);
+        return;
+      }
     }
 
     // ── Confirmation dialog ──────────────────────────────────────────────
@@ -665,11 +673,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         icon: Icons.wallet_outlined,
         value: _paymentMethod,
         items: [
-          _DropItem(value: 'cash',        label: AppLocalizations.of(context).cash,         subtitle: AppLocalizations.of(context).payWithCash,           icon: Icons.money),
-          _DropItem(value: 'wallet',       label: AppLocalizations.of(context).rotehWallet, subtitle: AppLocalizations.of(context).payFromWalletBalance,  icon: Icons.account_balance_wallet_outlined),
-          _DropItem(value: 'aba',          label: AppLocalizations.of(context).abaPay,      subtitle: AppLocalizations.of(context).abaMobileBanking,      icon: Icons.credit_card),
-          _DropItem(value: 'wing',         label: AppLocalizations.of(context).wingMoney,   subtitle: AppLocalizations.of(context).wingMobilePayment,     icon: Icons.send_to_mobile),
-          _DropItem(value: 'other_online', label: AppLocalizations.of(context).otherOnline, subtitle: AppLocalizations.of(context).otherOnlinePayment,    icon: Icons.language),
+          _DropItem(value: 'cash',        label: AppLocalizations.of(context).cash,         subtitle: AppLocalizations.of(context).payWithCash,           icon: Icons.money, logo: 'cash'),
+          _DropItem(value: 'wallet',       label: AppLocalizations.of(context).rotehWallet, subtitle: AppLocalizations.of(context).payFromWalletBalance,  icon: Icons.account_balance_wallet_outlined, logo: 'wallet'),
+          _DropItem(value: 'aba',          label: AppLocalizations.of(context).abaPay,      subtitle: AppLocalizations.of(context).abaMobileBanking,      icon: Icons.credit_card, logo: 'aba'),
+          _DropItem(value: 'acleda',       label: AppLocalizations.of(context).acleda,      subtitle: AppLocalizations.of(context).abaMobileBanking.replaceAll('ABA', 'ACLEDA'), icon: Icons.account_balance, logo: 'acleda'),
         ],
         onChanged: (v) => setState(() => _paymentMethod = v),
       ),
@@ -904,11 +911,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         icon: Icons.wallet_outlined,
         value: _movePaymentMethod,
         items: [
-          _DropItem(value: 'cash',        label: AppLocalizations.of(context).cash,         subtitle: AppLocalizations.of(context).payWithCash,           icon: Icons.money),
-          _DropItem(value: 'wallet',       label: AppLocalizations.of(context).rotehWallet, subtitle: AppLocalizations.of(context).payFromWalletBalance,  icon: Icons.account_balance_wallet_outlined),
-          _DropItem(value: 'aba',          label: AppLocalizations.of(context).abaPay,      subtitle: AppLocalizations.of(context).abaMobileBanking,      icon: Icons.credit_card),
-          _DropItem(value: 'wing',         label: AppLocalizations.of(context).wingMoney,   subtitle: AppLocalizations.of(context).wingMobilePayment,     icon: Icons.send_to_mobile),
-          _DropItem(value: 'other_online', label: AppLocalizations.of(context).otherOnline, subtitle: AppLocalizations.of(context).otherOnlinePayment,    icon: Icons.language),
+          _DropItem(value: 'cash',        label: AppLocalizations.of(context).cash,         subtitle: AppLocalizations.of(context).payWithCash,           icon: Icons.money, logo: 'cash'),
+          _DropItem(value: 'wallet',       label: AppLocalizations.of(context).rotehWallet, subtitle: AppLocalizations.of(context).payFromWalletBalance,  icon: Icons.account_balance_wallet_outlined, logo: 'wallet'),
+          _DropItem(value: 'aba',          label: AppLocalizations.of(context).abaPay,      subtitle: AppLocalizations.of(context).abaMobileBanking,      icon: Icons.credit_card, logo: 'aba'),
+          _DropItem(value: 'acleda',       label: AppLocalizations.of(context).acleda,      subtitle: AppLocalizations.of(context).abaMobileBanking.replaceAll('ABA', 'ACLEDA'), icon: Icons.account_balance, logo: 'acleda'),
         ],
         onChanged: (v) => setState(() => _movePaymentMethod = v),
       ),
@@ -1218,11 +1224,13 @@ class _DropItem<T> {
   final String label;
   final String subtitle;
   final IconData icon;
+  final String? logo; // payment method → PaymentLogo instead of the icon
   const _DropItem({
     required this.value,
     required this.label,
     required this.subtitle,
     required this.icon,
+    this.logo,
   });
 }
 
@@ -1292,6 +1300,9 @@ class _AppDropdown<T> extends StatelessWidget {
                   padding: EdgeInsets.symmetric(
                       horizontal: 20, vertical: 14),
                   child: Row(children: [
+                    if (item.logo != null)
+                      PaymentLogo(method: item.logo!, size: 40)
+                    else
                     Container(
                       width: 40, height: 40,
                       decoration: BoxDecoration(
@@ -2136,8 +2147,7 @@ class _DeliveryConfirmDialog extends StatelessWidget {
       'cash': AppLocalizations.of(context).cash,
       'wallet': AppLocalizations.of(context).wallet,
       'aba': AppLocalizations.of(context).abaPay,
-      'wing': AppLocalizations.of(context).wingMoney,
-      'other_online': AppLocalizations.of(context).otherOnline,
+      'acleda': AppLocalizations.of(context).acleda,
     }[paymentMethod] ?? paymentMethod;
 
     final String sizeLabel = {
@@ -2351,8 +2361,7 @@ class _MovingConfirmDialog extends StatelessWidget {
       'cash': AppLocalizations.of(context).cash,
       'wallet': AppLocalizations.of(context).wallet,
       'aba': AppLocalizations.of(context).abaPay,
-      'wing': AppLocalizations.of(context).wingMoney,
-      'other_online': AppLocalizations.of(context).otherOnline,
+      'acleda': AppLocalizations.of(context).acleda,
     }[paymentMethod] ?? paymentMethod;
 
     return Dialog(

@@ -203,7 +203,13 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
           ),
 
           // ── Body ───────────────────────────────────────────────────────
-          Expanded(child: _buildBody()),
+          Expanded(
+            child: RefreshIndicator(
+              color: AppTheme.accent,
+              onRefresh: () => _loadTrips(reset: true),
+              child: _buildBody(),
+            ),
+          ),
         ],
       ),
     );
@@ -704,6 +710,7 @@ class _GroupedList extends StatelessWidget {
       items.add(_LoadMoreButton(loading: loadingMore, onTap: onLoadMore));
     }
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(), // pull to refresh
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: items,
     );
@@ -727,6 +734,7 @@ class _FlatList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(), // pull to refresh
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         itemCount: trips.length + (hasMore ? 1 : 0),
         itemBuilder: (_, i) {

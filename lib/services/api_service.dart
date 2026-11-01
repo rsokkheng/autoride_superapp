@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../utils/phone_utils.dart';
 import '../screens/auth/welcome_screen.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -78,6 +79,16 @@ class ApiService {
         _refreshingFuture = null;
       }
     }();
+  }
+
+  /// The list in a response: `data` itself, or `data[key]` — most endpoints
+  /// wrap lists as `{data: {key: [...]}}`; casting that Map straight to a
+  /// List threw and left the screen empty.
+  static List<dynamic> _dataList(Map<String, dynamic> body, String key) {
+    final data = body['data'];
+    if (data is List) return data;
+    if (data is Map && data[key] is List) return data[key] as List;
+    return const [];
   }
 
   static Future<_RawResponse> _rawGet(
@@ -1694,13 +1705,22 @@ class ApiService {
     required double longitude,
     double? heading,
   }) async {
+    // POST /driver/location saves the position (driver's current location,
+    // Redis GEO, Firestore drivers_live) — what the customer's tracking map
+    // reads. The old /tracking/deliveries/{id} route never existed (404) and
+    // /movings/{id}/track only reads, so delivery positions were never saved.
     final token = await getToken();
     if (token == null) return;
-    await _rawPost('/tracking/deliveries/$deliveryId', {
-      'latitude':  latitude,
-      'longitude': longitude,
-      if (heading != null) 'heading': heading,
-    }, token: token);
+    try {
+      await _rawPost('/driver/location', {
+        'delivery_id': deliveryId,
+        'latitude':    latitude,
+        'longitude':   longitude,
+        if (heading != null && heading >= 0) 'heading': heading,
+      }, token: token);
+    } catch (e) {
+      AppLog.w('API', 'updateDeliveryLocation failed: $e');
+    }
   }
 
   static Future<DeliveryModel> rateDelivery(
@@ -2404,13 +2424,9 @@ class ApiService {
     required double longitude,
     double? heading,
   }) async {
-    final token = await getToken();
-    if (token == null) return;
-    // Endpoint: POST /movings/{id}/track — fields: lat, lng
-    await _rawPost('/movings/$movingId/track', {
-      'lat': latitude,
-      'lng': longitude,
-    }, token: token);
+    // Moving jobs are deliveries server-side — same position push.
+    await updateDeliveryLocation(movingId,
+        latitude: latitude, longitude: longitude, heading: heading);
   }
 
   static Future<DeliveryModel> rateMoving(
@@ -3228,6 +3244,10 @@ class ApiService {
 
   /// Returns the sent phone and (in dev) the OTP code.
   static Future<({String phone, int? code})> sendOtp(String phone) async {
+    // Each OTP is a paid SMS — refuse anything that isn't a real Cambodian
+    // mobile number before it reaches the server (which checks again).
+    final phoneError = validateLocalPhone(normalizeLocalPhone(phone));
+    if (phoneError != null) throw ApiException(phoneError, 422);
     final raw = await _rawPost('/auth/otp/send', {'phone': phone});
 
     final Map<String, dynamic> body;
@@ -3771,7 +3791,7 @@ class ApiService {
   static Future<ShareTripResult> shareDelivery(int deliveryId) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw = await _rawPost('/deliveries/$deliveryId/share', {}, token: token);
+    final raw = await _rawGet('/deliveries/$deliveryId/share', token: token); // GET mints the link on demand
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
       final data = (body['data'] as Map<String, dynamic>?) ?? body;
@@ -4117,7 +4137,7 @@ class ApiService {
     final raw  = await _rawGet('/deliveries/$deliveryId/stops', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _dataList(body, 'stops');
       return list.whereType<Map<String, dynamic>>().map(DeliveryStopModel.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
@@ -4340,7 +4360,7 @@ class ApiService {
     final raw  = await _rawGet('/driver/documents', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _dataList(body, 'documents');
       return list.whereType<Map<String, dynamic>>().map(DriverDocument.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
@@ -4368,7 +4388,7 @@ class ApiService {
     final raw  = await _rawGet('/admin/drivers/pending', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _dataList(body, 'drivers');
       return list.whereType<Map<String, dynamic>>().toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
@@ -4427,7 +4447,7 @@ class ApiService {
     final raw  = await _rawGet('/driver/heatmap', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _dataList(body, 'points');
       return list.whereType<Map<String, dynamic>>().map(HeatMapPoint.fromJson).toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
@@ -5044,7 +5064,7 @@ class ApiService {
   static Future<Map<String, dynamic>> updateAccessibilitySettings(Map<String, dynamic> data) async {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
-    final raw  = await _rawPatch('/accessibility', data, token: token);
+    final raw  = await _rawPut('/accessibility', data, token: token); // backend route is PUT
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
     throw ApiException(body['message'] as String? ?? 'Update failed.', raw.statusCode);
@@ -5127,7 +5147,7 @@ class ApiService {
     final raw  = await _rawGet('/driver/withdrawals', token: token);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200) {
-      final list = (body['data'] as List<dynamic>?) ?? [];
+      final list = _dataList(body, 'withdrawals');
       return list.whereType<Map<String, dynamic>>().toList();
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);

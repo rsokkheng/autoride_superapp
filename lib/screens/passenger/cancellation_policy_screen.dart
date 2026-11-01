@@ -122,7 +122,11 @@ class _CancellationPolicyScreenState extends State<CancellationPolicyScreen> {
       appBar: AppBar(title: Text(AppLocalizations.of(context).cancellationPolicyTitle)),
       body: Column(children: [
         Expanded(
-          child: ListView(
+          child: RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: () async => _reload(),
+        child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
               Container(
@@ -149,6 +153,7 @@ class _CancellationPolicyScreenState extends State<CancellationPolicyScreen> {
               const SizedBox(height: 16),
             ],
           ),
+      ),
         ),
         Padding(
           padding: EdgeInsets.fromLTRB(

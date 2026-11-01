@@ -192,7 +192,11 @@ class _GroupView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    return RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: () async => onReload(),
+        child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
         // Group header
@@ -257,7 +261,8 @@ class _GroupView extends StatelessWidget {
             ),
           )),
       ],
-    );
+    ),
+      );
   }
 
   void _bookForMember(BuildContext context, FamilyMember m) {

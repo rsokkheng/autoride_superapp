@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
 import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -36,6 +37,8 @@ import 'driver_missed_requests_screen.dart';
 import 'driver_earnings_screen.dart';
 import 'helmet_check_screen.dart';
 import '../../widgets/delete_account_dialog.dart';
+import '../../widgets/wallet_txn_tile.dart';
+import 'driver_transactions_screen.dart';
 
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
@@ -44,7 +47,7 @@ class DriverHomeScreen extends StatefulWidget {
   State<DriverHomeScreen> createState() => _DriverHomeScreenState();
 }
 
-class _DriverHomeScreenState extends State<DriverHomeScreen> {
+class _DriverHomeScreenState extends State<DriverHomeScreen> with WidgetsBindingObserver {
   int          _tab           = 0;
   DriverStatus _driverStatus  = DriverStatus.online;
   bool         _togglingOnline = false;
@@ -64,8 +67,22 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadGoOnlineGate();
     _loadModes();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Wallet may have changed while away (top-up approved, withdrawal rejected
+  // and refunded…) — refresh the go-online gate.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadGoOnlineGate();
   }
 
   static const _kModesPref = 'driver_service_modes'; // "ride,delivery,rental" as 1/0
@@ -104,13 +121,45 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         _walletBalanceKhr = status.walletBalanceKhr;
         _minBalanceKhr    = status.minBalanceKhr;
       });
+      // Balance fell under the minimum (e.g. a withdrawal) while online —
+      // the server already took the driver offline; match it here.
+      if (!status.canGoOnline && _driverStatus == DriverStatus.online) _onForcedOffline();
     } catch (_) {
       // Fail open — don't block the dashboard if this check fails; the
       // backend still enforces the gate on the actual go-online call.
     }
   }
 
-  void _showTopUpRequired({String? message, int? shortByKhr}) {
+  // After a withdrawal: if the wallet is now under the minimum, tell the
+  // driver they can't go online until they top up — online drivers are also
+  // switched offline (the server already did it).
+  Future<void> _afterWithdrawal() async {
+    final wasOnline = _driverStatus == DriverStatus.online;
+    await _loadGoOnlineGate(); // online → _onForcedOffline shows the notice
+    if (!mounted || wasOnline || _canGoOnline) return;
+    final l = AppLocalizations.of(context);
+    _showTopUpRequired(
+      title: l.drvLowBalanceOfflineTitle,
+      message: l.drvLowBalanceOfflineMsg(AppTheme.khr(_walletBalanceKhr), AppTheme.khr(_minBalanceKhr)),
+    );
+  }
+
+  // Server switched the driver offline (wallet under the minimum balance).
+  Future<void> _onForcedOffline() async {
+    if (!mounted || _driverStatus != DriverStatus.online) return;
+    setState(() { _driverStatus = DriverStatus.offline; _canGoOnline = false; });
+    final user = await ApiService.getSavedUser();
+    final driverId = user?.id.toString() ?? '';
+    if (driverId.isNotEmpty) await LocationService.instance.stopTracking(driverId);
+    if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    _showTopUpRequired(
+      title: l.drvLowBalanceOfflineTitle,
+      message: l.drvLowBalanceOfflineMsg(AppTheme.khr(_walletBalanceKhr), AppTheme.khr(_minBalanceKhr)),
+    );
+  }
+
+  void _showTopUpRequired({String? title, String? message, int? shortByKhr}) {
     final shortfall = shortByKhr ?? (_minBalanceKhr - _walletBalanceKhr);
     showDialog(
       context: context,
@@ -119,7 +168,7 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         title: Row(children: [
           const Icon(Icons.account_balance_wallet_outlined, color: AppTheme.danger),
           const SizedBox(width: 10),
-          Expanded(child: Text(AppLocalizations.of(context).topUpRequired, style: TextStyle(fontWeight: FontWeight.w800))),
+          Expanded(child: Text(title ?? AppLocalizations.of(context).topUpRequired, style: TextStyle(fontWeight: FontWeight.w800))),
         ]),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
@@ -168,8 +217,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
   Future<void> _toggleOnline(bool value) async {
     if (_togglingOnline || _driverStatus == DriverStatus.busy) return;
     if (value && !_canGoOnline) {
-      _showTopUpRequired();
-      return;
+      // The cached gate can be stale — e.g. admin rejected a withdrawal and
+      // the money came back. Ask the server before telling them to top up.
+      await _loadGoOnlineGate();
+      if (!mounted) return;
+      if (!_canGoOnline) {
+        _showTopUpRequired();
+        return;
+      }
     }
     setState(() => _togglingOnline = true);
     try {
@@ -287,8 +342,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         onBusy:         _setBusy,
         onTripCompleted: _setOnlineAfterTrip,
         onOpenTab:      (i) => setState(() => _tab = i),
+        onForcedOffline: () { _loadGoOnlineGate().then((_) => _onForcedOffline()); },
       ),
-      _DriverEarnings(onWalletChanged: _loadGoOnlineGate),
+      _DriverEarnings(onWalletChanged: _loadGoOnlineGate, onWithdrawn: _afterWithdrawal),
       const DriverMissionsScreen(),
       ChargingStationsScreen(isDriver: true, onBack: () => setState(() => _tab = 0)),
       _DriverProfile(onGoToEarnings: () => setState(() => _tab = 1),
@@ -421,6 +477,7 @@ class _DriverDashboard extends StatefulWidget {
   final VoidCallback onBusy;
   final VoidCallback onTripCompleted;
   final ValueChanged<int> onOpenTab;
+  final VoidCallback onForcedOffline;
 
   const _DriverDashboard({
     required this.driverStatus,
@@ -434,6 +491,7 @@ class _DriverDashboard extends StatefulWidget {
     required this.onBusy,
     required this.onTripCompleted,
     required this.onOpenTab,
+    required this.onForcedOffline,
   });
 
   bool get isOnline => driverStatus != DriverStatus.offline;
@@ -518,6 +576,11 @@ class _DriverDashboardState extends State<_DriverDashboard>
       _offerSub = RealtimeService.instance.subscribe(
         'driver.$id',
         (event, data) {
+          if (event == 'driver.forced_offline') {
+            setState(() { _pendingRide = null; _pendingDelivery = null; _pendingRental = null; });
+            widget.onForcedOffline();
+            return;
+          }
           _onOfferWithdrawn(event, data);
           _requestPoller.pokeNow();
         },
@@ -1212,7 +1275,11 @@ class _DriverDashboardState extends State<_DriverDashboard>
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: SingleChildScrollView(
+      child: RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1535,6 +1602,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
             const PromoEventsSection(),
           ],
         ),
+      ),
       ),
     );
   }
@@ -2568,7 +2636,8 @@ class _RentalRequestCardState extends State<_RentalRequestCard> {
 // ─── Earnings tab ─────────────────────────────────────────────────────────────
 class _DriverEarnings extends StatefulWidget {
   final VoidCallback? onWalletChanged;
-  const _DriverEarnings({this.onWalletChanged});
+  final VoidCallback? onWithdrawn;
+  const _DriverEarnings({this.onWalletChanged, this.onWithdrawn});
 
   @override
   State<_DriverEarnings> createState() => _DriverEarningsState();
@@ -2588,18 +2657,6 @@ class _DriverEarningsState extends State<_DriverEarnings> {
   bool _txLoading     = false;
   bool _txLoadingMore = false;
   String? _txError;
-  bool _showAllTx     = false; // false = today only, true = full history
-
-  bool _isToday(String createdAt) {
-    final dt = DateTime.tryParse(createdAt)?.toLocal();
-    if (dt == null) return false;
-    final now = DateTime.now();
-    return dt.year == now.year && dt.month == now.month && dt.day == now.day;
-  }
-
-  List<WalletTransactionModel> get _visibleTx => _showAllTx
-      ? _transactions
-      : _transactions.where((t) => _isToday(t.createdAt)).toList();
 
   // No BuildContext at field-init time — resolved to the localized default
   // in didChangeDependencies below.
@@ -2621,8 +2678,6 @@ class _DriverEarningsState extends State<_DriverEarnings> {
   List<Map<String, Object>> _banksFor(AppLocalizations l) => [
     {'name': l.abaBank,    'icon': Icons.account_balance,        'color': const Color(0xFF00D4AA), 'method': 'aba'},
     {'name': l.acledaBank, 'icon': Icons.account_balance_wallet, 'color': const Color(0xFF2196F3), 'method': 'acleda'},
-    {'name': l.wingMoney,  'icon': Icons.phone_android,          'color': const Color(0xFFFF6B35), 'method': 'wing'},
-    {'name': l.canadiaBank,'icon': Icons.credit_card,            'color': const Color(0xFF9C27B0), 'method': 'bank_transfer'},
   ];
 
   String _bankMethod(AppLocalizations l) =>
@@ -2670,17 +2725,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Row(children: [
-                  Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: isSel
-                          ? (b['color'] as Color).withValues(alpha: 0.12)
-                          : ctx.appCardBg,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(b['icon'] as IconData,
-                        color: isSel ? b['color'] as Color : Colors.grey, size: 20),
-                  ),
+                  PaymentLogo(method: b['method'] as String, size: 40),
                   const SizedBox(width: 12),
                   Expanded(child: Text(name, style: TextStyle(
                       color: ctx.appTextPrimary, fontWeight: FontWeight.w600, fontSize: 14))),
@@ -2886,6 +2931,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
       ));
       // Refresh full data to reflect any pending-payout state from backend
       _loadAll();
+      widget.onWithdrawn?.call();
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _withdrawing = false);
@@ -3014,88 +3060,6 @@ class _DriverEarningsState extends State<_DriverEarnings> {
             ),
             SizedBox(height: 20),
 
-            // ── Transaction history ───────────────────────────────────────
-            Row(children: [
-              Expanded(child: SectionHeader(
-                  title: _showAllTx ? AppLocalizations.of(context).transactionHistory : AppLocalizations.of(context).drvTodaysTransactions)),
-              if (_showAllTx && _total > 0)
-                Text(AppLocalizations.of(context).drvTotalCount(_total),
-                    style: TextStyle(
-                        color: context.appTextSecondary, fontSize: 12)),
-              if (!_showAllTx)
-                TextButton(
-                  onPressed: () => setState(() => _showAllTx = true),
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero,
-                      minimumSize: Size(0, 0),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                  child: Text(AppLocalizations.of(context).showAll,
-                      style: TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w600)),
-                ),
-            ]),
-            SizedBox(height: 14),
-
-            if (_txLoading)
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: CircularProgressIndicator(
-                      color: AppTheme.accentOrange),
-                ),
-              )
-            else if (_txError != null)
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                    color: context.appSurface,
-                    borderRadius: BorderRadius.circular(14)),
-                child: Column(children: [
-                  Text(_txError!,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: context.appTextSecondary, fontSize: 13)),
-                  SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => _loadTransactions(reset: true),
-                    child: Text(AppLocalizations.of(context).retry,
-                        style: TextStyle(color: AppTheme.accentOrange)),
-                  ),
-                ]),
-              )
-            else if (_visibleTx.isEmpty)
-              Container(
-                padding: EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                    color: context.appSurface,
-                    borderRadius: BorderRadius.circular(14)),
-                child: Center(
-                  child: Text(_showAllTx ? AppLocalizations.of(context).noTransactionsYet : AppLocalizations.of(context).noTransactionsToday,
-                      style: TextStyle(color: context.appTextSecondary)),
-                ),
-              )
-            else ...[
-              ..._visibleTx.map((t) => _TxnTile(txn: t)),
-              if (_showAllTx && _currentPage < _lastPage)
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Center(
-                    child: _txLoadingMore
-                        ? CircularProgressIndicator(
-                            color: AppTheme.accentOrange)
-                        : TextButton.icon(
-                            onPressed: () =>
-                                _loadTransactions(reset: false),
-                            icon: Icon(Icons.expand_more,
-                                color: AppTheme.accentOrange),
-                            label: Text(AppLocalizations.of(context).loadMore,
-                                style: TextStyle(
-                                    color: AppTheme.accentOrange)),
-                          ),
-                  ),
-                ),
-            ],
-
-            SizedBox(height: 20),
-
             // ── Instant withdrawal ────────────────────────────────────────
             SectionHeader(title: AppLocalizations.of(context).instantWithdrawal),
             SizedBox(height: 12),
@@ -3131,8 +3095,7 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                     border: Border.all(color: context.appCardBg),
                   ),
                   child: Row(children: [
-                    Icon(selected['icon'] as IconData,
-                        color: selected['color'] as Color, size: 22),
+                    PaymentLogo(method: selected['method'] as String, size: 34),
                     SizedBox(width: 12),
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(AppLocalizations.of(context).bank, style: TextStyle(
@@ -3200,6 +3163,71 @@ class _DriverEarningsState extends State<_DriverEarnings> {
                   style: TextStyle(
                       color: context.appTextSecondary, fontSize: 12)),
             ),
+            SizedBox(height: 24),
+
+            // ── Recent transactions (latest 5) ─────────────────────────────
+            // The full list lives on its own page, so the withdraw button
+            // above never ends up below a long scroll.
+            Row(children: [
+              Expanded(child: SectionHeader(title: AppLocalizations.of(context).recentTransactions)),
+              if (_transactions.isNotEmpty)
+                TextButton(
+                  onPressed: () async {
+                    await Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const DriverTransactionsScreen()));
+                    if (mounted) _loadAll();
+                  },
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero,
+                      minimumSize: Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                  child: Text(
+                      _total > 5 ? '${AppLocalizations.of(context).seeAll} ($_total)' : AppLocalizations.of(context).seeAll,
+                      style: TextStyle(color: AppTheme.accentOrange, fontWeight: FontWeight.w600)),
+                ),
+            ]),
+            SizedBox(height: 14),
+
+            if (_txLoading)
+              Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: CircularProgressIndicator(
+                      color: AppTheme.accentOrange),
+                ),
+              )
+            else if (_txError != null)
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(14)),
+                child: Column(children: [
+                  Text(_txError!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          color: context.appTextSecondary, fontSize: 13)),
+                  SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => _loadTransactions(reset: true),
+                    child: Text(AppLocalizations.of(context).retry,
+                        style: TextStyle(color: AppTheme.accentOrange)),
+                  ),
+                ]),
+              )
+            else if (_transactions.isEmpty)
+              Container(
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(14)),
+                child: Center(
+                  child: Text(AppLocalizations.of(context).noTransactionsYet,
+                      style: TextStyle(color: context.appTextSecondary)),
+                ),
+              )
+            else
+              ..._transactions.take(5).map((t) => WalletTxnTile(txn: t)),
+            SizedBox(height: 8),
           ]),
         ),
       ),
@@ -3227,130 +3255,6 @@ class _EarningItem extends StatelessWidget {
             style: TextStyle(
                 color: labelColor ?? context.appTextSecondary, fontSize: 10)),
       ]);
-}
-
-class _TxnTile extends StatelessWidget {
-  final WalletTransactionModel txn;
-
-  const _TxnTile({required this.txn});
-
-  IconData get _icon {
-    switch (txn.type) {
-      case 'trip_earning':        return Icons.electric_rickshaw;
-      case 'platform_commission': return Icons.percent;
-      case 'bonus':               return Icons.emoji_events;
-      case 'top_up':              return Icons.add_circle_outline;
-      case 'withdrawal':          return Icons.account_balance_outlined;
-      case 'refund':              return Icons.undo;
-      default:                    return Icons.swap_horiz;
-    }
-  }
-
-  Color get _statusColor {
-    switch (txn.status) {
-      case 'completed':  return AppTheme.success;
-      case 'pending':    return AppTheme.warning;
-      case 'processing': return AppTheme.accentOrange;
-      case 'failed':
-      case 'rejected':
-      case 'cancelled':  return AppTheme.danger;
-      default:            return Colors.grey;
-    }
-  }
-
-  IconData get _statusIcon {
-    switch (txn.status) {
-      case 'completed':  return Icons.check_circle_rounded;
-      case 'pending':     return Icons.schedule_rounded;
-      case 'processing': return Icons.autorenew_rounded;
-      case 'failed':
-      case 'rejected':
-      case 'cancelled':  return Icons.cancel_rounded;
-      default:            return Icons.circle;
-    }
-  }
-
-  String get _statusLabel =>
-      txn.status.isEmpty ? '' : txn.status[0].toUpperCase() + txn.status.substring(1);
-
-  @override
-  Widget build(BuildContext context) {
-    final isCredit    = txn.isCredit;
-    final itemColor   = isCredit ? AppTheme.success : AppTheme.accentOrange;
-    final statusColor = _statusColor;
-    final isPending    = txn.status == 'pending' || txn.status == 'processing';
-    final amountStr = isCredit
-        ? '+${AppTheme.khr(txn.amount)}'
-        : '-${AppTheme.khr(txn.amount)}';
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 10),
-      padding: EdgeInsets.all(14),
-      decoration: BoxDecoration(
-          color: context.appSurface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border(left: BorderSide(
-              color: isPending ? statusColor : Colors.transparent, width: 3))),
-      child: Row(children: [
-        Container(
-          padding: EdgeInsets.all(10),
-          decoration: BoxDecoration(
-              color: itemColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12)),
-          child: Icon(_icon, color: itemColor, size: 18),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(txn.displayLabel,
-                    style: TextStyle(
-                        color: context.appTextPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                SizedBox(height: 3),
-                Row(children: [
-                  Text(txn.formattedDate,
-                      style: TextStyle(
-                          color: context.appTextSecondary,
-                          fontSize: 11)),
-                  SizedBox(width: 8),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6)),
-                    child: Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(_statusIcon, color: statusColor, size: 10),
-                      const SizedBox(width: 3),
-                      Text(_statusLabel,
-                          style: TextStyle(
-                              color: statusColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700)),
-                    ]),
-                  ),
-                ]),
-              ]),
-        ),
-        const SizedBox(width: 8),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(amountStr,
-              style: TextStyle(
-                  color: itemColor,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13)),
-          Text(AppLocalizations.of(context).drvBalanceShort(AppTheme.khr(txn.balanceAfter)),
-              style: TextStyle(
-                  color: context.appTextSecondary, fontSize: 10)),
-        ]),
-      ]),
-    );
-  }
 }
 
 // ─── Driver profile ───────────────────────────────────────────────────────────
@@ -3408,7 +3312,11 @@ class _DriverProfileState extends State<_DriverProfile> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: SingleChildScrollView(
+      child: RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: _loadProfile,
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(20),
         child: Column(children: [
           SizedBox(height: 20),
@@ -3526,6 +3434,7 @@ class _DriverProfileState extends State<_DriverProfile> {
             ]);
           }),
         ]),
+      ),
       ),
     );
   }

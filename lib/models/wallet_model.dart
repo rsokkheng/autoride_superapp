@@ -57,17 +57,37 @@ class WalletTransactionModel {
   bool get isCredit => direction == 'credit';
   bool get isDebit  => direction == 'debit';
 
+  /// Translated title by transaction type. The server's `note` is English
+  /// ("Top-up via cash", "Withdrawal request hold"), so it is only the
+  /// fallback for types the app doesn't know yet.
   String get displayLabel {
-    if (note != null && note!.isNotEmpty) return note!;
     switch (type) {
-      case 'top_up':              return l10n.trWalletTopUp;
+      case 'top_up':
+      case 'topup':               return l10n.trWalletTopUp;
       case 'trip_earning':        return l10n.trTripEarning;
       case 'platform_commission': return l10n.trPlatformFee;
       case 'bonus':               return l10n.trBonusCredit;
-      case 'trip_payment':        return l10n.trTripPayment;
+      case 'trip_payment':
+      case 'ride_payment':        return l10n.trTripPayment;
       case 'refund':              return l10n.trRefund;
-      default:                    return type.replaceAll('_', ' ');
+      case 'withdrawal_hold':     return status == 'pending' ? l10n.txWithdrawalPending : l10n.txWithdrawal;
+      case 'withdrawal':          return l10n.txWithdrawal;
+      case 'withdrawal_rejected':
+      case 'withdrawal_refund':   return l10n.txWithdrawalReturned;
+      case 'transfer_in':         return l10n.txTransferIn;
+      case 'transfer_out':        return l10n.txTransferOut;
+      case 'tip_in':              return l10n.txTipIn;
+      case 'tip_out':             return l10n.txTipOut;
+      case 'salary':              return l10n.txSalary;
+      case 'delivery_payment':    return l10n.txDeliveryPayment;
+      case 'cancellation_fee':    return l10n.txCancellationFee;
+      case 'admin_credit':        return l10n.txAdminCredit;
+      case 'referral_reward':     return l10n.txReferralReward;
+      case 'company_share':       return l10n.txCompanyShare;
+      case 'loyalty_redemption':  return l10n.txLoyaltyRedemption;
     }
+    if (note != null && note!.isNotEmpty) return note!;
+    return type.replaceAll('_', ' ');
   }
 
   String get formattedDate {
@@ -217,6 +237,8 @@ class WalletModel {
   final Map<String, dynamic>? pendingWithdrawal;
   // Go-online gate — also present on /wallet and /wallet/balance responses.
   final bool    canGoOnline;
+  // Top-up waiting for admin approval ({id, amount, method, created_at}).
+  final Map<String, dynamic>? pendingTopUp;
 
   const WalletModel({
     required this.balance,
@@ -226,9 +248,11 @@ class WalletModel {
     this.minWithdrawalKhr  = 0,
     this.pendingWithdrawal,
     this.canGoOnline       = true,
+    this.pendingTopUp,
   });
 
   bool get hasPendingWithdrawal => pendingWithdrawal != null;
+  bool get hasPendingTopUp      => pendingTopUp != null;
 
   factory WalletModel.fromJson(Map<String, dynamic> json) {
     final rawBalance = json['balance'] ?? json['wallet_balance'] ?? json['balance_khr'];
@@ -257,6 +281,7 @@ class WalletModel {
           : int.tryParse(minWithdrawal?.toString() ?? '') ?? 0,
       pendingWithdrawal: json['pending_withdrawal'] as Map<String, dynamic>?,
       canGoOnline:  json['can_go_online'] as bool? ?? true,
+      pendingTopUp: json['pending_topup'] as Map<String, dynamic>?,
     );
   }
 }

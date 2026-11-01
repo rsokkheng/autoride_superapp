@@ -576,6 +576,33 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
       'trSurchargesLine': 'Surcharges & minimum fare',
       'trMeterSoFar': 'Distance so far',
+      'txStatusPending': 'Pending',
+      'txStatusProcessing': 'Processing',
+      'txStatusFailed': 'Failed',
+      'txStatusRejected': 'Rejected',
+      'txFilterIncome': 'Income',
+      'txFilterDeductions': 'Deductions',
+      'txNoneForFilter': 'No transactions here yet.',
+      'txWithdrawalPending': 'Withdrawal (waiting for approval)',
+      'txWithdrawal': 'Withdrawal',
+      'txWithdrawalReturned': 'Withdrawal rejected — money returned',
+      'txTransferIn': 'Money received',
+      'txTransferOut': 'Money sent',
+      'txTipIn': 'Tip received',
+      'txTipOut': 'Tip',
+      'txSalary': 'Salary',
+      'txDeliveryPayment': 'Delivery payment',
+      'txCancellationFee': 'Cancellation fee',
+      'txAdminCredit': 'Credit from support',
+      'txReferralReward': 'Referral reward',
+      'txCompanyShare': 'Company share',
+      'txLoyaltyRedemption': 'Points redeemed',
+      'topUpPendingTitle': 'Top-up waiting for approval',
+      'topUpPendingStatus': 'Waiting for approval',
+      'topUpPendingBlocked': 'You already have a top-up waiting for approval. Please wait until it is approved.',
+      'drvLowBalanceOfflineTitle': 'Money withdrawn — you are offline',
+      'drvLowBalanceOfflineMsg': 'Your wallet now has {balance}, below the {min} needed to go online and accept jobs. Please top up your wallet to work again.',
+      'drvTripCancelledTitle': 'Trip cancelled',
       'drvRequestNoLongerAvailable': 'This request is no longer available — it was cancelled or taken by another driver.',
       'drvSenderCancelledDelivery': 'The customer cancelled that delivery request.',
       'trCancelledStatus': 'Cancelled',
@@ -1019,7 +1046,7 @@ class AppLocalizations {
       'minimumTransferAmountIs1': 'Minimum transfer amount is 1,000 KHR.',
       'noTransactionsYet': 'No transactions yet',
       'recentTransactions': 'Recent Transactions',
-      'reload': 'Reload',
+      'reload': 'Top up',
       'send': 'Send',
       'sendMoney': 'Send Money',
       'sentSuccessfully': 'Sent successfully',
@@ -2717,6 +2744,34 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
       'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
       'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
+      'txStatusPending': 'កំពុងរង់ចាំ',
+      'txStatusProcessing': 'កំពុងដំណើរការ',
+      'txStatusFailed': 'បរាជ័យ',
+      'txStatusRejected': 'បានបដិសេធ',
+      'txFilterIncome': 'ចំណូល',
+      'txFilterDeductions': 'ការដក',
+      'txNoneForFilter': 'មិនទាន់មានប្រតិបត្តិការនៅឡើយ។',
+      'txWithdrawalPending': 'ដកប្រាក់ (កំពុងរង់ចាំអនុម័ត)',
+      'txWithdrawal': 'ដកប្រាក់',
+      'txWithdrawalReturned': 'ការដកប្រាក់ត្រូវបានបដិសេធ — បានប្រគល់ប្រាក់វិញ',
+      'txTransferIn': 'បានទទួលប្រាក់',
+      'txTransferOut': 'បានផ្ញើប្រាក់',
+      'txTipIn': 'បានទទួលប្រាក់ទឹកតែ',
+      'txTipOut': 'ប្រាក់ទឹកតែ',
+      'txSalary': 'ប្រាក់ខែ',
+      'txDeliveryPayment': 'ការទូទាត់ការដឹកជញ្ជូន',
+      'txCancellationFee': 'ថ្លៃលុបចោល',
+      'txAdminCredit': 'ប្រាក់បញ្ចូលពីក្រុមការងារ',
+      'txReferralReward': 'រង្វាន់ណែនាំមិត្ត',
+      'txCompanyShare': 'ចំណែកក្រុមហ៊ុន',
+      'txLoyaltyRedemption': 'ប្តូរពិន្ទុ',
+      'topUpPendingTitle': 'កំពុងរង់ចាំការអនុម័តបញ្ចូលប្រាក់',
+      'topUpPendingStatus': 'កំពុងរង់ចាំអនុម័ត',
+      'topUpPendingBlocked': 'អ្នកមានសំណើបញ្ចូលប្រាក់កំពុងរង់ចាំការអនុម័តរួចហើយ។ សូមរង់ចាំរហូតដល់ត្រូវបានអនុម័ត។',
+      'bankTransfer': 'ផ្ទេរតាមធនាគារ',
+      'drvLowBalanceOfflineTitle': 'បានដកប្រាក់ចេញ — អ្នកត្រូវបានបិទអនឡាញ',
+      'drvLowBalanceOfflineMsg': 'កាបូបរបស់អ្នកនៅសល់ {balance} តិចជាង {min} ដែលត្រូវការដើម្បីបើកអនឡាញ និងទទួលការដឹក។ សូមបញ្ចូលប្រាក់ក្នុងកាបូប ដើម្បីធ្វើការបានវិញ។',
+      'drvTripCancelledTitle': 'ដំណើរត្រូវបានលុបចោល',
       'drvRequestNoLongerAvailable': 'ការស្នើនេះលែងមានទៀតហើយ — ត្រូវបានលុបចោល ឬអ្នកបើកបរផ្សេងបានទទួល។',
       'drvSenderCancelledDelivery': 'អតិថិជនបានលុបចោលការកម្ម៉ង់ដឹកជញ្ជូននេះ។',
       'trCancelledStatus': 'បានលុបចោល',
@@ -3163,7 +3218,7 @@ class AppLocalizations {
       'minimumTransferAmountIs1': 'វេរទឹកប្រាក់ចាប់ពី 1,000 រៀល.',
       'noTransactionsYet': 'មិនមានប្រតិបត្តិការនៅឡើយ',
       'recentTransactions': 'ប្រតិបត្តិការថ្មីៗ',
-      'reload': 'Reload',
+      'reload': 'បញ្ចូលប្រាក់',
       'send': 'ផ្ញើ',
       'sendMoney': 'វេរ ទឹកប្រាក់',
       'sentSuccessfully': 'វេរ ជោគជ័យ',
@@ -3473,7 +3528,6 @@ class AppLocalizations {
       // ── driver_withdrawal_screen messages ──
       'accountName': 'ឈ្មោះគណនី',
       'amount': 'ចំនួន',
-      'bankTransfer': 'ផ្ទេរតាមធនាគារ',
       'enterAValidAmount': 'បញ្ជូលចំនួនឱ្យបានត្រឹមត្រូវ',
       'enterAccountHolderName': 'បញ្ជូលឈ្មោះម្ចាស់គណនី',
       'enterAccountNumber': 'បញ្ជូលលេខគណនី',
@@ -4861,6 +4915,34 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
       'trSurchargesLine': '附加费与最低车费',
       'trMeterSoFar': '目前里程',
+      'txStatusPending': '待处理',
+      'txStatusProcessing': '处理中',
+      'txStatusFailed': '失败',
+      'txStatusRejected': '已拒绝',
+      'txFilterIncome': '收入',
+      'txFilterDeductions': '支出',
+      'txNoneForFilter': '暂无交易。',
+      'txWithdrawalPending': '提现（等待审核）',
+      'txWithdrawal': '提现',
+      'txWithdrawalReturned': '提现被拒绝——已退回',
+      'txTransferIn': '收到转账',
+      'txTransferOut': '转出',
+      'txTipIn': '收到小费',
+      'txTipOut': '小费',
+      'txSalary': '工资',
+      'txDeliveryPayment': '配送付款',
+      'txCancellationFee': '取消费',
+      'txAdminCredit': '客服充值',
+      'txReferralReward': '推荐奖励',
+      'txCompanyShare': '公司分成',
+      'txLoyaltyRedemption': '积分兑换',
+      'topUpPendingTitle': '充值等待审核',
+      'topUpPendingStatus': '等待审核',
+      'topUpPendingBlocked': '您已有一笔充值在等待审核，请等待审核完成。',
+      'bankTransfer': '银行转账',
+      'drvLowBalanceOfflineTitle': '已提现 — 您已下线',
+      'drvLowBalanceOfflineMsg': '您的钱包余额为 {balance}，低于上线接单所需的 {min}。请充值后再接单。',
+      'drvTripCancelledTitle': '行程已取消',
       'drvRequestNoLongerAvailable': '此请求已不可用——已被取消或由其他司机接单。',
       'drvSenderCancelledDelivery': '客户取消了该配送请求。',
       'trCancelledStatus': '已取消',
@@ -5306,7 +5388,7 @@ class AppLocalizations {
       'minimumTransferAmountIs1': '最低转账金额为 1,000 瑞尔',
       'noTransactionsYet': '暂无交易',
       'recentTransactions': '最近交易',
-      'reload': '重新加载',
+      'reload': '充值',
       'send': '发送',
       'sendMoney': '转账',
       'sentSuccessfully': '发送成功',
@@ -5616,7 +5698,6 @@ class AppLocalizations {
       // ── driver_withdrawal_screen messages ──
       'accountName': '账户名称',
       'amount': '金额',
-      'bankTransfer': '银行转账',
       'enterAValidAmount': '请输入有效金额',
       'enterAccountHolderName': '请输入账户持有人姓名',
       'enterAccountNumber': '请输入账号',
@@ -7006,6 +7087,35 @@ class AppLocalizations {
   String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
   String get trSurchargesLine => tr('trSurchargesLine');
   String get trMeterSoFar => tr('trMeterSoFar');
+  String get txStatusPending => tr('txStatusPending');
+  String get txStatusProcessing => tr('txStatusProcessing');
+  String get txStatusFailed => tr('txStatusFailed');
+  String get txStatusRejected => tr('txStatusRejected');
+  String get txFilterIncome => tr('txFilterIncome');
+  String get txFilterDeductions => tr('txFilterDeductions');
+  String get txNoneForFilter => tr('txNoneForFilter');
+  String get txWithdrawalPending => tr('txWithdrawalPending');
+  String get txWithdrawal => tr('txWithdrawal');
+  String get txWithdrawalReturned => tr('txWithdrawalReturned');
+  String get txTransferIn => tr('txTransferIn');
+  String get txTransferOut => tr('txTransferOut');
+  String get txTipIn => tr('txTipIn');
+  String get txTipOut => tr('txTipOut');
+  String get txSalary => tr('txSalary');
+  String get txDeliveryPayment => tr('txDeliveryPayment');
+  String get txCancellationFee => tr('txCancellationFee');
+  String get txAdminCredit => tr('txAdminCredit');
+  String get txReferralReward => tr('txReferralReward');
+  String get txCompanyShare => tr('txCompanyShare');
+  String get txLoyaltyRedemption => tr('txLoyaltyRedemption');
+  String get topUpPendingTitle => tr('topUpPendingTitle');
+  String get topUpPendingStatus => tr('topUpPendingStatus');
+  String get topUpPendingBlocked => tr('topUpPendingBlocked');
+  String get bankTransfer => tr('bankTransfer');
+  String get drvLowBalanceOfflineTitle => tr('drvLowBalanceOfflineTitle');
+  String drvLowBalanceOfflineMsg(String balance, String min) =>
+      _fill('drvLowBalanceOfflineMsg', {'balance': balance, 'min': min});
+  String get drvTripCancelledTitle => tr('drvTripCancelledTitle');
   String get drvRequestNoLongerAvailable => tr('drvRequestNoLongerAvailable');
   String get drvSenderCancelledDelivery => tr('drvSenderCancelledDelivery');
   String get trCancelledStatus => tr('trCancelledStatus');
@@ -7786,7 +7896,6 @@ class AppLocalizations {
   // ── driver_withdrawal_screen messages ──
   String get accountName => tr('accountName');
   String get amount => tr('amount');
-  String get bankTransfer => tr('bankTransfer');
   String get enterAValidAmount => tr('enterAValidAmount');
   String get enterAccountHolderName => tr('enterAccountHolderName');
   String get enterAccountNumber => tr('enterAccountNumber');

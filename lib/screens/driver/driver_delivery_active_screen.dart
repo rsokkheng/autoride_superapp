@@ -10,6 +10,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
+import '../../services/realtime_service.dart';
+import '../../services/notification_service.dart';
 import '../../services/maps_service.dart';
 import '../../models/delivery_model.dart';
 import '../shared/ride_chat_screen.dart';
@@ -78,6 +80,12 @@ class _DriverDeliveryActiveScreenState
   // UI state
   bool _acting       = false;
   bool _completed    = false;
+
+  // Sender / admin cancelling mid-job ends this screen (it used to stay
+  // open with every button still working on a dead job).
+  AdaptivePoller?       _statusPoller;
+  RealtimeSubscription? _statusSub;
+  bool                  _cancelHandled = false;
   DateTime? _lastBackendPush;
 
   // Map data
@@ -115,8 +123,85 @@ class _DriverDeliveryActiveScreenState
     )..addListener(_onMarkerAnimTick);
 
     _initStaticMarkers();
-    if (!widget.readOnly) _startTracking();
+    if (!widget.readOnly) {
+      _startTracking();
+      _startStatusWatch();
+    }
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  void _startStatusWatch() {
+    final poller = _statusPoller = AdaptivePoller(
+      onPoll:       _pollStatus,
+      fastInterval: const Duration(seconds: 5),
+      slowInterval: const Duration(seconds: 10),
+    )..start();
+    _statusSub = RealtimeService.instance.subscribe('delivery.${widget.delivery.id}', (event, data) {
+      if (event != 'delivery.updated') return;
+      if (data['status'] == 'cancelled') {
+        _onCancelled(null);
+      } else {
+        poller.pokeNow();
+      }
+    });
+  }
+
+  void _stopStatusWatch() {
+    _statusPoller?.stop();
+    _statusPoller = null;
+    _statusSub?.cancel();
+    _statusSub = null;
+  }
+
+  Future<void> _pollStatus() async {
+    if (_completed || _cancelHandled) return;
+    try {
+      final d = await ApiService.getDelivery(widget.delivery.id);
+      if (d.isCancelled) _onCancelled(d);
+    } catch (_) {}
+  }
+
+  Future<void> _onCancelled(DeliveryModel? delivery) async {
+    if (!mounted || _cancelHandled || _completed) return;
+    _cancelHandled = true;
+    _stopStatusWatch();
+    LocationService.instance.stopTracking(widget.driverIdStr);
+    delivery ??= await ApiService.getDelivery(widget.delivery.id)
+        .then<DeliveryModel?>((d) => d, onError: (_) => null);
+    if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    final title  = _isMoving ? l.trMovingCancelledTitle : l.trDeliveryCancelledTitle;
+    final body   = delivery?.cancelledBy == 'admin' ? l.trCancelledByAdmin : l.drvSenderCancelledDelivery;
+    final reason = delivery?.cancellationReason;
+    NotificationService.instance.showTripUpdate(title: title, body: body);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        icon: const Icon(Icons.cancel_rounded, color: AppTheme.danger, size: 48),
+        title: Text(title, textAlign: TextAlign.center),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(body, textAlign: TextAlign.center),
+          if (reason != null) ...[
+            const SizedBox(height: 8),
+            Text(l.trCancelReason(reason), textAlign: TextAlign.center,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+          ],
+        ]),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: AppTheme.confirmButtonStyle(),
+              child: Text(l.ok),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
   }
 
   static _DeliveryPhase _phaseFromStatus(String status) {
@@ -138,6 +223,7 @@ class _DriverDeliveryActiveScreenState
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _stopStatusWatch();
     _markerAnimCtrl.dispose();
     if (!widget.readOnly) LocationService.instance.stopTracking(widget.driverIdStr);
     _mapController?.dispose();
@@ -360,7 +446,7 @@ class _DriverDeliveryActiveScreenState
   // ── Workflow actions ───────────────────────────────────────────────────────
 
   Future<void> _onActionTap() async {
-    if (_acting) return;
+    if (_acting || _cancelHandled) return; // cancelled job — nothing to do
     setState(() => _acting = true);
 
     try {
@@ -370,6 +456,9 @@ class _DriverDeliveryActiveScreenState
         await _deliveryAction();
       }
     } on ApiException catch (e) {
+      // Refused because the job was just cancelled? Show the cancel notice instead.
+      await _pollStatus();
+      if (_cancelHandled) return;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(e.message),

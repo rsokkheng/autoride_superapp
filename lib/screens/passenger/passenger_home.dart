@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../main.dart' show routeObserver;
 import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -144,7 +145,7 @@ class _HomeTab extends StatefulWidget {
   State<_HomeTab> createState() => _HomeTabState();
 }
 
-class _HomeTabState extends State<_HomeTab> {
+class _HomeTabState extends State<_HomeTab> with RouteAware, WidgetsBindingObserver {
   static const _gridColumnsPrefKey = 'home_services_grid_columns';
 
   String     _firstName  = '';
@@ -162,12 +163,34 @@ class _HomeTabState extends State<_HomeTab> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _load();
     _loadGridColumns();
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) routeObserver.subscribe(this, route);
+  }
+
+  // Back on the home screen (trip finished, receipt closed, booking
+  // cancelled…) — re-check the active ride. It was only loaded once, so a
+  // finished trip's "ride in progress" banner stayed and led back to its
+  // receipt in a loop.
+  @override
+  void didPopNext() => _loadActiveRide();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadActiveRide();
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
     _slowBannerTimer?.cancel();
     super.dispose();
   }
@@ -795,7 +818,11 @@ class _ProfileTabState extends State<_ProfileTab> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: SingleChildScrollView(
+      child: RefreshIndicator(
+        color: AppTheme.accent,
+        onRefresh: _loadProfile,
+        child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.all(20),
         child: Column(
           children: [
@@ -889,6 +916,7 @@ class _ProfileTabState extends State<_ProfileTab> {
             }),
           ],
         ),
+      ),
       ),
     );
   }

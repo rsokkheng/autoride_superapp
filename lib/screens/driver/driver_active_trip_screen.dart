@@ -11,6 +11,7 @@ import '../../utils/app_log.dart';
 import '../../services/notification_service.dart';
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
+import '../../services/realtime_service.dart';
 import '../../services/maps_service.dart';
 import '../../services/locale_service.dart';
 import '../../services/marker_icon_service.dart';
@@ -77,6 +78,13 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   // Live meter for a no-destination trip: km driven and fare so far, from
   // the server's GPS-track meter — the same numbers the passenger sees.
   Timer?  _meterTimer;
+
+  // Watches the ride's status so a passenger (or admin) cancelling while the
+  // driver is on the way ends this screen — before, nothing changed and every
+  // button kept working on a dead trip.
+  AdaptivePoller?       _statusPoller;
+  RealtimeSubscription? _statusSub;
+  bool                  _cancelHandled = false;
   double? _liveKm;
   int?    _liveFareKhr;
 
@@ -223,11 +231,106 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
       if (mounted) setState(() => _driverIcon = icon);
     });
 
+    _restorePhaseFromRide(); // before the map/route — they depend on the phase
     _initMap();
     _fetchFullRoute();
     _resolveDriverId().then((_) => _startTracking());
     _loadWayStops();
+    _startStatusWatch();
     WidgetsBinding.instance.addObserver(this);
+  }
+
+  // Reopening the app on a trip already under way used to restart at
+  // "heading to pickup" — pick up where the server says the trip is.
+  void _restorePhaseFromRide() {
+    final ride = widget.ride;
+    if (ride == null) return;
+    switch (ride.status) {
+      case 'driver_arrived':
+        _phase = _TripPhase.waitingAtPickup;
+      case 'in_progress':
+        _phase = _TripPhase.inProgress;
+        _tripStartTime  = DateTime.tryParse(ride.startedAt ?? '')?.toLocal() ?? DateTime.now();
+        _tripDistanceKm = (ride.distanceKm ?? 0) > 0 ? ride.distanceKm : null;
+        if (_isMetered) _startLiveMeter();
+    }
+  }
+
+  void _startStatusWatch() {
+    final id = widget.ride?.id;
+    if (id == null) return;
+    final poller = _statusPoller = AdaptivePoller(
+      onPoll:       _pollStatus,
+      fastInterval: const Duration(seconds: 5),
+      slowInterval: const Duration(seconds: 10),
+    )..start();
+    _statusSub = RealtimeService.instance.subscribe('ride.$id', (event, data) {
+      if (event != 'ride.updated') return;
+      if (data['status'] == 'cancelled') {
+        _onRideCancelled(null);
+      } else {
+        poller.pokeNow();
+      }
+    });
+  }
+
+  void _stopStatusWatch() {
+    _statusPoller?.stop();
+    _statusPoller = null;
+    _statusSub?.cancel();
+    _statusSub = null;
+  }
+
+  Future<void> _pollStatus() async {
+    final id = widget.ride?.id;
+    if (id == null || _phase == _TripPhase.completed || _completing) return;
+    try {
+      final ride = await ApiService.getRide(id);
+      if (ride.isCancelled) _onRideCancelled(ride);
+    } catch (_) {
+      // Network blip — the next poll / realtime push will catch it.
+    }
+  }
+
+  Future<void> _onRideCancelled(RideModel? ride) async {
+    if (!mounted || _cancelHandled || _phase == _TripPhase.completed) return;
+    _cancelHandled = true;
+    _stopStatusWatch();
+    _meterTimer?.cancel();
+    LocationService.instance.stopTracking(_driverId);
+    ride ??= await ApiService.getRide(widget.ride!.id).then<RideModel?>((r) => r, onError: (_) => null);
+    if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    final reason = ride?.cancellationReason?.trim() ?? '';
+    NotificationService.instance.showTripUpdate(title: l.drvTripCancelledTitle, body: l.thePassengerCancelledThatRide);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        icon: const Icon(Icons.cancel_rounded, color: AppTheme.danger, size: 48),
+        title: Text(l.drvTripCancelledTitle, textAlign: TextAlign.center),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Text(l.thePassengerCancelledThatRide, textAlign: TextAlign.center),
+          if (reason.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(l.trCancelReason(reason), textAlign: TextAlign.center,
+                style: TextStyle(color: context.appTextSecondary, fontSize: 13)),
+          ],
+        ]),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: AppTheme.confirmButtonStyle(),
+              child: Text(l.ok),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (mounted) _exitTrip();
   }
 
   Future<void> _loadWayStops({int attempt = 0}) async {
@@ -291,6 +394,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     WidgetsBinding.instance.removeObserver(this);
     LocationService.instance.stopTracking(_driverId);
     _meterTimer?.cancel();
+    _stopStatusWatch();
     if (_prevMapsLanguage != null) {
       MapsService.language = _prevMapsLanguage!;
       LocaleService.setLocale(_prevMapsLanguage!);
@@ -770,6 +874,7 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
   }
 
   Future<void> _advancePhase() async {
+    if (_cancelHandled) return; // trip was cancelled — nothing to advance
     if (_phase == _TripPhase.completed) {
       _exitTrip();
       return;
@@ -853,6 +958,12 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           // server and the passenger stuck.
           if (!mounted) return;
           setState(() => _completing = false);
+          // Refused (4xx) — most often the ride was cancelled. Show that and
+          // close the trip instead of offering a Retry that can never work.
+          if (e is ApiException && e.statusCode >= 400 && e.statusCode < 500) {
+            await _pollStatus();
+            if (_cancelHandled || !mounted) return;
+          }
           final l = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(e is ApiException && e.statusCode != 0 && e.message.isNotEmpty
@@ -914,15 +1025,22 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
     }
 
     // Call backend API before advancing phase
+    // A refusal from the server (e.g. the passenger just cancelled) must not
+    // move the screen on — re-check the ride instead. Network errors still
+    // advance, as before, so a flaky connection doesn't block the driver.
     if (_phase == _TripPhase.headingToPickup && widget.ride != null) {
       // Mark arrived at pickup → POST /rides/{id}/arrive
       try {
         await ApiService.arriveAtPickup(widget.ride!.id);
+      } on ApiException catch (e) {
+        if (e.statusCode >= 400 && e.statusCode < 500) { await _pollStatus(); if (_cancelHandled) return; }
       } catch (_) {}
     } else if (_phase == _TripPhase.waitingAtPickup && widget.ride != null) {
       // Passenger on board → POST /rides/{id}/start
       try {
         await ApiService.startTrip(widget.ride!.id);
+      } on ApiException catch (e) {
+        if (e.statusCode >= 400 && e.statusCode < 500) { await _pollStatus(); if (_cancelHandled) return; }
       } catch (_) {}
     }
 
@@ -1431,47 +1549,6 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
           zoomControlsEnabled: false,
         ),
 
-        // ── Turn-by-turn navigation banner (Grab-style) ────────────────────────
-        if (!_navBannerDismissed && !isCompleted && _navSteps.isNotEmpty &&
-            _currentStepIndex < _navSteps.length &&
-            (_phase == _TripPhase.headingToPickup || _phase == _TripPhase.inProgress))
-          Positioned(
-            top: 0, left: 0, right: 0,
-            child: Container(
-              color: const Color(0xFF10151F),
-              padding: EdgeInsets.only(
-                top:    MediaQuery.of(context).padding.top + 10,
-                left:   16, right: 8, bottom: 14,
-              ),
-              child: Row(children: [
-                Icon(_maneuverIcon(_navSteps[_currentStepIndex].maneuver),
-                    color: Colors.white, size: 36),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(_navDistanceLabel(_navSteps[_currentStepIndex]),
-                        style: const TextStyle(color: Colors.white60,
-                            fontSize: 13, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 2),
-                    Text(_navStreetName(_navSteps[_currentStepIndex]),
-                        maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: Colors.white,
-                            fontSize: 19, fontWeight: FontWeight.w800)),
-                  ]),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => _navBannerDismissed = true),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                        color: Colors.white24, shape: BoxShape.circle),
-                    child: const Icon(Icons.close, color: Colors.white, size: 16),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-
         // ── Top bar ───────────────────────────────────────────────────────────
         SafeArea(
           child: Column(children: [
@@ -1573,6 +1650,53 @@ class _DriverActiveTripScreenState extends State<DriverActiveTripScreen>
               ),
             ]),
             ),
+
+            // Turn-by-turn instruction — a card under the top controls. It used
+            // to be a dark full-width bar behind the status bar, with the back
+            // button, phase pill and SOS drawn over its text.
+            if (!_navBannerDismissed && !isCompleted && _navSteps.isNotEmpty &&
+                _currentStepIndex < _navSteps.length &&
+                (_phase == _TripPhase.headingToPickup || _phase == _TripPhase.inProgress))
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                  decoration: BoxDecoration(
+                    color: context.appSurface,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 3))],
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.accent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(_maneuverIcon(_navSteps[_currentStepIndex].maneuver),
+                          color: AppTheme.accent, size: 28),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(_navDistanceLabel(_navSteps[_currentStepIndex]),
+                            style: const TextStyle(color: AppTheme.accent,
+                                fontSize: 13, fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(_navStreetName(_navSteps[_currentStepIndex]),
+                            maxLines: 2, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: context.appTextPrimary,
+                                fontSize: 15, fontWeight: FontWeight.w600, height: 1.3)),
+                      ]),
+                    ),
+                    IconButton(
+                      onPressed: () => setState(() => _navBannerDismissed = true),
+                      visualDensity: VisualDensity.compact,
+                      icon: Icon(Icons.close, color: context.appTextSecondary, size: 18),
+                    ),
+                  ]),
+                ),
+              ),
 
             // Live speed readout (Grab-style) — only while en-route.
             if (!isCompleted &&
