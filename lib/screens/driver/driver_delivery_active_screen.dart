@@ -80,6 +80,7 @@ class _DriverDeliveryActiveScreenState
   // UI state
   bool _acting       = false;
   bool _completed    = false;
+  bool _failed       = false; // "can't deliver" reported — returning to the shop
 
   // Sender / admin cancelling mid-job ends this screen (it used to stay
   // open with every button still working on a dead job).
@@ -115,6 +116,7 @@ class _DriverDeliveryActiveScreenState
   void initState() {
     super.initState();
     _deliveryPhase = _phaseFromStatus(widget.delivery.status);
+    _failed        = widget.delivery.status == 'delivery_failed';
     _movingPhase   = _movingPhaseFromStatus(widget.delivery.status);
 
     _markerAnimCtrl = AnimationController(
@@ -206,7 +208,11 @@ class _DriverDeliveryActiveScreenState
 
   static _DeliveryPhase _phaseFromStatus(String status) {
     switch (status) {
-      case 'in_progress': return _DeliveryPhase.inTransit;
+      case 'in_progress':
+      case 'picked_up':
+      case 'in_transit':
+      case 'delivery_failed': return _DeliveryPhase.inTransit;
+      case 'returned':        return _DeliveryPhase.completed;
       case 'completed':   return _DeliveryPhase.completed;
       default:            return _DeliveryPhase.headingToPickup;
     }
@@ -494,6 +500,12 @@ class _DriverDeliveryActiveScreenState
         break;
 
       case _DeliveryPhase.inTransit:
+        // Could not deliver → the main button is "Returned to shop".
+        if (_failed) {
+          await ApiService.returnDeliveryToShop(widget.delivery.id);
+          await _finishReturned();
+          break;
+        }
         DeliveryModel? completedDelivery;
         try {
           completedDelivery = await ApiService.completeDelivery(widget.delivery.id);
@@ -508,6 +520,82 @@ class _DriverDeliveryActiveScreenState
       case _DeliveryPhase.completed:
         break;
     }
+  }
+
+  /// Driver can't hand the package over — pick a reason, then bring it back.
+  Future<void> _cantDeliver() async {
+    if (_acting) return;
+    final l = AppLocalizations.of(context);
+    final picked = await showModalBottomSheet<(String, String)>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: context.appSurface,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (_) => const _CantDeliverSheet(),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _acting = true);
+    try {
+      await ApiService.failDelivery(widget.delivery.id, reason: picked.$1, note: picked.$2);
+      if (!mounted) return;
+      setState(() => _failed = true);
+      _showPhaseSnack(l.drvReturningTitle);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message), backgroundColor: AppTheme.danger, behavior: SnackBarBehavior.floating));
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  /// Receiver answered after all — finish as a normal delivery.
+  Future<void> _deliveredAfterAll() async {
+    if (_acting) return;
+    setState(() { _acting = true; });
+    try {
+      final done = await ApiService.completeDelivery(widget.delivery.id);
+      if (!mounted) return;
+      setState(() { _failed = false; _deliveryPhase = _DeliveryPhase.completed; _completed = true; });
+      await _showCompleteSummary(done);
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _acting = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message), backgroundColor: AppTheme.danger, behavior: SnackBarBehavior.floating));
+      }
+    } catch (_) {
+      if (mounted) setState(() => _acting = false);
+    }
+  }
+
+  Future<void> _finishReturned() async {
+    _stopStatusWatch();
+    LocationService.instance.stopTracking(widget.driverIdStr);
+    setState(() { _deliveryPhase = _DeliveryPhase.completed; _completed = true; });
+    final l = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        icon: const Icon(Icons.assignment_return_rounded, color: AppTheme.accent, size: 48),
+        title: Text(l.drvReturnDone, textAlign: TextAlign.center),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: AppTheme.confirmButtonStyle(),
+              child: Text(l.ok),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (mounted && Navigator.of(context).canPop()) Navigator.of(context).pop();
   }
 
   Future<void> _movingAction() async {
@@ -644,6 +732,9 @@ class _DriverDeliveryActiveScreenState
             onAction:      _onActionTap,
             etaMinutes:    _etaMinutes,
             readOnly:      widget.readOnly,
+            failed:        _failed,
+            onCantDeliver: _cantDeliver,
+            onDeliveredAnyway: _deliveredAfterAll,
           ),
         ),
       ]),
@@ -708,6 +799,78 @@ class _MapButton extends StatelessWidget {
 
 // ─── Bottom panel ─────────────────────────────────────────────────────────────
 
+/// Reasons a driver could not hand over a package.
+class _CantDeliverSheet extends StatefulWidget {
+  const _CantDeliverSheet();
+
+  @override
+  State<_CantDeliverSheet> createState() => _CantDeliverSheetState();
+}
+
+class _CantDeliverSheetState extends State<_CantDeliverSheet> {
+  String _reason = 'cannot_contact';
+  final _note = TextEditingController();
+
+  @override
+  void dispose() {
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final reasons = [
+      ('cannot_contact', Icons.phone_disabled_rounded, l.pkReasonCannotContact),
+      ('receiver_refused', Icons.do_not_disturb_on_outlined, l.pkReasonRefused),
+      ('wrong_address', Icons.wrong_location_outlined, l.pkReasonWrongAddress),
+      ('receiver_postponed', Icons.schedule_rounded, l.pkReasonPostponed),
+      ('other', Icons.more_horiz_rounded, l.pkReasonOther),
+    ];
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 14, 20, 16 + MediaQuery.of(context).viewInsets.bottom),
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(l.drvCantDeliverTitle,
+                style: TextStyle(color: context.appTextPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 12),
+            for (final r in reasons)
+              RadioListTile<String>(
+                value: r.$1,
+                groupValue: _reason,
+                onChanged: (v) => setState(() => _reason = v ?? _reason),
+                activeColor: AppTheme.danger,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: Row(children: [
+                  Icon(r.$2, size: 20, color: context.appTextSecondary),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(r.$3, style: TextStyle(color: context.appTextPrimary, fontSize: 14))),
+                ]),
+              ),
+            const SizedBox(height: 6),
+            TextField(
+              controller: _note,
+              maxLength: 200,
+              decoration: InputDecoration(labelText: l.drvFailNote, isDense: true),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context, (_reason, _note.text.trim())),
+                style: AppTheme.confirmButtonStyle(background: AppTheme.danger),
+                child: Text(l.drvReportFail),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _BottomPanel extends StatelessWidget {
   final DeliveryModel   delivery;
   final bool            isMoving;
@@ -717,6 +880,10 @@ class _BottomPanel extends StatelessWidget {
   final VoidCallback    onAction;
   final int             etaMinutes;
   final bool            readOnly;
+  /// Driver reported "can't deliver" — now returning the package to the shop.
+  final bool            failed;
+  final VoidCallback?   onCantDeliver;
+  final VoidCallback?   onDeliveredAnyway;
 
   const _BottomPanel({
     required this.delivery,
@@ -727,6 +894,9 @@ class _BottomPanel extends StatelessWidget {
     required this.onAction,
     required this.etaMinutes,
     this.readOnly = false,
+    this.failed = false,
+    this.onCantDeliver,
+    this.onDeliveredAnyway,
   });
 
   // ── Delivery workflow labels ───────────────────────────────────────────────
@@ -743,7 +913,7 @@ class _BottomPanel extends StatelessWidget {
     switch (deliveryPhase) {
       case _DeliveryPhase.headingToPickup:  return l.arrivedAtPickup;
       case _DeliveryPhase.arrivedAtPickup:  return l.packagePickedUp;
-      case _DeliveryPhase.inTransit:        return l.markAsDelivered;
+      case _DeliveryPhase.inTransit:        return failed ? l.drvReturnedToShop : l.markAsDelivered;
       case _DeliveryPhase.completed:        return l.done;
     }
   }
@@ -760,7 +930,7 @@ class _BottomPanel extends StatelessWidget {
     switch (deliveryPhase) {
       case _DeliveryPhase.headingToPickup: return l.headingToSender;
       case _DeliveryPhase.arrivedAtPickup: return l.atPickupCollectPackage;
-      case _DeliveryPhase.inTransit:       return l.onTheWayToRecipient;
+      case _DeliveryPhase.inTransit:       return failed ? l.drvReturningTitle : l.onTheWayToRecipient;
       case _DeliveryPhase.completed:       return l.deliveredExcl;
     }
   }
@@ -878,6 +1048,24 @@ class _BottomPanel extends StatelessWidget {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
                   : Text(_buttonLabel(AppLocalizations.of(context))),
+            ),
+          ),
+
+        // Can't deliver (cannot contact receiver…) / receiver answered after all.
+        if (!isMoving && !readOnly && !_isDone && deliveryPhase == _DeliveryPhase.inTransit)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: acting ? null : (failed ? onDeliveredAnyway : onCantDeliver),
+                icon: Icon(failed ? Icons.check_circle_outline_rounded : Icons.report_problem_outlined,
+                    size: 18, color: failed ? AppTheme.success : AppTheme.danger),
+                label: Text(
+                  failed ? AppLocalizations.of(context).drvDeliveredAfterAll : AppLocalizations.of(context).drvCantDeliver,
+                  style: TextStyle(color: failed ? AppTheme.success : AppTheme.danger, fontWeight: FontWeight.w600),
+                ),
+              ),
             ),
           ),
 

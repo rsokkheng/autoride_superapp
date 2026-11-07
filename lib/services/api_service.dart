@@ -8,12 +8,14 @@ import '../main.dart' show navigatorKey, appLocale;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../utils/app_log.dart';
 import 'auth_service.dart';
 import 'realtime_service.dart';
 import 'notification_service.dart';
+import '../models/partner_package.dart';
 import '../models/user_model.dart';
 import '../models/vehicle_model.dart';
 import '../models/vehicle_type_model.dart';
@@ -1394,6 +1396,8 @@ class ApiService {
         getDeliveries(status: 'in_progress'),
         getMovings(status: 'accepted'),
         getMovings(status: 'in_progress'),
+        // Couldn't deliver — driver still has to bring the package back.
+        getDeliveries(status: 'delivery_failed'),
       ]);
       for (final deliveries in results) {
         if (deliveries.isNotEmpty) return deliveries.first;
@@ -1689,6 +1693,26 @@ class ApiService {
     final token = await getToken();
     if (token == null) throw const ApiException('Not authenticated.', 401);
     final raw = await _rawPost('/deliveries/$id/complete', {}, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  /// POST /v1/deliveries/{id}/fail — driver could not hand the package over.
+  /// [reason]: cannot_contact | receiver_refused | wrong_address | receiver_postponed | other
+  static Future<DeliveryModel> failDelivery(int id, {required String reason, String? note}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/fail', {
+      'reason': reason,
+      if (note != null && note.isNotEmpty) 'note': note,
+    }, token: token);
+    return _parseDeliveryResponse(raw);
+  }
+
+  /// POST /v1/deliveries/{id}/return — the failed package is back at the shop.
+  static Future<DeliveryModel> returnDeliveryToShop(int id) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/deliveries/$id/return', {}, token: token);
     return _parseDeliveryResponse(raw);
   }
 
@@ -3481,6 +3505,150 @@ class ApiService {
     final msg = body['message'] as String? ?? body['error'] as String? ??
         'Failed to send message (${raw.statusCode}).';
     throw ApiException(msg, raw.statusCode);
+  }
+
+  // ── Partner packages (approved Partners, Passenger app) ──────────────────
+
+  static Map<String, dynamic> _decodeData(_RawResponse raw, String fallback) {
+    Map<String, dynamic> body;
+    try { body = jsonDecode(raw.body) as Map<String, dynamic>; } catch (_) { body = const {}; }
+    if (raw.statusCode == 200 || raw.statusCode == 201) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    var msg = body['message'] as String? ?? '$fallback (${raw.statusCode}).';
+    // Laravel validation: show the first field error.
+    final errors = body['errors'];
+    if (raw.statusCode == 422 && errors is Map && errors.isNotEmpty) {
+      final first = errors.values.first;
+      if (first is List && first.isNotEmpty) msg = first.first.toString();
+    }
+    throw ApiException(msg, raw.statusCode);
+  }
+
+  static Future<String> _tokenOrThrow() async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    return token;
+  }
+
+  /// GET /v1/partner/profile — none | pending | approved | rejected | suspended
+  static Future<PartnerStatus> getPartnerStatus() async {
+    final raw = await _rawGet('/partner/profile', token: await _tokenOrThrow());
+    return PartnerStatus.fromJson(_decodeData(raw, 'Could not load Partner status'));
+  }
+
+  /// POST /v1/partner/register — ROTEH reviews it.
+  static Future<PartnerStatus> registerPartner({
+    required String businessName, String? businessType, String? contactName,
+    required String phone, required String address, double? latitude, double? longitude,
+  }) async {
+    final raw = await _rawPost('/partner/register', {
+      'business_name': businessName,
+      if (businessType != null) 'business_type': businessType,
+      if (contactName != null && contactName.isNotEmpty) 'contact_name': contactName,
+      'phone': phone,
+      'address': address,
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
+    }, token: await _tokenOrThrow());
+    return PartnerStatus.fromJson(_decodeData(raw, 'Registration failed'));
+  }
+
+  /// GET /v1/partner/packages/quote — the server's delivery fee.
+  static Future<int> quotePartnerPackage({required String size, String serviceOption = 'normal'}) async {
+    final raw = await _rawGet('/partner/packages/quote?package_size=$size&service_option=$serviceOption',
+        token: await _tokenOrThrow());
+    return ((_decodeData(raw, 'Could not get the fee')['fee'] as num?) ?? 0).round();
+  }
+
+  /// POST /v1/partner/packages (multipart when [photo] is set).
+  static Future<PartnerPackage> createPartnerPackage(Map<String, String> fields, {File? photo}) async {
+    final token = await _tokenOrThrow();
+    final raw = photo != null
+        ? await _rawPostMultipart('/partner/packages', fields: fields, files: [MapEntry('photo', photo)], token: token)
+        : await _rawPost('/partner/packages', fields, token: token, idempotent: true);
+    final data = _decodeData(raw, 'Could not create the package');
+    return PartnerPackage.fromJson(data['package'] as Map<String, dynamic>);
+  }
+
+  /// GET /v1/partner/packages?group=active|history|all
+  static Future<({List<PartnerPackage> items, int lastPage})> getPartnerPackages({
+    String group = 'all', String? status, String? search, int page = 1,
+  }) async {
+    final q = <String>[
+      'group=$group', 'page=$page', 'per_page=20',
+      if (status != null) 'status=$status',
+      if (search != null && search.trim().isNotEmpty) 'search=${Uri.encodeQueryComponent(search.trim())}',
+    ].join('&');
+    final raw = await _rawGet('/partner/packages?$q', token: await _tokenOrThrow());
+    final data = _decodeData(raw, 'Could not load packages');
+    final items = (data['packages'] as List? ?? const [])
+        .whereType<Map>()
+        .map((e) => PartnerPackage.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+    final last = ((data['pagination'] as Map?)?['last_page'] as num?)?.toInt() ?? 1;
+    return (items: items, lastPage: last);
+  }
+
+  /// GET /v1/partner/packages/summary
+  static Future<Map<String, dynamic>> getPartnerSummary() async {
+    final raw = await _rawGet('/partner/packages/summary', token: await _tokenOrThrow());
+    return _decodeData(raw, 'Could not load summary');
+  }
+
+  /// GET /v1/partner/packages/report?period=day|week|month&date=YYYY-MM-DD
+  static Future<Map<String, dynamic>> getPartnerReport({required String period, required DateTime date}) async {
+    String two(int v) => v.toString().padLeft(2, '0');
+    final d = '${date.year}-${two(date.month)}-${two(date.day)}';
+    final raw = await _rawGet('/partner/packages/report?period=$period&date=$d', token: await _tokenOrThrow());
+    return _decodeData(raw, 'Could not load the report');
+  }
+
+  /// GET /v1/partner/packages/report/export — saves the PDF / Excel file to
+  /// the phone's temp folder and returns it (for the share sheet).
+  static Future<File> downloadPartnerReport({
+    required String period, required DateTime date, required String format, // pdf | xlsx
+  }) async {
+    String two(int v) => v.toString().padLeft(2, '0');
+    final d = '${date.year}-${two(date.month)}-${two(date.day)}';
+    final uri = Uri.parse('$_baseUrl/partner/packages/report/export?period=$period&date=$d&format=$format');
+
+    Future<http.Response> get(String token) => http.get(uri, headers: {
+          'Authorization': 'Bearer $token',
+          'Accept': format == 'pdf'
+              ? 'application/pdf'
+              : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'X-Locale': appLocale.value.languageCode,
+        }).timeout(const Duration(seconds: 60));
+
+    var res = await get(await _tokenOrThrow());
+    if (res.statusCode == 401) {
+      final fresh = await _refreshAccessToken();
+      if (fresh != null) res = await get(fresh);
+    }
+    if (res.statusCode != 200) {
+      String msg = 'Export failed (${res.statusCode}).';
+      try { msg = (jsonDecode(res.body) as Map<String, dynamic>)['message'] as String? ?? msg; } catch (_) {}
+      throw ApiException(msg, res.statusCode);
+    }
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/ROTEH_report_${period}_$d.$format');
+    await file.writeAsBytes(res.bodyBytes, flush: true);
+    return file;
+  }
+
+  /// GET /v1/partner/packages/{id}
+  static Future<PartnerPackage> getPartnerPackage(int id) async {
+    final raw = await _rawGet('/partner/packages/$id', token: await _tokenOrThrow());
+    return PartnerPackage.fromJson(_decodeData(raw, 'Could not load package')['package'] as Map<String, dynamic>);
+  }
+
+  /// POST /v1/partner/packages/{id}/cancel
+  static Future<PartnerPackage> cancelPartnerPackage(int id, {String? reason}) async {
+    final raw = await _rawPost('/partner/packages/$id/cancel', {
+      if (reason != null && reason.isNotEmpty) 'reason': reason,
+    }, token: await _tokenOrThrow());
+    return PartnerPackage.fromJson(_decodeData(raw, 'Could not cancel')['package'] as Map<String, dynamic>);
   }
 
   // ── Session storage ───────────────────────────────────────────────────────

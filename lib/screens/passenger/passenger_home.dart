@@ -1,4 +1,6 @@
 import 'dart:async';
+import '../partner/partner_register_screen.dart';
+import '../partner/partner_ui.dart';
 import '../../main.dart' show routeObserver;
 import '../auth/welcome_screen.dart';
 import 'package:flutter/material.dart';
@@ -208,7 +210,10 @@ class _HomeTabState extends State<_HomeTab> with RouteAware, WidgetsBindingObser
     await prefs.setInt(_gridColumnsPrefKey, columns);
   }
 
+  final _partnerKey = GlobalKey<PartnerServicesSectionState>();
+
   Future<void> _load() async {
+    _partnerKey.currentState?.reload();
     setState(() => _showSlowBanner = false);
     _slowBannerTimer?.cancel();
     _slowBannerTimer = Timer(const Duration(seconds: 4), () {
@@ -569,6 +574,8 @@ class _HomeTabState extends State<_HomeTab> with RouteAware, WidgetsBindingObser
                 ],
               );
             }),
+            // Partner Package Delivery — only for registered / approved Partners.
+            PartnerServicesSection(key: _partnerKey),
             const SizedBox(height: 24),
             Builder(builder: (context) {
               final l = AppLocalizations.of(context);
@@ -783,6 +790,7 @@ class _ProfileTabState extends State<_ProfileTab> {
   double? _rating;
   int? _totalTrips;
   bool _loadingProfile = true;
+  bool _isPartner = false;
 
   @override
   void initState() {
@@ -800,6 +808,7 @@ class _ProfileTabState extends State<_ProfileTab> {
         _photoUrl = user.photoUrl;
         _rating = user.rating;
         _totalTrips = user.totalTrips;
+        _isPartner = user.role == 'partner';
         _loadingProfile = false;
       });
     } catch (_) {
@@ -866,6 +875,9 @@ class _ProfileTabState extends State<_ProfileTab> {
                       // profile data would otherwise stay stale after a save.
                       _loadProfile();
                     }),
+                _ProfileMenuItem(icon: Icons.handshake_outlined, label: _isPartner ? l.pkPartnerAccount : l.pkBecomePartner,
+                    color: AppTheme.accent,
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PartnerRegisterScreen()))),
                 _ProfileMenuItem(icon: Icons.account_balance_wallet_outlined, label: l.rotehPay,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
                 _ProfileMenuItem(icon: Icons.local_offer_outlined, label: l.promosVouchers,

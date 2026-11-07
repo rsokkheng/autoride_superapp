@@ -576,6 +576,162 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
       'trSurchargesLine': 'Surcharges & minimum fare',
       'trMeterSoFar': 'Distance so far',
+      'pkExportReport': 'Export report',
+      'pkExportPdf': 'PDF',
+      'pkExportPdfSub': 'Summary, chart and package list — easy to print or send',
+      'pkExportExcel': 'Excel',
+      'pkExportExcelSub': 'Every package with receiver names and addresses',
+      'pkStatusCompleted': 'Completed',
+      'pkStatusFailed': 'Not delivered',
+      'pkStatusReturned': 'Returned to shop',
+      'pkReasonCannotContact': 'Cannot contact receiver',
+      'pkReasonRefused': 'Receiver refused',
+      'pkReasonWrongAddress': 'Wrong address',
+      'pkReasonPostponed': 'Receiver asked to deliver later',
+      'pkReasonOther': 'Other reason',
+      'pkReturningToShop': 'The driver is bringing it back to your shop',
+      'pkReports': 'Reports',
+      'pkReportsSub': 'Daily, weekly and monthly',
+      'pkDay': 'Day',
+      'pkWeek': 'Week',
+      'pkMonth': 'Month',
+      'pkTotalPackages': 'Total packages',
+      'pkSuccessRate': 'Success rate',
+      'pkInProgress': 'In progress',
+      'pkDeliveryFees': 'Delivery fees',
+      'pkCodCollected': 'COD collected',
+      'pkAvgTime': 'Avg. delivery time',
+      'pkMinutes': '{n} min',
+      'pkFailureReasons': 'Why packages were not delivered',
+      'pkNoData': 'No packages in this period',
+      'pkToday': 'Today',
+      'pkThisWeek': 'This week',
+      'pkThisMonth': 'This month',
+      'pkByHour': 'Packages by hour',
+      'pkByDay': 'Packages by day',
+      'pkTodaySummary': 'Today: {done} completed · {back} returned · {open} in progress',
+      'drvCantDeliver': 'Can\'t deliver',
+      'drvCantDeliverTitle': 'Why can\'t you deliver?',
+      'drvFailNote': 'Note (optional)',
+      'drvReportFail': 'Report & return to shop',
+      'drvReturningTitle': 'Return the package to the shop',
+      'drvReturnedToShop': 'Returned to shop',
+      'drvDeliveredAfterAll': 'Receiver answered — mark delivered',
+      'drvReturnDone': 'Package returned to the shop',
+      'pkPartnerServices': 'Partner Services',
+      'pkCreatePackage': 'Create Package',
+      'pkCreatePackageSub': 'ROTEH picks up & delivers',
+      'pkMyPackages': 'My Packages',
+      'pkMyPackagesSub': 'All your packages',
+      'pkTrackPackage': 'Track Package',
+      'pkTrackPackageSub': 'Packages on the way',
+      'pkHistory': 'Package History',
+      'pkHistorySub': 'Delivered & cancelled',
+      'pkActiveCount': '{n} on the way',
+      'pkTodayCount': '{n} today',
+      'pkCodPending': 'COD to collect',
+      'pkBecomePartner': 'Become a ROTEH Partner',
+      'pkBecomePartnerSub': 'Send packages — ROTEH picks up and delivers to your customers',
+      'pkPartnerAccount': 'ROTEH Partner',
+      'pkPendingTitle': 'Registration under review',
+      'pkPendingBody': 'ROTEH is reviewing your Partner registration. You will get a notification once it is approved.',
+      'pkRejectedTitle': 'Registration not approved',
+      'pkSuspendedTitle': 'Partner account suspended',
+      'pkSuspendedBody': 'Please contact ROTEH support.',
+      'pkResubmit': 'Update and resubmit',
+      'pkRegisterTitle': 'Register as a Partner',
+      'pkRegisterIntro': 'Use this same account. After ROTEH approves, you can create packages and track them here — and still book rides as usual.',
+      'pkBusinessName': 'Shop / business name',
+      'pkBusinessType': 'Business type',
+      'pkContactName': 'Contact person (optional)',
+      'pkBusinessPhone': 'Business phone',
+      'pkPickupAddress': 'Usual pickup address',
+      'pkSubmit': 'Submit registration',
+      'pkRequired': 'Please fill in this field',
+      'pkTypeOnlineShop': 'Online shop',
+      'pkTypeRetail': 'Shop / retail',
+      'pkTypeRestaurant': 'Restaurant / food',
+      'pkTypeOther': 'Other',
+      'pkSender': 'Sender',
+      'pkReceiver': 'Receiver',
+      'pkName': 'Name',
+      'pkPhone': 'Phone number',
+      'pkPickupLocation': 'Pickup location',
+      'pkDeliveryLocation': 'Delivery location',
+      'pkChooseOnMap': 'Tap to choose on map',
+      'pkPackage': 'Package',
+      'pkPackageType': 'Package type',
+      'pkDescription': 'Description (what is inside)',
+      'pkWeight': 'Weight (kg, optional)',
+      'pkSize': 'Size',
+      'pkPhoto': 'Package photo (optional)',
+      'pkAddPhoto': 'Add photo',
+      'pkCamera': 'Camera',
+      'pkGallery': 'Gallery',
+      'pkService': 'Delivery speed',
+      'pkNormal': 'Normal',
+      'pkExpress': 'Express',
+      'pkPayment': 'Payment',
+      'pkWhoPays': 'Who pays the delivery fee?',
+      'pkPartnerPays': 'I pay',
+      'pkReceiverPays': 'Receiver pays (cash)',
+      'pkCodAmount': 'Collect from receiver — item price (៛)',
+      'pkCodHint': 'Leave empty if there is nothing to collect',
+      'pkReference': 'Your order number (optional)',
+      'pkNotes': 'Note for the driver (optional)',
+      'pkDeliveryFee': 'Delivery fee',
+      'pkSubmitPackage': 'Create package',
+      'pkChooseLocations': 'Choose both the pickup and delivery locations on the map',
+      'pkCreatedTitle': 'Package created',
+      'pkCreatedBody': '{code} is waiting for ROTEH to confirm. We will notify you when a driver is on the way.',
+      'pkStatusPending': 'Pending',
+      'pkStatusConfirmed': 'Confirmed',
+      'pkStatusDriverAssigned': 'Driver assigned',
+      'pkStatusPickedUp': 'Picked up',
+      'pkStatusInTransit': 'In transit',
+      'pkStatusDelivered': 'Delivered',
+      'pkStatusCancelled': 'Cancelled',
+      'pkTabActive': 'On the way',
+      'pkTabHistory': 'History',
+      'pkTabAll': 'All',
+      'pkSearchHint': 'Search code, receiver or phone',
+      'pkEmptyActive': 'No packages on the way',
+      'pkEmptyHistory': 'No delivered or cancelled packages yet',
+      'pkEmptyAll': 'No packages yet',
+      'pkDetailTitle': 'Package details',
+      'pkTimeline': 'Tracking',
+      'pkDriver': 'Driver',
+      'pkCall': 'Call',
+      'pkLiveMap': 'Live map',
+      'pkShareLink': 'Share tracking link',
+      'pkShareText': 'Track your ROTEH package {code}: {url}',
+      'pkCancelPackage': 'Cancel package',
+      'pkCancelConfirm': 'Cancel this package? This cannot be undone.',
+      'pkCancelReason': 'Reason (optional)',
+      'pkKeep': 'Keep',
+      'pkQrTitle': 'Package QR',
+      'pkQrHint': 'Stick this on the package — the driver scans it at pickup and delivery.',
+      'pkProofPhoto': 'Delivery proof',
+      'pkWaitingConfirm': 'Waiting for ROTEH to confirm',
+      'pkFindingDriver': 'ROTEH is finding a driver',
+      'pkPaymentByReceiver': 'Receiver pays',
+      'pkPaymentByPartner': 'You pay',
+      'pkCod': 'COD',
+      'pkSizeSmall': 'Small',
+      'pkSizeMedium': 'Medium',
+      'pkSizeLarge': 'Large',
+      'pkSizeXL': 'Extra large',
+      'pkTypeDocument': 'Document',
+      'pkTypeParcel': 'Parcel',
+      'pkTypeFood': 'Food',
+      'pkTypeClothing': 'Clothing',
+      'pkTypeElectronics': 'Electronics',
+      'pkTypeFragile': 'Fragile',
+      'pkPayMethod': 'Pay with',
+      'pkPayCash': 'Cash to driver',
+      'pkPayWallet': 'ROTEH Pay',
+      'pkPayAba': 'ABA / KHQR',
+      'pkCreated': 'Created',
       'paywayOrderPaidBody': 'Your payment of {amount} was received. Thank you!',
       'paywayNotAvailable': 'ABA payment is not available yet. You can pay later from this order.',
       'paywayPayNow': 'Pay with ABA / KHQR',
@@ -2761,6 +2917,162 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
       'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
       'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
+      'pkExportReport': 'នាំចេញរបាយការណ៍',
+      'pkExportPdf': 'PDF',
+      'pkExportPdfSub': 'សង្ខេប ក្រាហ្វ និងបញ្ជីកញ្ចប់ — ងាយបោះពុម្ព ឬផ្ញើ',
+      'pkExportExcel': 'Excel',
+      'pkExportExcelSub': 'កញ្ចប់ទាំងអស់ រួមទាំងឈ្មោះ និងអាសយដ្ឋានអ្នកទទួល',
+      'pkStatusCompleted': 'បានបញ្ចប់',
+      'pkStatusFailed': 'មិនបានដឹកដល់',
+      'pkStatusReturned': 'បានប្រគល់ត្រឡប់មកហាង',
+      'pkReasonCannotContact': 'មិនអាចទាក់ទងអ្នកទទួល',
+      'pkReasonRefused': 'អ្នកទទួលបដិសេធ',
+      'pkReasonWrongAddress': 'អាសយដ្ឋានខុស',
+      'pkReasonPostponed': 'អ្នកទទួលស្នើឲ្យដឹកពេលក្រោយ',
+      'pkReasonOther': 'មូលហេតុផ្សេងៗ',
+      'pkReturningToShop': 'អ្នកបើកបរកំពុងយកត្រឡប់មកហាងរបស់អ្នក',
+      'pkReports': 'របាយការណ៍',
+      'pkReportsSub': 'ប្រចាំថ្ងៃ សប្តាហ៍ និងខែ',
+      'pkDay': 'ថ្ងៃ',
+      'pkWeek': 'សប្តាហ៍',
+      'pkMonth': 'ខែ',
+      'pkTotalPackages': 'កញ្ចប់សរុប',
+      'pkSuccessRate': 'អត្រាជោគជ័យ',
+      'pkInProgress': 'កំពុងដំណើរការ',
+      'pkDeliveryFees': 'ថ្លៃដឹកសរុប',
+      'pkCodCollected': 'COD បានប្រមូល',
+      'pkAvgTime': 'រយៈពេលដឹកជាមធ្យម',
+      'pkMinutes': '{n} នាទី',
+      'pkFailureReasons': 'មូលហេតុដែលកញ្ចប់មិនបានដឹកដល់',
+      'pkNoData': 'គ្មានកញ្ចប់ក្នុងរយៈពេលនេះ',
+      'pkToday': 'ថ្ងៃនេះ',
+      'pkThisWeek': 'សប្តាហ៍នេះ',
+      'pkThisMonth': 'ខែនេះ',
+      'pkByHour': 'កញ្ចប់តាមម៉ោង',
+      'pkByDay': 'កញ្ចប់តាមថ្ងៃ',
+      'pkTodaySummary': 'ថ្ងៃនេះ៖ បានបញ្ចប់ {done} · ប្រគល់វិញ {back} · កំពុងដំណើរការ {open}',
+      'drvCantDeliver': 'មិនអាចដឹកដល់',
+      'drvCantDeliverTitle': 'ហេតុអ្វីមិនអាចដឹកដល់?',
+      'drvFailNote': 'កំណត់សម្គាល់ (ស្រេចចិត្ត)',
+      'drvReportFail': 'រាយការណ៍ ហើយយកត្រឡប់ទៅហាង',
+      'drvReturningTitle': 'យកកញ្ចប់ត្រឡប់ទៅហាងវិញ',
+      'drvReturnedToShop': 'បានប្រគល់ទៅហាងវិញ',
+      'drvDeliveredAfterAll': 'អ្នកទទួលឆ្លើយហើយ — ដឹកដល់',
+      'drvReturnDone': 'បានប្រគល់កញ្ចប់ទៅហាងវិញ',
+      'pkPartnerServices': 'សេវាដៃគូ',
+      'pkCreatePackage': 'បង្កើតកញ្ចប់',
+      'pkCreatePackageSub': 'ROTEH មកយក និងដឹកជូន',
+      'pkMyPackages': 'កញ្ចប់របស់ខ្ញុំ',
+      'pkMyPackagesSub': 'មើលកញ្ចប់ទាំងអស់',
+      'pkTrackPackage': 'តាមដានកញ្ចប់',
+      'pkTrackPackageSub': 'តាមដានការដឹកជញ្ជូន',
+      'pkHistory': 'ប្រវត្តិផ្ញើកញ្ចប់',
+      'pkHistorySub': 'បានដឹកដល់ និងបានបោះបង់',
+      'pkActiveCount': '{n} កំពុងដឹក',
+      'pkTodayCount': 'ថ្ងៃនេះ {n}',
+      'pkCodPending': 'COD ត្រូវប្រមូល',
+      'pkBecomePartner': 'ក្លាយជាដៃគូ ROTEH',
+      'pkBecomePartnerSub': 'ផ្ញើកញ្ចប់ — ROTEH មកយក និងដឹកជូនអតិថិជនរបស់អ្នក',
+      'pkPartnerAccount': 'ដៃគូ ROTEH',
+      'pkPendingTitle': 'កំពុងពិនិត្យការចុះឈ្មោះ',
+      'pkPendingBody': 'ROTEH កំពុងពិនិត្យការចុះឈ្មោះដៃគូរបស់អ្នក។ អ្នកនឹងទទួលបានការជូនដំណឹងនៅពេលត្រូវបានអនុម័ត។',
+      'pkRejectedTitle': 'ការចុះឈ្មោះមិនត្រូវបានអនុម័ត',
+      'pkSuspendedTitle': 'គណនីដៃគូត្រូវបានផ្អាក',
+      'pkSuspendedBody': 'សូមទាក់ទងផ្នែកជំនួយ ROTEH។',
+      'pkResubmit': 'កែប្រែ និងដាក់ស្នើម្តងទៀត',
+      'pkRegisterTitle': 'ចុះឈ្មោះជាដៃគូ',
+      'pkRegisterIntro': 'ប្រើគណនីដដែលនេះ។ បន្ទាប់ពី ROTEH អនុម័ត អ្នកអាចបង្កើត និងតាមដានកញ្ចប់នៅទីនេះ — ហើយនៅតែកក់ដំណើរបានដូចធម្មតា។',
+      'pkBusinessName': 'ឈ្មោះហាង / អាជីវកម្ម',
+      'pkBusinessType': 'ប្រភេទអាជីវកម្ម',
+      'pkContactName': 'អ្នកទំនាក់ទំនង (ស្រេចចិត្ត)',
+      'pkBusinessPhone': 'លេខទូរស័ព្ទអាជីវកម្ម',
+      'pkPickupAddress': 'ទីតាំងយកកញ្ចប់ជាប្រចាំ',
+      'pkSubmit': 'ដាក់ស្នើការចុះឈ្មោះ',
+      'pkRequired': 'សូមបំពេញព័ត៌មាននេះ',
+      'pkTypeOnlineShop': 'ហាងអនឡាញ',
+      'pkTypeRetail': 'ហាងលក់រាយ',
+      'pkTypeRestaurant': 'ភោជនីយដ្ឋាន / ម្ហូប',
+      'pkTypeOther': 'ផ្សេងៗ',
+      'pkSender': 'អ្នកផ្ញើ',
+      'pkReceiver': 'អ្នកទទួល',
+      'pkName': 'ឈ្មោះ',
+      'pkPhone': 'លេខទូរស័ព្ទ',
+      'pkPickupLocation': 'ទីតាំងមកយក',
+      'pkDeliveryLocation': 'ទីតាំងដឹកជូន',
+      'pkChooseOnMap': 'ចុចដើម្បីជ្រើសលើផែនទី',
+      'pkPackage': 'កញ្ចប់',
+      'pkPackageType': 'ប្រភេទកញ្ចប់',
+      'pkDescription': 'ការពិពណ៌នា (មានអ្វីខាងក្នុង)',
+      'pkWeight': 'ទម្ងន់ (គីឡូ, ស្រេចចិត្ត)',
+      'pkSize': 'ទំហំ',
+      'pkPhoto': 'រូបភាពកញ្ចប់ (ស្រេចចិត្ត)',
+      'pkAddPhoto': 'បន្ថែមរូបភាព',
+      'pkCamera': 'កាមេរ៉ា',
+      'pkGallery': 'វិចិត្រសាល',
+      'pkService': 'ល្បឿនដឹកជញ្ជូន',
+      'pkNormal': 'ធម្មតា',
+      'pkExpress': 'រហ័ស',
+      'pkPayment': 'ការទូទាត់',
+      'pkWhoPays': 'នរណាបង់ថ្លៃដឹក?',
+      'pkPartnerPays': 'ខ្ញុំបង់',
+      'pkReceiverPays': 'អ្នកទទួលបង់ (សាច់ប្រាក់)',
+      'pkCodAmount': 'ប្រមូលពីអ្នកទទួល — តម្លៃទំនិញ (៛)',
+      'pkCodHint': 'ទុកទទេ បើគ្មានប្រាក់ត្រូវប្រមូល',
+      'pkReference': 'លេខកម្ម៉ង់របស់អ្នក (ស្រេចចិត្ត)',
+      'pkNotes': 'កំណត់សម្គាល់ជូនអ្នកបើកបរ (ស្រេចចិត្ត)',
+      'pkDeliveryFee': 'ថ្លៃដឹកជញ្ជូន',
+      'pkSubmitPackage': 'បង្កើតកញ្ចប់',
+      'pkChooseLocations': 'សូមជ្រើសទីតាំងមកយក និងដឹកជូនលើផែនទី',
+      'pkCreatedTitle': 'បានបង្កើតកញ្ចប់',
+      'pkCreatedBody': '{code} កំពុងរង់ចាំ ROTEH បញ្ជាក់។ យើងនឹងជូនដំណឹងនៅពេលអ្នកបើកបរកំពុងមក។',
+      'pkStatusPending': 'កំពុងរង់ចាំ',
+      'pkStatusConfirmed': 'បានបញ្ជាក់',
+      'pkStatusDriverAssigned': 'មានអ្នកបើកបរ',
+      'pkStatusPickedUp': 'បានមកយក',
+      'pkStatusInTransit': 'កំពុងដឹក',
+      'pkStatusDelivered': 'បានដឹកដល់',
+      'pkStatusCancelled': 'បានបោះបង់',
+      'pkTabActive': 'កំពុងដឹក',
+      'pkTabHistory': 'ប្រវត្តិ',
+      'pkTabAll': 'ទាំងអស់',
+      'pkSearchHint': 'ស្វែងរកលេខកូដ អ្នកទទួល ឬលេខទូរស័ព្ទ',
+      'pkEmptyActive': 'គ្មានកញ្ចប់កំពុងដឹក',
+      'pkEmptyHistory': 'មិនទាន់មានកញ្ចប់បានដឹក ឬបោះបង់',
+      'pkEmptyAll': 'មិនទាន់មានកញ្ចប់',
+      'pkDetailTitle': 'ព័ត៌មានកញ្ចប់',
+      'pkTimeline': 'ការតាមដាន',
+      'pkDriver': 'អ្នកបើកបរ',
+      'pkCall': 'ហៅ',
+      'pkLiveMap': 'ផែនទីផ្ទាល់',
+      'pkShareLink': 'ចែករំលែកតំណតាមដាន',
+      'pkShareText': 'តាមដានកញ្ចប់ ROTEH {code} របស់អ្នក៖ {url}',
+      'pkCancelPackage': 'បោះបង់កញ្ចប់',
+      'pkCancelConfirm': 'បោះបង់កញ្ចប់នេះ? មិនអាចត្រឡប់វិញបានទេ។',
+      'pkCancelReason': 'មូលហេតុ (ស្រេចចិត្ត)',
+      'pkKeep': 'ទុក',
+      'pkQrTitle': 'QR កញ្ចប់',
+      'pkQrHint': 'បិទលើកញ្ចប់ — អ្នកបើកបរស្កេននៅពេលមកយក និងពេលដឹកដល់។',
+      'pkProofPhoto': 'ភស្តុតាងដឹកដល់',
+      'pkWaitingConfirm': 'កំពុងរង់ចាំ ROTEH បញ្ជាក់',
+      'pkFindingDriver': 'ROTEH កំពុងស្វែងរកអ្នកបើកបរ',
+      'pkPaymentByReceiver': 'អ្នកទទួលបង់',
+      'pkPaymentByPartner': 'អ្នកបង់',
+      'pkCod': 'COD',
+      'pkSizeSmall': 'តូច',
+      'pkSizeMedium': 'មធ្យម',
+      'pkSizeLarge': 'ធំ',
+      'pkSizeXL': 'ធំខ្លាំង',
+      'pkTypeDocument': 'ឯកសារ',
+      'pkTypeParcel': 'កញ្ចប់ទូទៅ',
+      'pkTypeFood': 'អាហារ',
+      'pkTypeClothing': 'សម្លៀកបំពាក់',
+      'pkTypeElectronics': 'គ្រឿងអេឡិចត្រូនិក',
+      'pkTypeFragile': 'ងាយបែក',
+      'pkPayMethod': 'បង់តាម',
+      'pkPayCash': 'សាច់ប្រាក់ឲ្យអ្នកបើកបរ',
+      'pkPayWallet': 'ROTEH Pay',
+      'pkPayAba': 'ABA / KHQR',
+      'pkCreated': 'បានបង្កើត',
       'paywayOrderPaidBody': 'បានទទួលការបង់ប្រាក់ {amount} របស់អ្នក។ សូមអរគុណ!',
       'paywayNotAvailable': 'ការបង់ប្រាក់តាម ABA មិនទាន់អាចប្រើបានទេ។ អ្នកអាចបង់ពេលក្រោយពីការកម្ម៉ង់នេះ។',
       'paywayPayNow': 'បង់ប្រាក់តាម ABA / KHQR',
@@ -4949,6 +5261,162 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
       'trSurchargesLine': '附加费与最低车费',
       'trMeterSoFar': '目前里程',
+      'pkExportReport': '导出报表',
+      'pkExportPdf': 'PDF',
+      'pkExportPdfSub': '汇总、图表和包裹清单——便于打印或发送',
+      'pkExportExcel': 'Excel',
+      'pkExportExcelSub': '所有包裹，含收件人姓名和地址',
+      'pkStatusCompleted': '已完成',
+      'pkStatusFailed': '未送达',
+      'pkStatusReturned': '已退回店铺',
+      'pkReasonCannotContact': '无法联系收件人',
+      'pkReasonRefused': '收件人拒收',
+      'pkReasonWrongAddress': '地址错误',
+      'pkReasonPostponed': '收件人要求改期',
+      'pkReasonOther': '其他原因',
+      'pkReturningToShop': '司机正在将其送回您的店铺',
+      'pkReports': '报表',
+      'pkReportsSub': '日报、周报、月报',
+      'pkDay': '日',
+      'pkWeek': '周',
+      'pkMonth': '月',
+      'pkTotalPackages': '包裹总数',
+      'pkSuccessRate': '成功率',
+      'pkInProgress': '进行中',
+      'pkDeliveryFees': '运费合计',
+      'pkCodCollected': '已代收货款',
+      'pkAvgTime': '平均配送时间',
+      'pkMinutes': '{n} 分钟',
+      'pkFailureReasons': '未送达原因',
+      'pkNoData': '该时段没有包裹',
+      'pkToday': '今天',
+      'pkThisWeek': '本周',
+      'pkThisMonth': '本月',
+      'pkByHour': '按小时统计',
+      'pkByDay': '按天统计',
+      'pkTodaySummary': '今日：完成 {done} · 退回 {back} · 进行中 {open}',
+      'drvCantDeliver': '无法送达',
+      'drvCantDeliverTitle': '为什么无法送达？',
+      'drvFailNote': '备注（可选）',
+      'drvReportFail': '上报并退回店铺',
+      'drvReturningTitle': '将包裹送回店铺',
+      'drvReturnedToShop': '已送回店铺',
+      'drvDeliveredAfterAll': '已联系上收件人——标记送达',
+      'drvReturnDone': '包裹已送回店铺',
+      'pkPartnerServices': '伙伴服务',
+      'pkCreatePackage': '创建包裹',
+      'pkCreatePackageSub': 'ROTEH 上门取件配送',
+      'pkMyPackages': '我的包裹',
+      'pkMyPackagesSub': '查看全部包裹',
+      'pkTrackPackage': '追踪包裹',
+      'pkTrackPackageSub': '配送中的包裹',
+      'pkHistory': '寄件记录',
+      'pkHistorySub': '已送达与已取消',
+      'pkActiveCount': '{n} 进行中',
+      'pkTodayCount': '今日 {n}',
+      'pkCodPending': '待收货款',
+      'pkBecomePartner': '成为 ROTEH 伙伴',
+      'pkBecomePartnerSub': '寄送包裹——ROTEH 上门取件并送达您的客户',
+      'pkPartnerAccount': 'ROTEH 伙伴',
+      'pkPendingTitle': '注册审核中',
+      'pkPendingBody': 'ROTEH 正在审核您的伙伴注册，通过后会通知您。',
+      'pkRejectedTitle': '注册未通过',
+      'pkSuspendedTitle': '伙伴账户已暂停',
+      'pkSuspendedBody': '请联系 ROTEH 客服。',
+      'pkResubmit': '修改并重新提交',
+      'pkRegisterTitle': '注册成为伙伴',
+      'pkRegisterIntro': '使用同一账户。ROTEH 审核通过后，即可在此创建和追踪包裹，并照常叫车。',
+      'pkBusinessName': '店铺/商家名称',
+      'pkBusinessType': '商家类型',
+      'pkContactName': '联系人（可选）',
+      'pkBusinessPhone': '商家电话',
+      'pkPickupAddress': '常用取件地址',
+      'pkSubmit': '提交注册',
+      'pkRequired': '请填写此项',
+      'pkTypeOnlineShop': '网店',
+      'pkTypeRetail': '零售店',
+      'pkTypeRestaurant': '餐饮',
+      'pkTypeOther': '其他',
+      'pkSender': '寄件人',
+      'pkReceiver': '收件人',
+      'pkName': '姓名',
+      'pkPhone': '电话号码',
+      'pkPickupLocation': '取件地点',
+      'pkDeliveryLocation': '送货地点',
+      'pkChooseOnMap': '点击在地图上选择',
+      'pkPackage': '包裹',
+      'pkPackageType': '包裹类型',
+      'pkDescription': '描述（内装物品）',
+      'pkWeight': '重量（公斤，可选）',
+      'pkSize': '尺寸',
+      'pkPhoto': '包裹照片（可选）',
+      'pkAddPhoto': '添加照片',
+      'pkCamera': '相机',
+      'pkGallery': '相册',
+      'pkService': '配送速度',
+      'pkNormal': '普通',
+      'pkExpress': '加急',
+      'pkPayment': '付款',
+      'pkWhoPays': '谁支付运费？',
+      'pkPartnerPays': '我付',
+      'pkReceiverPays': '收件人付（现金）',
+      'pkCodAmount': '向收件人代收货款（៛）',
+      'pkCodHint': '无需代收请留空',
+      'pkReference': '您的订单号（可选）',
+      'pkNotes': '给司机的备注（可选）',
+      'pkDeliveryFee': '运费',
+      'pkSubmitPackage': '创建包裹',
+      'pkChooseLocations': '请在地图上选择取件和送货地点',
+      'pkCreatedTitle': '包裹已创建',
+      'pkCreatedBody': '{code} 等待 ROTEH 确认，司机出发时会通知您。',
+      'pkStatusPending': '待确认',
+      'pkStatusConfirmed': '已确认',
+      'pkStatusDriverAssigned': '已分配司机',
+      'pkStatusPickedUp': '已取件',
+      'pkStatusInTransit': '运输中',
+      'pkStatusDelivered': '已送达',
+      'pkStatusCancelled': '已取消',
+      'pkTabActive': '进行中',
+      'pkTabHistory': '记录',
+      'pkTabAll': '全部',
+      'pkSearchHint': '搜索单号、收件人或电话',
+      'pkEmptyActive': '没有进行中的包裹',
+      'pkEmptyHistory': '暂无已送达或已取消的包裹',
+      'pkEmptyAll': '暂无包裹',
+      'pkDetailTitle': '包裹详情',
+      'pkTimeline': '物流跟踪',
+      'pkDriver': '司机',
+      'pkCall': '致电',
+      'pkLiveMap': '实时地图',
+      'pkShareLink': '分享追踪链接',
+      'pkShareText': '追踪您的 ROTEH 包裹 {code}：{url}',
+      'pkCancelPackage': '取消包裹',
+      'pkCancelConfirm': '确定取消此包裹？此操作无法撤销。',
+      'pkCancelReason': '原因（可选）',
+      'pkKeep': '保留',
+      'pkQrTitle': '包裹二维码',
+      'pkQrHint': '贴在包裹上——司机取件和送达时扫描。',
+      'pkProofPhoto': '送达凭证',
+      'pkWaitingConfirm': '等待 ROTEH 确认',
+      'pkFindingDriver': 'ROTEH 正在寻找司机',
+      'pkPaymentByReceiver': '收件人付',
+      'pkPaymentByPartner': '您付',
+      'pkCod': '代收',
+      'pkSizeSmall': '小',
+      'pkSizeMedium': '中',
+      'pkSizeLarge': '大',
+      'pkSizeXL': '特大',
+      'pkTypeDocument': '文件',
+      'pkTypeParcel': '普通包裹',
+      'pkTypeFood': '食品',
+      'pkTypeClothing': '服装',
+      'pkTypeElectronics': '电子产品',
+      'pkTypeFragile': '易碎品',
+      'pkPayMethod': '支付方式',
+      'pkPayCash': '现金付给司机',
+      'pkPayWallet': 'ROTEH Pay',
+      'pkPayAba': 'ABA / KHQR',
+      'pkCreated': '创建时间',
       'paywayOrderPaidBody': '已收到您支付的 {amount}，谢谢！',
       'paywayNotAvailable': 'ABA 付款暂不可用，您可稍后在此订单中付款。',
       'paywayPayNow': '使用 ABA / KHQR 付款',
@@ -7138,6 +7606,162 @@ class AppLocalizations {
   String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
   String get trSurchargesLine => tr('trSurchargesLine');
   String get trMeterSoFar => tr('trMeterSoFar');
+  String get pkExportReport => tr('pkExportReport');
+  String get pkExportPdf => tr('pkExportPdf');
+  String get pkExportPdfSub => tr('pkExportPdfSub');
+  String get pkExportExcel => tr('pkExportExcel');
+  String get pkExportExcelSub => tr('pkExportExcelSub');
+  String get pkStatusCompleted => tr('pkStatusCompleted');
+  String get pkStatusFailed => tr('pkStatusFailed');
+  String get pkStatusReturned => tr('pkStatusReturned');
+  String get pkReasonCannotContact => tr('pkReasonCannotContact');
+  String get pkReasonRefused => tr('pkReasonRefused');
+  String get pkReasonWrongAddress => tr('pkReasonWrongAddress');
+  String get pkReasonPostponed => tr('pkReasonPostponed');
+  String get pkReasonOther => tr('pkReasonOther');
+  String get pkReturningToShop => tr('pkReturningToShop');
+  String get pkReports => tr('pkReports');
+  String get pkReportsSub => tr('pkReportsSub');
+  String get pkDay => tr('pkDay');
+  String get pkWeek => tr('pkWeek');
+  String get pkMonth => tr('pkMonth');
+  String get pkTotalPackages => tr('pkTotalPackages');
+  String get pkSuccessRate => tr('pkSuccessRate');
+  String get pkInProgress => tr('pkInProgress');
+  String get pkDeliveryFees => tr('pkDeliveryFees');
+  String get pkCodCollected => tr('pkCodCollected');
+  String get pkAvgTime => tr('pkAvgTime');
+  String pkMinutes(int n) => _fill('pkMinutes', {'n': '$n'});
+  String get pkFailureReasons => tr('pkFailureReasons');
+  String get pkNoData => tr('pkNoData');
+  String get pkToday => tr('pkToday');
+  String get pkThisWeek => tr('pkThisWeek');
+  String get pkThisMonth => tr('pkThisMonth');
+  String get pkByHour => tr('pkByHour');
+  String get pkByDay => tr('pkByDay');
+  String pkTodaySummary(int done, int back, int open) => _fill('pkTodaySummary', {'done': '$done', 'back': '$back', 'open': '$open'});
+  String get drvCantDeliver => tr('drvCantDeliver');
+  String get drvCantDeliverTitle => tr('drvCantDeliverTitle');
+  String get drvFailNote => tr('drvFailNote');
+  String get drvReportFail => tr('drvReportFail');
+  String get drvReturningTitle => tr('drvReturningTitle');
+  String get drvReturnedToShop => tr('drvReturnedToShop');
+  String get drvDeliveredAfterAll => tr('drvDeliveredAfterAll');
+  String get drvReturnDone => tr('drvReturnDone');
+  String get pkPartnerServices => tr('pkPartnerServices');
+  String get pkCreatePackage => tr('pkCreatePackage');
+  String get pkCreatePackageSub => tr('pkCreatePackageSub');
+  String get pkMyPackages => tr('pkMyPackages');
+  String get pkMyPackagesSub => tr('pkMyPackagesSub');
+  String get pkTrackPackage => tr('pkTrackPackage');
+  String get pkTrackPackageSub => tr('pkTrackPackageSub');
+  String get pkHistory => tr('pkHistory');
+  String get pkHistorySub => tr('pkHistorySub');
+  String pkActiveCount(int n) => _fill('pkActiveCount', {'n': '$n'});
+  String pkTodayCount(int n) => _fill('pkTodayCount', {'n': '$n'});
+  String get pkCodPending => tr('pkCodPending');
+  String get pkBecomePartner => tr('pkBecomePartner');
+  String get pkBecomePartnerSub => tr('pkBecomePartnerSub');
+  String get pkPartnerAccount => tr('pkPartnerAccount');
+  String get pkPendingTitle => tr('pkPendingTitle');
+  String get pkPendingBody => tr('pkPendingBody');
+  String get pkRejectedTitle => tr('pkRejectedTitle');
+  String get pkSuspendedTitle => tr('pkSuspendedTitle');
+  String get pkSuspendedBody => tr('pkSuspendedBody');
+  String get pkResubmit => tr('pkResubmit');
+  String get pkRegisterTitle => tr('pkRegisterTitle');
+  String get pkRegisterIntro => tr('pkRegisterIntro');
+  String get pkBusinessName => tr('pkBusinessName');
+  String get pkBusinessType => tr('pkBusinessType');
+  String get pkContactName => tr('pkContactName');
+  String get pkBusinessPhone => tr('pkBusinessPhone');
+  String get pkPickupAddress => tr('pkPickupAddress');
+  String get pkSubmit => tr('pkSubmit');
+  String get pkRequired => tr('pkRequired');
+  String get pkTypeOnlineShop => tr('pkTypeOnlineShop');
+  String get pkTypeRetail => tr('pkTypeRetail');
+  String get pkTypeRestaurant => tr('pkTypeRestaurant');
+  String get pkTypeOther => tr('pkTypeOther');
+  String get pkSender => tr('pkSender');
+  String get pkReceiver => tr('pkReceiver');
+  String get pkName => tr('pkName');
+  String get pkPhone => tr('pkPhone');
+  String get pkPickupLocation => tr('pkPickupLocation');
+  String get pkDeliveryLocation => tr('pkDeliveryLocation');
+  String get pkChooseOnMap => tr('pkChooseOnMap');
+  String get pkPackage => tr('pkPackage');
+  String get pkPackageType => tr('pkPackageType');
+  String get pkDescription => tr('pkDescription');
+  String get pkWeight => tr('pkWeight');
+  String get pkSize => tr('pkSize');
+  String get pkPhoto => tr('pkPhoto');
+  String get pkAddPhoto => tr('pkAddPhoto');
+  String get pkCamera => tr('pkCamera');
+  String get pkGallery => tr('pkGallery');
+  String get pkService => tr('pkService');
+  String get pkNormal => tr('pkNormal');
+  String get pkExpress => tr('pkExpress');
+  String get pkPayment => tr('pkPayment');
+  String get pkWhoPays => tr('pkWhoPays');
+  String get pkPartnerPays => tr('pkPartnerPays');
+  String get pkReceiverPays => tr('pkReceiverPays');
+  String get pkCodAmount => tr('pkCodAmount');
+  String get pkCodHint => tr('pkCodHint');
+  String get pkReference => tr('pkReference');
+  String get pkNotes => tr('pkNotes');
+  String get pkDeliveryFee => tr('pkDeliveryFee');
+  String get pkSubmitPackage => tr('pkSubmitPackage');
+  String get pkChooseLocations => tr('pkChooseLocations');
+  String get pkCreatedTitle => tr('pkCreatedTitle');
+  String pkCreatedBody(String code) => _fill('pkCreatedBody', {'code': code});
+  String get pkStatusPending => tr('pkStatusPending');
+  String get pkStatusConfirmed => tr('pkStatusConfirmed');
+  String get pkStatusDriverAssigned => tr('pkStatusDriverAssigned');
+  String get pkStatusPickedUp => tr('pkStatusPickedUp');
+  String get pkStatusInTransit => tr('pkStatusInTransit');
+  String get pkStatusDelivered => tr('pkStatusDelivered');
+  String get pkStatusCancelled => tr('pkStatusCancelled');
+  String get pkTabActive => tr('pkTabActive');
+  String get pkTabHistory => tr('pkTabHistory');
+  String get pkTabAll => tr('pkTabAll');
+  String get pkSearchHint => tr('pkSearchHint');
+  String get pkEmptyActive => tr('pkEmptyActive');
+  String get pkEmptyHistory => tr('pkEmptyHistory');
+  String get pkEmptyAll => tr('pkEmptyAll');
+  String get pkDetailTitle => tr('pkDetailTitle');
+  String get pkTimeline => tr('pkTimeline');
+  String get pkDriver => tr('pkDriver');
+  String get pkCall => tr('pkCall');
+  String get pkLiveMap => tr('pkLiveMap');
+  String get pkShareLink => tr('pkShareLink');
+  String pkShareText(String code, String url) => _fill('pkShareText', {'code': code, 'url': url});
+  String get pkCancelPackage => tr('pkCancelPackage');
+  String get pkCancelConfirm => tr('pkCancelConfirm');
+  String get pkCancelReason => tr('pkCancelReason');
+  String get pkKeep => tr('pkKeep');
+  String get pkQrTitle => tr('pkQrTitle');
+  String get pkQrHint => tr('pkQrHint');
+  String get pkProofPhoto => tr('pkProofPhoto');
+  String get pkWaitingConfirm => tr('pkWaitingConfirm');
+  String get pkFindingDriver => tr('pkFindingDriver');
+  String get pkPaymentByReceiver => tr('pkPaymentByReceiver');
+  String get pkPaymentByPartner => tr('pkPaymentByPartner');
+  String get pkCod => tr('pkCod');
+  String get pkSizeSmall => tr('pkSizeSmall');
+  String get pkSizeMedium => tr('pkSizeMedium');
+  String get pkSizeLarge => tr('pkSizeLarge');
+  String get pkSizeXL => tr('pkSizeXL');
+  String get pkTypeDocument => tr('pkTypeDocument');
+  String get pkTypeParcel => tr('pkTypeParcel');
+  String get pkTypeFood => tr('pkTypeFood');
+  String get pkTypeClothing => tr('pkTypeClothing');
+  String get pkTypeElectronics => tr('pkTypeElectronics');
+  String get pkTypeFragile => tr('pkTypeFragile');
+  String get pkPayMethod => tr('pkPayMethod');
+  String get pkPayCash => tr('pkPayCash');
+  String get pkPayWallet => tr('pkPayWallet');
+  String get pkPayAba => tr('pkPayAba');
+  String get pkCreated => tr('pkCreated');
   String paywayOrderPaidBody(String amount) => _fill('paywayOrderPaidBody', {'amount': amount});
   String get paywayNotAvailable => tr('paywayNotAvailable');
   String get paywayPayNow => tr('paywayPayNow');

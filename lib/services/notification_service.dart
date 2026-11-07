@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../screens/partner/partner_packages_screen.dart';
+import '../screens/partner/partner_register_screen.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show Color, MaterialPageRoute, ValueNotifier;
@@ -204,10 +206,17 @@ class NotificationService {
 
   /// Opens the screen a tapped push is about (shop and admin pushes).
   Future<void> openForType(String? type) async {
-    if (type == null || !(type.startsWith('shop_') || type.startsWith('admin_'))) return;
+    if (type == null || !(type.startsWith('shop_') || type.startsWith('admin_') || type.startsWith('partner_'))) return;
     final nav = navigatorKey.currentState;
     if (nav == null) {
       _pendingTapType = type;
+      return;
+    }
+    // Partner registration result / package updates.
+    if (type.startsWith('partner_')) {
+      nav.push(MaterialPageRoute(builder: (_) => type == 'partner_package'
+          ? const PartnerPackagesScreen(initialTab: 0)
+          : const PartnerRegisterScreen()));
       return;
     }
     if (type.startsWith('admin_')) {

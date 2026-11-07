@@ -49,7 +49,7 @@ class _SplashScreenState extends State<SplashScreen>
       destination = const AdminDashboardScreen();
     } else if (role == 'driver') {
       destination = const DriverHomeScreen();
-    } else if (role == 'passenger') {
+    } else if (role == 'passenger' || role == 'partner') {
       destination = const PassengerHomeScreen();
     } else {
       final seenOnboarding = await OnboardingScreen.hasSeenOnboarding();
@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     // Register this device for push notifications if a session already
     // exists — fire-and-forget, shouldn't block navigation.
-    if (role == 'admin' || role == 'driver' || role == 'passenger') {
+    if (role == 'admin' || role == 'driver' || role == 'passenger' || role == 'partner') {
       NotificationService.instance.initFcm();
     }
 

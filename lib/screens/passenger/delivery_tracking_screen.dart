@@ -237,6 +237,9 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
     'assigned':  'accepted',
     'in_transit': 'in_progress',
     'completed': 'delivered',
+    // Could not deliver → package goes back to the sender.
+    'delivery_failed': 'in_progress',
+    'returned': 'in_progress',
   };
 
   int get _stepIndex {
@@ -260,6 +263,10 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
         default:          return AppLocalizations.of(context).trProcessingDots;
       }
     }
+    if (_status == 'delivery_failed') {
+      return '${AppLocalizations.of(context).pkStatusFailed} — ${AppLocalizations.of(context).pkReturningToShop}';
+    }
+    if (_status == 'returned') return AppLocalizations.of(context).pkStatusReturned;
     switch (_kStatusAlias[_status] ?? _status) {
       case 'requested':   return AppLocalizations.of(context).trLookingForDriver;
       case 'accepted':    return AppLocalizations.of(context).trDriverAssigned;
