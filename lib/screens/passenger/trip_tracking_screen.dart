@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import '../../l10n/l10n.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:math' show min, max, cos, pi, sqrt;
@@ -904,6 +905,12 @@ class _TripTrackingScreenState extends State<TripTrackingScreen>
       distKm = _distanceKm;
     }
     if (!mounted) return;
+    // ABA / ACLEDA ride: collect the fare through ABA PayWay right away. If
+    // the passenger closes it, the receipt keeps a "Pay" button.
+    if (widget.rideId != null && isPayWayMethod(payMethod)) {
+      await payOrderWithAba(context, type: 'ride', id: widget.rideId!);
+      if (!mounted) return;
+    }
     // Dispose map before replacing route to avoid iOS
     // "recreating_view" PlatformException.
     _mapController?.dispose();

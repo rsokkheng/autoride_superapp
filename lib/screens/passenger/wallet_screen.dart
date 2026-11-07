@@ -1,4 +1,5 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import '../shared/payway_checkout_screen.dart';
 import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
@@ -166,6 +167,7 @@ class _WalletScreenState extends State<WalletScreen> {
     }
     showTopUpSheet(
       context,
+      onPayWayFinished: (_) { if (mounted) _loadAll(); },
       onSubmitted: (request) async {
         final approved = await Navigator.push<bool>(
           context,
@@ -728,6 +730,9 @@ void showTopUpSheet(
   BuildContext context, {
   required void Function(TopUpRequestModel request) onSubmitted,
   int? initialAmountKhr,
+  /// ABA / ACLEDA went through ABA PayWay (no admin approval) — `paid` is
+  /// true once the wallet was credited.
+  void Function(bool paid)? onPayWayFinished,
 }) {
   showModalBottomSheet(
     context: context,
@@ -739,6 +744,7 @@ void showTopUpSheet(
     builder: (ctx) => _TopUpSheet(
       onSubmitted: onSubmitted,
       initialAmountKhr: initialAmountKhr,
+      onPayWayFinished: onPayWayFinished,
     ),
   );
 }
@@ -746,8 +752,9 @@ void showTopUpSheet(
 class _TopUpSheet extends StatefulWidget {
   final void Function(TopUpRequestModel request) onSubmitted;
   final int? initialAmountKhr;
+  final void Function(bool paid)? onPayWayFinished;
 
-  const _TopUpSheet({required this.onSubmitted, this.initialAmountKhr});
+  const _TopUpSheet({required this.onSubmitted, this.initialAmountKhr, this.onPayWayFinished});
 
   @override
   State<_TopUpSheet> createState() => _TopUpSheetState();
@@ -805,6 +812,33 @@ class _TopUpSheetState extends State<_TopUpSheet> {
       return;
     }
     setState(() => _submitting = true);
+
+    // ABA / ACLEDA → real ABA PayWay KHQR, credited automatically once paid.
+    // Falls back to a manual request while the server has no PayWay keys.
+    if (_selectedMethod == 'aba' || _selectedMethod == 'acleda') {
+      try {
+        final checkout = await ApiService.createPayWayKhqr(amount: amount);
+        if (!mounted) return;
+        final nav = Navigator.of(context);
+        nav.pop(); // close the sheet
+        final paid = await nav.push<bool>(
+            MaterialPageRoute(builder: (_) => PayWayCheckoutScreen(checkout: checkout)));
+        widget.onPayWayFinished?.call(paid == true);
+        return;
+      } on ApiException catch (e) {
+        if (e.statusCode != 503) {
+          if (!mounted) return;
+          setState(() => _submitting = false);
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(e.message), backgroundColor: AppTheme.danger, behavior: SnackBarBehavior.floating));
+          return;
+        }
+        // 503 not configured → manual top-up request below.
+      } catch (_) {
+        // Network error → manual request below.
+      }
+    }
+
     try {
       final request = await ApiService.requestTopUp(amount: amount, method: _selectedMethod);
       await _rememberTopUp(request.id);

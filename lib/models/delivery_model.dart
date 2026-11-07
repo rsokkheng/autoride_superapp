@@ -21,6 +21,7 @@ class DeliveryModel {
   final int fee;
   final String paymentBy;
   final String paymentMethod;
+  final String paymentStatus; // unpaid | prepaid | awaiting_payment | paid
   final String? notes;
   final String createdAt;
   final String updatedAt;
@@ -80,6 +81,7 @@ class DeliveryModel {
     required this.fee,
     this.paymentBy     = 'sender',
     this.paymentMethod = 'cash',
+    this.paymentStatus = 'unpaid',
     this.notes,
     required this.createdAt,
     required this.updatedAt,
@@ -157,6 +159,7 @@ class DeliveryModel {
       fee:            _toInt(json['fee']),
       paymentBy:      json['payment_by']?.toString()     ?? 'sender',
       paymentMethod:  json['payment_method']?.toString() ?? 'cash',
+      paymentStatus:  json['payment_status']?.toString() ?? 'unpaid',
       notes:          json['notes']?.toString(),
       createdAt:      json['created_at']?.toString() ?? '',
       updatedAt:      json['updated_at']?.toString() ?? '',

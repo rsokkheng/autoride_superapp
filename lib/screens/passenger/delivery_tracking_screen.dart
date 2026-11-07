@@ -1,4 +1,6 @@
 import 'package:autoride_superapp/l10n/app_localizations.dart';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import 'package:autoride_superapp/utils/sheet_insets.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -296,6 +298,11 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
   String? get _cancelledReason {
     final reason = _delivery?.cancellationReason;
     return reason == null ? null : AppLocalizations.of(context).trCancelReason(reason);
+  }
+
+  Future<void> _payWithAba() async {
+    final paid = await payOrderWithAba(context, type: 'delivery', id: widget.deliveryId);
+    if (paid) _fetchDelivery();
   }
 
   void _goBack() {
@@ -633,6 +640,7 @@ class _DeliveryTrackingScreenState extends State<DeliveryTrackingScreen> {
             onRate:      _isDelivered ? _showRatingDialog : null,
             onViewSummary: _isDelivered ? _openDeliverySummary : null,
             onShare:     _shareDelivery,
+            onPayAba:    _payWithAba,
             cancelledTitle:   _status == 'cancelled' ? _cancelledTitle : null,
             cancelledMessage: _status == 'cancelled' ? _cancelledMessage : null,
             cancelledReason:  _status == 'cancelled' ? _cancelledReason : null,
@@ -657,6 +665,7 @@ class _BottomSheet extends StatelessWidget {
   final String? cancelledMessage;
   final String? cancelledReason;
   final VoidCallback? onBack;
+  final VoidCallback? onPayAba;
   final bool    driverAssigned;
   final String  fareDisplay;
   final String  serviceType;
@@ -680,6 +689,7 @@ class _BottomSheet extends StatelessWidget {
     this.cancelledMessage,
     this.cancelledReason,
     this.onBack,
+    this.onPayAba,
     required this.driverAssigned,
     required this.fareDisplay,
     required this.serviceType,
@@ -758,6 +768,31 @@ class _BottomSheet extends StatelessWidget {
                 ),
               ]),
               const SizedBox(height: 14),
+
+              // Unpaid ABA / ACLEDA delivery (KHQR closed before paying) → pay now.
+              if (delivery != null && cancelledTitle == null && isPayWayMethod(delivery!.paymentMethod)
+                  && !const ['paid', 'prepaid'].contains(delivery!.paymentStatus)) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(children: [
+                    const PaymentLogo(method: 'aba', size: 32),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(AppLocalizations.of(context).paywayUnpaid,
+                        style: const TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w800))),
+                    ElevatedButton(
+                      onPressed: onPayAba,
+                      style: AppTheme.confirmButtonStyle(),
+                      child: Text(AppLocalizations.of(context).paywayPayNow),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 12),
+              ],
 
               // Progress bar — replaced by the cancellation notice when cancelled
               if (cancelledTitle != null) ...[

@@ -3661,6 +3661,54 @@ class ApiService {
     throw ApiException(message, raw.statusCode);
   }
 
+  /// POST /v1/payments/payway/khqr — real ABA PayWay KHQR (pay with ABA
+  /// Mobile or any KHQR bank app, e.g. ACLEDA). purpose=topup credits the
+  /// wallet once PayWay confirms. Throws ApiException(…, 503) when the
+  /// server has no PayWay keys yet.
+  static Future<Map<String, dynamic>> createPayWayKhqr({required int amount, String purpose = 'topup'}) async {
+    final token = await getToken();
+    if (token == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/payments/payway/khqr', {'amount': amount, 'purpose': purpose},
+        token: token, idempotent: true);
+    Map<String, dynamic> body;
+    try { body = jsonDecode(raw.body) as Map<String, dynamic>; } catch (_) { body = const {}; }
+    if (raw.statusCode == 201 || raw.statusCode == 200) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    throw ApiException(body['message'] as String? ?? 'ABA payment failed (${raw.statusCode}).', raw.statusCode);
+  }
+
+  /// POST /v1/payments/payway/order — KHQR for an order (ride | delivery |
+  /// marketplace | car_rental | subscription). The server computes the amount.
+  static Future<Map<String, dynamic>> createPayWayForOrder({
+    required String type, required int id, String? guestToken,
+  }) async {
+    final token = await getToken();
+    if (token == null && guestToken == null) throw const ApiException('Not authenticated.', 401);
+    final raw = await _rawPost('/payments/payway/order', {
+      'type': type, 'id': id,
+      if (token == null && guestToken != null) 'guest_token': guestToken,
+    }, token: token, idempotent: true);
+    Map<String, dynamic> body;
+    try { body = jsonDecode(raw.body) as Map<String, dynamic>; } catch (_) { body = const {}; }
+    if (raw.statusCode == 201 || raw.statusCode == 200) {
+      return (body['data'] as Map<String, dynamic>?) ?? body;
+    }
+    throw ApiException(body['message'] as String? ?? 'ABA payment failed (${raw.statusCode}).', raw.statusCode);
+  }
+
+  /// GET /v1/payments/payway/{tranId} — pending | paid | failed | cancelled | expired | refunded
+  static Future<Map<String, dynamic>> getPayWayStatus(String tranId, {String? guestToken}) async {
+    final token = await getToken();
+    if (token == null && guestToken == null) throw const ApiException('Not authenticated.', 401);
+    final q = (token == null && guestToken != null) ? '?guest_token=${Uri.encodeQueryComponent(guestToken)}' : '';
+    final raw = await _rawGet('/payments/payway/$tranId$q', token: token);
+    Map<String, dynamic> body;
+    try { body = jsonDecode(raw.body) as Map<String, dynamic>; } catch (_) { body = const {}; }
+    if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
+    throw ApiException(body['message'] as String? ?? 'Failed (${raw.statusCode}).', raw.statusCode);
+  }
+
   /// GET /v1/wallet/topup/{id}
   static Future<TopUpRequestModel> getTopUpRequest(int id) async {
     final token = await getToken();
@@ -5092,13 +5140,23 @@ class ApiService {
       ..headers['Accept']        = 'application/json'
       ..files.add(http.MultipartFile.fromBytes(
         'image', imageBytes, filename: filename,
-        contentType: MediaType('image', filename.split('.').last),
+        // "jpg" isn't a MIME subtype — the server expects image/jpeg.
+        contentType: MediaType('image', switch (filename.split('.').last.toLowerCase()) {
+          'png'  => 'png',
+          'webp' => 'webp',
+          _      => 'jpeg',
+        }),
       ));
     final streamed = await request.send().timeout(const Duration(seconds: 30));
     final raw  = await http.Response.fromStream(streamed);
-    final body = jsonDecode(raw.body) as Map<String, dynamic>;
+    Map<String, dynamic> body;
+    try {
+      body = jsonDecode(raw.body) as Map<String, dynamic>;
+    } catch (_) {
+      body = const {}; // e.g. an HTML error page for a too-large upload
+    }
     if (raw.statusCode == 200) return (body['data'] as Map<String, dynamic>?) ?? body;
-    throw ApiException(body['message'] as String? ?? 'Helmet check failed.', raw.statusCode);
+    throw ApiException(body['message'] as String? ?? l10n.helmetCheckFailed, raw.statusCode);
   }
 
   // ── Promotional Banners ────────────────────────────────────────────────────
@@ -6018,7 +6076,9 @@ class ApiService {
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
-  static Future<String> subscribePlan({
+  /// Message plus the subscription — `status: pending` means it starts once
+  /// the ABA PayWay payment is confirmed.
+  static Future<({String message, int? id, String? status})> subscribePlan({
     required String planSlug,
     required String paymentMethod,
     bool autoRenew = true,
@@ -6032,12 +6092,14 @@ class ApiService {
     }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return body['message'] as String? ?? l10n.trSubscribed;
+      final data = body['data'] as Map<String, dynamic>?;
+      return (message: body['message'] as String? ?? l10n.trSubscribed,
+              id: (data?['id'] as num?)?.toInt(), status: data?['status'] as String?);
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }
 
-  static Future<String> upgradeSubscription({
+  static Future<({String message, int? id, String? status})> upgradeSubscription({
     required String planSlug,
     required String paymentMethod,
   }) async {
@@ -6049,7 +6111,9 @@ class ApiService {
     }, token: token, idempotent: true);
     final body = jsonDecode(raw.body) as Map<String, dynamic>;
     if (raw.statusCode == 200 || raw.statusCode == 201) {
-      return body['message'] as String? ?? l10n.trPlanUpgraded;
+      final data = body['data'] as Map<String, dynamic>?;
+      return (message: body['message'] as String? ?? l10n.trPlanUpgraded,
+              id: (data?['id'] as num?)?.toInt(), status: data?['status'] as String?);
     }
     throw ApiException(body['message'] as String? ?? 'Failed.', raw.statusCode);
   }

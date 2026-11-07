@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import 'car_rental_screen.dart';
@@ -2762,6 +2763,9 @@ class _OrderScreenState extends State<_OrderScreen> {
     if (_isGuest && !await ensureGuestPhoneVerified(context, guestPhone!)) return;
     if (!mounted) return;
     setState(() { _busy = true; _err = null; });
+    // Which order to pay through ABA PayWay once it's placed.
+    String payType = 'marketplace';
+    int? payId;
     try {
       if (_isVehicleRental) {
         // Pickup falls back to the listing's own location, then a manually
@@ -2777,7 +2781,7 @@ class _OrderScreenState extends State<_OrderScreen> {
         final pickupLng = _locType == _LocType.pickup
             ? (widget.product.locationLng ?? _manualPickupLatLng?.longitude ?? kRotehPin.longitude)
             : _deliveryLatLng?.longitude;
-        await ApiService.createCarRental(
+        final rental = await ApiService.createCarRental(
           marketplaceProductId: widget.product.id,
           pickupLocation: pickupLocation,
           pickupLat:      pickupLat,
@@ -2790,8 +2794,10 @@ class _OrderScreenState extends State<_OrderScreen> {
           guestName:      guestName,
           guestPhone:     guestPhone,
         );
+        payType = 'car_rental';
+        payId   = (rental['id'] as num?)?.toInt();
       } else if (_extraItems.isEmpty) {
-        await ApiService.placeMarketplaceOrder(_currentProduct.id,
+        final order = await ApiService.placeMarketplaceOrder(_currentProduct.id,
           orderType:     widget.orderType,
           quantity:      _qty,
           paymentMethod: _pay,
@@ -2806,12 +2812,13 @@ class _OrderScreenState extends State<_OrderScreen> {
           deliveryLat:     _orderDeliveryAddress != null ? _deliveryLatLng?.latitude  : null,
           deliveryLng:     _orderDeliveryAddress != null ? _deliveryLatLng?.longitude : null,
         );
+        payId = order.id;
       } else {
         // Multiple items — atomic checkout: all orders succeed together or
         // none are created, instead of firing one request per item and
         // risking a half-placed cart if a later item fails.
         try {
-          await ApiService.checkoutMarketplaceCart(
+          final orders = await ApiService.checkoutMarketplaceCart(
             items: [
               MarketplaceCheckoutItem(productId: _currentProduct.id, quantity: _qty,
                   accessoryIds: _selectedAccessoryIds.toList()),
@@ -2827,6 +2834,7 @@ class _OrderScreenState extends State<_OrderScreen> {
             deliveryLat:     _orderDeliveryAddress != null ? _deliveryLatLng?.latitude  : null,
             deliveryLng:     _orderDeliveryAddress != null ? _deliveryLatLng?.longitude : null,
           );
+          if (orders.isNotEmpty) payId = orders.first.id;
         } on ApiException catch (e) {
           // TEMPORARY: /marketplace/checkout isn't deployed on the live
           // server yet (404/405 — route not registered there, though it
@@ -2863,6 +2871,13 @@ class _OrderScreenState extends State<_OrderScreen> {
         }
       }
       if (!mounted) return;
+      // ABA / ACLEDA → pay the order through ABA PayWay before the success
+      // dialog. The server prices it (USD, whole checkout in one payment).
+      if (payId != null && isPayWayMethod(_pay)) {
+        await payOrderWithAba(context, type: payType, id: payId,
+            guestToken: _isGuest ? await ApiService.getGuestToken() : null);
+        if (!mounted) return;
+      }
       final goToHistory = await _showSuccessDialog();
       if (!mounted) return;
       if (goToHistory) {
@@ -4124,6 +4139,10 @@ class _MyOrdersTabState extends State<_MyOrdersTab>
           o.source == 'car_rental'
               ? await ApiService.cancelCarRental(o.id)
               : await ApiService.cancelMarketplaceOrder(o.id);
+        case 'pay_aba':
+          await payOrderWithAba(context,
+              type: o.source == 'car_rental' ? 'car_rental' : 'marketplace', id: o.id,
+              guestToken: _isGuest ? await ApiService.getGuestToken() : null);
       }
       _load();
     } on ApiException catch (e) {
@@ -4217,8 +4236,27 @@ class _OrderList extends StatelessWidget {
       child: ListView.builder(
         padding: responsivePadding(context, top: 12, bottom: 24),
         itemCount: orders.length,
-        itemBuilder: (_, i) =>
-            _OrderCard(order: orders[i], isSeller: isSeller, isGuest: isGuest, onAction: onAction),
+        itemBuilder: (ctx, i) {
+          final o = orders[i];
+          // Unpaid ABA / ACLEDA order (KHQR closed before paying) → pay now.
+          final needsPay = !isSeller && isPayWayMethod(o.paymentMethod)
+              && o.paymentStatus != 'paid' && o.status != 'cancelled';
+          final card = _OrderCard(order: o, isSeller: isSeller, isGuest: isGuest, onAction: onAction);
+          if (!needsPay) return card;
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            card,
+            Transform.translate(
+              offset: const Offset(0, -6),
+              child: ElevatedButton.icon(
+                onPressed: () => onAction(o, 'pay_aba'),
+                style: AppTheme.confirmButtonStyle(),
+                icon: const PaymentLogo(method: 'aba', size: 22),
+                label: Text(AppLocalizations.of(ctx).paywayPayNow),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ]);
+        },
       ),
     );
   }

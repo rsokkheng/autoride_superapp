@@ -73,6 +73,7 @@ class RideModel {
   final String  fare;
   final String  serviceType;
   final String? paymentMethod;
+  final String? paymentStatus; // unpaid | awaiting_payment | paid …
   final double? distanceKm;
   final int?    durationMin;
   final double? passengerRating;
@@ -118,6 +119,7 @@ class RideModel {
     required this.fare,
     required this.serviceType,
     this.paymentMethod,
+    this.paymentStatus,
     this.distanceKm,
     this.durationMin,
     this.passengerRating,
@@ -180,6 +182,7 @@ class RideModel {
       fare:           fare,
       serviceType:    json['service_type']?.toString()    ?? 'standard',
       paymentMethod:  json['payment_method']?.toString(),
+      paymentStatus:  json['payment_status']?.toString(),
       distanceKm:     _toDoubleOrNull(json['distance_km']),
       durationMin:    _toIntOrNull(json['duration_min']),
       passengerRating: _toDoubleOrNull(json['passenger_rating']),

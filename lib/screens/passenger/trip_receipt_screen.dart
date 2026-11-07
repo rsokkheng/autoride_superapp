@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/services/api_service.dart';
+import 'package:autoride_superapp/widgets/payment_logo.dart';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import 'package:autoride_superapp/l10n/app_localizations.dart';
 import 'package:autoride_superapp/theme/app_theme.dart';
 import 'package:share_plus/share_plus.dart';
@@ -137,6 +140,10 @@ class TripReceiptScreen extends StatelessWidget {
                     _buildHeader(context),
                     const SizedBox(height: 20),
                     _buildFareCard(context),
+                    if (rideId != null && isPayWayMethod(paymentMethod)) ...[
+                      const SizedBox(height: 12),
+                      _AbaRidePayment(rideId: rideId!),
+                    ],
                     const SizedBox(height: 16),
                     _buildTripDetailsCard(context),
                     const SizedBox(height: 16),
@@ -609,6 +616,67 @@ class _DetailRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// ABA / ACLEDA ride: paid or not, and a Pay button while it isn't.
+class _AbaRidePayment extends StatefulWidget {
+  final int rideId;
+  const _AbaRidePayment({required this.rideId});
+
+  @override
+  State<_AbaRidePayment> createState() => _AbaRidePaymentState();
+}
+
+class _AbaRidePaymentState extends State<_AbaRidePayment> {
+  String? _status;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final r = await ApiService.getRide(widget.rideId);
+      if (mounted) setState(() => _status = r.paymentStatus ?? 'unpaid');
+    } catch (_) {}
+  }
+
+  Future<void> _pay() async {
+    final paid = await payOrderWithAba(context, type: 'ride', id: widget.rideId);
+    if (paid && mounted) setState(() => _status = 'paid');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (_status == null) return const SizedBox.shrink();
+    final paid = _status == 'paid';
+    final color = paid ? AppTheme.success : AppTheme.warning;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(children: [
+        const PaymentLogo(method: 'aba', size: 34),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(paid ? l.paywayPaidLabel : l.paywayUnpaid,
+              style: TextStyle(color: color, fontWeight: FontWeight.w800)),
+        ),
+        if (!paid)
+          ElevatedButton(
+            onPressed: _pay,
+            style: AppTheme.confirmButtonStyle(),
+            child: Text(l.paywayPayNow),
+          ),
+      ]),
     );
   }
 }

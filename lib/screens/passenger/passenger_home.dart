@@ -30,7 +30,6 @@ import 'support_screen.dart';
 import 'scheduled_rides_screen.dart';
 import 'loyalty_screen.dart';
 import 'referral_screen.dart';
-import 'qr_payment_screen.dart';
 import 'settings_screen.dart';
 import 'car_rental_screen.dart';
 import 'family_screen.dart';
@@ -869,8 +868,6 @@ class _ProfileTabState extends State<_ProfileTab> {
                     }),
                 _ProfileMenuItem(icon: Icons.account_balance_wallet_outlined, label: l.rotehPay,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WalletScreen()))),
-                _ProfileMenuItem(icon: Icons.qr_code_outlined, label: l.qrPayment,
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const QrPaymentScreen()))),
                 _ProfileMenuItem(icon: Icons.local_offer_outlined, label: l.promosVouchers,
                     onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoScreen()))),
                 _ProfileMenuItem(icon: Icons.calendar_month_outlined, label: l.scheduledRides,

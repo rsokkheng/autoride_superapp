@@ -576,6 +576,23 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
       'trSurchargesLine': 'Surcharges & minimum fare',
       'trMeterSoFar': 'Distance so far',
+      'paywayOrderPaidBody': 'Your payment of {amount} was received. Thank you!',
+      'paywayNotAvailable': 'ABA payment is not available yet. You can pay later from this order.',
+      'paywayPayNow': 'Pay with ABA / KHQR',
+      'paywayUnpaid': 'Not paid yet',
+      'paywayPaidLabel': 'Paid',
+      'paywayTitle': 'Pay with ABA / KHQR',
+      'paywayScanHint': 'Scan with ABA Mobile, ACLEDA or any KHQR bank app.',
+      'paywayWaiting': 'Waiting for payment',
+      'paywayExpired': 'This QR has expired. Please try again.',
+      'paywayFailed': 'The payment was not completed.',
+      'paywayOpenAba': 'Open ABA Mobile',
+      'paywayIPaid': 'I have paid — check now',
+      'paywayRef': 'Reference',
+      'paywayPaidTitle': 'Payment received',
+      'paywayPaidBody': '{amount} has been added to your ROTEH Pay wallet.',
+      'helmetConfidence': 'Confidence: {value}',
+      'helmetCheckFailed': 'Could not check the photo. Please try again.',
       'txStatusPending': 'Pending',
       'txStatusProcessing': 'Processing',
       'txStatusFailed': 'Failed',
@@ -2744,6 +2761,23 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
       'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
       'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
+      'paywayOrderPaidBody': 'បានទទួលការបង់ប្រាក់ {amount} របស់អ្នក។ សូមអរគុណ!',
+      'paywayNotAvailable': 'ការបង់ប្រាក់តាម ABA មិនទាន់អាចប្រើបានទេ។ អ្នកអាចបង់ពេលក្រោយពីការកម្ម៉ង់នេះ។',
+      'paywayPayNow': 'បង់ប្រាក់តាម ABA / KHQR',
+      'paywayUnpaid': 'មិនទាន់បង់ប្រាក់',
+      'paywayPaidLabel': 'បានបង់ប្រាក់',
+      'paywayTitle': 'បង់ប្រាក់តាម ABA / KHQR',
+      'paywayScanHint': 'ស្កេនជាមួយ ABA Mobile, ACLEDA ឬកម្មវិធីធនាគារ KHQR ណាមួយ។',
+      'paywayWaiting': 'កំពុងរង់ចាំការបង់ប្រាក់',
+      'paywayExpired': 'QR នេះផុតកំណត់ហើយ។ សូមព្យាយាមម្តងទៀត។',
+      'paywayFailed': 'ការបង់ប្រាក់មិនបានជោគជ័យទេ។',
+      'paywayOpenAba': 'បើក ABA Mobile',
+      'paywayIPaid': 'ខ្ញុំបានបង់រួចហើយ — ពិនិត្យឥឡូវនេះ',
+      'paywayRef': 'លេខយោង',
+      'paywayPaidTitle': 'បានទទួលការបង់ប្រាក់',
+      'paywayPaidBody': 'បានបញ្ចូល {amount} ទៅក្នុងកាបូប ROTEH Pay របស់អ្នក។',
+      'helmetConfidence': 'ភាពជាក់លាក់៖ {value}',
+      'helmetCheckFailed': 'មិនអាចពិនិត្យរូបថតបានទេ។ សូមព្យាយាមម្តងទៀត។',
       'txStatusPending': 'កំពុងរង់ចាំ',
       'txStatusProcessing': 'កំពុងដំណើរការ',
       'txStatusFailed': 'បរាជ័យ',
@@ -4915,6 +4949,23 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
       'trSurchargesLine': '附加费与最低车费',
       'trMeterSoFar': '目前里程',
+      'paywayOrderPaidBody': '已收到您支付的 {amount}，谢谢！',
+      'paywayNotAvailable': 'ABA 付款暂不可用，您可稍后在此订单中付款。',
+      'paywayPayNow': '使用 ABA / KHQR 付款',
+      'paywayUnpaid': '尚未付款',
+      'paywayPaidLabel': '已付款',
+      'paywayTitle': 'ABA / KHQR 付款',
+      'paywayScanHint': '使用 ABA Mobile、ACLEDA 或任意 KHQR 银行应用扫码。',
+      'paywayWaiting': '等待付款',
+      'paywayExpired': '二维码已过期，请重试。',
+      'paywayFailed': '付款未完成。',
+      'paywayOpenAba': '打开 ABA Mobile',
+      'paywayIPaid': '我已付款——立即查询',
+      'paywayRef': '参考号',
+      'paywayPaidTitle': '已收到付款',
+      'paywayPaidBody': '{amount} 已存入您的 ROTEH Pay 钱包。',
+      'helmetConfidence': '置信度：{value}',
+      'helmetCheckFailed': '无法检测照片，请重试。',
       'txStatusPending': '待处理',
       'txStatusProcessing': '处理中',
       'txStatusFailed': '失败',
@@ -7087,6 +7138,23 @@ class AppLocalizations {
   String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
   String get trSurchargesLine => tr('trSurchargesLine');
   String get trMeterSoFar => tr('trMeterSoFar');
+  String paywayOrderPaidBody(String amount) => _fill('paywayOrderPaidBody', {'amount': amount});
+  String get paywayNotAvailable => tr('paywayNotAvailable');
+  String get paywayPayNow => tr('paywayPayNow');
+  String get paywayUnpaid => tr('paywayUnpaid');
+  String get paywayPaidLabel => tr('paywayPaidLabel');
+  String get paywayTitle => tr('paywayTitle');
+  String get paywayScanHint => tr('paywayScanHint');
+  String get paywayWaiting => tr('paywayWaiting');
+  String get paywayExpired => tr('paywayExpired');
+  String get paywayFailed => tr('paywayFailed');
+  String get paywayOpenAba => tr('paywayOpenAba');
+  String get paywayIPaid => tr('paywayIPaid');
+  String get paywayRef => tr('paywayRef');
+  String get paywayPaidTitle => tr('paywayPaidTitle');
+  String paywayPaidBody(String amount) => _fill('paywayPaidBody', {'amount': amount});
+  String helmetConfidence(String value) => _fill('helmetConfidence', {'value': value});
+  String get helmetCheckFailed => tr('helmetCheckFailed');
   String get txStatusPending => tr('txStatusPending');
   String get txStatusProcessing => tr('txStatusProcessing');
   String get txStatusFailed => tr('txStatusFailed');

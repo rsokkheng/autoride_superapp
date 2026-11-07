@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -246,6 +247,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         scheduledAt:    _isScheduled ? _formatDateTime(_scheduledTime) : null,
       );
       if (!mounted) return;
+      if (isPayWayMethod(_paymentMethod)) {
+        await payOrderWithAba(context, type: 'delivery', id: created.id);
+        if (!mounted) return;
+      }
       final recipientName = _recipientNameCtrl.text.trim();
       Navigator.pushReplacement(
         context,
@@ -334,6 +339,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         scheduledAt:      _isMoveScheduled ? _formatDateTime(_moveDate) : null,
       );
       if (!mounted) return;
+      if (isPayWayMethod(_movePaymentMethod)) {
+        await payOrderWithAba(context, type: 'delivery', id: createdMoving.id);
+        if (!mounted) return;
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

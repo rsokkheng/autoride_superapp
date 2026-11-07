@@ -588,6 +588,27 @@ class _DriverDashboardState extends State<_DriverDashboard>
     });
   }
 
+  Future<void> _onRideLeftList(int rideId) async {
+    RideModel? ride;
+    int? me;
+    try {
+      ride = await ApiService.getRide(rideId);
+      me   = await ApiService.getUserId();
+    } catch (_) {
+      return; // can't tell — the next poll / realtime event decides
+    }
+    if (!mounted || _pendingRide?.id != rideId) return; // accept flow moved on
+    if (ride.driverId != null && ride.driverId == me) return; // we accepted it
+    _dismissed.add('ride:$rideId');
+    setState(() => _pendingRide = null);
+    // Only a real cancel (passenger / admin) is worth a popup. A request that
+    // simply expired with no driver (auto-cancel) or was taken by another
+    // driver just disappears.
+    if (ride.isCancelled && ride.cancellationReason != 'no_driver_available') {
+      _showRequestCancelled(isRide: true);
+    }
+  }
+
   // A request on screen was cancelled by the passenger / sender: drop the card
   // at once (no Accept on a dead booking) and say why. Taken by another
   // driver ('taken') just disappears quietly.
@@ -614,12 +635,16 @@ class _DriverDashboardState extends State<_DriverDashboard>
 
   /// [unknownReason]: gone from the list without a realtime notice — can't
   /// tell a cancel from another driver taking it, so don't blame the passenger.
+  bool _cancelDialogOpen = false;
+
   void _showRequestCancelled({required bool isRide, bool unknownReason = false}) {
+    if (_cancelDialogOpen) return; // never stack several of these
     final l = AppLocalizations.of(context);
     final body = unknownReason
         ? l.drvRequestNoLongerAvailable
         : isRide ? l.thePassengerCancelledThatRide : l.drvSenderCancelledDelivery;
     NotificationService.instance.showTripUpdate(title: l.requestCancelled, body: body);
+    _cancelDialogOpen = true;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -638,7 +663,7 @@ class _DriverDashboardState extends State<_DriverDashboard>
           ),
         ],
       ),
-    );
+    ).whenComplete(() => _cancelDialogOpen = false);
   }
 
   void _stopRequestPolling() {
@@ -866,11 +891,11 @@ class _DriverDashboardState extends State<_DriverDashboard>
       final rides = await ApiService.getAvailableRides();
       if (!mounted) return;
       if (_pendingRide != null && !rides.any((r) => r.id == _pendingRide!.id)) {
-        // Gone from /available without a realtime notice (socket down):
-        // cancelled or taken — either way it can't be accepted any more.
-        _dismissed.add('ride:${_pendingRide!.id}');
-        setState(() => _pendingRide = null);
-        _showRequestCancelled(isRide: true, unknownReason: true);
+        // Gone from /available — ask the server why before saying anything.
+        // It is also gone the moment *this* driver accepts it (the accept
+        // request may still be in flight), which used to pop a false
+        // "request cancelled" right after tapping Accept.
+        await _onRideLeftList(_pendingRide!.id);
       } else if (_pendingRide == null) {
         final next = _firstRide(rides);
         if (next != null) setState(() => _pendingRide = next);
@@ -3369,7 +3394,6 @@ class _DriverProfileState extends State<_DriverProfile> {
                 }, false),
                 (l.helmetCheck,    Icons.security_rounded,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HelmetCheckScreen())), false),
                 (l.safetySettings,  Icons.shield_outlined,          () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SafetyScreen())),  false),
-                (l.documents,       Icons.description_outlined,     () {}, false),
                 (l.tripHistory,     Icons.history_outlined,         () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DriverHistoryScreen())), false),
                 (l.deleteAccountLabel, Icons.delete_forever_outlined, () => confirmAndDeleteAccount(context), true),
                 (l.signOut, Icons.logout, () async {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import 'package:autoride_superapp/widgets/payment_logo.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
@@ -115,13 +116,20 @@ class _SubscriptionScreenState extends State<SubscriptionScreen>
     if (confirmed != true || !mounted) return;
 
     try {
-      final msg = isUpgrade
+      final res = isUpgrade
           ? await ApiService.upgradeSubscription(
               planSlug: plan.slug, paymentMethod: method)
           : await ApiService.subscribePlan(
               planSlug: plan.slug, paymentMethod: method);
+      // ABA / ACLEDA: the plan starts once ABA PayWay confirms the payment.
+      if (res.status == 'pending' && res.id != null && mounted) {
+        final paid = await payOrderWithAba(context, type: 'subscription', id: res.id!);
+        await _loadMy();
+        if (paid && mounted) _showSuccess(AppLocalizations.of(context).trSubscribed);
+        return;
+      }
       await _loadMy();
-      if (mounted) _showSuccess(msg);
+      if (mounted) _showSuccess(res.message);
     } on ApiException catch (e) {
       if (mounted) _showError(e);
     }

@@ -42,7 +42,8 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final detected  = _result?['helmet_detected'] == true || _result?['detected'] == true;
+    // Backend returns `passed` (and `helmet_detected` from now on).
+    final detected  = _result?['passed'] == true || _result?['helmet_detected'] == true || _result?['detected'] == true;
     final confident = (_result?['confidence'] as num?)?.toDouble() ?? 0.0;
 
     return Scaffold(
@@ -183,7 +184,7 @@ class _HelmetCheckScreenState extends State<HelmetCheckScreen> {
                 if (confident > 0) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Confidence: ${(confident * 100).toStringAsFixed(1)}%',
+                    AppLocalizations.of(context).helmetConfidence('${(confident * 100).toStringAsFixed(0)}%'),
                     style: TextStyle(color: context.appTextSecondary, fontSize: 14),
                   ),
                 ],

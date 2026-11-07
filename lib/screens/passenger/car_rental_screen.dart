@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:autoride_superapp/services/payway_pay.dart';
 import 'package:autoride_superapp/widgets/payment_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -599,6 +600,12 @@ class _CarRentalScreenState extends State<CarRentalScreen> {
         guestPhone:           _isGuest ? _guestPhoneCtrl.text.trim() : null,
       );
       if (!mounted) return;
+      final rentalId = (result['id'] as num?)?.toInt();
+      if (rentalId != null && isPayWayMethod(_paymentId)) {
+        await payOrderWithAba(context, type: 'car_rental', id: rentalId,
+            guestToken: _isGuest ? await ApiService.getGuestToken() : null);
+        if (!mounted) return;
+      }
       _showConfirmation(result);
     } on ApiException catch (e) {
       if (!mounted) return;
