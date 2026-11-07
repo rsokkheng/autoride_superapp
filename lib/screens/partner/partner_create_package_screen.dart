@@ -43,7 +43,6 @@ class _PartnerCreatePackageScreenState extends State<PartnerCreatePackageScreen>
   String _type = 'parcel';
   String _size = 'small';
   String _option = 'normal';
-  String _paymentBy = 'recipient';
   String _method = 'cash';
   File? _photo;
 
@@ -144,7 +143,8 @@ class _PartnerCreatePackageScreenState extends State<PartnerCreatePackageScreen>
       setState(() => _error = l.pkChooseLocations);
       return;
     }
-    final method = _paymentBy == 'recipient' ? 'cash' : _method;
+    // ROTEH always charges the delivery fee to the Partner.
+    final method = _method;
     final fields = <String, String>{
       'sender_name': _senderName.text.trim(),
       'sender_phone': normalizeLocalPhone(_senderPhone.text),
@@ -162,7 +162,6 @@ class _PartnerCreatePackageScreenState extends State<PartnerCreatePackageScreen>
       'package_size': _size,
       'service_option': _option,
       if (_cod.text.trim().isNotEmpty) 'package_amount': _cod.text.trim(),
-      'payment_by': _paymentBy,
       'payment_method': method,
       if (_reference.text.trim().isNotEmpty) 'partner_reference': _reference.text.trim(),
       if (_notes.text.trim().isNotEmpty) 'notes': _notes.text.trim(),
@@ -355,15 +354,23 @@ class _PartnerCreatePackageScreenState extends State<PartnerCreatePackageScreen>
                     (v) { setState(() => _option = v); _quote(); }),
               ]),
               _section(l.pkPayment, Icons.payments_outlined, [
-                Text(l.pkWhoPays, style: TextStyle(color: context.appTextSecondary, fontSize: 12.5)),
-                const SizedBox(height: 6),
-                _choice([('recipient', l.pkReceiverPays), ('sender', l.pkPartnerPays)], _paymentBy,
-                    (v) => setState(() => _paymentBy = v)),
-                if (_paymentBy == 'sender') ...[
+                // ROTEH charges the delivery fee to the Partner; the receiver pays only the COD.
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: AppTheme.accent.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.info_outline_rounded, size: 18, color: AppTheme.accent),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(l.pkFeeChargedToYou,
+                        style: TextStyle(color: context.appTextPrimary, fontSize: 12.5, height: 1.4))),
+                  ]),
+                ),
+                ...[
                   const SizedBox(height: 12),
                   Text(l.pkPayMethod, style: TextStyle(color: context.appTextSecondary, fontSize: 12.5)),
                   const SizedBox(height: 6),
-                  for (final m in [('cash', l.pkPayCash, 'cash'), ('wallet', l.pkPayWallet, 'wallet'), ('aba', l.pkPayAba, 'aba')])
+                  for (final m in [('cash', l.pkPayFromCod, 'cash'), ('wallet', l.pkPayWallet, 'wallet'), ('aba', l.pkPayAba, 'aba')])
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
                       child: Material(

@@ -3637,6 +3637,22 @@ class ApiService {
     return file;
   }
 
+  /// GET /v1/partner/statements?date= — daily statement (successful / unsuccessful).
+  static Future<Map<String, dynamic>> getPartnerStatement(DateTime date) async {
+    String two(int v) => v.toString().padLeft(2, '0');
+    final d = '${date.year}-${two(date.month)}-${two(date.day)}';
+    final raw = await _rawGet('/partner/statements?date=$d', token: await _tokenOrThrow());
+    return _decodeData(raw, 'Could not load the statement');
+  }
+
+  /// GET /v1/partner/statements/link — 30-minute browser links: print_url (Print / PDF), excel_url.
+  static Future<Map<String, dynamic>> getPartnerStatementLink(DateTime date, {String type = 'both'}) async {
+    String two(int v) => v.toString().padLeft(2, '0');
+    final d = '${date.year}-${two(date.month)}-${two(date.day)}';
+    final raw = await _rawGet('/partner/statements/link?date=$d&type=$type', token: await _tokenOrThrow());
+    return _decodeData(raw, 'Could not open the statement');
+  }
+
   /// GET /v1/partner/packages/{id}
   static Future<PartnerPackage> getPartnerPackage(int id) async {
     final raw = await _rawGet('/partner/packages/$id', token: await _tokenOrThrow());

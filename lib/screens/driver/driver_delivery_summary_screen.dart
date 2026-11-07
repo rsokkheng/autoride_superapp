@@ -90,6 +90,7 @@ class _DriverDeliverySummaryScreenState
   /// only counts when the recipient is the payer — a sender-paid fee was
   /// already settled at booking time.
   int get _totalCollect {
+    if (delivery.isPartnerPackage) return delivery.cashToCollect;
     if (!_isCash) return 0;
     final package = _hasPackageAmount ? delivery.packageAmount! : 0;
     return _isRecipientPay ? delivery.fee + package : package;
@@ -238,7 +239,7 @@ class _DriverDeliverySummaryScreenState
                   _Card(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(l.earnings,
+                      Text(delivery.isPartnerPackage ? l.drvStaffJob : l.earnings,
                           style: TextStyle(
                               color: context.appTextSecondary,
                               fontSize: 11,
@@ -251,7 +252,7 @@ class _DriverDeliverySummaryScreenState
                         label: isMoving ? l.movingFee : l.deliveryFee,
                         value: AppTheme.khr(delivery.fee),
                       ),
-                      if (_commission != null) ...[
+                      if (_commission != null && !delivery.isPartnerPackage) ...[
                         const SizedBox(height: 8),
                         _AmountRow(
                           label: l.platformFee,
@@ -267,15 +268,20 @@ class _DriverDeliverySummaryScreenState
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _netFee != null
-                                    ? l.netDriverFee
-                                    : l.driverFee,
+                                delivery.isPartnerPackage
+                                    ? l.drvSalaryJob
+                                    : _netFee != null
+                                        ? l.netDriverFee
+                                        : l.driverFee,
                                 style: TextStyle(
                                     color: context.appTextPrimary,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700),
                               ),
-                              if (_netFee == null)
+                              if (delivery.isPartnerPackage)
+                                Text(l.drvFeeToRoteh,
+                                    style: TextStyle(color: context.appTextSecondary, fontSize: 11))
+                              else if (_netFee == null)
                                 Text(l.beforePlatformFee,
                                     style: TextStyle(
                                         color: context.appTextSecondary,
@@ -286,12 +292,12 @@ class _DriverDeliverySummaryScreenState
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(AppTheme.khr(_netFee ?? delivery.fee),
+                            Text(AppTheme.khr(delivery.isPartnerPackage ? 0 : (_netFee ?? delivery.fee)),
                                 style: TextStyle(
                                     color: AppTheme.accentOrange,
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800)),
-                            Text(AppTheme.usd((_netFee ?? delivery.fee) / 4000),
+                            Text(AppTheme.usd((delivery.isPartnerPackage ? 0 : (_netFee ?? delivery.fee)) / 4000),
                                 style: TextStyle(
                                     color: context.appTextSecondary,
                                     fontSize: 11)),
@@ -323,9 +329,11 @@ class _DriverDeliverySummaryScreenState
                         Row(children: [
                           Expanded(
                             child: Text(
-                              _isRecipientPay
-                                  ? l.collectFromRecipient
-                                  : l.collectPackageAmount,
+                              delivery.isPartnerPackage
+                                  ? l.drvHandOverToRoteh
+                                  : _isRecipientPay
+                                      ? l.collectFromRecipient
+                                      : l.collectPackageAmount,
                               style: TextStyle(
                                   color: AppTheme.success,
                                   fontSize: 13,

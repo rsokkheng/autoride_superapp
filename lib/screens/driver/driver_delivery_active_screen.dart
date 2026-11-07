@@ -1027,6 +1027,25 @@ class _BottomPanel extends StatelessWidget {
             phone: delivery.recipientPhone,
           ),
 
+        // Partner package (staff job): cash to collect from the receiver.
+        if (delivery.isPartnerPackage && delivery.cashToCollect > 0 && !_isDone)
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppTheme.success.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(children: [
+              const Icon(Icons.payments_rounded, color: AppTheme.success, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(AppLocalizations.of(context).drvCollectFromReceiver,
+                  style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.w600, fontSize: 13))),
+              Text(AppTheme.khr(delivery.cashToCollect),
+                  style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.w800, fontSize: 16)),
+            ]),
+          ),
+
         // Action button — hidden in read-only (Missions view) mode
         if (!_isDone && !readOnly)
           SizedBox(

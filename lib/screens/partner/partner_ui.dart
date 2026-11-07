@@ -8,6 +8,7 @@ import 'partner_create_package_screen.dart';
 import 'partner_packages_screen.dart';
 import 'partner_register_screen.dart';
 import 'partner_report_screen.dart';
+import 'partner_statement_screen.dart';
 
 /// Labels, colours and icons for Partner package statuses / sizes / types.
 class PackageUi {
@@ -273,6 +274,36 @@ class PartnerServicesSectionState extends State<PartnerServicesSection> {
                 ),
               ),
           ],
+        ),
+        const SizedBox(height: 10),
+        // Daily statement — successful / unsuccessful, reconcile with ROTEH
+        Material(
+          color: context.appSurface,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => _open(const PartnerStatementScreen()),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(color: AppTheme.confirmBlue.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
+                  child: const Icon(Icons.receipt_long_rounded, color: AppTheme.confirmBlue, size: 22),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(l.pkStatement, style: TextStyle(color: context.appTextPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(l.pkStatementSub, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: context.appTextSecondary, fontSize: 11)),
+                  ]),
+                ),
+                Icon(Icons.chevron_right, color: context.appTextSecondary),
+              ]),
+            ),
+          ),
         ),
         const SizedBox(height: 10),
         // Reports — day / week / month

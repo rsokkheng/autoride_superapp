@@ -576,6 +576,36 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'Could not complete the trip — check your connection and try again.',
       'trSurchargesLine': 'Surcharges & minimum fare',
       'trMeterSoFar': 'Distance so far',
+      'pkFeeChargedToYou': 'ROTEH charges the delivery fee to you. The receiver pays only the item price (COD); ROTEH pays you COD − delivery fee. Without COD, you pay ROTEH the fee.',
+      'pkPayFromCod': 'Deduct from COD / pay on daily statement',
+      'drvCollectFromReceiver': 'Collect from receiver',
+      'drvStaffJob': 'ROTEH STAFF JOB',
+      'drvSalaryJob': 'Paid by salary',
+      'drvFeeToRoteh': 'The delivery fee goes to ROTEH',
+      'drvHandOverToRoteh': 'Hand over to ROTEH',
+      'pkTotalCollected': 'Total collected (COD + fee)',
+      'pkRotehFee': 'ROTEH delivery fee',
+      'pkBalance': 'Balance',
+      'pkNoCod': 'No COD',
+      'pkBalanceHint': 'COD packages: ROTEH pays you the COD. No-COD packages you pay for: you pay ROTEH the delivery fee.',
+      'pkStatement': 'Daily statement',
+      'pkStatementSub': 'Successful & unsuccessful — reconcile with ROTEH',
+      'pkSuccessful': 'Successful',
+      'pkUnsuccessful': 'Unsuccessful',
+      'pkClosingDate': 'Closing date',
+      'pkServiceFee': 'Service fee',
+      'pkNetToPartner': 'ROTEH pays you',
+      'pkPartnerOwes': 'You owe ROTEH',
+      'pkFeeByReceiver': 'Receiver paid',
+      'pkFeePrepaid': 'Prepaid',
+      'pkFeeFromCod': 'Deducted from COD',
+      'pkCodNotCollected': 'COD not collected',
+      'pkFeeCharged': 'Fee charged',
+      'pkPrintPdf': 'Print / PDF',
+      'pkStatementEmptyOk': 'No delivered packages on this day',
+      'pkStatementEmptyBad': 'No unsuccessful packages on this day',
+      'pkReturning': 'Returning',
+      'pkNetHint': '= COD collected − service fees you have not paid yet',
       'pkExportReport': 'Export report',
       'pkExportPdf': 'PDF',
       'pkExportPdfSub': 'Summary, chart and package list — easy to print or send',
@@ -2917,6 +2947,36 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': 'មិនអាចបញ្ចប់ដំណើរបានទេ — សូមពិនិត្យអ៊ីនធឺណិត ហើយព្យាយាមម្តងទៀត។',
       'trSurchargesLine': 'ថ្លៃបន្ថែម និងថ្លៃអប្បបរមា',
       'trMeterSoFar': 'ចម្ងាយរហូតមកដល់ពេលនេះ',
+      'pkFeeChargedToYou': 'ROTEH គិតថ្លៃដឹកពីអ្នក។ អ្នកទទួលបង់តែតម្លៃទំនិញ (COD)។ ROTEH បង់ឲ្យអ្នក = COD − ថ្លៃដឹក។ បើគ្មាន COD អ្នកបង់ថ្លៃដឹកឲ្យ ROTEH។',
+      'pkPayFromCod': 'កាត់ពី COD / បង់តាមរបាយការណ៍ប្រចាំថ្ងៃ',
+      'drvCollectFromReceiver': 'ប្រមូលពីអ្នកទទួល',
+      'drvStaffJob': 'ការងារបុគ្គលិក ROTEH',
+      'drvSalaryJob': 'ទទួលប្រាក់ខែ',
+      'drvFeeToRoteh': 'ថ្លៃដឹកជាចំណូលរបស់ ROTEH',
+      'drvHandOverToRoteh': 'ប្រគល់ឲ្យ ROTEH',
+      'pkTotalCollected': 'ប្រាក់សរុបបានប្រមូល (COD + ថ្លៃដឹក)',
+      'pkRotehFee': 'ថ្លៃដឹក ROTEH',
+      'pkBalance': 'សមតុល្យ',
+      'pkNoCod': 'គ្មាន COD',
+      'pkBalanceHint': 'កញ្ចប់មាន COD៖ ROTEH បង់ COD ឲ្យអ្នក។ កញ្ចប់គ្មាន COD ដែលអ្នកបង់ថ្លៃដឹក៖ អ្នកបង់ថ្លៃដឹកឲ្យ ROTEH។',
+      'pkStatement': 'របាយការណ៍ប្រចាំថ្ងៃ',
+      'pkStatementSub': 'ជោគជ័យ និងមិនជោគជ័យ — ផ្ទៀងផ្ទាត់ជាមួយ ROTEH',
+      'pkSuccessful': 'ដឹកជោគជ័យ',
+      'pkUnsuccessful': 'មិនជោគជ័យ',
+      'pkClosingDate': 'ថ្ងៃបិទបញ្ជី',
+      'pkServiceFee': 'តម្លៃសេវា',
+      'pkNetToPartner': 'ROTEH ត្រូវបង់អ្នក',
+      'pkPartnerOwes': 'អ្នកត្រូវបង់ ROTEH',
+      'pkFeeByReceiver': 'អ្នកទទួលបង់',
+      'pkFeePrepaid': 'បង់រួច',
+      'pkFeeFromCod': 'កាត់ពី COD',
+      'pkCodNotCollected': 'COD មិនបានប្រមូល',
+      'pkFeeCharged': 'គិតថ្លៃ',
+      'pkPrintPdf': 'បោះពុម្ព / PDF',
+      'pkStatementEmptyOk': 'គ្មានកញ្ចប់ដឹកជោគជ័យនៅថ្ងៃនេះ',
+      'pkStatementEmptyBad': 'គ្មានកញ្ចប់មិនជោគជ័យនៅថ្ងៃនេះ',
+      'pkReturning': 'កំពុងយកត្រឡប់',
+      'pkNetHint': '= COD បានប្រមូល − តម្លៃសេវាដែលអ្នកមិនទាន់បង់',
       'pkExportReport': 'នាំចេញរបាយការណ៍',
       'pkExportPdf': 'PDF',
       'pkExportPdfSub': 'សង្ខេប ក្រាហ្វ និងបញ្ជីកញ្ចប់ — ងាយបោះពុម្ព ឬផ្ញើ',
@@ -5261,6 +5321,36 @@ class AppLocalizations {
       'trCouldNotCompleteTrip': '无法完成行程——请检查网络后重试。',
       'trSurchargesLine': '附加费与最低车费',
       'trMeterSoFar': '目前里程',
+      'pkFeeChargedToYou': 'ROTEH 向您收取运费。收件人只支付货款（代收）；ROTEH 支付给您 代收款 − 运费。无代收时，您向 ROTEH 支付运费。',
+      'pkPayFromCod': '从代收款扣除 / 按每日对账单支付',
+      'drvCollectFromReceiver': '向收件人收取',
+      'drvStaffJob': 'ROTEH 员工任务',
+      'drvSalaryJob': '按工资计酬',
+      'drvFeeToRoteh': '运费归 ROTEH 所有',
+      'drvHandOverToRoteh': '交给 ROTEH',
+      'pkTotalCollected': '代收总额（货款 + 运费）',
+      'pkRotehFee': 'ROTEH 运费',
+      'pkBalance': '结余',
+      'pkNoCod': '无代收',
+      'pkBalanceHint': '有代收的包裹：ROTEH 向您支付货款。无代收且由您付运费的包裹：您向 ROTEH 支付运费。',
+      'pkStatement': '每日对账单',
+      'pkStatementSub': '成功与未成功——与 ROTEH 对账',
+      'pkSuccessful': '成功',
+      'pkUnsuccessful': '未成功',
+      'pkClosingDate': '结算日期',
+      'pkServiceFee': '服务费',
+      'pkNetToPartner': 'ROTEH 应付您',
+      'pkPartnerOwes': '您应付 ROTEH',
+      'pkFeeByReceiver': '收件人付',
+      'pkFeePrepaid': '已预付',
+      'pkFeeFromCod': '从代收款扣除',
+      'pkCodNotCollected': '未代收',
+      'pkFeeCharged': '收取费用',
+      'pkPrintPdf': '打印 / PDF',
+      'pkStatementEmptyOk': '当天没有成功送达的包裹',
+      'pkStatementEmptyBad': '当天没有未成功的包裹',
+      'pkReturning': '退回中',
+      'pkNetHint': '= 已代收货款 − 您尚未支付的服务费',
       'pkExportReport': '导出报表',
       'pkExportPdf': 'PDF',
       'pkExportPdfSub': '汇总、图表和包裹清单——便于打印或发送',
@@ -7606,6 +7696,36 @@ class AppLocalizations {
   String get trCouldNotCompleteTrip => tr('trCouldNotCompleteTrip');
   String get trSurchargesLine => tr('trSurchargesLine');
   String get trMeterSoFar => tr('trMeterSoFar');
+  String get pkFeeChargedToYou => tr('pkFeeChargedToYou');
+  String get pkPayFromCod => tr('pkPayFromCod');
+  String get drvCollectFromReceiver => tr('drvCollectFromReceiver');
+  String get drvStaffJob => tr('drvStaffJob');
+  String get drvSalaryJob => tr('drvSalaryJob');
+  String get drvFeeToRoteh => tr('drvFeeToRoteh');
+  String get drvHandOverToRoteh => tr('drvHandOverToRoteh');
+  String get pkTotalCollected => tr('pkTotalCollected');
+  String get pkRotehFee => tr('pkRotehFee');
+  String get pkBalance => tr('pkBalance');
+  String get pkNoCod => tr('pkNoCod');
+  String get pkBalanceHint => tr('pkBalanceHint');
+  String get pkStatement => tr('pkStatement');
+  String get pkStatementSub => tr('pkStatementSub');
+  String get pkSuccessful => tr('pkSuccessful');
+  String get pkUnsuccessful => tr('pkUnsuccessful');
+  String get pkClosingDate => tr('pkClosingDate');
+  String get pkServiceFee => tr('pkServiceFee');
+  String get pkNetToPartner => tr('pkNetToPartner');
+  String get pkPartnerOwes => tr('pkPartnerOwes');
+  String get pkFeeByReceiver => tr('pkFeeByReceiver');
+  String get pkFeePrepaid => tr('pkFeePrepaid');
+  String get pkFeeFromCod => tr('pkFeeFromCod');
+  String get pkCodNotCollected => tr('pkCodNotCollected');
+  String get pkFeeCharged => tr('pkFeeCharged');
+  String get pkPrintPdf => tr('pkPrintPdf');
+  String get pkStatementEmptyOk => tr('pkStatementEmptyOk');
+  String get pkStatementEmptyBad => tr('pkStatementEmptyBad');
+  String get pkReturning => tr('pkReturning');
+  String get pkNetHint => tr('pkNetHint');
   String get pkExportReport => tr('pkExportReport');
   String get pkExportPdf => tr('pkExportPdf');
   String get pkExportPdfSub => tr('pkExportPdfSub');

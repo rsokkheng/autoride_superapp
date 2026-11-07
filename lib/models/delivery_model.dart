@@ -11,6 +11,8 @@ class DeliveryModel {
   final String? recipientPhone;
   final String? packageSize;
   final int?    packageAmount;
+  /// Set for Partner packages — delivered by ROTEH staff drivers on a salary.
+  final int?    partnerId;
   final String pickupAddress;
   final String dropoffAddress;
   final String? scheduledAt;
@@ -71,6 +73,7 @@ class DeliveryModel {
     this.recipientPhone,
     this.packageSize,
     this.packageAmount,
+    this.partnerId,
     required this.pickupAddress,
     required this.dropoffAddress,
     this.scheduledAt,
@@ -120,6 +123,18 @@ class DeliveryModel {
   /// What the platform keeps out of [fee], in KHR. Null when the response
   /// carried no payout information at all — callers must not fall back to a
   /// hard-coded rate, since the commission is configured server-side.
+  bool get isPartnerPackage => partnerId != null;
+
+  /// Cash the driver collects from the receiver: COD, plus the delivery fee
+  /// when the receiver pays it in cash.
+  int get cashToCollect {
+    final cod = packageAmount ?? 0;
+    // Partner packages: the fee is charged to the Partner — receiver pays only the COD.
+    if (isPartnerPackage) return cod;
+    final fee = paymentBy == 'recipient' && paymentMethod == 'cash' ? this.fee : 0;
+    return cod + fee;
+  }
+
   int? get platformCommission {
     if (commissionAmount != null) return commissionAmount!.clamp(0, fee);
     if (driverNetFee != null)     return (fee - driverNetFee!).clamp(0, fee);
@@ -148,6 +163,7 @@ class DeliveryModel {
       recipientPhone: json['recipient_phone'] as String?,
       packageSize:    json['package_size'] as String?,
       packageAmount:  json['package_amount'] != null ? _toInt(json['package_amount']) : (json['package_price'] != null ? _toInt(json['package_price']) : null),
+      partnerId:      json['partner_id'] == null ? null : _toInt(json['partner_id']),
       pickupAddress:  json['pickup_address'] as String,
       dropoffAddress: json['dropoff_address'] as String,
       scheduledAt:    json['scheduled_at'] as String?,

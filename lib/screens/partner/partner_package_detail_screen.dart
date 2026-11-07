@@ -197,8 +197,7 @@ class _PartnerPackageDetailScreenState extends State<PartnerPackageDetailScreen>
                   ])),
                   const SizedBox(height: 12),
                   _card(l.pkPayment, Icons.payments_outlined, Column(children: [
-                    _money(l.pkDeliveryFee, p.fee,
-                        p.paymentBy == 'recipient' ? l.pkPaymentByReceiver : l.pkPaymentByPartner),
+                    _money(l.pkDeliveryFee, p.fee, l.pkPaymentByPartner),
                     if (p.codAmount > 0) _money(l.pkCod, p.codAmount, l.pkReceiver),
                   ])),
                   if (p.photoUrl != null || p.proofPhotoUrl != null) ...[
